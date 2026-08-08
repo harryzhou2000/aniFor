@@ -1,6 +1,8 @@
 import {
   VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS,
+  VISUAL_LAB_ZERO_RESOURCE_ADDITIONS,
   type VisualLabDomainShaderAdapter,
+  type VisualLabShaderResourceBudget,
 } from './visual-lab';
 
 /** Gas candidate body split from the shared volume dispatcher. */
@@ -59,10 +61,21 @@ vec3 applyHdrGasLab(
 }
 `;
 
+const HDR_VOLUME_LAB_GAS_RESOURCE_BUDGET = Object.freeze({
+  existingSamplerReads: Object.freeze({
+    wall: 1,
+    atmosphere: 5,
+    atmosphereStyle: 1,
+  }),
+  maxAdditionalTextureReadsPerFragment: 7,
+  adds: VISUAL_LAB_ZERO_RESOURCE_ADDITIONS,
+} satisfies VisualLabShaderResourceBudget);
+
 export const HDR_VOLUME_LAB_GAS_DESCRIPTOR = Object.freeze({
   domain: 'gas',
   domainCode: VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS.gas.domainCode,
   hook: 'volume-field',
   entryPoint: 'applyHdrGasLab',
   source: HDR_VOLUME_LAB_GAS_GLSL,
+  budget: HDR_VOLUME_LAB_GAS_RESOURCE_BUDGET,
 } satisfies VisualLabDomainShaderAdapter);

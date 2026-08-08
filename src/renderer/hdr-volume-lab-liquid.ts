@@ -1,6 +1,8 @@
 import {
   VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS,
+  VISUAL_LAB_ZERO_RESOURCE_ADDITIONS,
   type VisualLabDomainShaderAdapter,
+  type VisualLabShaderResourceBudget,
 } from './visual-lab';
 
 /**
@@ -80,10 +82,17 @@ vec3 applyHdrLiquidLab(
 }
 `;
 
+const HDR_VOLUME_LAB_LIQUID_RESOURCE_BUDGET = Object.freeze({
+  existingSamplerReads: Object.freeze({}),
+  maxAdditionalTextureReadsPerFragment: 0,
+  adds: VISUAL_LAB_ZERO_RESOURCE_ADDITIONS,
+} satisfies VisualLabShaderResourceBudget);
+
 export const HDR_VOLUME_LAB_LIQUID_DESCRIPTOR = Object.freeze({
   domain: 'liquid',
   domainCode: VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS.liquid.domainCode,
   hook: 'liquid-surface',
   entryPoint: 'applyHdrLiquidLab',
   source: HDR_VOLUME_LAB_LIQUID_GLSL,
+  budget: HDR_VOLUME_LAB_LIQUID_RESOURCE_BUDGET,
 } satisfies VisualLabDomainShaderAdapter);

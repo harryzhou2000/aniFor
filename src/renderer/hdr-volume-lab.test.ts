@@ -6,11 +6,19 @@ import {
 import { HDR_VOLUME_LAB_EMISSION_DESCRIPTOR } from './hdr-volume-lab-emission';
 import { HDR_VOLUME_LAB_GAS_DESCRIPTOR } from './hdr-volume-lab-gas';
 import { HDR_VOLUME_LAB_LIQUID_DESCRIPTOR } from './hdr-volume-lab-liquid';
-import { VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS } from './visual-lab';
+import {
+  VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS,
+  type VisualLabSampler,
+} from './visual-lab';
 
 const occurrences = (source: string, needle: string): number => (
   source.split(needle).length - 1
 );
+
+const KNOWN_VISUAL_LAB_SAMPLERS = new Set<VisualLabSampler>([
+  'hdr', 'bloom', 'semantic', 'wall', 'liquid',
+  'atmosphere', 'atmosphereStyle', 'emission',
+]);
 
 describe('HDR Visual Lab domain adapters', () => {
   it('assembles one frozen, complete adapter map in stable domain order', () => {
@@ -66,6 +74,48 @@ describe('HDR Visual Lab domain adapters', () => {
       expect(adapter.source).not.toContain('gl_FragColor');
       expect(adapter.source).not.toMatch(/\.a\s*=/);
     }
+  });
+
+  it('accounts for existing sampler reads without adding compositor resources', () => {
+    expect(HDR_VOLUME_LAB_LIQUID_DESCRIPTOR.budget.existingSamplerReads).toEqual({});
+    expect(HDR_VOLUME_LAB_GAS_DESCRIPTOR.budget.existingSamplerReads).toEqual({
+      wall: 1, atmosphere: 5, atmosphereStyle: 1,
+    });
+    expect(HDR_VOLUME_LAB_EMISSION_DESCRIPTOR.budget.existingSamplerReads).toEqual({
+      wall: 1, semantic: 1, emission: 5,
+    });
+    expect(HDR_VOLUME_LAB_GAS_DESCRIPTOR.budget.existingSamplerReads.atmosphere).toBe(
+      occurrences(HDR_VOLUME_LAB_GAS_DESCRIPTOR.source, 'uAtmosphereTexture'),
+    );
+    expect(HDR_VOLUME_LAB_GAS_DESCRIPTOR.budget.existingSamplerReads.atmosphereStyle).toBe(
+      occurrences(HDR_VOLUME_LAB_GAS_DESCRIPTOR.source, 'uAtmosphereStyleTexture'),
+    );
+    expect(HDR_VOLUME_LAB_EMISSION_DESCRIPTOR.budget.existingSamplerReads.emission).toBe(
+      occurrences(HDR_VOLUME_LAB_EMISSION_DESCRIPTOR.source, 'uEmissionTexture'),
+    );
+    expect(HDR_VOLUME_LAB_EMISSION_DESCRIPTOR.budget.existingSamplerReads.semantic).toBe(
+      occurrences(HDR_VOLUME_LAB_EMISSION_DESCRIPTOR.source, 'semanticState(uv)'),
+    );
+    expect(occurrences(HDR_VOLUME_LAB_GLSL, 'texture(uWallTexture')).toBe(1);
+
+    const expectedReadBudgets = [0, 7, 7];
+    Object.values(HDR_VOLUME_LAB_DOMAIN_ADAPTERS).forEach((adapter, index) => {
+      const budget = adapter.budget;
+      const samplerReads = Object.entries(budget.existingSamplerReads);
+      expect(samplerReads.every(([sampler]) => (
+        KNOWN_VISUAL_LAB_SAMPLERS.has(sampler as VisualLabSampler)
+      ))).toBe(true);
+      expect(samplerReads.reduce((sum, [, reads]) => sum + reads, 0)).toBe(
+        expectedReadBudgets[index],
+      );
+      expect(budget.maxAdditionalTextureReadsPerFragment).toBe(expectedReadBudgets[index]);
+      expect(budget.adds).toEqual({
+        samplers: 0, textures: 0, fields: 0, passes: 0, targets: 0,
+      });
+      expect(Object.isFrozen(budget)).toBe(true);
+      expect(Object.isFrozen(budget.existingSamplerReads)).toBe(true);
+      expect(Object.isFrozen(budget.adds)).toBe(true);
+    });
   });
 
   it('retains variant-zero no-op and shared wall guards in the facade', () => {

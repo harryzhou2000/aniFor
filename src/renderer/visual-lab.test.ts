@@ -1,13 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import {
   DISABLED_VISUAL_LAB_STATE,
+  isVisualLabDetailScaleSupported,
   isVisualLabDomainImplemented,
+  isVisualLabExecutionSupported,
   packVisualLabState,
   resolveVisualLabState,
   VISUAL_LAB_DOMAIN_CAPABILITY,
   VISUAL_LAB_DOMAIN_CODE,
   VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS,
+  VISUAL_LAB_NORMAL_HDR_EXECUTION_PROFILE,
+  VISUAL_LAB_ZERO_RESOURCE_ADDITIONS,
 } from './visual-lab';
+import type { VisualLabShaderResourceBudget } from './visual-lab';
 
 describe('normal-WebGL visual lab state', () => {
   it('keeps stable shader-facing domain codes and vec4 packing', () => {
@@ -50,17 +55,84 @@ describe('normal-WebGL visual lab state', () => {
 
   it('exports a deeply frozen complete descriptor table for implemented domains', () => {
     expect(VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS).toEqual({
-      liquid: { domainCode: 2, targetKind: 'semantic-material-id' },
-      gas: { domainCode: 3, targetKind: 'propagated-atmosphere-style-byte' },
-      emission: { domainCode: 4, targetKind: 'semantic-material-id' },
+      liquid: {
+        domainCode: 2,
+        targetKind: 'semantic-material-id',
+        executionProfile: VISUAL_LAB_NORMAL_HDR_EXECUTION_PROFILE,
+      },
+      gas: {
+        domainCode: 3,
+        targetKind: 'propagated-atmosphere-style-byte',
+        executionProfile: VISUAL_LAB_NORMAL_HDR_EXECUTION_PROFILE,
+      },
+      emission: {
+        domainCode: 4,
+        targetKind: 'semantic-material-id',
+        executionProfile: VISUAL_LAB_NORMAL_HDR_EXECUTION_PROFILE,
+      },
     });
     expect(Object.isFrozen(VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS)).toBe(true);
     for (const descriptor of Object.values(VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS)) {
       expect(Object.isFrozen(descriptor)).toBe(true);
+      expect(descriptor.executionProfile).toBe(VISUAL_LAB_NORMAL_HDR_EXECUTION_PROFILE);
     }
     for (const capability of Object.values(VISUAL_LAB_DOMAIN_CAPABILITY)) {
       expect(Object.isFrozen(capability)).toBe(true);
     }
+  });
+
+  it('shares one deeply frozen normal-HDR execution and fallback profile', () => {
+    expect(VISUAL_LAB_NORMAL_HDR_EXECUTION_PROFILE).toEqual({
+      detailScales: [1, 2, 4],
+      backend: 'webgl',
+      pipeline: 'normal-hdr',
+      variantZero: 'pixel-preserving-baseline',
+      fallbacks: {
+        classic: 'disabled-preserve-baseline',
+        canvas2d: 'disabled-preserve-baseline',
+        hdrUnavailable: 'disabled-preserve-baseline',
+        detail8x: 'disabled-preserve-baseline',
+      },
+    });
+    expect(Object.isFrozen(VISUAL_LAB_NORMAL_HDR_EXECUTION_PROFILE)).toBe(true);
+    expect(Object.isFrozen(VISUAL_LAB_NORMAL_HDR_EXECUTION_PROFILE.detailScales)).toBe(true);
+    expect(Object.isFrozen(VISUAL_LAB_NORMAL_HDR_EXECUTION_PROFILE.fallbacks)).toBe(true);
+
+    for (const outputScale of VISUAL_LAB_NORMAL_HDR_EXECUTION_PROFILE.detailScales) {
+      expect(isVisualLabDetailScaleSupported('gas', outputScale)).toBe(true);
+      expect(resolveVisualLabState(
+        'realistic', outputScale, '?visualLab=gas&visualVariant=1&visualTarget=4',
+      )).toMatchObject({ domain: 'gas', variant: 1, target: 4 });
+    }
+    expect(isVisualLabDetailScaleSupported('gas', 8)).toBe(false);
+    expect(isVisualLabExecutionSupported('gas', {
+      backend: 'webgl', pipeline: 'normal-hdr', detailScale: 2,
+    })).toBe(true);
+    expect(isVisualLabExecutionSupported('gas', {
+      backend: 'canvas2d', pipeline: 'normal-hdr', detailScale: 2,
+    })).toBe(false);
+    expect(isVisualLabExecutionSupported('gas', {
+      backend: 'webgl', pipeline: 'none', detailScale: 2,
+    })).toBe(false);
+    expect(isVisualLabExecutionSupported('gas', {
+      backend: 'webgl', pipeline: 'normal-hdr', detailScale: 8,
+    })).toBe(false);
+  });
+
+  it('types existing sampler reads separately from zero resource additions', () => {
+    const budget = Object.freeze({
+      existingSamplerReads: Object.freeze({ wall: 1, atmosphere: 5, atmosphereStyle: 1 }),
+      maxAdditionalTextureReadsPerFragment: 7,
+      adds: VISUAL_LAB_ZERO_RESOURCE_ADDITIONS,
+    } satisfies VisualLabShaderResourceBudget);
+
+    expect(budget).toEqual({
+      existingSamplerReads: { wall: 1, atmosphere: 5, atmosphereStyle: 1 },
+      maxAdditionalTextureReadsPerFragment: 7,
+      adds: { samplers: 0, textures: 0, fields: 0, passes: 0, targets: 0 },
+    });
+    expect(Object.isFrozen(VISUAL_LAB_ZERO_RESOURCE_ADDITIONS)).toBe(true);
+    expect(budget.adds).toBe(VISUAL_LAB_ZERO_RESOURCE_ADDITIONS);
   });
 
   it('collapses Classic, off, invalid/reserved domains, and true 8x to the disabled state', () => {

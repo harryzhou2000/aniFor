@@ -2,19 +2,16 @@
 
 ## Current direction
 
-The E80 dense-body ambient floor, E81 native-PHOT spectral irradiance on exact
-deep Metal, and E82 authoritative-temperature Ceramic blackbody relief are
-accepted across normal WebGL and their compact true-8× exclusions. Pause the
-detail-first E-number ladder here. The active goal is framework-first: complete
-a modular, typed Visual Lab adapter facade before starting another material
-treatment. Gas, liquid, and emission comparison arithmetic should live in
-domain-local modules assembled through one stable shader ABI. A frozen renderer
-capability table and the environment-specific capture catalog must share exact,
-tested domain and target semantics. Extend that descriptor vocabulary next with
-resource/sample budgets, supported Detail/fallback paths, fixture constraints,
-preparation, field evidence, and fixed URL requirements. Adding a normal A/B
-idea should touch one domain module plus descriptor metadata, not presenter
-setup, HDR lifecycle, app boot, or CDP branching.
+Pause the detail-first E-number ladder. The active goal is framework leverage,
+not another isolated material treatment. The modular typed Visual Lab facade is
+deployed: gas, liquid, and emission comparison arithmetic lives in domain-local
+modules assembled through one stable shader ABI. Complete its executable
+capability profile next: frozen renderer and capture descriptors must share
+exact domain, target, supported Detail/fallback, evidence, URL, and resource-
+budget semantics, and the generic capture runner must consume them without
+domain branches. Then add named capture recipes and reusable result records so
+a normal A/B idea touches one domain module plus one catalog entry—not presenter
+setup, HDR lifecycle, app boot, package-script duplication, or CDP branching.
 
 The typed Visual Lab state, fixed normal-HDR composition seam, promotion-safe
 same-page off/A/B selection, declarative fixtures, and production-bundle capture
@@ -24,17 +21,19 @@ motion is an accepted E08 baseline and uses the moving-Oil fixture with liquid
 target `8`; E65 Water surface motion is an accepted E08 baseline and uses the
 retained moving-Water fixture with liquid target `2`. Their legacy resolvers,
 uniforms, queries, datasets, and bespoke verifier paths are removed. E65 is also
-deployed: `main_codex` and Pages serve revision
-`c85e3cfdd1deb16dd4994a51db29929c01df76a3` after successful workflow run
-`31274976219`.
+deployed. The facade and detached-browser lifecycle checkpoint is also live:
+`main_codex` and Pages serve revision
+`cf39b9cbad824e18d5b2a145b2ac3655d73ff5c1` after successful workflow run
+`31276908367` and independent live-revision/asset-closure verification.
 
-The next stable deployment checkpoint is the typed domain-adapter/facade
-milestone, not a fourth leaf migration. It must enforce exact renderer/capture
-domain and target-kind parity, preserve the fixed `domain/variant/target/gain` shader
-assembly boundary, keep the generic CDP harness branch-free, and provide
-reusable fixture, evidence, cleanup, build, Pages-asset-closure, and live-
-revision gates. Checkpoint and deploy that infrastructure once the normal WebGL
-browser proof passes. Then use it for rapid, visually judged material
+The next stable deployment checkpoint is the capability-profile milestone, not
+a fourth leaf migration. It must enforce exact renderer/capture parity for
+domain, target kind, supported paths, fallback behavior, field evidence, URL
+requirements, and explicit sampler/resource budgets; preserve the fixed
+`domain/variant/target/gain` shader assembly boundary; and keep the generic CDP
+harness branch-free. Checkpoint and deploy it after a production build and real
+normal-WebGL proof. Continue framework work afterward with named capture recipes
+and candidate-result records, then use those for rapid visually judged material
 experiments and promote only selected looks into ordinary baselines. Defer E66
 because its tangent reads make it resource-sensitive; migrate another accepted
 leaf only when doing so removes more special-case infrastructure than it adds.

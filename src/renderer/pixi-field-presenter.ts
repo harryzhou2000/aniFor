@@ -39,7 +39,7 @@ import { sampleCanvasFieldAlpha } from './canvas-surface-light';
 import { HDRVfxPipeline, type HDRPipelineInfo } from './hdr-vfx-pipeline';
 import { resolveCeramicBlackbodyVfxEnabled } from './ceramic-blackbody-vfx';
 import {
-  isVisualLabDomainImplemented, resolveVisualLabState,
+  isVisualLabExecutionSupported, resolveVisualLabState,
   type VisualLabState, type VisualLabVariant,
 } from './visual-lab';
 import {
@@ -13465,13 +13465,17 @@ export class PixiFieldPresenter {
 
   private publishVisualLabDataset(): void {
     const state = this.visualLabState;
-    const supportedDomain = isVisualLabDomainImplemented(state.domain);
+    const supportedExecution = isVisualLabExecutionSupported(state.domain, {
+      backend: 'webgl',
+      pipeline: this.hdrPipelineInfo.active ? 'normal-hdr' : 'none',
+      detailScale: this.outputScale,
+    });
     this.app.canvas.dataset.visualLabDomain = state.domain;
     this.app.canvas.dataset.visualLabVariant = String(state.variant);
     this.app.canvas.dataset.visualLabTarget = String(state.target);
     this.app.canvas.dataset.visualLabGain = String(state.gain);
     this.app.canvas.dataset.visualLab = this.hdrPipelineInfo.active
-      && supportedDomain && state.variant > 0 && state.gain > 0 ? 'active' : 'inactive';
+      && supportedExecution && state.variant > 0 && state.gain > 0 ? 'active' : 'inactive';
   }
 
   setRoleMaterialStylingEnabled(enabled: boolean): void {

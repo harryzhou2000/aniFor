@@ -1,6 +1,8 @@
 import {
   VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS,
+  VISUAL_LAB_ZERO_RESOURCE_ADDITIONS,
   type VisualLabDomainShaderAdapter,
+  type VisualLabShaderResourceBudget,
 } from './visual-lab';
 
 /** Emission candidate body split from the shared volume dispatcher. */
@@ -52,10 +54,21 @@ vec3 applyHdrEmissionLab(
 }
 `;
 
+const HDR_VOLUME_LAB_EMISSION_RESOURCE_BUDGET = Object.freeze({
+  existingSamplerReads: Object.freeze({
+    wall: 1,
+    semantic: 1,
+    emission: 5,
+  }),
+  maxAdditionalTextureReadsPerFragment: 7,
+  adds: VISUAL_LAB_ZERO_RESOURCE_ADDITIONS,
+} satisfies VisualLabShaderResourceBudget);
+
 export const HDR_VOLUME_LAB_EMISSION_DESCRIPTOR = Object.freeze({
   domain: 'emission',
   domainCode: VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS.emission.domainCode,
   hook: 'volume-field',
   entryPoint: 'applyHdrEmissionLab',
   source: HDR_VOLUME_LAB_EMISSION_GLSL,
+  budget: HDR_VOLUME_LAB_EMISSION_RESOURCE_BUDGET,
 } satisfies VisualLabDomainShaderAdapter);

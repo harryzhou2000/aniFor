@@ -17,6 +17,77 @@ export type VisualLabTargetKind =
   | 'semantic-material-id'
   | 'propagated-atmosphere-style-byte';
 
+export type VisualLabDetailScale = Exclude<FieldOutputScale, 8>;
+export type VisualLabExecutionFallback = 'disabled-preserve-baseline';
+
+/**
+ * Shared execution contract for comparison domains in the normal HDR
+ * compositor. Fallbacks are explicit so unsupported paths cannot silently
+ * reinterpret a requested variant.
+ */
+export interface VisualLabExecutionProfile {
+  readonly detailScales: readonly VisualLabDetailScale[];
+  readonly backend: 'webgl';
+  readonly pipeline: 'normal-hdr';
+  readonly variantZero: 'pixel-preserving-baseline';
+  readonly fallbacks: Readonly<{
+    classic: VisualLabExecutionFallback;
+    canvas2d: VisualLabExecutionFallback;
+    hdrUnavailable: VisualLabExecutionFallback;
+    detail8x: VisualLabExecutionFallback;
+  }>;
+}
+
+export const VISUAL_LAB_NORMAL_HDR_EXECUTION_PROFILE = Object.freeze({
+  detailScales: Object.freeze([1, 2, 4] as const),
+  backend: 'webgl',
+  pipeline: 'normal-hdr',
+  variantZero: 'pixel-preserving-baseline',
+  fallbacks: Object.freeze({
+    classic: 'disabled-preserve-baseline',
+    canvas2d: 'disabled-preserve-baseline',
+    hdrUnavailable: 'disabled-preserve-baseline',
+    detail8x: 'disabled-preserve-baseline',
+  }),
+} as const satisfies VisualLabExecutionProfile);
+
+/** Existing fixed-compositor samplers that a lab adapter may read. */
+export type VisualLabSampler =
+  | 'hdr'
+  | 'bloom'
+  | 'semantic'
+  | 'wall'
+  | 'liquid'
+  | 'atmosphere'
+  | 'atmosphereStyle'
+  | 'emission';
+
+export type VisualLabExistingSamplerReads = Readonly<
+  Partial<Record<VisualLabSampler, number>>
+>;
+
+export interface VisualLabResourceAdditions {
+  readonly samplers: 0;
+  readonly textures: 0;
+  readonly fields: 0;
+  readonly passes: 0;
+  readonly targets: 0;
+}
+
+export interface VisualLabShaderResourceBudget {
+  readonly existingSamplerReads: VisualLabExistingSamplerReads;
+  readonly maxAdditionalTextureReadsPerFragment: number;
+  readonly adds: Readonly<VisualLabResourceAdditions>;
+}
+
+export const VISUAL_LAB_ZERO_RESOURCE_ADDITIONS = Object.freeze({
+  samplers: 0,
+  textures: 0,
+  fields: 0,
+  passes: 0,
+  targets: 0,
+} as const satisfies VisualLabResourceAdditions);
+
 /**
  * One renderer-owned capability table for lab routing and diagnostics. Powder
  * keeps its reserved shader code, but cannot request the expanded compositor
@@ -53,6 +124,7 @@ export type VisualLabDomainShaderAdapter = {
     hook: VisualLabHook;
     entryPoint: string;
     source: string;
+    budget: Readonly<VisualLabShaderResourceBudget>;
   }>;
 }[ImplementedVisualLabDomain];
 
@@ -60,6 +132,7 @@ type ImplementedVisualLabDomainDescriptorMap = {
   readonly [Domain in ImplementedVisualLabDomain]: Readonly<{
     domainCode: (typeof VISUAL_LAB_DOMAIN_CODE)[Domain];
     targetKind: Exclude<VisualLabTargetKind, 'none'>;
+    executionProfile: Readonly<VisualLabExecutionProfile>;
   }>;
 };
 
@@ -72,19 +145,51 @@ export const VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS = Object.freeze({
   liquid: Object.freeze({
     domainCode: VISUAL_LAB_DOMAIN_CODE.liquid,
     targetKind: VISUAL_LAB_DOMAIN_CAPABILITY.liquid.targetKind,
+    executionProfile: VISUAL_LAB_NORMAL_HDR_EXECUTION_PROFILE,
   }),
   gas: Object.freeze({
     domainCode: VISUAL_LAB_DOMAIN_CODE.gas,
     targetKind: VISUAL_LAB_DOMAIN_CAPABILITY.gas.targetKind,
+    executionProfile: VISUAL_LAB_NORMAL_HDR_EXECUTION_PROFILE,
   }),
   emission: Object.freeze({
     domainCode: VISUAL_LAB_DOMAIN_CODE.emission,
     targetKind: VISUAL_LAB_DOMAIN_CAPABILITY.emission.targetKind,
+    executionProfile: VISUAL_LAB_NORMAL_HDR_EXECUTION_PROFILE,
   }),
 } as const satisfies ImplementedVisualLabDomainDescriptorMap);
 
-export function isVisualLabDomainImplemented(domain: VisualLabDomain): boolean {
+export function isVisualLabDomainImplemented(
+  domain: VisualLabDomain,
+): domain is ImplementedVisualLabDomain {
   return VISUAL_LAB_DOMAIN_CAPABILITY[domain].implemented;
+}
+
+export function isVisualLabDetailScaleSupported(
+  domain: ImplementedVisualLabDomain,
+  outputScale: FieldOutputScale,
+): outputScale is VisualLabDetailScale {
+  const supportedScales: readonly FieldOutputScale[] =
+    VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS[domain].executionProfile.detailScales;
+  return supportedScales.includes(outputScale);
+}
+
+export interface VisualLabExecutionContext {
+  readonly backend: VisualLabExecutionProfile['backend'] | 'canvas2d';
+  readonly pipeline: VisualLabExecutionProfile['pipeline'] | 'none';
+  readonly detailScale: FieldOutputScale;
+}
+
+/** Positive-path check; every false result preserves the ordinary baseline. */
+export function isVisualLabExecutionSupported(
+  domain: VisualLabDomain,
+  context: Readonly<VisualLabExecutionContext>,
+): domain is ImplementedVisualLabDomain {
+  if (!isVisualLabDomainImplemented(domain)) return false;
+  const profile = VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS[domain].executionProfile;
+  return context.backend === profile.backend
+    && context.pipeline === profile.pipeline
+    && isVisualLabDetailScaleSupported(domain, context.detailScale);
 }
 
 export interface VisualLabState {
@@ -135,7 +240,7 @@ export function resolveVisualLabState(
   outputScale: FieldOutputScale,
   search = globalThis.location?.search ?? '',
 ): Readonly<VisualLabState> {
-  if (look === 'classic' || outputScale >= 8) return DISABLED_VISUAL_LAB_STATE;
+  if (look === 'classic') return DISABLED_VISUAL_LAB_STATE;
 
   const parameters = new URLSearchParams(search);
   const requestedDomain = parameters.get('visualLab');
@@ -148,6 +253,11 @@ export function resolveVisualLabState(
   if (!isDomain(requestedDomain) || requestedDomain === 'off'
     || !isVisualLabDomainImplemented(requestedDomain)
     || (parameters.get('inputAudit') === '1' && !explicitExperiment)) {
+    return DISABLED_VISUAL_LAB_STATE;
+  }
+  if (!isVisualLabExecutionSupported(requestedDomain, {
+    backend: 'webgl', pipeline: 'normal-hdr', detailScale: outputScale,
+  })) {
     return DISABLED_VISUAL_LAB_STATE;
   }
 

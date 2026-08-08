@@ -2,7 +2,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { PixiFieldPresenter } from './pixi-field-presenter';
 import { powderRenderStyleValue } from './powder-render-style';
-import { WEBGL_EIGHT_X_FRAME_STALL_MS } from './render-resolution';
+import {
+  WEBGL_EIGHT_X_FRAME_STALL_MS, type FieldOutputScale,
+} from './render-resolution';
 
 interface PresenterHarness {
   readonly uniforms: { readonly uniforms: Record<string, number> };
@@ -116,6 +118,7 @@ describe('Pixi presenter startup configuration', () => {
       }>;
       hdrVfxPipeline: { setVisualLabState(state: unknown): void };
       hdrPipelineInfo: { active: boolean };
+      outputScale: FieldOutputScale;
       app: { canvas: { dataset: Record<string, string> } };
       renderApplication(): void;
       setVisualLabVariant: PixiFieldPresenter['setVisualLabVariant'];
@@ -126,6 +129,7 @@ describe('Pixi presenter startup configuration', () => {
       }),
       hdrVfxPipeline: { setVisualLabState },
       hdrPipelineInfo: { active: true },
+      outputScale: 2,
       app: { canvas: { dataset: {} } },
       renderApplication,
     });

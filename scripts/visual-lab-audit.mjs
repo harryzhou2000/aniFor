@@ -24,7 +24,9 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
-  buildVisualLabStartupExpression, resolveVisualLabDomain, resolveVisualLabFixture,
+  buildVisualLabCaptureUrl, buildVisualLabStartupExpression,
+  resolveVisualLabDomain, resolveVisualLabFixture,
+  VISUAL_LAB_CAPTURE_PROTOCOL,
   visualLabDomainNames, visualLabFixtureNames,
 } from './visual-lab-fixtures.mjs';
 import {
@@ -48,18 +50,14 @@ Options (use --name=value):
   --base-url=http://127.0.0.1:5173/  Dev URL or file:///.../dist/index.html
   --bundle=dist/index.html              Built bundle entry (overrides default URL)
   --domain=${visualLabDomainNames().join('|')}         Lab domain (default: gas)
-  --target=0..255                      Gas style byte or liquid/emission material ID
+  --target=0..255                      Domain target selector; 0 is wildcard
   --fixture=${visualLabFixtureNames().join('|')}        App-owned fixture (default: showcase)
   --gain=0.01..2                       RGB-only experiment gain (default: 1)
-  --render-scale=1|2|4                 Normal WebGL scale (default: 2)
+  --render-scale=<domain scale>        Normal WebGL scale (prefers 2)
   --output-dir=/tmp/anifor-visual-lab-gas
   --chrome=/path/to/chrome              Otherwise CHROME_BIN/autodetection
   --gpu=auto|swiftshader                Prefer local GPU; CI can force software
   --help
-
-Gas target codes currently mean propagated atmosphere styles, not material
-IDs: wildcard=0, Smoke=1, Steam=2, Oxygen=4, CO2=6, Noble Gas=7, FOG=10.
-Emission targets are semantic material IDs; 0 selects every emitting owner.
 
 Outputs: off.png, a.png, b.png, and report.json in --output-dir.`;
 
@@ -92,9 +90,16 @@ function parseArguments(argv) {
   if (!Number.isFinite(gain) || gain <= 0 || gain > 2) {
     throw new Error('--gain must be greater than 0 and no greater than 2');
   }
-  const renderScale = Number(values.get('render-scale') ?? 2);
-  if (![1, 2, 4].includes(renderScale)) {
-    throw new Error('--render-scale must be 1, 2, or 4; compact true 8x excludes this lab');
+  const defaultRenderScale = domainAdapter.executionProfile.detailScales.includes(2)
+    ? 2 : domainAdapter.executionProfile.detailScales[0];
+  const renderScale = Number(values.get('render-scale') ?? defaultRenderScale);
+  if (!domainAdapter.executionProfile.detailScales.includes(renderScale)) {
+    throw new Error(
+      `--render-scale for ${domain} must be ${
+        domainAdapter.executionProfile.detailScales.join(', ')
+      };`
+      + ' unsupported paths preserve the baseline',
+    );
   }
   const gpu = values.get('gpu') ?? 'auto';
   if (gpu !== 'auto' && gpu !== 'swiftshader') {
@@ -140,29 +145,6 @@ function parseArguments(argv) {
   });
 }
 
-function auditUrl(options) {
-  const url = new URL(options.baseUrl);
-  const parameters = url.searchParams;
-  parameters.set('scene', options.fixtureAdapter.scene);
-  parameters.set('inputAudit', '1');
-  parameters.set('auditStage', 'visual-lab');
-  parameters.set('renderLook', 'realistic');
-  parameters.set('renderScale', String(options.renderScale));
-  // Retain the diagnostic default framebuffer for the alpha/support proof.
-  parameters.set('visualLabAudit', '1');
-  parameters.set('visualLab', options.domain);
-  parameters.set('visualVariant', '0');
-  // The target is domain-specific: gas consumes a propagated atmosphere style
-  // byte, while liquid and emission consume semantic material IDs.
-  parameters.set('visualTarget', String(options.target));
-  parameters.set('visualGain', String(options.gain));
-  for (const [name, value] of Object.entries(options.domainAdapter.urlParameters)) {
-    parameters.set(name, value);
-  }
-  parameters.delete('renderer');
-  return url;
-}
-
 async function main() {
   const options = parseArguments(process.argv.slice(2));
   if (options.help) {
@@ -170,7 +152,7 @@ async function main() {
     return;
   }
 
-  const url = auditUrl(options);
+  const url = buildVisualLabCaptureUrl(options.baseUrl, options);
   await ensureServer(url, options.bundle);
   await mkdir(options.outputDir, { recursive: true });
   const chromePath = await resolveChrome(options.chrome);
@@ -238,7 +220,7 @@ async function main() {
         requestAnimationFrame(() => resolve(true))));
     })()`);
     await waitFor(async () => {
-      const snapshot = await snapshotState(cdp, options.domainAdapter.fieldAlphaMethod);
+      const snapshot = await snapshotState(cdp, options.domainAdapter.evidence.readerMethod);
       return snapshot.semantic.occupied > 0
         && snapshot.fieldAlpha.nonzero > 0
         && snapshot.framebufferAlpha.nonzero > 0;
@@ -286,6 +268,13 @@ async function main() {
       fixtureScene: options.fixtureAdapter.scene,
       fixturePreparation: options.fixtureAdapter.preparation?.method ?? 'scene',
       targetKind: options.domainAdapter.targetKind,
+      domainCapability: {
+        targetKind: options.domainAdapter.targetKind,
+        executionProfile: options.domainAdapter.executionProfile,
+        evidence: options.domainAdapter.evidence,
+        fixedUrlParameters: options.domainAdapter.fixedUrlParameters,
+      },
+      captureProtocol: VISUAL_LAB_CAPTURE_PROTOCOL,
       gain: options.gain,
       renderScale: options.renderScale,
       gpu: options.gpu,
@@ -433,13 +422,17 @@ async function waitForPage(cdp, options, expectedVariant) {
     }
     const dataset = canvas.dataset;
     const backend = audit.backend();
+    const executionProfile = ${JSON.stringify(options.domainAdapter.executionProfile)};
+    const datasetRequirements = ${JSON.stringify(VISUAL_LAB_CAPTURE_PROTOCOL.datasetRequirements)};
     const expectedBacking = (audit.width * ${options.renderScale}) + 'x'
       + (audit.height * ${options.renderScale});
-    return backend.backend === 'webgl'
+    return backend.backend === executionProfile.backend
       && backend.outputScale === ${options.renderScale}
-      && dataset.renderer === 'semantic-field-webgl'
-      && dataset.hdrPipeline === 'active'
-      && dataset.renderLook === 'realistic'
+      && dataset.renderer === datasetRequirements.renderer
+      && dataset.hdrPipeline === datasetRequirements.hdrPipeline
+      && dataset.renderLook === ${JSON.stringify(
+        VISUAL_LAB_CAPTURE_PROTOCOL.fixedUrlParameters.renderLook
+      )}
       && Number(dataset.outputScale) === ${options.renderScale}
       && dataset.backingSize === expectedBacking
       && dataset.visualLabDomain === ${JSON.stringify(options.domain)}
@@ -489,7 +482,7 @@ async function captureVariant(cdp, options, variant) {
       && Number(canvas.dataset.visualLabGain) === ${options.gain};
   })()`), VARIANT_SETTLE_TIMEOUT_MS, `${variant.name} lab dataset`);
 
-  const state = await snapshotState(cdp, options.domainAdapter.fieldAlphaMethod);
+  const state = await snapshotState(cdp, options.domainAdapter.evidence.readerMethod);
   assertVariantState(state, options, variant);
   const clip = await evaluate(cdp, `(() => {
     const rect = document.querySelector('.semantic-field-canvas').getBoundingClientRect();
@@ -518,12 +511,20 @@ async function captureVariant(cdp, options, variant) {
 
 function assertVariantState(state, options, variant) {
   const expectedBacking = `${state.world.width * options.renderScale}x${state.world.height * options.renderScale}`;
-  assert(state.backend.backend === 'webgl', `${variant.name} did not use WebGL`);
+  const { executionProfile } = options.domainAdapter;
+  const { datasetRequirements } = VISUAL_LAB_CAPTURE_PROTOCOL;
+  assert(state.backend.backend === executionProfile.backend,
+    `${variant.name} backend is ${state.backend.backend}, expected ${executionProfile.backend}`);
   assert(state.backend.outputScale === options.renderScale,
     `${variant.name} backend scale is ${state.backend.outputScale}, expected ${options.renderScale}`);
-  assert(state.dataset.renderer === 'semantic-field-webgl', `${variant.name} renderer dataset is wrong`);
-  assert(state.dataset.hdrPipeline === 'active', `${variant.name} HDR pipeline is inactive`);
-  assert(state.dataset.renderLook === 'realistic', `${variant.name} render look is not realistic`);
+  assert(state.dataset.renderer === datasetRequirements.renderer,
+    `${variant.name} renderer dataset is wrong`);
+  assert(state.dataset.hdrPipeline === datasetRequirements.hdrPipeline,
+    `${variant.name} pipeline dataset is wrong`);
+  assert(
+    state.dataset.renderLook === VISUAL_LAB_CAPTURE_PROTOCOL.fixedUrlParameters.renderLook,
+    `${variant.name} render look is not ${VISUAL_LAB_CAPTURE_PROTOCOL.fixedUrlParameters.renderLook}`,
+  );
   assert(state.dataset.backingSize === expectedBacking,
     `${variant.name} backing is ${state.dataset.backingSize}, expected ${expectedBacking}`);
   assert(state.dataset.visualLabDomain === options.domain, `${variant.name} lab domain is wrong`);

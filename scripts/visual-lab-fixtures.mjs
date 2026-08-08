@@ -6,6 +6,57 @@
 
 const anyTarget = null;
 
+const VISUAL_LAB_CAPTURE_EXECUTION_PROFILE = Object.freeze({
+  detailScales: Object.freeze([1, 2, 4]),
+  backend: 'webgl',
+  pipeline: 'normal-hdr',
+  variantZero: 'pixel-preserving-baseline',
+  fallbacks: Object.freeze({
+    classic: 'disabled-preserve-baseline',
+    canvas2d: 'disabled-preserve-baseline',
+    hdrUnavailable: 'disabled-preserve-baseline',
+    detail8x: 'disabled-preserve-baseline',
+  }),
+});
+
+export const VISUAL_LAB_CAPTURE_PROTOCOL = Object.freeze({
+  fixedUrlParameters: Object.freeze({
+    inputAudit: '1',
+    auditStage: 'visual-lab',
+    renderLook: 'realistic',
+    visualLabAudit: '1',
+  }),
+  dynamicUrlParameterNames: Object.freeze([
+    'scene',
+    'renderScale',
+    'visualLab',
+    'visualVariant',
+    'visualTarget',
+    'visualGain',
+    'renderer',
+  ]),
+  datasetRequirements: Object.freeze({
+    renderer: 'semantic-field-webgl',
+    hdrPipeline: 'active',
+  }),
+});
+
+const PROTECTED_FIXED_URL_PARAMETER_NAMES = new Set([
+  ...Object.keys(VISUAL_LAB_CAPTURE_PROTOCOL.fixedUrlParameters),
+  ...VISUAL_LAB_CAPTURE_PROTOCOL.dynamicUrlParameterNames,
+]);
+
+const assertFixedUrlParametersDoNotCollide = (domain, fixedUrlParameters) => {
+  for (const parameterName of Object.keys(fixedUrlParameters)) {
+    if (PROTECTED_FIXED_URL_PARAMETER_NAMES.has(parameterName)) {
+      throw new Error(
+        `Visual Lab domain ${domain} fixed URL parameter ${JSON.stringify(parameterName)}`
+        + ' collides with the common capture protocol',
+      );
+    }
+  }
+};
+
 const formatAlternatives = (values) => {
   if (values.length < 2) return values[0] ?? '';
   if (values.length === 2) return `${values[0]} or ${values[1]}`;
@@ -32,31 +83,79 @@ const freezeAdapter = ({
   requirement,
 });
 
-const freezeDomain = ({ name, targetKind, fieldAlphaMethod, urlParameters = {} }) => Object.freeze({
-  name,
-  targetKind,
-  fieldAlphaMethod,
-  urlParameters: Object.freeze({ ...urlParameters }),
-});
+const freezeDomain = ({
+  name, targetKind, evidence, fixedUrlParameters = {},
+}) => {
+  assertFixedUrlParametersDoNotCollide(name, fixedUrlParameters);
+  return Object.freeze({
+    name,
+    targetKind,
+    executionProfile: VISUAL_LAB_CAPTURE_EXECUTION_PROFILE,
+    evidence: Object.freeze({ ...evidence }),
+    fixedUrlParameters: Object.freeze({ ...fixedUrlParameters }),
+  });
+};
 
-export const VISUAL_LAB_DOMAIN_ADAPTERS = Object.freeze([
-  freezeDomain({
+export const createVisualLabDomainCatalog = (domains) => Object.freeze(
+  domains.map(freezeDomain),
+);
+
+export const VISUAL_LAB_DOMAIN_ADAPTERS = createVisualLabDomainCatalog([
+  {
     name: 'gas',
     targetKind: 'propagated-atmosphere-style-byte',
-    fieldAlphaMethod: 'atmosphereFieldAlpha',
-  }),
-  freezeDomain({
+    evidence: { readerMethod: 'atmosphereFieldAlpha', plane: 'atmosphere-alpha' },
+  },
+  {
     name: 'liquid',
     targetKind: 'semantic-material-id',
-    fieldAlphaMethod: 'liquidFieldAlpha',
-    urlParameters: { liquidBodyVfx: '1', liquidSurfaceVfx: '1' },
-  }),
-  freezeDomain({
+    evidence: { readerMethod: 'liquidFieldAlpha', plane: 'liquid-alpha' },
+    fixedUrlParameters: { liquidBodyVfx: '1', liquidSurfaceVfx: '1' },
+  },
+  {
     name: 'emission',
     targetKind: 'semantic-material-id',
-    fieldAlphaMethod: 'emissionFieldAlpha',
-  }),
+    evidence: { readerMethod: 'emissionFieldAlpha', plane: 'emission-alpha' },
+  },
 ]);
+
+/** Builds one deterministic capture URL without mutating the supplied base URL. */
+export function buildVisualLabCaptureUrl(baseUrl, request) {
+  const url = new URL(baseUrl);
+  const parameters = url.searchParams;
+  for (const [name, value] of Object.entries(VISUAL_LAB_CAPTURE_PROTOCOL.fixedUrlParameters)) {
+    parameters.set(name, value);
+  }
+
+  const dynamicValues = {
+    scene: request.fixtureAdapter.scene,
+    renderScale: String(request.renderScale),
+    visualLab: request.domain,
+    visualVariant: '0',
+    visualTarget: String(request.target),
+    visualGain: String(request.gain),
+    renderer: null,
+  };
+  const dynamicNames = VISUAL_LAB_CAPTURE_PROTOCOL.dynamicUrlParameterNames;
+  const dynamicKeys = Object.keys(dynamicValues);
+  if (dynamicKeys.length !== dynamicNames.length
+    || dynamicKeys.some((name) => !dynamicNames.includes(name))) {
+    throw new Error('Visual Lab dynamic URL values do not match the capture protocol');
+  }
+  for (const name of dynamicNames) {
+    const value = dynamicValues[name];
+    if (value === null) parameters.delete(name);
+    else parameters.set(name, value);
+  }
+
+  assertFixedUrlParametersDoNotCollide(
+    request.domainAdapter.name, request.domainAdapter.fixedUrlParameters,
+  );
+  for (const [name, value] of Object.entries(request.domainAdapter.fixedUrlParameters)) {
+    parameters.set(name, value);
+  }
+  return url;
+}
 
 export const VISUAL_LAB_FIXTURE_ADAPTERS = Object.freeze([
   freezeAdapter({

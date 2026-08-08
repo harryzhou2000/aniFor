@@ -3,9 +3,12 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS } from '../src/renderer/visual-lab.ts';
 import {
+  buildVisualLabCaptureUrl,
   buildVisualLabStartupExpression,
+  createVisualLabDomainCatalog,
   resolveVisualLabDomain,
   resolveVisualLabFixture,
+  VISUAL_LAB_CAPTURE_PROTOCOL,
   VISUAL_LAB_DOMAIN_ADAPTERS,
   VISUAL_LAB_FIXTURE_ADAPTERS,
   visualLabDomainNames,
@@ -19,32 +22,127 @@ const runStartupExpression = (adapter, audit, scene = 'showcase') => Function(
 });
 
 describe('Visual Lab fixture adapters', () => {
-  it('centralizes domain query parameters, target kinds, and alpha readers', () => {
+  it('centralizes the common capture protocol and domain capability profiles', () => {
+    expect(VISUAL_LAB_CAPTURE_PROTOCOL).toEqual({
+      fixedUrlParameters: {
+        inputAudit: '1',
+        auditStage: 'visual-lab',
+        renderLook: 'realistic',
+        visualLabAudit: '1',
+      },
+      dynamicUrlParameterNames: [
+        'scene', 'renderScale', 'visualLab', 'visualVariant',
+        'visualTarget', 'visualGain', 'renderer',
+      ],
+      datasetRequirements: {
+        renderer: 'semantic-field-webgl',
+        hdrPipeline: 'active',
+      },
+    });
     expect(visualLabDomainNames()).toEqual(['gas', 'liquid', 'emission']);
     expect(resolveVisualLabDomain('gas')).toMatchObject({
       targetKind: 'propagated-atmosphere-style-byte',
-      fieldAlphaMethod: 'atmosphereFieldAlpha',
-      urlParameters: {},
+      executionProfile: {
+        detailScales: [1, 2, 4],
+        backend: 'webgl',
+        pipeline: 'normal-hdr',
+        variantZero: 'pixel-preserving-baseline',
+        fallbacks: {
+          classic: 'disabled-preserve-baseline',
+          canvas2d: 'disabled-preserve-baseline',
+          hdrUnavailable: 'disabled-preserve-baseline',
+          detail8x: 'disabled-preserve-baseline',
+        },
+      },
+      evidence: { readerMethod: 'atmosphereFieldAlpha', plane: 'atmosphere-alpha' },
+      fixedUrlParameters: {},
     });
     expect(resolveVisualLabDomain('liquid')).toMatchObject({
       targetKind: 'semantic-material-id',
-      fieldAlphaMethod: 'liquidFieldAlpha',
-      urlParameters: { liquidBodyVfx: '1', liquidSurfaceVfx: '1' },
+      executionProfile: { detailScales: [1, 2, 4] },
+      evidence: { readerMethod: 'liquidFieldAlpha', plane: 'liquid-alpha' },
+      fixedUrlParameters: { liquidBodyVfx: '1', liquidSurfaceVfx: '1' },
     });
-    expect(resolveVisualLabDomain('emission').fieldAlphaMethod).toBe('emissionFieldAlpha');
+    expect(resolveVisualLabDomain('emission').evidence).toEqual({
+      readerMethod: 'emissionFieldAlpha', plane: 'emission-alpha',
+    });
     expect(() => resolveVisualLabDomain('powder'))
       .toThrow('--domain must be gas, liquid, or emission');
   });
 
-  it('matches renderer capability domains and target semantics exactly', () => {
+  it('matches renderer capability domains, targets, and execution profiles exactly', () => {
     const renderer = Object.entries(VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS)
-      .map(([name, { targetKind }]) => ({ name, targetKind }))
-      .sort((left, right) => left.name.localeCompare(right.name));
+      .map(([domain, { targetKind, executionProfile }]) => ({
+        domain, targetKind, executionProfile,
+      }))
+      .sort((left, right) => left.domain.localeCompare(right.domain));
     const capture = VISUAL_LAB_DOMAIN_ADAPTERS
-      .map(({ name, targetKind }) => ({ name, targetKind }))
-      .sort((left, right) => left.name.localeCompare(right.name));
+      .map(({ name: domain, targetKind, executionProfile }) => ({
+        domain, targetKind, executionProfile,
+      }))
+      .sort((left, right) => left.domain.localeCompare(right.domain));
 
     expect(capture).toEqual(renderer);
+  });
+
+  it('rejects domain fixed parameters that collide with common or dynamic protocol keys', () => {
+    const base = {
+      name: 'test',
+      targetKind: 'semantic-material-id',
+      evidence: { readerMethod: 'testFieldAlpha', plane: 'test-alpha' },
+    };
+    const protectedNames = [
+      ...Object.keys(VISUAL_LAB_CAPTURE_PROTOCOL.fixedUrlParameters),
+      ...VISUAL_LAB_CAPTURE_PROTOCOL.dynamicUrlParameterNames,
+    ];
+    for (const parameterName of protectedNames) {
+      expect(() => createVisualLabDomainCatalog([{
+        ...base, fixedUrlParameters: { [parameterName]: 'collision' },
+      }])).toThrow(`fixed URL parameter ${JSON.stringify(parameterName)}`);
+    }
+
+    expect(createVisualLabDomainCatalog([{
+      ...base, fixedUrlParameters: { liquidBodyVfx: '1' },
+    }])[0].fixedUrlParameters).toEqual({ liquidBodyVfx: '1' });
+  });
+
+  it('builds capture URLs from the protocol while preserving unrelated parameters', () => {
+    const baseUrl = new URL(
+      'https://example.test/app?keep=retained&inputAudit=hostile&auditStage=hostile'
+      + '&renderLook=classic&visualLabAudit=0&scene=hostile&renderScale=8'
+      + '&visualLab=powder&visualVariant=2&visualTarget=255&visualGain=2'
+      + '&renderer=canvas&liquidBodyVfx=0&liquidSurfaceVfx=0',
+    );
+    const domainAdapter = resolveVisualLabDomain('liquid');
+    const fixtureAdapter = resolveVisualLabFixture('water-motion', 'liquid', 2);
+    const url = buildVisualLabCaptureUrl(baseUrl, {
+      fixtureAdapter,
+      domainAdapter,
+      domain: 'liquid',
+      target: 2,
+      gain: 1.25,
+      renderScale: 4,
+    });
+
+    expect(url).not.toBe(baseUrl);
+    expect(baseUrl.searchParams.get('renderer')).toBe('canvas');
+    expect(Object.fromEntries([...url.searchParams].filter(([name]) => (
+      Object.hasOwn(VISUAL_LAB_CAPTURE_PROTOCOL.fixedUrlParameters, name)
+    )))).toEqual(VISUAL_LAB_CAPTURE_PROTOCOL.fixedUrlParameters);
+    expect(Object.fromEntries(VISUAL_LAB_CAPTURE_PROTOCOL.dynamicUrlParameterNames.map((name) => [
+      name, url.searchParams.get(name),
+    ]))).toEqual({
+      scene: 'showcase',
+      renderScale: '4',
+      visualLab: 'liquid',
+      visualVariant: '0',
+      visualTarget: '2',
+      visualGain: '1.25',
+      renderer: null,
+    });
+    expect(url.searchParams.get('liquidBodyVfx')).toBe('1');
+    expect(url.searchParams.get('liquidSurfaceVfx')).toBe('1');
+    expect(url.searchParams.get('keep')).toBe('retained');
   });
 
   it('keeps the general showcase compatible with every implemented capture domain', () => {
@@ -89,12 +187,28 @@ describe('Visual Lab fixture adapters', () => {
       .toThrow('--fixture=water-motion requires --domain=liquid --target=2');
   });
 
-  it('keeps every adapter and nested constraint JSON-serializable and immutable', () => {
+  it('keeps the protocol and every nested adapter value JSON-safe and deeply frozen', () => {
     expect(() => JSON.stringify({
-      domains: VISUAL_LAB_DOMAIN_ADAPTERS, fixtures: VISUAL_LAB_FIXTURE_ADAPTERS,
+      protocol: VISUAL_LAB_CAPTURE_PROTOCOL,
+      domains: VISUAL_LAB_DOMAIN_ADAPTERS,
+      fixtures: VISUAL_LAB_FIXTURE_ADAPTERS,
     })).not.toThrow();
+    expect(Object.isFrozen(VISUAL_LAB_CAPTURE_PROTOCOL)).toBe(true);
+    expect(Object.isFrozen(VISUAL_LAB_CAPTURE_PROTOCOL.fixedUrlParameters)).toBe(true);
+    expect(Object.isFrozen(VISUAL_LAB_CAPTURE_PROTOCOL.dynamicUrlParameterNames)).toBe(true);
+    expect(Object.isFrozen(VISUAL_LAB_CAPTURE_PROTOCOL.datasetRequirements)).toBe(true);
     for (const adapter of [...VISUAL_LAB_DOMAIN_ADAPTERS, ...VISUAL_LAB_FIXTURE_ADAPTERS]) {
       expect(Object.isFrozen(adapter)).toBe(true);
+    }
+    const [firstDomain] = VISUAL_LAB_DOMAIN_ADAPTERS;
+    for (const adapter of VISUAL_LAB_DOMAIN_ADAPTERS) {
+      expect(adapter.executionProfile).toBe(firstDomain.executionProfile);
+      expect(Object.isFrozen(adapter.executionProfile)).toBe(true);
+      expect(Object.isFrozen(adapter.executionProfile.detailScales)).toBe(true);
+      expect(Object.isFrozen(adapter.executionProfile.fallbacks)).toBe(true);
+      expect(Object.isFrozen(adapter.evidence)).toBe(true);
+      expect(Object.isFrozen(adapter.fixedUrlParameters)).toBe(true);
+      expect(JSON.parse(JSON.stringify(adapter))).toEqual(adapter);
     }
     for (const adapter of VISUAL_LAB_FIXTURE_ADAPTERS) {
       expect(Object.isFrozen(adapter.constraints)).toBe(true);
@@ -182,10 +296,14 @@ describe('Visual Lab fixture adapters', () => {
     for (const [argument, message] of [
       ['--domain=powder', '--domain must be gas, liquid, or emission'],
       ['--target=256', '--target must be an integer from 0 through 255'],
+      ['--domain=gas --render-scale=8',
+        '--render-scale for gas must be 1, 2, 4; unsupported paths preserve the baseline'],
       ['--fixture=oil-motion', '--fixture=oil-motion requires --domain=liquid --target=8'],
       ['--fixture=water-motion', '--fixture=water-motion requires --domain=liquid --target=2'],
     ]) {
-      const child = spawnSync(process.execPath, [auditScript.pathname, argument], {
+      const child = spawnSync(process.execPath, [
+        auditScript.pathname, ...argument.split(' '),
+      ], {
         encoding: 'utf8', timeout: 5_000,
       });
       expect(child.status).toBe(1);

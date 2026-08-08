@@ -1,34 +1,37 @@
 ## Current execution objective — framework leverage
 
 Prioritize an effective rendering-experiment framework over further isolated
-visual-detail work. The immediate milestone is a modular, typed Visual Lab
-adapter facade: gas, liquid, and emission candidates live in domain-local shader
-modules; one stable assembly ABI connects them to the normal-HDR compositor; and
-frozen renderer/capture descriptors share exact, tested domain and target
-semantics. Extend that vocabulary next with implementation state, resource
-budgets, supported Detail/fallback paths, fixture preparation, field evidence,
-and fixed query requirements. A new normal-scale A/B experiment should normally
-touch one domain module plus descriptor metadata, with no presenter, app
-lifecycle, or CDP branch.
+visual-detail work. The modular typed Visual Lab facade is now deployed: gas,
+liquid, and emission candidates live in domain-local shader modules behind one
+stable normal-HDR assembly ABI. The immediate milestone is an executable
+capability profile for that facade: frozen renderer/capture descriptors must
+share exact domain, target, supported Detail/fallback, evidence, URL, and
+resource-budget semantics, and the generic capture runner must consume that
+metadata without domain branches. Follow it with named capture recipes so a new
+normal-scale A/B experiment normally touches one domain module and one catalog
+entry—not presenter setup, app lifecycle, package-script duplication, or CDP
+branching.
 
 The fixed `domain/variant/target/gain` state, promotion-safe same-page switching,
 declarative fixture startup, and production-bundle off/A/B route already form
 the base. E62 Oxygen, E69 Oil motion, and E65 Water motion have been folded into
 their accepted parent baselines and their one-off selector/telemetry/verifier
-plumbing removed. E65 is complete and deployed: `main_codex` and Pages serve
-revision `c85e3cfdd1deb16dd4994a51db29929c01df76a3` after successful workflow
-run `31274976219`.
+plumbing removed. The modular adapter and detached-browser lifecycle checkpoint
+is complete and deployed: `main_codex` and Pages serve revision
+`cf39b9cbad824e18d5b2a145b2ac3655d73ff5c1` after successful workflow run
+`31276908367` and independent live-revision/asset-closure verification.
 
-The next stable deployment checkpoint is the adapter/facade milestone, not a
-fourth effect. It must enforce exact renderer/capture metadata parity, preserve the shader
-ABI and resource contracts, keep unsupported domains inert, and make fixtures,
-off/A/B evidence, Chrome cleanup, build verification, Pages asset closure, and
-live-revision verification reusable gates. Deploy that checkpoint once its real
-normal-WebGL proof passes. Then shift to rapid material experiments, choose
-winners from visual evidence, and migrate only accepted treatments whose
-promotion removes more special-case code than it adds. Canvas remains the
-resilient semantic fallback and true 8× remains on its compact direct path
-unless a separately budgeted design proves otherwise.
+The next stable deployment checkpoint is the capability-profile milestone, not
+a fourth effect. It must make supported paths, baseline-preserving fallbacks,
+field evidence, fixed capture protocol, and exact per-domain sampler/resource
+budgets machine-readable; enforce renderer/capture parity; keep the harness
+domain-branch-free; and retain reusable cleanup, build, Pages asset-closure,
+and live-revision gates. After deployment, add a named recipe/catalog layer and
+candidate result records so experiments are cheap to invoke, compare, accept,
+or discard. Only then resume rapid material experiments and migrate treatments
+whose visual evidence wins and whose promotion removes more special-case code
+than it adds. Canvas remains the resilient semantic fallback and true 8× stays
+on its compact direct path unless a separately budgeted design proves otherwise.
 
 ## Visual north star
 
