@@ -47,6 +47,7 @@ import { auditGbmbForceGraphics } from './gbmb-force-graphics-audit.mjs';
 import { auditDistilledDieselLiquidGraphics } from './distilled-diesel-liquid-graphics-audit.mjs';
 import { auditDenseBodyAmbientGraphics } from './dense-body-ambient-graphics-audit.mjs';
 import { auditPhotonMetalIrradianceVfx } from './photon-metal-irradiance-vfx-audit.mjs';
+import { auditCeramicBlackbodyVfx } from './ceramic-blackbody-vfx-audit.mjs';
 import {
   assertPairedLavaStateGraphics,
   auditLavaStateGraphics,
@@ -684,6 +685,10 @@ const photonMetalIrradianceVfxOnly = process.argv.includes('--photon-metal-irrad
 if (photonMetalIrradianceVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--photon-metal-irradiance-vfx-only requires --webgl-only');
 }
+const ceramicBlackbodyVfxOnly = process.argv.includes('--ceramic-blackbody-vfx-only');
+if (ceramicBlackbodyVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--ceramic-blackbody-vfx-only requires --webgl-only');
+}
 const focusedVfxOnlyFlags = [
   hdrVfxOnly, volumeVfxOnly, liquidBodyVfxOnly, liquidSurfaceVfxOnly, liquidMotionVfxOnly,
   oilMotionVfxOnly,
@@ -714,9 +719,10 @@ const focusedVfxOnlyFlags = [
   vibrMacroReliefVfxOnly,
   woodTanninVfxOnly,
   photonMetalIrradianceVfxOnly,
+  ceramicBlackbodyVfxOnly,
 ];
 if (focusedVfxOnlyFlags.filter(Boolean).length > 1) {
-  throw new Error('HDR/volume/liquid-body/liquid-surface/liquid-motion/oil-motion/water-curvature/fire-flame/cflm-cold-flame/gas-body/gas-motion/powder-body/concrete-mesostrata-retention/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/water-metal-transmission/water-metal-separation/water-metal-fresnel-spectrum/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/oil-depth-transmission/rock-roughness/rock-mesostructure/rock-weathered-facet/water-body/water-volume-recession/acid-body/soap-body/nitro-body/sooty-powder-body/thermite-body/snowpack-body/quartz-mesostructure/c4-body/deut-body/hydrogen-body/carbon-dioxide-body/carbon-dioxide-core-fold/steam-condensate/fog-core-diffuse/radioactive-solid-body/iszs-crystalline/iszs-crystal-hierarchy/vibr-macro-relief/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/plant-canopy-tissue/plant-canopy-interlock/plant-canopy-hierarchy/plant-canopy-foliage/plant-canopy-lifecycle/wood-tannin/photon-metal-irradiance focused audits are mutually exclusive');
+  throw new Error('HDR/volume/liquid-body/liquid-surface/liquid-motion/oil-motion/water-curvature/fire-flame/cflm-cold-flame/gas-body/gas-motion/powder-body/concrete-mesostrata-retention/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/water-metal-transmission/water-metal-separation/water-metal-fresnel-spectrum/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/oil-depth-transmission/rock-roughness/rock-mesostructure/rock-weathered-facet/water-body/water-volume-recession/acid-body/soap-body/nitro-body/sooty-powder-body/thermite-body/snowpack-body/quartz-mesostructure/c4-body/deut-body/hydrogen-body/carbon-dioxide-body/carbon-dioxide-core-fold/steam-condensate/fog-core-diffuse/radioactive-solid-body/iszs-crystalline/iszs-crystal-hierarchy/vibr-macro-relief/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/plant-canopy-tissue/plant-canopy-interlock/plant-canopy-hierarchy/plant-canopy-foliage/plant-canopy-lifecycle/wood-tannin/photon-metal-irradiance/ceramic-blackbody focused audits are mutually exclusive');
 }
 
 const layoutOnly = process.argv.includes('--layout-only');
@@ -791,6 +797,7 @@ const denseBodyAmbientOnly = process.argv.includes('--dense-body-ambient-only');
 const denseBodyAmbientEight = denseBodyAmbientOnly && process.argv.includes('--render-scale=8');
 const photonMetalIrradianceVfxEight = photonMetalIrradianceVfxOnly
   && process.argv.includes('--render-scale=8');
+const ceramicBlackbodyVfxEight = ceramicBlackbodyVfxOnly && process.argv.includes('--render-scale=8');
 const lavaStateGraphicsOnly = process.argv.includes('--lava-state-graphics-only');
 const botanicalLifecycleGraphicsOnly = process.argv.includes('--botanical-lifecycle-graphics-only');
 const sparkStateGraphicsOnly = process.argv.includes('--spark-state-graphics-only');
@@ -3836,6 +3843,27 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, photonMetalIrradianceVfx, browserErrors: errors.length };
+    }
+    if (ceramicBlackbodyVfxOnly) {
+      const ceramicBlackbodyVfx = await auditCeramicBlackbodyVfx({
+        cdp,
+        mode,
+        evaluate,
+        waitFor,
+        waitForStablePageCapture,
+        captureSettledPage,
+        waitForNextWebGLPresentation,
+        outputScale: ceramicBlackbodyVfxEight ? 8 : 2,
+        screenshotRequest,
+        variantScreenshotPath,
+        writeFile,
+        browserErrors: errors,
+        sampleBackdropRefractionRegions,
+        assert,
+      });
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, ceramicBlackbodyVfx, browserErrors: errors.length };
     }
     if (lavaStateGraphicsOnly) {
       const lavaStateGraphics = await auditLavaStateGraphics({

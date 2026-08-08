@@ -941,6 +941,13 @@ export class MaterialRenderer {
     this.presenter?.setPhotonMetalIrradianceVfxEnabled(enabled);
   }
 
+  /** Normal-WebGL exact Ceramic temperature relief; Canvas remains unchanged. */
+  setCeramicBlackbodyVfxEnabled(enabled: boolean): void {
+    // The presenter owns the uniform mutation and submitted frame. A missing
+    // presenter is the resilient Canvas path, where E82 is deliberately inert.
+    this.presenter?.setCeramicBlackbodyVfxEnabled(enabled);
+  }
+
   /** Native DLAY countdown is a state-owned RGB cue, never a JavaScript timer. */
   setDlayStateStylingEnabled(enabled: boolean): void {
     if (enabled === this.dlayStateStylingEnabled) return;

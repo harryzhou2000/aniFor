@@ -99,6 +99,9 @@ import {
   CERAMIC_GLAZE_VFX_AUDIT, prepareCeramicGlazeVfxFixture,
 } from './ceramic-glaze-vfx-audit';
 import {
+  CERAMIC_TEMPERATURE_VFX_AUDIT, prepareCeramicTemperatureVfxFixture,
+} from './ceramic-temperature-vfx-audit';
+import {
   BOTANICAL_BODY_VFX_AUDIT, prepareBotanicalBodyVfxFixture,
 } from './botanical-body-vfx-audit';
 import {
@@ -657,6 +660,9 @@ export class Game {
       setPhotonMetalIrradianceVfx: (enabled) => {
         this.renderer.setPhotonMetalIrradianceVfxEnabled(enabled);
       },
+      setCeramicBlackbodyVfx: (enabled) => {
+        this.renderer.setCeramicBlackbodyVfxEnabled(enabled);
+      },
       setRoleMaterialStyling: (enabled) => {
         this.renderer.setRoleMaterialStylingEnabled(enabled);
       },
@@ -988,6 +994,14 @@ export class Game {
       ceramicGlazeVfxFixture: () => CERAMIC_GLAZE_VFX_AUDIT,
       prepareCeramicGlazeVfxFixture: () => {
         prepareCeramicGlazeVfxFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      ceramicTemperatureVfxFixture: () => CERAMIC_TEMPERATURE_VFX_AUDIT,
+      prepareCeramicTemperatureVfxFixture: () => {
+        prepareCeramicTemperatureVfxFixture(this.simulation);
+        // E82 owns authoritative Uint16 temperature and native wall state in
+        // addition to the semantic material plane; refresh every packed input.
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },

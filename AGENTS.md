@@ -2,13 +2,18 @@
 
 ## Current direction
 
-The E80 dense-body ambient floor and E81 native-PHOT spectral irradiance on
-exact deep Metal are accepted across normal WebGL and their strict true-8×
-exclusions. The next visual preflight is E82: authoritative-temperature
-blackbody emission for an exact native hot-material owner, rather than a
-generic light system. The rejected Powder-concavity idea must not be revived by
-misnaming directional slope or adding an unbudgeted sample. Spend
-most implementation and audit effort on material breadth, native material behaviour, and graphics:
+The E80 dense-body ambient floor, E81 native-PHOT spectral irradiance on exact
+deep Metal, and E82 authoritative-temperature Ceramic blackbody relief are
+accepted across normal WebGL and their compact true-8× exclusions. Pause the
+detail-first E-number ladder here. The primary next objective is a more
+effective rendering-experiment framework: reduce monolithic shader/selector
+pressure, make visual variants cheap to compose and compare, centralize
+experiment metadata and capability/scale budgets, and make deterministic
+visual-lab captures reusable instead of cloning a large audit route for every
+colour or lighting idea. Its first checkpoint should preserve the current
+pixels while establishing the framework seam. The rejected Powder-concavity
+idea must not be revived by misnaming directional slope or adding an
+unbudgeted sample. Continue material breadth, native material behaviour, and graphics:
 expose more TPT
 forces/sources, radioactive matter, botanical growth, phase changes, and
 reactions; give material families distinctive topology-preserving body optics,
@@ -17,6 +22,28 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 1×/2×/4×/8×. Treat the now-correct viewport, cursor, brush, pan, zoom, aspect-fit,
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
+
+## Visual experiment cadence
+
+Optimize presentation work for iteration speed. For an RGB-only visual idea,
+build a deterministic comparison scene, capture disabled/enabled images at one
+representative normal WebGL scale, inspect the result, and checkpoint the
+visually preferred variant early. Competing treatments may live on short-lived
+experiment branches or consecutive commits so they can be compared or reverted
+without rebuilding a large formal proof first. Record the scene, controls,
+render scale, and aesthetic reason for the choice.
+
+Do not create or run a broad unit-test matrix merely to certify subjective
+visual quality. A normal visual checkpoint needs a compile/build check, a real
+browser capture, and lightweight invariants proportional to its risk. A known
+failure in a purely aesthetic threshold may be documented and checkpointed when
+the A/B comparison is clearly better. Add narrow automated coverage when it
+protects semantics, alpha/support/topology, material ownership, shader
+compilation, resource budgets, viewport/input, or recovery, or when it captures
+a demonstrated regression. Existing protected-contract tests remain useful;
+avoid making every new colour, light, or texture experiment wait for the whole
+historical suite. Shader changes still require a real WebGL run, and anything
+that can affect compact true 8× must receive the bounded 8× safety check.
 
 The accepted visual experiment ladder now runs through E79. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
@@ -1888,11 +1915,32 @@ completed GPU fence (about `5.77 s` on the accepted SwiftShader run), with an
 exact repeated-off framebuffer, no later presentation refresh, and zero browser
 errors.
 
-E82 is a preflight for a bounded normal-WebGL exact-owner blackbody-emission
-response from authoritative native temperature, following the Phase-1
-blackbody roadmap. It must reuse authentic material temperature and preserve
-the established normal/compact topology and true-8× contracts before any
-generic dynamic-light system is considered.
+E82 is the accepted bounded normal-WebGL exact-Ceramic blackbody-relief
+checkpoint, independently selectable with `?ceramicBlackbodyVfx=0|1` while
+remaining a strict child of E19 and the HDR path. It reads authoritative native
+temperature from the existing semantic byte, and packs its selector into
+`uCeramicGlazeVfx`: `0` disables E19/E82, `1` enables E19 only, and `2` enables
+both. That packing avoided the fragment-pressure regression caused by adding a
+new uniform and late generic branch. The response stays inside E19's exact deep
+ordinary Ceramic guards and reuses its depth/crown/pocket values plus the
+existing blackbody helpers; no sampler, texture, field, pass, target, upload,
+allocation, clock, opacity/support/topology, state, or physics decision is
+added.
+
+The five-card native-temperature atlas holds ambient and onset exact, then
+progresses at fit view from warm (`~0.34` RGB RMS) through orange (`~1.38`) to
+bright (`~2.49…2.50`) consistently at 1×/2×/4×. Authored holes/notches,
+one-cell/isolated Ceramic, native walls, Water contact, hot Brick/Metal, blank
+space, and repeated-off frames remain exact. Requested-on compact true 8× is
+inactive at exact `4896×3072`, completes a real GPU fence in about `5.31 s`,
+and reports zero browser errors. Do not add E82 to the compact fragment.
+
+The next checkpoint is framework work rather than E83 material polish. Start by
+extracting a declarative experiment registry and reusable visual-comparison
+route around a small accepted slice, while emitting the same uniforms, dataset
+state, query semantics, and GLSL. Do not combine that seam extraction with a
+new visual treatment; a byte-identical architecture checkpoint makes later
+branch-based A/B work faster and easier to revert.
 
 Contact-audit lesson: a DPR-1 fit-view PNG may merge opposing subcell lobes into
 one CSS pixel. It remains authoritative for visible seam width, topology, and

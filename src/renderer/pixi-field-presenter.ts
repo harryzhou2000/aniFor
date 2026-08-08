@@ -37,6 +37,7 @@ import {
 import { canvasAtmosphereAlphaAtWorldCell } from './canvas-atmosphere-relief';
 import { sampleCanvasFieldAlpha } from './canvas-surface-light';
 import { HDRVfxPipeline, type HDRPipelineInfo } from './hdr-vfx-pipeline';
+import { resolveCeramicBlackbodyVfxEnabled } from './ceramic-blackbody-vfx';
 import {
   resolveBotanicalBodyVfxEnabled,
   resolveBotanicalMesostructureVfxEnabled,
@@ -10979,6 +10980,32 @@ void main() {
       color += (vec3(1.0) - clamp(color, 0.0, 1.0))
         * ceramicReflection * ceramicCrown;
       color *= vec3(1.0) - vec3(0.58, 0.70, 0.90) * ceramicPocket;
+      // E82: Ceramic's native temperature now drives a restrained fired-body
+      // blackbody response inside E19's already-proven exact deep-owner scope.
+      // Packing the E82 selector into E19's existing scalar avoids extending
+      // this large fragment program with another uniform/live register. Reuse
+      // the established depth, face, crown, and pocket values; no sample, field,
+      // pass, target, clock, allocation, opacity, support, ownership, topology,
+      // state, or physics decision is added. The generic HDR blackbody pass
+      // remains authoritative and later composes this body-local relief.
+      if (uCeramicGlazeVfx > 1.5) {
+        float ceramicTemperatureByte = floor(materialTemperature * 255.0 + 0.5);
+        float ceramicThermalBody = ceramicDepth
+          * smoothstep(44.0, 72.0, ceramicTemperatureByte);
+        if (ceramicThermalBody > 0.001) {
+          vec3 ceramicBlackbody = blackbodyColor(ceramicTemperatureByte);
+          float ceramicRadiance = blackbodyHdrRadiance(ceramicTemperatureByte)
+            * ceramicThermalBody;
+          float ceramicThermalGain = min(
+            0.070, ceramicRadiance * (0.040 + ceramicCrown * 0.60)
+          );
+          color += (vec3(1.35) - clamp(color, 0.0, 1.35))
+            * mix(ceramicBlackbody, vec3(1.0, 0.78, 0.44), 0.18)
+            * ceramicThermalGain;
+          color *= vec3(1.0) - vec3(0.06, 0.14, 0.30)
+            * min(0.060, ceramicRadiance * ceramicPocket * 0.80);
+        }
+      }
     }
   }
   if (uEnergyIdentityStyling > 0.5 && halo < 0.5 && surfaceOnly < 0.5
@@ -11988,6 +12015,11 @@ export class PixiFieldPresenter {
     // its accepted static Ceramic identity and declares no E19 selector.
     const ceramicGlazeVfxEnabled = outputScale < 8
       && resolveCeramicGlazeVfxEnabled(renderLook);
+    // E82 is a temperature-driven exact-Ceramic child of the existing normal
+    // HDR blackbody path. Compact true 8x retains its proven static identity
+    // and declares neither this selector nor a parallel thermal branch.
+    const ceramicBlackbodyVfxEnabled = outputScale < 8
+      && ceramicGlazeVfxEnabled && resolveCeramicBlackbodyVfxEnabled(renderLook);
     // E20 replaces repeated band-forming Wood/PLNT body carriers with one
     // organic volume response in normal WebGL. The compact true-8x shader keeps
     // its established botanical grammar and declares no E20 selector.
@@ -12182,7 +12214,10 @@ export class PixiFieldPresenter {
       uRockMesostructureVfx: { value: rockMesostructureVfxEnabled ? 1 : 0, type: 'f32' },
       uRockWeatheredFacetVfx: { value: rockWeatheredFacetVfxEnabled ? 1 : 0, type: 'f32' },
       uPlatinumBodyVfx: { value: platinumBodyVfxEnabled ? 1 : 0, type: 'f32' },
-      uCeramicGlazeVfx: { value: ceramicGlazeVfxEnabled ? 1 : 0, type: 'f32' },
+      uCeramicGlazeVfx: {
+        value: ceramicGlazeVfxEnabled ? (ceramicBlackbodyVfxEnabled ? 2 : 1) : 0,
+        type: 'f32',
+      },
       uBotanicalBodyVfx: { value: botanicalBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uBotanicalMesostructureVfx: {
         value: botanicalMesostructureVfxEnabled ? 1 : 0, type: 'f32',
@@ -12584,6 +12619,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('rockWeatheredFacetVfxAudit') === '1'
             || new URLSearchParams(location.search).get('platinumBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('ceramicGlazeVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('ceramicBlackbodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('botanicalBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('botanicalMesostructureVfxAudit') === '1'
             || new URLSearchParams(location.search).get('botanicalPigmentVfxAudit') === '1'
@@ -12744,6 +12780,9 @@ export class PixiFieldPresenter {
     presenter.app.canvas.dataset.ceramicGlazeVfx = Number(
       presenter.uniforms.uniforms.uCeramicGlazeVfx
     ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.ceramicBlackbodyVfx = Number(
+      presenter.uniforms.uniforms.uCeramicGlazeVfx
+    ) > 1.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.botanicalBodyVfx = Number(
       presenter.uniforms.uniforms.uBotanicalBodyVfx
     ) > 0.5 ? 'active' : 'inactive';
@@ -13407,6 +13446,20 @@ export class PixiFieldPresenter {
     const active = enabled && Number(uniforms.uSolidBodyVfx) > 0.5;
     uniforms.uPhotonMetalIrradianceVfx = active ? 1 : 0;
     this.app.canvas.dataset.photonMetalIrradianceVfx = active ? 'active' : 'inactive';
+    this.renderApplication();
+  }
+
+  /** Normal-WebGL-only hot Ceramic body relief; direct 8x stays unchanged. */
+  setCeramicBlackbodyVfxEnabled(enabled: boolean): void {
+    const uniforms = this.uniforms.uniforms;
+    if (this.outputScale >= 8) {
+      this.app.canvas.dataset.ceramicBlackbodyVfx = 'inactive';
+      return;
+    }
+    const glazeActive = Number(uniforms.uCeramicGlazeVfx) > 0.5;
+    const active = enabled && glazeActive && Number(uniforms.uHDRVfx) > 0.5;
+    uniforms.uCeramicGlazeVfx = glazeActive ? (active ? 2 : 1) : 0;
+    this.app.canvas.dataset.ceramicBlackbodyVfx = active ? 'active' : 'inactive';
     this.renderApplication();
   }
 
@@ -14462,6 +14515,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.rockWeatheredFacetVfx = 'inactive';
         this.app.canvas.dataset.platinumBodyVfx = 'inactive';
         this.app.canvas.dataset.ceramicGlazeVfx = 'inactive';
+        this.app.canvas.dataset.ceramicBlackbodyVfx = 'inactive';
         this.app.canvas.dataset.botanicalBodyVfx = 'inactive';
         this.app.canvas.dataset.botanicalMesostructureVfx = 'inactive';
         this.app.canvas.dataset.botanicalPigmentVfx = 'inactive';

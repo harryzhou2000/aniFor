@@ -168,6 +168,8 @@
     "audit:dense-body-ambient:8x": "npm run build && node scripts/verify-browser-input.mjs --dense-body-ambient-only --render-scale=8 --webgl-only --production-bundle",
     "audit:vfx:photon-metal-irradiance": "npm run build && node scripts/verify-browser-input.mjs --photon-metal-irradiance-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:photon-metal-irradiance:8x": "npm run build && node scripts/verify-browser-input.mjs --photon-metal-irradiance-vfx-only --render-scale=8 --webgl-only --production-bundle --capture-dpr=1",
+    "audit:vfx:ceramic-blackbody": "npm run build && node scripts/verify-browser-input.mjs --ceramic-blackbody-vfx-only --webgl-only --production-bundle --capture-dpr=1",
+    "audit:vfx:ceramic-blackbody:8x": "npm run build && node scripts/verify-browser-input.mjs --ceramic-blackbody-vfx-only --render-scale=8 --webgl-only --production-bundle --capture-dpr=1",
     "audit:lava-state": "node scripts/verify-browser-input.mjs --lava-state-graphics-only",
     "audit:botanical-lifecycle": "node scripts/verify-browser-input.mjs --botanical-lifecycle-graphics-only",
     "audit:spark-state": "node scripts/verify-browser-input.mjs --spark-state-graphics-only",

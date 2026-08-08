@@ -105,6 +105,9 @@ import type { PlasmaCoreVfxAuditSnapshot } from './plasma-core-vfx-audit';
 import type { SolidBodyVfxAuditSnapshot } from './solid-body-vfx-audit';
 import type { RockRoughnessVfxAuditSnapshot } from './rock-roughness-vfx-audit';
 import type { CeramicGlazeVfxAuditSnapshot } from './ceramic-glaze-vfx-audit';
+import type {
+  CeramicTemperatureVfxAuditSnapshot,
+} from './ceramic-temperature-vfx-audit';
 import type { BotanicalBodyVfxAuditSnapshot } from './botanical-body-vfx-audit';
 import type { GlassBodyVfxAuditSnapshot } from './glass-body-vfx-audit';
 import type { WaterBodyVfxAuditSnapshot } from './water-body-vfx-audit';
@@ -188,6 +191,8 @@ export interface BrowserInputAuditApi {
   setSolidFieldLighting(enabled: boolean): void;
   setDenseBodyAmbientFill(enabled: boolean): void;
   setPhotonMetalIrradianceVfx(enabled: boolean): void;
+  /** E82 normal-WebGL Ceramic blackbody body response; true 8x stays inert. */
+  setCeramicBlackbodyVfx(enabled: boolean): void;
   setRoleMaterialStyling(enabled: boolean): void;
   setCellularMaterialStyling(enabled: boolean): void;
   setStructuralRigidStyling(enabled: boolean): void;
@@ -310,6 +315,9 @@ export interface BrowserInputAuditApi {
   prepareRockRoughnessVfxFixture(): void;
   ceramicGlazeVfxFixture(): CeramicGlazeVfxAuditSnapshot;
   prepareCeramicGlazeVfxFixture(): void;
+  /** E82 exposes exact CRMC material/temperature/wall hashes and all card controls. */
+  ceramicTemperatureVfxFixture(): CeramicTemperatureVfxAuditSnapshot;
+  prepareCeramicTemperatureVfxFixture(): void;
   botanicalBodyVfxFixture(): BotanicalBodyVfxAuditSnapshot;
   prepareBotanicalBodyVfxFixture(): void;
   glassBodyVfxFixture(): GlassBodyVfxAuditSnapshot;

@@ -27,6 +27,7 @@ interface PresenterHarness {
   setSolidFieldLightingEnabled: PixiFieldPresenter['setSolidFieldLightingEnabled'];
   setDenseBodyAmbientFillEnabled: PixiFieldPresenter['setDenseBodyAmbientFillEnabled'];
   setPhotonMetalIrradianceVfxEnabled: PixiFieldPresenter['setPhotonMetalIrradianceVfxEnabled'];
+  setCeramicBlackbodyVfxEnabled: PixiFieldPresenter['setCeramicBlackbodyVfxEnabled'];
   setRoleMaterialStylingEnabled: PixiFieldPresenter['setRoleMaterialStylingEnabled'];
   setCellularMaterialStylingEnabled: PixiFieldPresenter['setCellularMaterialStylingEnabled'];
   setStructuralRigidStylingEnabled: PixiFieldPresenter['setStructuralRigidStylingEnabled'];
@@ -1161,6 +1162,91 @@ describe('Pixi presenter startup configuration', () => {
     );
     expect(source).toContain('presenter.app.canvas.dataset.ceramicGlazeVfx');
     expect(source).toContain("this.app.canvas.dataset.ceramicGlazeVfx = 'inactive';");
+  });
+
+  it('keeps E82 Ceramic blackbody deep-owner, normal-WebGL-only, and HDR-dependent', () => {
+    const presenter = presenterHarness();
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e19Start = normal.indexOf('    // E19:');
+    const e19End = normal.indexOf('  }\n  if (uEnergyIdentityStyling', e19Start);
+    const e19 = normal.slice(e19Start, e19End);
+    const e82Start = normal.indexOf('      // E82:');
+    const e82End = normal.indexOf('    }\n  }\n  if (uEnergyIdentityStyling', e82Start);
+    const e82 = normal.slice(e82Start, e82End);
+    const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveDrawingBufferEnd = source.indexOf('resolution: outputScale', preserveDrawingBufferStart);
+    const preserveDrawingBuffer = source.slice(preserveDrawingBufferStart, preserveDrawingBufferEnd);
+
+    expect(eightStart).toBeGreaterThanOrEqual(0);
+    expect(normalStart).toBeGreaterThan(eightStart);
+    expect(normalEnd).toBeGreaterThan(normalStart);
+    expect(e19Start).toBeGreaterThan(0);
+    expect(e19End).toBeGreaterThan(e19Start);
+    expect(e82Start).toBeGreaterThan(0);
+    expect(e82End).toBeGreaterThan(e82Start);
+    expect(normal).toContain('uniform float uCeramicGlazeVfx;');
+    expect(normal).not.toContain('uCeramicBlackbodyVfx');
+    expect(normal.match(/uCeramicGlazeVfx > 1\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uCeramicBlackbodyVfx');
+    expect(eight).not.toContain('ceramicBlackbodyVfx');
+    expect(canvasSource).not.toContain('uCeramicBlackbodyVfx');
+    for (const guard of [
+      'material == 25.0', 'family == 0.0', 'profile == 2.0', 'optics == 8.0',
+      '!materialEmissive', 'traits < 0.5', 'surfaceOnly < 0.5', 'halo < 0.5',
+      'wall < 0.5', 'wallOnly < 0.5', 'emissionOnly < 0.5',
+      'granularSurface < 0.5', 'translucentSurface < 0.5',
+      'foreignMatterContact < 0.5', 'unlikeMaterialContact < 0.5',
+      'solidInterior > 0.001', 'solidOpticalDepth > 6.0 / 255.0',
+    ]) expect(e19).toContain(guard);
+    for (const reusedValue of [
+      'ceramicTemperatureByte', 'ceramicThermalBody', 'ceramicDepth',
+      'ceramicCrown', 'ceramicPocket', 'blackbodyColor(', 'blackbodyHdrRadiance(',
+    ]) expect(e82).toContain(reusedValue);
+    expect(e82).not.toMatch(/\b(?:texture|textureLod|texelFetch)\s*\(/);
+    expect(e82).not.toContain('uTime');
+    expect(e82).not.toContain('gl_FragCoord');
+    expect(e82).not.toMatch(/\b(?:alpha|support|semantic|material|profile|optics|wall)\s*(?:\+=|\*=|=(?!=))/);
+    expect(source.match(/this\.uniforms\.uniforms\.uCeramicGlazeVfx = 0;/g)).toHaveLength(2);
+    expect(source).toMatch(
+      /const ceramicBlackbodyVfxEnabled = outputScale < 8\s*&& ceramicGlazeVfxEnabled && resolveCeramicBlackbodyVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain('value: ceramicGlazeVfxEnabled ? (ceramicBlackbodyVfxEnabled ? 2 : 1) : 0');
+    expect(source).toContain('presenter.app.canvas.dataset.ceramicBlackbodyVfx');
+    expect(source).toContain('Number(\n      presenter.uniforms.uniforms.uCeramicGlazeVfx\n    ) > 1.5');
+    expect(source).toContain("this.app.canvas.dataset.ceramicBlackbodyVfx = 'inactive';");
+    expect(preserveDrawingBuffer).toContain("get('ceramicBlackbodyVfxAudit') === '1'");
+
+    presenter.uniforms.uniforms.uCeramicGlazeVfx = 1;
+    presenter.uniforms.uniforms.uHDRVfx = 1;
+    presenter.setCeramicBlackbodyVfxEnabled(true);
+    expect(presenter.uniforms.uniforms.uCeramicGlazeVfx).toBe(2);
+    expect(presenter.app.canvas.dataset.ceramicBlackbodyVfx).toBe('active');
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+    presenter.app.render.mockClear();
+    presenter.setCeramicBlackbodyVfxEnabled(false);
+    expect(presenter.uniforms.uniforms.uCeramicGlazeVfx).toBe(1);
+    expect(presenter.app.canvas.dataset.ceramicBlackbodyVfx).toBe('inactive');
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+    presenter.app.render.mockClear();
+    presenter.uniforms.uniforms.uHDRVfx = 0;
+    presenter.setCeramicBlackbodyVfxEnabled(true);
+    expect(presenter.uniforms.uniforms.uCeramicGlazeVfx).toBe(1);
+    expect(presenter.app.canvas.dataset.ceramicBlackbodyVfx).toBe('inactive');
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+
+    const eightPresenter = presenterHarness(8);
+    eightPresenter.uniforms.uniforms.uCeramicGlazeVfx = 0;
+    eightPresenter.uniforms.uniforms.uHDRVfx = 0;
+    eightPresenter.setCeramicBlackbodyVfxEnabled(true);
+    expect(eightPresenter.uniforms.uniforms.uCeramicGlazeVfx).toBe(0);
+    expect(eightPresenter.app.canvas.dataset.ceramicBlackbodyVfx).toBe('inactive');
+    expect(eightPresenter.app.render).not.toHaveBeenCalled();
   });
 
   it('keeps E20 botanical body recomposition exact-owner, normal-WebGL-only, and RGB-only', () => {
