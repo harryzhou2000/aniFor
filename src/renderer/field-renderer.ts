@@ -928,8 +928,10 @@ export class MaterialRenderer {
   setDenseBodyAmbientFillEnabled(enabled: boolean): void {
     if (enabled === this.denseBodyAmbientFillEnabled) return;
     this.denseBodyAmbientFillEnabled = enabled;
+    // The WebGL presenter submits the uniform change itself. Canvas has no E80
+    // branch, and a later WebGL promotion receives the stored value through
+    // configurePresentation, so a second FieldRenderer frame is never needed.
     this.presenter?.setDenseBodyAmbientFillEnabled(enabled);
-    this.changed = true;
   }
 
   /** Native DLAY countdown is a state-owned RGB cue, never a JavaScript timer. */

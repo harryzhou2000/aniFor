@@ -3308,11 +3308,53 @@ not a seam control; sample the actual interface for semantics/alpha and place
 the foreign-owner RGB no-op probe safely inside the foreign block so bounded
 HDR spill cannot masquerade as ownership leakage.
 
-The next experiment should come from a fresh canonical fit-view diagnosis.
-Avoid another Water/Metal or DSTW/DESL colour layer. Prefer either heap-scale
-powder valley depth using already-live stable occupancy evidence, or a bounded
-emission/gas volume refinement with an explicit resource budget and frozen
-sparse-topology controls.
+E80 closes the shared dark-backdrop deep-body leg without reopening E78/E79.
+The next experiment must diagnose a fresh fit-view deficit outside Water/Metal,
+DSTW/DESL, or generic deep-body lift.
+
+### E80 — accepted dense-body ambient floor
+
+E80 is the final bounded normal-WebGL floor for deep ordinary bodies. It runs
+after the established liquid, solid, and identity stack, brightening only deep
+exact family-2 liquid and thick non-granular, non-translucent family-0 solid
+support with a hue-preserving RGB multiplier capped at five framebuffer bytes.
+It adds no sample, texture, field, pass, target, upload, allocation, clock,
+alpha/support, silhouette, ownership, topology, state, or physics decision.
+Canvas keeps its semantic presentation, while compact true 8× deliberately has
+no E80 branch or uniform.
+
+`npm run audit:dense-body-ambient` runs DPR-1 canonical WebGL A/B/A at
+1×/2×/4× through the existing source-target and liquid-identity fixtures. Deep
+Water mean/peak response is `1.9028/3`, `1.8611/3`, and `1.8750/3`; deep Metal
+is `.7083/1`, `.7083/1`, and `.6944/1`. Response is positive and full-coverage,
+normalized-chroma peak stays at or below `.0036`, alpha/support and repeated-off
+pixels are exact, and Water shore, Grains Sand, O₂, PHOT, thin structure,
+native-wall coexistence, unlike-liquid seam, and isolated-liquid controls are
+exact. The route also writes the canonical 2× A/B captures.
+
+`npm run audit:dense-body-ambient:8x` proves exact `4896×3072`, a signalled GPU
+fence (`gpu-fence`, about `5.27 s` on the accepted SwiftShader run), inactive
+selector, and byte-identical requested-on no-op over a hydrated fixture. It
+additionally holds the public presentation-refresh sequence fixed
+across both setter calls and four later animation frames, protecting 8× from an
+otherwise-wasted 15-million-fragment redraw. The earlier three-CDP-readback
+form falsely attributed an unrelated queued Sand presentation to E80; keep the
+atomic framebuffer proof and the later-refresh proof separate.
+
+The first E81 preflight rejected settled-Powder "self-valley curvature" without
+an implementation change: `occupancyShape` assigns `contourCurvature` only for
+family-0 Solid, so family-4 Powder receives exact zero. E05's live signed
+powder slope is directional relief, not genuine concavity; do not rename it or
+add an unbudgeted neighbour sample merely to rescue the idea.
+
+The next evidence candidate is normal-WebGL exact deep Metal illuminated by an
+independently present native PHOT spectrum (`photonMetalIrradianceVfx`). Reuse
+only the already decoded photon spectrum/peak and existing Metal interior,
+optical-depth, Fresnel, and environment carriers. The existing photon-spectrum
+fixture must prove red/green/blue/violet ordering plus exact holes, channels,
+thin/isolated/absent state, Water, Glass, native-wall, blank, off restoration,
+and true-8× no-op before any candidate can be accepted. Add no photon velocity
+or directional-streak claim: no authoritative photon velocity is projected.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

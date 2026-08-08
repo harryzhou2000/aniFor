@@ -124,6 +124,28 @@ describe('field renderer layout scheduling', () => {
     expect(renderer.changed).toBe(true);
   });
 
+  it('stores the WebGL-only dense ambient toggle without queuing a second field frame', () => {
+    const setDenseBodyAmbientFillEnabled = vi.fn();
+    const renderer = Object.create(MaterialRenderer.prototype) as {
+      denseBodyAmbientFillEnabled: boolean;
+      presenter?: { setDenseBodyAmbientFillEnabled(enabled: boolean): void };
+      changed: boolean;
+      setDenseBodyAmbientFillEnabled(enabled: boolean): void;
+    };
+    Object.assign(renderer, {
+      denseBodyAmbientFillEnabled: true,
+      presenter: { setDenseBodyAmbientFillEnabled },
+      changed: false,
+    });
+
+    renderer.setDenseBodyAmbientFillEnabled(false);
+
+    expect(setDenseBodyAmbientFillEnabled).toHaveBeenCalledOnce();
+    expect(setDenseBodyAmbientFillEnabled).toHaveBeenCalledWith(false);
+    expect(renderer.denseBodyAmbientFillEnabled).toBe(false);
+    expect(renderer.changed).toBe(false);
+  });
+
   it('ignores a queued frame after navigation has disposed the outgoing renderer', () => {
     const renderer = Object.create(MaterialRenderer.prototype) as {
       disposed: boolean;

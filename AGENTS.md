@@ -2,8 +2,11 @@
 
 ## Current direction
 
-The configured-source identity checkpoint is complete. Spend most implementation
-and audit effort now on material breadth, native material behaviour, and graphics:
+The E80 dense-body ambient floor is accepted across normal WebGL and its strict
+true-8× exclusion. The next visual preflight is E81 native-PHOT spectral
+irradiance on exact deep Metal; the rejected Powder-concavity idea must not be
+revived by misnaming directional slope or adding an unbudgeted sample. Spend
+most implementation and audit effort on material breadth, native material behaviour, and graphics:
 expose more TPT
 forces/sources, radioactive matter, botanical growth, phase changes, and
 reactions; give material families distinctive topology-preserving body optics,
@@ -1820,6 +1823,47 @@ body light into its RGB. Keep the foreign material's RGB no-op probe safely
 inside that owner, and never misclassify the remote interior of a liquid owner
 block as a seam/contact control.
 
+E80 is the accepted default-on normal-WebGL-only dense-body ambient floor. It
+runs after ordinary liquid, solid, and identity composition and applies a
+hue-preserving RGB multiplier only to deep exact family-2 liquid and thick
+non-granular, non-translucent family-0 solid support. The response is capped at
+five framebuffer bytes. Shores, unlike seams, reconstruction/halo support,
+native walls, traits, emission, molten or foreign matter, granular and
+transparent bodies, thin structure, gas, energy, and isolated liquid are exact
+controls. The branch adds no sample, texture, field, pass, target, upload,
+allocation, clock, alpha/support, silhouette, ownership, topology, state, or
+physics decision; Canvas remains the semantic fallback.
+
+`npm run audit:dense-body-ambient` freezes a DPR-1 WebGL 1×/2×/4× A/B/A
+matrix. Deep Water has mean RGB lifts `1.9028/1.8611/1.8750` with peak `3`;
+deep Metal has `.7083/.7083/.6944` with peak `1`. Coverage is `1`, signed and
+Rec.709 response is positive, maximum normalized-chroma drift is `.0036`, and
+every repeated-off frame is byte-exact. Water shore, Grains Sand, O₂, PHOT,
+thin structure, native wall coexistence, the true unlike-liquid interface, and
+an isolated liquid remain exact at every scale. The canonical 2× A/B is a
+calibration capture: E80 is a restrained scene-independent dark-backdrop floor,
+not a new visible texture layer.
+
+`npm run audit:dense-body-ambient:8x` proves the exact `4896×3072` promoted
+WebGL backing through a completed `gpu-fence` (about `5.27 s` on the accepted
+SwiftShader run) while the selector stays inactive.
+The hydrated before/requested-on/off framebuffer is byte-identical and the
+public toggle is render-free: its presentation-refresh sequence remains fixed
+through four later animation frames. Keep the compact true-8× shader free of an
+E80 uniform, branch, sampler, or resource. When proving this contract, take the
+three no-op readbacks inside one browser task so an unrelated queued
+15-million-fragment frame cannot invent response; separately prove the wrapper
+queues no subsequent field presentation.
+
+E81 preflight rejected settled-Powder "self-valley curvature" under the
+no-new-sample constraint: normal WebGL's `occupancyShape` computes
+`contourCurvature` only for family-0 Solid, so the value is exactly zero for
+family-4 Powder. Do not relabel E05's signed broad slope as curvature. The next
+evidence candidate is exact deep Metal under an independently present native
+PHOT spectrum, reusing the already decoded photon state and existing Metal
+depth/Fresnel carriers; it must remain distinct from generic photon glow and
+must first pass the established photon-spectrum topology controls.
+
 Contact-audit lesson: a DPR-1 fit-view PNG may merge opposing subcell lobes into
 one CSS pixel. It remains authoritative for visible seam width, topology, and
 the composed score, but not for exact owner attribution. At 2×/4×, read the
@@ -2441,7 +2485,7 @@ Framebuffer coverage must be measured against a stable same-geometry blank audit
 
 Liquid native-wall refraction may move only the analytic wall-pattern coordinate. Restrict ownership to authoritative semantic non-emissive liquid cells; reconstructed empty support has no trustworthy species/optics and must retain a straight backdrop, though it may stabilize phase-categorical shore classification for neighbouring semantic liquid. Unlike-liquid seams are not outer shores, and molten/Lava is an exact no-op. Keep displacement deterministic and quantized in world-cell space, with no time ripple, framebuffer copy, extra texture/pass/target, alpha/support change, or duplicate 8× surface. Preserve the Water/Oil response controls, wall-backed Lava reconstructed-pinhole zero control, exact off→on→off repeat, and Canvas/WebGL parity gate.
 
-Normal WebGL may add a final dense-body ambient fill after ordinary liquid/solid composition to keep proven deep interiors from collapsing against the dark backdrop. It is default-on, independently auditable, hue-preserving RGB-only, and capped at five framebuffer bytes. Liquid requires exact ordinary family-2 ownership, no reconstructed support/shore/seam/wall/trait/emission/molten/foreign contact, `liquidDepth > .48`, and cardinal mean `> .56`; solid requires exact non-granular, non-translucent family-0 ownership, no surface/halo/wall/trait/emission case, positive `solidInterior`, and optical depth above `6/255`. Alpha, support, topology, fields, state, and protected controls are exact no-ops. Keep direct 8× unchanged: its no-op setter and true-8× control prove this normal-compositor refinement never expands the compact shader's resource/register budget. The DPR-1 WebGL gate must prove exact off→on→off plus bounded deep Water/Metal lift, with Sand, O₂, PHOT, thin, native-wall, unlike-liquid-seam, and isolated-liquid controls unchanged.
+Normal WebGL may add a final dense-body ambient fill after ordinary liquid/solid composition to keep proven deep interiors from collapsing against the dark backdrop. It is default-on, independently auditable, hue-preserving RGB-only, and capped at five framebuffer bytes. Liquid requires exact ordinary family-2 ownership, no reconstructed support or exposed side, no seam/wall/trait/emission/molten/foreign contact, `liquidDepth > .48`, cardinal mean `> .56`, and squared species slope below `.00024`; solid requires exact non-granular, non-translucent family-0 ownership, no surface/halo/wall/trait/emission case, positive `solidInterior`, and optical depth above `6/255`. Alpha, support, topology, fields, state, and protected controls are exact no-ops. Keep direct 8× unchanged and render-free: its no-op setter, inactive selector, stable presentation-refresh sequence, and true-8× control prove this normal-compositor refinement never expands the compact shader's resource/register budget. The DPR-1 WebGL gate must prove exact off→on→off at 1×/2×/4× plus bounded deep Water/Metal lift, with Sand, O₂, PHOT, thin, native-wall, unlike-liquid-seam, and isolated-liquid controls unchanged.
 
 Read [`docs/render-lab.md`](docs/render-lab.md) before changing reconstruction thresholds or blur radii. A TypeScript or Vite build does not compile Pixi's runtime GLSL; a browser screenshot with a clean shader console is required.
 

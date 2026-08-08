@@ -8126,6 +8126,8 @@ void main() {
       && liquidOnly < 0.5 && halo < 0.5 && surfaceOnly < 0.5 && wall < 0.5
       && traits < 0.5 && !materialEmissive && molten < 0.5
       && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5
+      && exposedLiquidSide < 0.5
+      && dot(liquidSpeciesSlope, liquidSpeciesSlope) < 0.00024
       && liquidDepth > 0.48 && liquidNeighbourMean > 0.56) {
       float liquidAmbientBody = smoothstep(0.48, 0.90, liquidDepth)
         * smoothstep(0.56, 0.90, liquidNeighbourMean);
@@ -12253,7 +12255,7 @@ export class PixiFieldPresenter {
       uSurfaceContourLighting: { value: 1, type: 'f32' },
       uPhaseContactLighting: { value: 1, type: 'f32' },
       uSolidFieldLighting: { value: 1, type: 'f32' },
-      uDenseBodyAmbientFill: { value: 1, type: 'f32' },
+      uDenseBodyAmbientFill: { value: outputScale < 8 ? 1 : 0, type: 'f32' },
       uRoleMaterialStyling: { value: 1, type: 'f32' },
       uCellularMaterialStyling: { value: 1, type: 'f32' },
       uStructuralRigidStyling: { value: 1, type: 'f32' },
@@ -12577,6 +12579,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('waterVolumeRecessionVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('distilledDieselBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('denseBodyAmbientVfxAudit') === '1'
             || new URLSearchParams(location.search).get('nitroBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSolidMeniscusVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSurfaceVfxAudit') === '1'
@@ -12619,6 +12622,9 @@ export class PixiFieldPresenter {
     presenter.app.canvas.dataset.backingSize = presenter.app.canvas.width + 'x' + presenter.app.canvas.height;
     presenter.app.canvas.dataset.renderLook = presenter.hdrPipelineInfo.look;
     presenter.app.canvas.dataset.hdrPipeline = presenter.hdrPipelineInfo.active ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.denseBodyAmbientFill = outputScale < 8
+      && Number(presenter.uniforms.uniforms.uDenseBodyAmbientFill) > 0.5
+      ? 'active' : 'inactive';
     presenter.app.canvas.dataset.volumeVfx = Number(presenter.uniforms.uniforms.uVolumeVfx) > 0.5
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.gasBodyVfx = Number(presenter.uniforms.uniforms.uGasBodyVfx) > 0.5
@@ -13195,7 +13201,9 @@ export class PixiFieldPresenter {
     uniforms.uSurfaceContourLighting = surfaceContourLightingEnabled ? 1 : 0;
     uniforms.uPhaseContactLighting = phaseContactLightingEnabled ? 1 : 0;
     uniforms.uSolidFieldLighting = solidFieldLightingEnabled ? 1 : 0;
-    uniforms.uDenseBodyAmbientFill = denseBodyAmbientFillEnabled ? 1 : 0;
+    uniforms.uDenseBodyAmbientFill = this.outputScale < 8 && denseBodyAmbientFillEnabled ? 1 : 0;
+    this.app.canvas.dataset.denseBodyAmbientFill = Number(uniforms.uDenseBodyAmbientFill) > 0.5
+      ? 'active' : 'inactive';
     uniforms.uLiquidSilhouetteCohesion = liquidSilhouetteCohesionEnabled ? 1 : 0;
     uniforms.uGasVolumeChroma = gasVolumeChromaEnabled ? 1 : 0;
     uniforms.uGasIdentityStyling = gasIdentityStylingEnabled ? 1 : 0;
@@ -13342,8 +13350,13 @@ export class PixiFieldPresenter {
 
   /** Normal-WebGL-only body-core fill; direct 8x deliberately stays compact. */
   setDenseBodyAmbientFillEnabled(enabled: boolean): void {
-    if (this.outputScale >= 8) return;
+    if (this.outputScale >= 8) {
+      this.uniforms.uniforms.uDenseBodyAmbientFill = 0;
+      this.app.canvas.dataset.denseBodyAmbientFill = 'inactive';
+      return;
+    }
     this.uniforms.uniforms.uDenseBodyAmbientFill = enabled ? 1 : 0;
+    this.app.canvas.dataset.denseBodyAmbientFill = enabled ? 'active' : 'inactive';
     this.renderApplication();
   }
 
@@ -14413,6 +14426,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.glassBodyVfx = 'inactive';
         this.app.canvas.dataset.liquidBodyVfx = 'inactive';
         this.app.canvas.dataset.distilledDieselBodyVfx = 'inactive';
+        this.app.canvas.dataset.denseBodyAmbientFill = 'inactive';
         this.app.canvas.dataset.nitroBodyVfx = 'inactive';
         this.app.canvas.dataset.acidBodyVfx = 'inactive';
         this.app.canvas.dataset.soapBodyVfx = 'inactive';

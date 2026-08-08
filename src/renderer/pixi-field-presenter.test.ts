@@ -75,7 +75,7 @@ interface PresenterHarness {
   webGLTimingSequence: number;
 }
 
-function presenterHarness(): PresenterHarness {
+function presenterHarness(outputScale = 2): PresenterHarness {
   const presenter = Object.create(PixiFieldPresenter.prototype) as PresenterHarness;
   Object.assign(presenter, {
     uniforms: { uniforms: {} },
@@ -86,7 +86,7 @@ function presenterHarness(): PresenterHarness {
     firstFrameReady: false,
     firstFrameFailed: false,
     firstFrameWaiters: new Set(),
-    outputScale: 2,
+    outputScale,
     destroyed: false,
     contextLost: false,
     webGLTimingEnabled: false,
@@ -7494,11 +7494,28 @@ describe('Pixi presenter startup configuration', () => {
       true, true, true, true, true, true, true, true, true, 'smooth',
     );
     expect(presenter.uniforms.uniforms.uDenseBodyAmbientFill).toBe(1);
+    expect(presenter.app.canvas.dataset.denseBodyAmbientFill).toBe('active');
     expect(presenter.app.render).not.toHaveBeenCalled();
 
     presenter.setDenseBodyAmbientFillEnabled(false);
     expect(presenter.uniforms.uniforms.uDenseBodyAmbientFill).toBe(0);
+    expect(presenter.app.canvas.dataset.denseBodyAmbientFill).toBe('inactive');
     expect(presenter.app.render).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the dense body ambient selector inactive and render-free at true 8x', () => {
+    const presenter = presenterHarness(8);
+
+    presenter.configurePresentation(
+      true, true, true, true, true, true, true, true, true, 'smooth',
+    );
+    expect(presenter.uniforms.uniforms.uDenseBodyAmbientFill).toBe(0);
+    expect(presenter.app.canvas.dataset.denseBodyAmbientFill).toBe('inactive');
+
+    presenter.setDenseBodyAmbientFillEnabled(true);
+    expect(presenter.uniforms.uniforms.uDenseBodyAmbientFill).toBe(0);
+    expect(presenter.app.canvas.dataset.denseBodyAmbientFill).toBe('inactive');
+    expect(presenter.app.render).not.toHaveBeenCalled();
   });
 
   it('keeps dense-body ambient fill RGB-only and inside the normal WebGL compositor', () => {
@@ -7516,11 +7533,16 @@ describe('Pixi presenter startup configuration', () => {
     const bodyBlocks = `${normal.slice(liquidStart, liquidEnd)}${normal.slice(solidStart, solidEnd)}`;
 
     expect(normal).toContain('uniform float uDenseBodyAmbientFill;');
+    expect(source).toContain("get('denseBodyAmbientVfxAudit') === '1'");
+    expect(source).toContain('uDenseBodyAmbientFill: { value: outputScale < 8 ? 1 : 0');
+    expect(source).toContain('presenter.app.canvas.dataset.denseBodyAmbientFill = outputScale < 8');
     expect(liquidStart).toBeGreaterThan(0);
     expect(solidStart).toBeGreaterThan(0);
     expect(bodyBlocks).toContain('family == 2.0');
     expect(bodyBlocks).toContain('liquidOnly < 0.5 && halo < 0.5 && surfaceOnly < 0.5 && wall < 0.5');
     expect(bodyBlocks).toContain('foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5');
+    expect(bodyBlocks).toContain('exposedLiquidSide < 0.5');
+    expect(bodyBlocks).toContain('dot(liquidSpeciesSlope, liquidSpeciesSlope) < 0.00024');
     expect(bodyBlocks).toContain('liquidDepth > 0.48 && liquidNeighbourMean > 0.56');
     expect(bodyBlocks).toContain('family == 0.0 && granularSurface < 0.5');
     expect(bodyBlocks).toContain('translucentSurface < 0.5 && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5');
