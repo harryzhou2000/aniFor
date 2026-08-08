@@ -165,6 +165,25 @@ describe('field renderer layout scheduling', () => {
     expect(renderer.changed).toBe(false);
   });
 
+  it('retains an early Visual Lab choice across asynchronous WebGL startup', () => {
+    const setVisualLabVariant = vi.fn();
+    const renderer = Object.create(MaterialRenderer.prototype) as {
+      desiredVisualLabVariant?: 0 | 1 | 2;
+      presenter?: { setVisualLabVariant(variant: 0 | 1 | 2): void };
+      setVisualLabVariant(variant: 0 | 1 | 2): void;
+    };
+
+    renderer.presenter = undefined;
+    renderer.setVisualLabVariant(2);
+    expect(renderer.desiredVisualLabVariant).toBe(2);
+
+    renderer.presenter = { setVisualLabVariant };
+    renderer.setVisualLabVariant(1);
+    expect(renderer.desiredVisualLabVariant).toBe(1);
+    expect(setVisualLabVariant).toHaveBeenCalledOnce();
+    expect(setVisualLabVariant).toHaveBeenCalledWith(1);
+  });
+
   it('ignores a queued frame after navigation has disposed the outgoing renderer', () => {
     const renderer = Object.create(MaterialRenderer.prototype) as {
       disposed: boolean;

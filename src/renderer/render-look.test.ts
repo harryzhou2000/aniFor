@@ -30,7 +30,6 @@ import {
   resolveNobleGasBillowVfxEnabled, resolveNobleGasPrismVfxEnabled,
   resolveNobleGasCoreReliefVfxEnabled,
   resolveHydrogenBodyVfxEnabled,
-  resolveOxygenVolumeFoldVfxEnabled,
   resolveSmokeBillowDepthVfxEnabled,
   resolveSmokeSoftnessVfxEnabled,
   resolveAcidBodyVfxEnabled,
@@ -293,37 +292,6 @@ describe('resolveRenderLook', () => {
     expect(resolveGasCoreDepthVfxEnabled(
       'realistic', '?gasBodyVfx=off&gasCoreDepthVfx=on',
     )).toBe(false);
-  });
-
-  it('keeps exact Oxygen volume folding subordinate to E04 and E15', () => {
-    expect(resolveOxygenVolumeFoldVfxEnabled(
-      'classic', '?oxygenVolumeFoldVfx=on',
-    )).toBe(false);
-    expect(resolveOxygenVolumeFoldVfxEnabled('realistic', '')).toBe(true);
-    expect(resolveOxygenVolumeFoldVfxEnabled('neon-lab', '')).toBe(true);
-    expect(resolveOxygenVolumeFoldVfxEnabled('realistic', '?inputAudit=1')).toBe(false);
-    expect(resolveOxygenVolumeFoldVfxEnabled(
-      'realistic', '?inputAudit=1&oxygenVolumeFoldVfx=true',
-    )).toBe(true);
-    for (const requested of ['0', 'off', 'false']) {
-      expect(resolveOxygenVolumeFoldVfxEnabled(
-        'realistic', `?oxygenVolumeFoldVfx=${requested}`,
-      )).toBe(false);
-    }
-    for (const requested of ['1', 'on', 'true']) {
-      expect(resolveOxygenVolumeFoldVfxEnabled(
-        'realistic', `?oxygenVolumeFoldVfx=${requested}`,
-      )).toBe(true);
-    }
-    expect(resolveOxygenVolumeFoldVfxEnabled(
-      'realistic', '?gasBodyVfx=off&gasCoreDepthVfx=on&oxygenVolumeFoldVfx=on',
-    )).toBe(false);
-    expect(resolveOxygenVolumeFoldVfxEnabled(
-      'realistic', '?gasBodyVfx=on&gasCoreDepthVfx=off&oxygenVolumeFoldVfx=on',
-    )).toBe(false);
-    expect(resolveOxygenVolumeFoldVfxEnabled(
-      'realistic', '?volumeVfx=0&gasBodyVfx=on&gasCoreDepthVfx=on&oxygenVolumeFoldVfx=1',
-    )).toBe(true);
   });
 
   it('keeps exact Noble Gas billows subordinate to the stable gas body', () => {

@@ -39,7 +39,8 @@ import { sampleCanvasFieldAlpha } from './canvas-surface-light';
 import { HDRVfxPipeline, type HDRPipelineInfo } from './hdr-vfx-pipeline';
 import { resolveCeramicBlackbodyVfxEnabled } from './ceramic-blackbody-vfx';
 import {
-  resolveVisualLabState, type VisualLabState, type VisualLabVariant,
+  isVisualLabDomainImplemented, resolveVisualLabState,
+  type VisualLabState, type VisualLabVariant,
 } from './visual-lab';
 import {
   resolveBotanicalBodyVfxEnabled,
@@ -64,7 +65,6 @@ import {
   resolveSteamCondensateVfxEnabled,
   resolveFogCoreDiffuseVfxEnabled,
   resolveHydrogenBodyVfxEnabled,
-  resolveOxygenVolumeFoldVfxEnabled,
   resolveIszsCrystalHierarchyVfxEnabled,
   resolveIszsCrystallineVfxEnabled,
   resolveRadioactiveSolidBodyVfxEnabled,
@@ -3313,7 +3313,6 @@ uniform float uGasMotionVfx;
 uniform float uCflmColdFlameVfx;
 uniform float uGasLightVfx;
 uniform float uGasCoreDepthVfx;
-uniform float uOxygenVolumeFoldVfx;
 uniform float uHydrogenBodyVfx;
 uniform float uCarbonDioxideBodyVfx;
 uniform float uCarbonDioxideCoreFoldVfx;
@@ -6567,7 +6566,7 @@ void main() {
           // result is bounded RGB arithmetic; atmosphere support, semantic
           // carriers, authored gaps, alpha, ownership, and compact true 8x
           // stay on their established paths.
-          if (uOxygenVolumeFoldVfx > 0.5 && gasCoreOxygen > 0.5) {
+          if (gasCoreOxygen > 0.5) {
             float oxygenFoldPhase = clamp(
               gasVfxBillow * 0.50 + gasVfxWaveC * 0.50
                 + gasDirectionalRelief * 0.12 + gasCurvature * 0.035,
@@ -11914,10 +11913,6 @@ export class PixiFieldPresenter {
     // parallel branch and retains its proven fragment-register budget.
     const gasCoreDepthVfxEnabled = outputScale < 8
       && resolveGasCoreDepthVfxEnabled(renderLook);
-    // E62 is an arithmetic-only exact-Oxygen child of E04 and E15. Canvas and
-    // compact true 8x retain the accepted propagated style-4 presentation.
-    const oxygenVolumeFoldVfxEnabled = outputScale < 8
-      && resolveOxygenVolumeFoldVfxEnabled(renderLook);
     // E42 is an arithmetic-only exact-Hydrogen child of E04. Compact true 8x
     // retains its existing propagated style-5 key and declares no E42 branch.
     const hydrogenBodyVfxEnabled = outputScale < 8
@@ -12184,7 +12179,6 @@ export class PixiFieldPresenter {
       uCflmColdFlameVfx: { value: cflmColdFlameVfxEnabled ? 1 : 0, type: 'f32' },
       uGasLightVfx: { value: gasLightVfxEnabled ? 1 : 0, type: 'f32' },
       uGasCoreDepthVfx: { value: gasCoreDepthVfxEnabled ? 1 : 0, type: 'f32' },
-      uOxygenVolumeFoldVfx: { value: oxygenVolumeFoldVfxEnabled ? 1 : 0, type: 'f32' },
       uHydrogenBodyVfx: { value: hydrogenBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uCarbonDioxideBodyVfx: {
         value: carbonDioxideBodyVfxEnabled ? 1 : 0, type: 'f32',
@@ -12511,7 +12505,6 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uCflmColdFlameVfx = 0;
       this.uniforms.uniforms.uGasLightVfx = 0;
       this.uniforms.uniforms.uGasCoreDepthVfx = 0;
-      this.uniforms.uniforms.uOxygenVolumeFoldVfx = 0;
       this.uniforms.uniforms.uHydrogenBodyVfx = 0;
       this.uniforms.uniforms.uCarbonDioxideBodyVfx = 0;
       this.uniforms.uniforms.uCarbonDioxideCoreFoldVfx = 0;
@@ -12612,7 +12605,6 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('cflmColdFlameVfxAudit') === '1'
             || new URLSearchParams(location.search).get('gasLightVfxAudit') === '1'
             || new URLSearchParams(location.search).get('gasCoreDepthVfxAudit') === '1'
-            || new URLSearchParams(location.search).get('oxygenVolumeFoldVfxAudit') === '1'
             || new URLSearchParams(location.search).get('hydrogenBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('carbonDioxideBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('carbonDioxideCoreFoldVfxAudit') === '1'
@@ -12724,9 +12716,6 @@ export class PixiFieldPresenter {
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.gasCoreDepthVfx = Number(
       presenter.uniforms.uniforms.uGasCoreDepthVfx
-    ) > 0.5 ? 'active' : 'inactive';
-    presenter.app.canvas.dataset.oxygenVolumeFoldVfx = Number(
-      presenter.uniforms.uniforms.uOxygenVolumeFoldVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.hydrogenBodyVfx = Number(
       presenter.uniforms.uniforms.uHydrogenBodyVfx
@@ -13481,18 +13470,17 @@ export class PixiFieldPresenter {
   }
 
   /** Fixed normal-HDR A/B bridge; all simulation and camera state stay intact. */
-  setVisualLabVariant(variant: VisualLabVariant): void {
+  setVisualLabVariant(variant: VisualLabVariant, render = true): void {
     const next = Object.freeze({ ...this.visualLabState, variant });
     this.visualLabState = next;
     this.hdrVfxPipeline?.setVisualLabState(next);
     this.publishVisualLabDataset();
-    if (this.hdrVfxPipeline) this.renderApplication();
+    if (render && this.hdrVfxPipeline) this.renderApplication();
   }
 
   private publishVisualLabDataset(): void {
     const state = this.visualLabState;
-    const supportedDomain = state.domain === 'liquid'
-      || state.domain === 'gas' || state.domain === 'emission';
+    const supportedDomain = isVisualLabDomainImplemented(state.domain);
     this.app.canvas.dataset.visualLabDomain = state.domain;
     this.app.canvas.dataset.visualLabVariant = String(state.variant);
     this.app.canvas.dataset.visualLabTarget = String(state.target);
@@ -14453,7 +14441,6 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uCflmColdFlameVfx = 0;
         this.uniforms.uniforms.uGasLightVfx = 0;
         this.uniforms.uniforms.uGasCoreDepthVfx = 0;
-        this.uniforms.uniforms.uOxygenVolumeFoldVfx = 0;
         this.uniforms.uniforms.uHydrogenBodyVfx = 0;
         this.uniforms.uniforms.uCarbonDioxideBodyVfx = 0;
         this.uniforms.uniforms.uCarbonDioxideCoreFoldVfx = 0;
@@ -14530,7 +14517,6 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.cflmColdFlameVfx = 'inactive';
         this.app.canvas.dataset.gasLightVfx = 'inactive';
         this.app.canvas.dataset.gasCoreDepthVfx = 'inactive';
-        this.app.canvas.dataset.oxygenVolumeFoldVfx = 'inactive';
         this.app.canvas.dataset.hydrogenBodyVfx = 'inactive';
         this.app.canvas.dataset.carbonDioxideBodyVfx = 'inactive';
         this.app.canvas.dataset.carbonDioxideCoreFoldVfx = 'inactive';

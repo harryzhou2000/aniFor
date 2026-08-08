@@ -107,6 +107,41 @@ function presenterHarness(outputScale = 2): PresenterHarness {
 }
 
 describe('Pixi presenter startup configuration', () => {
+  it('can seed a retained Visual Lab choice without submitting an unhydrated frame', () => {
+    const setVisualLabState = vi.fn();
+    const renderApplication = vi.fn();
+    const presenter = Object.create(PixiFieldPresenter.prototype) as {
+      visualLabState: Readonly<{
+        domain: 'gas'; domainCode: 3; variant: 0 | 1 | 2; target: number; gain: number;
+      }>;
+      hdrVfxPipeline: { setVisualLabState(state: unknown): void };
+      hdrPipelineInfo: { active: boolean };
+      app: { canvas: { dataset: Record<string, string> } };
+      renderApplication(): void;
+      setVisualLabVariant: PixiFieldPresenter['setVisualLabVariant'];
+    };
+    Object.assign(presenter, {
+      visualLabState: Object.freeze({
+        domain: 'gas', domainCode: 3, variant: 0, target: 1, gain: 1,
+      }),
+      hdrVfxPipeline: { setVisualLabState },
+      hdrPipelineInfo: { active: true },
+      app: { canvas: { dataset: {} } },
+      renderApplication,
+    });
+
+    presenter.setVisualLabVariant(2, false);
+    expect(setVisualLabState).toHaveBeenCalledOnce();
+    expect(renderApplication).not.toHaveBeenCalled();
+    expect(presenter.app.canvas.dataset).toMatchObject({
+      visualLab: 'active', visualLabDomain: 'gas', visualLabVariant: '2',
+      visualLabTarget: '1', visualLabGain: '1',
+    });
+
+    presenter.setVisualLabVariant(1);
+    expect(renderApplication).toHaveBeenCalledOnce();
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
@@ -3432,7 +3467,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain("this.app.canvas.dataset.waterVolumeRecessionVfx = 'inactive';");
   });
 
-  it('keeps E62 Oxygen volume fold exact-style, E04/E15-dependent, normal-WebGL-only, and RGB-only', () => {
+  it('keeps accepted E62 exact-Oxygen fold inside the E04/E15 baseline without legacy plumbing', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
@@ -3453,13 +3488,11 @@ describe('Pixi presenter startup configuration', () => {
     expect(e62Start).toBeGreaterThanOrEqual(0);
     expect(e62Start).toBeGreaterThan(e15Start);
     expect(e62End).toBeGreaterThan(e62Start);
-    expect(normal).toContain('uniform float uOxygenVolumeFoldVfx;');
+    expect(normal).not.toContain('uOxygenVolumeFoldVfx');
     expect(eight).not.toContain('uOxygenVolumeFoldVfx');
     expect(eight).not.toContain('oxygenVolumeFold');
     expect(canvasSource).not.toContain('oxygenVolumeFoldVfx');
-    for (const guard of [
-      'uOxygenVolumeFoldVfx > 0.5', 'gasCoreOxygen > 0.5',
-    ]) expect(e62).toContain(guard);
+    expect(e62).toContain('if (gasCoreOxygen > 0.5)');
     for (const parentProof of [
       'uGasCoreDepthVfx > 0.5', 'uGasIdentityStyling > 0.5',
       'wall < 0.5', '!materialEmissive',
@@ -3477,17 +3510,10 @@ describe('Pixi presenter startup configuration', () => {
     expect(e62).not.toContain('discard');
     expect(e62).not.toMatch(/\balpha\s*[+*]?=/);
     expect(e62).not.toMatch(/\b(?:atmosphereState|finalColor)\.a\s*[+*]?=/);
-    expect(source.match(/this\.uniforms\.uniforms\.uOxygenVolumeFoldVfx = 0;/g))
-      .toHaveLength(2);
-    expect(source).toMatch(
-      /const oxygenVolumeFoldVfxEnabled = outputScale < 8\s*&& resolveOxygenVolumeFoldVfxEnabled\(renderLook\);/,
-    );
-    expect(source).toContain(
-      'uOxygenVolumeFoldVfx: { value: oxygenVolumeFoldVfxEnabled ? 1 : 0',
-    );
-    expect(source).toContain("get('oxygenVolumeFoldVfxAudit') === '1'");
-    expect(source).toContain('presenter.app.canvas.dataset.oxygenVolumeFoldVfx');
-    expect(source).toContain("this.app.canvas.dataset.oxygenVolumeFoldVfx = 'inactive';");
+    expect(source).not.toContain('uOxygenVolumeFoldVfx');
+    expect(source).not.toContain('resolveOxygenVolumeFoldVfxEnabled');
+    expect(source).not.toContain('oxygenVolumeFoldVfxAudit');
+    expect(source).not.toContain('dataset.oxygenVolumeFoldVfx');
   });
 
   it('keeps E79 Distilled/Diesel bodies exact-owner, E03-dependent, normal-WebGL-only, and RGB-only', () => {

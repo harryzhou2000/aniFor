@@ -12,6 +12,27 @@ export const VISUAL_LAB_DOMAIN_CODE = Object.freeze({
 
 export type VisualLabDomain = keyof typeof VISUAL_LAB_DOMAIN_CODE;
 export type VisualLabVariant = 0 | 1 | 2;
+export type VisualLabTargetKind = 'none' | 'semantic-material-id' | 'propagated-style';
+
+/**
+ * One renderer-owned capability table for lab routing and diagnostics. Powder
+ * keeps its reserved shader code, but cannot request the expanded compositor
+ * until its conservative hook exists.
+ */
+export const VISUAL_LAB_DOMAIN_CAPABILITY = Object.freeze({
+  off: { implemented: false, targetKind: 'none' },
+  powder: { implemented: false, targetKind: 'semantic-material-id' },
+  liquid: { implemented: true, targetKind: 'semantic-material-id' },
+  gas: { implemented: true, targetKind: 'propagated-style' },
+  emission: { implemented: true, targetKind: 'semantic-material-id' },
+} as const satisfies Record<VisualLabDomain, {
+  readonly implemented: boolean;
+  readonly targetKind: VisualLabTargetKind;
+}>);
+
+export function isVisualLabDomainImplemented(domain: VisualLabDomain): boolean {
+  return VISUAL_LAB_DOMAIN_CAPABILITY[domain].implemented;
+}
 
 export interface VisualLabState {
   readonly domain: VisualLabDomain;
@@ -68,9 +89,11 @@ export function resolveVisualLabState(
   const requestedVariant = parseVariant(parameters.get('visualVariant'));
   const explicitExperiment = isDomain(requestedDomain)
     && requestedDomain !== 'off'
+    && isVisualLabDomainImplemented(requestedDomain)
     && requestedVariant !== undefined;
 
   if (!isDomain(requestedDomain) || requestedDomain === 'off'
+    || !isVisualLabDomainImplemented(requestedDomain)
     || (parameters.get('inputAudit') === '1' && !explicitExperiment)) {
     return DISABLED_VISUAL_LAB_STATE;
   }

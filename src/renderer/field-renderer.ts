@@ -383,6 +383,8 @@ export class MaterialRenderer {
   private webGLPresentationTimingEnabled = false;
   private presentationRefreshAuditEnabled = false;
   private presentationRefreshAudit?: PresentationRefreshAudit;
+  /** Latest same-page A/B choice, retained across asynchronous WebGL startup. */
+  private desiredVisualLabVariant?: VisualLabVariant;
   // Detail navigation creates a fresh page with a different-sized WebGL
   // backing. Relinquish the outgoing presenter before that navigation so its
   // colour target cannot contend with the next true-8x candidate.
@@ -951,6 +953,7 @@ export class MaterialRenderer {
 
   /** Normal-HDR visual-lab A/B selector; Canvas and true 8x remain inert. */
   setVisualLabVariant(variant: VisualLabVariant): void {
+    this.desiredVisualLabVariant = variant;
     this.presenter?.setVisualLabVariant(variant);
   }
 
@@ -1585,6 +1588,12 @@ export class MaterialRenderer {
       this.dlayStateStylingEnabled,
       this.wifiStateStylingEnabled,
     );
+    // The browser audit bridge is installed before late WebGL promotion can
+    // finish. Seed any same-page choice without submitting an unhydrated frame;
+    // later calls route through this.presenter and render normally.
+    if (this.desiredVisualLabVariant !== undefined) {
+      presenter.setVisualLabVariant(this.desiredVisualLabVariant, false);
+    }
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;
     // latest semantic/field mutations coalesce behind the presenter's fence.

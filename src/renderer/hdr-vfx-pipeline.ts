@@ -5,7 +5,9 @@ import type { TextureSource } from 'pixi.js';
 import { HDR_VOLUME_LAB_GLSL } from './hdr-volume-lab';
 import type { FieldOutputScale } from './render-resolution';
 import type { RenderLook } from './render-look';
-import { packVisualLabState, type VisualLabState } from './visual-lab';
+import {
+  isVisualLabDomainImplemented, packVisualLabState, type VisualLabState,
+} from './visual-lab';
 
 export type HDRPipelineReason = 'classic' | 'scale-8' | 'not-webgl2'
   | 'float-color-unavailable' | 'mrt-unavailable' | 'float-framebuffer-incomplete'
@@ -28,8 +30,6 @@ export interface HDRPipelineInfo {
   readonly liquidMotionVfx?: boolean;
   readonly oilMotionVfx?: boolean;
   readonly waterCurvatureVfx?: boolean;
-  readonly visualLabDomain?: VisualLabState['domain'];
-  readonly visualLabVariant?: VisualLabState['variant'];
 }
 
 /** Existing presenter textures reused by the normal-scale HDR compositor. */
@@ -592,7 +592,7 @@ export class HDRVfxPipeline {
         },
         'hdr-bloom-blur',
       ));
-      const visualLabEnabled = composition.visualLab.domain !== 'off';
+      const visualLabEnabled = isVisualLabDomainImplemented(composition.visualLab.domain);
       const compositeUniforms = new UniformGroup({
         uBloomIntensity: { value: look === 'neon-lab' ? 0.62 : 0.34, type: 'f32' },
         uExposure: { value: look === 'neon-lab' ? 1.04 : 1.0, type: 'f32' },
@@ -665,8 +665,6 @@ export class HDRVfxPipeline {
         liquidMotionVfx: composition.enabled && composition.motionEnabled,
         oilMotionVfx: composition.enabled && composition.oilMotionEnabled,
         waterCurvatureVfx: composition.enabled && composition.curvatureEnabled,
-        visualLabDomain: composition.visualLab.domain,
-        visualLabVariant: composition.visualLab.variant,
         bloomWidth: bloomWidth * outputScale,
         bloomHeight: bloomHeight * outputScale,
       };

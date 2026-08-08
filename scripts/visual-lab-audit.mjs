@@ -39,11 +39,11 @@ const HELP = `Usage:
 
 Options (use --name=value):
   --base-url=http://127.0.0.1:5173/  Dev URL or file:///.../dist/index.html
-  --bundle=dist/index.html                Built bundle entry (overrides default URL)
+  --bundle=dist/index.html              Built bundle entry (overrides default URL)
   --domain=gas|liquid|emission         Lab domain (default: gas)
   --target=0..255                      Gas style byte or liquid/emission material ID
-  --gain=0.01..2                        RGB-only experiment gain (default: 1)
-  --render-scale=1|2|4                  Normal WebGL scale (default: 2)
+  --gain=0.01..2                       RGB-only experiment gain (default: 1)
+  --render-scale=1|2|4                 Normal WebGL scale (default: 2)
   --output-dir=/tmp/anifor-visual-lab-gas
   --chrome=/path/to/chrome              Otherwise CHROME_BIN/autodetection
   --gpu=auto|swiftshader                Prefer local GPU; CI can force software
@@ -205,7 +205,12 @@ async function main() {
     // Launch directly at the fixture URL. Navigating an already attached blank
     // target over CDP can withhold its acknowledgement while SwiftShader is
     // compiling, making a healthy load indistinguishable from a protocol hang.
-    await waitForPage(cdp, options);
+    const startupSelection = await stageVariantDuringStartup(cdp, options);
+    assert(startupSelection.backendBeforeSelection === 'canvas2d'
+      && startupSelection.backendReasonBeforeSelection === 'webgl-starting'
+      && startupSelection.stagedBeforeWebGL === true,
+    `Visual Lab selector was not staged during bounded Canvas startup: ${JSON.stringify(startupSelection)}`);
+    await waitForPage(cdp, options, 2);
 
     await evaluate(cdp, `(() => {
       const audit = window.__ANIFOR_INPUT_AUDIT__;
@@ -263,6 +268,7 @@ async function main() {
       gain: options.gain,
       renderScale: options.renderScale,
       gpu: options.gpu,
+      startupSelection,
       backend: reference.backend.backend,
       hdrPipeline: reference.dataset.hdrPipeline,
       backingSize: reference.dataset.backingSize,
@@ -385,7 +391,22 @@ function collectBrowserErrors(cdp) {
   return errors;
 }
 
-async function waitForPage(cdp, options) {
+async function stageVariantDuringStartup(cdp, options) {
+  return waitFor(() => evaluate(cdp, `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (!audit || typeof audit.setVisualLabVariant !== 'function') return false;
+    const before = audit.backend();
+    audit.setVisualLabVariant(2);
+    return {
+      requestedVariant: 2,
+      backendBeforeSelection: before.backend,
+      backendReasonBeforeSelection: before.reason,
+      stagedBeforeWebGL: before.backend !== 'webgl',
+    };
+  })()`), PAGE_STARTUP_TIMEOUT_MS, `${options.domain} startup audit bridge`);
+}
+
+async function waitForPage(cdp, options, expectedVariant) {
   const readinessExpression = `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     const canvas = document.querySelector('.semantic-field-canvas');
@@ -407,8 +428,8 @@ async function waitForPage(cdp, options) {
       && dataset.visualLabDomain === ${JSON.stringify(options.domain)}
       && Number(dataset.visualLabTarget) === ${options.target}
       && Number(dataset.visualLabGain) === ${options.gain}
-      && dataset.visualLabVariant === '0'
-      && dataset.visualLab === 'inactive';
+      && dataset.visualLabVariant === ${JSON.stringify(String(expectedVariant))}
+      && dataset.visualLab === ${JSON.stringify(expectedVariant === 0 ? 'inactive' : 'active')};
   })()`;
   try {
     await waitFor(

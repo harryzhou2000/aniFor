@@ -370,12 +370,6 @@ const gasCoreDepthVfxOnly = process.argv.includes('--gas-core-depth-vfx-only');
 if (gasCoreDepthVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--gas-core-depth-vfx-only requires --webgl-only');
 }
-// E62 is an exact-Oxygen fold over E04/E15's connected atmosphere body. Its
-// focused route toggles only that child while compact true 8x stays excluded.
-const oxygenVolumeFoldVfxOnly = process.argv.includes('--oxygen-volume-fold-vfx-only');
-if (oxygenVolumeFoldVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
-  throw new Error('--oxygen-volume-fold-vfx-only requires --webgl-only');
-}
 // E16 stays on normal-detail WebGL so the direct 8x mesh remains compact.
 const plasmaCoreVfxOnly = process.argv.includes('--plasma-core-vfx-only');
 if (plasmaCoreVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
@@ -698,7 +692,7 @@ const focusedVfxOnlyFlags = [
   translucentEdgeVfxOnly, organicSubsurfaceVfxOnly, wetSedimentVfxOnly, gasLightVfxOnly,
   liquidSolidMeniscusVfxOnly, metalWaterContactVfxOnly, waterMetalTransmissionVfxOnly,
   waterMetalSeparationVfxOnly, waterMetalFresnelSpectrumVfxOnly,
-  gasCoreDepthVfxOnly, oxygenVolumeFoldVfxOnly,
+  gasCoreDepthVfxOnly,
   plasmaCoreVfxOnly, solidBodyVfxOnly,
   platinumBodyVfxOnly, ceramicGlazeVfxOnly, botanicalBodyVfxOnly, glassBodyVfxOnly,
   oilBodyVfxOnly, oilDepthTransmissionVfxOnly,
@@ -1805,8 +1799,8 @@ if ((waterMetalTransmissionVfxOnly || waterMetalSeparationVfxOnly)
   && renderScaleArgument === '8') {
   throw new Error('--water-metal-transmission-vfx-only/--water-metal-separation-vfx-only are normal-detail 1x/2x/4x experiments');
 }
-if ((gasCoreDepthVfxOnly || oxygenVolumeFoldVfxOnly) && renderScaleArgument === '8') {
-  throw new Error('--gas-core-depth-vfx-only/--oxygen-volume-fold-vfx-only are normal-detail 1x/2x/4x experiments');
+if (gasCoreDepthVfxOnly && renderScaleArgument === '8') {
+  throw new Error('--gas-core-depth-vfx-only is a normal-detail 1x/2x/4x experiment');
 }
 if (plasmaCoreVfxOnly && renderScaleArgument === '8') {
   throw new Error('--plasma-core-vfx-only is a normal-detail 1x/2x/4x experiment');
@@ -2037,7 +2031,7 @@ async function main() {
     const reducedAudit = quickScreenshot || showcaseScreenshotOnly || composedRankOnly
       || candidateRankOnly || nitroBodyVfxOnly || hdrVfxOnly || volumeVfxOnly || plantCanopyInterlockVfxOnly || plantCanopyHierarchyVfxOnly || plantCanopyFoliageVfxOnly || plantCanopyLifecycleVfxOnly || oilDepthTransmissionVfxOnly
       || liquidBodyVfxOnly || liquidSurfaceVfxOnly || liquidMotionVfxOnly || oilMotionVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-      || powderBodyVfxOnly || concreteMesostrataRetentionVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || waterMetalSeparationVfxOnly || gasCoreDepthVfxOnly || oxygenVolumeFoldVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || carbonDioxideCoreFoldVfxOnly || steamCondensateVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || nobleGasCoreReliefVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
+      || powderBodyVfxOnly || concreteMesostrataRetentionVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || waterMetalSeparationVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || carbonDioxideCoreFoldVfxOnly || steamCondensateVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || nobleGasCoreReliefVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
       || photonMetalIrradianceVfxOnly
@@ -2137,7 +2131,7 @@ async function auditMode(mode) {
   const startsBlank = !canvasFallbackAudit && (hdrVfxOnly || volumeVfxOnly
     || plantCanopyHierarchyVfxOnly || plantCanopyFoliageVfxOnly || plantCanopyLifecycleVfxOnly || oilDepthTransmissionVfxOnly
     || liquidBodyVfxOnly || liquidSurfaceVfxOnly || liquidMotionVfxOnly || oilMotionVfxOnly || waterCurvatureVfxOnly || fireFlameVfxOnly || cflmColdFlameVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-  || powderBodyVfxOnly || concreteMesostrataRetentionVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || waterMetalSeparationVfxOnly || gasCoreDepthVfxOnly || oxygenVolumeFoldVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || bglaBodyVfxOnly || bglaClusterVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || carbonDioxideCoreFoldVfxOnly || steamCondensateVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || nobleGasCoreReliefVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+  || powderBodyVfxOnly || concreteMesostrataRetentionVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || waterMetalSeparationVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || bglaBodyVfxOnly || bglaClusterVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || carbonDioxideCoreFoldVfxOnly || steamCondensateVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || nobleGasCoreReliefVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly
     || unusualSolidGraphicsOnly || deviceIdentityGraphicsOnly || fieldProfileGraphicsOnly
     || electricDischargeGraphicsOnly || liquidIdentityGraphicsOnly
@@ -2920,13 +2914,6 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, gasCoreDepthVfx, browserErrors: errors.length };
-    }
-    if (oxygenVolumeFoldVfxOnly) {
-      assert(mode === 'webgl', '--oxygen-volume-fold-vfx-only requires --webgl-only');
-      const oxygenVolumeFoldVfx = await auditOxygenVolumeFoldVfxExperiment(cdp, mode, dpr);
-      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
-      cdp.close();
-      return { backend: mode, oxygenVolumeFoldVfx, browserErrors: errors.length };
     }
     if (plasmaCoreVfxOnly) {
       assert(mode === 'webgl', '--plasma-core-vfx-only requires --webgl-only');
@@ -14730,10 +14717,6 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
   // E72 is deliberately opt-in under inputAudit. The accepted product survey
   // names it so it cannot silently keep scoring the E38 control.
   const composedOilDepthTransmissionVfx = oilDepthTransmissionVfxArgument ?? '1';
-  // E62 is likewise default-on in ordinary non-Classic play and intentionally
-  // opt-in under inputAudit. Keep exact Oxygen's accepted E04/E15 child in the
-  // canonical product stack instead of grading its focused flat control.
-  const composedOxygenVolumeFoldVfx = '1';
   // E55 telemetry is default-on in the composed survey; its focused numeric
   // acceptance remains isolated in the dedicated production-WebGL audit.
   const composedPlantCanopyInterlockVfx = plantCanopyInterlockVfxArgument ?? '1';
@@ -14780,7 +14763,6 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       } : {}),
       ...(deutBodyVfxArgument ? { deutBodyVfx: deutBodyVfxArgument } : {}),
       ...(hydrogenBodyVfxArgument ? { hydrogenBodyVfx: hydrogenBodyVfxArgument } : {}),
-      oxygenVolumeFoldVfx: composedOxygenVolumeFoldVfx,
       carbonDioxideBodyVfx: composedCarbonDioxideBodyVfx,
       carbonDioxideCoreFoldVfx: composedCarbonDioxideCoreFoldVfx,
       concreteMesostrataRetentionVfx: composedConcreteMesostrataRetentionVfx,
@@ -14843,7 +14825,6 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
         && parameters.get('smokeBillowDepthVfx') === ${JSON.stringify(smokeBillowDepthVfxArgument ?? null)}
         && parameters.get('deutBodyVfx') === ${JSON.stringify(deutBodyVfxArgument ?? null)}
         && parameters.get('hydrogenBodyVfx') === ${JSON.stringify(hydrogenBodyVfxArgument ?? null)}
-        && parameters.get('oxygenVolumeFoldVfx') === ${JSON.stringify(composedOxygenVolumeFoldVfx)}
         && parameters.get('carbonDioxideBodyVfx') === ${JSON.stringify(composedCarbonDioxideBodyVfx)}
         && parameters.get('carbonDioxideCoreFoldVfx') === ${JSON.stringify(composedCarbonDioxideCoreFoldVfx)}
         && parameters.get('concreteMesostrataRetentionVfx') === ${JSON.stringify(composedConcreteMesostrataRetentionVfx)}
@@ -15106,16 +15087,6 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
     const hydrogenBodyVfx = await evaluate(cdp,
       `document.querySelector('canvas.world-canvas')?.dataset.hydrogenBodyVfx ?? 'missing'`,
     );
-    const oxygenVolumeFoldVfx = await evaluate(cdp,
-      `document.querySelector('canvas.world-canvas')?.dataset.oxygenVolumeFoldVfx ?? 'missing'`,
-    );
-    const expectedOxygenVolumeFoldState = composedLook !== 'classic'
-      && composedOxygenVolumeFoldVfx === '1' ? 'active' : 'inactive';
-    assert(oxygenVolumeFoldVfx === expectedOxygenVolumeFoldState,
-      `composed rank ${scale}x Oxygen volume-fold selector resolved incorrectly (${JSON.stringify({
-        argument: composedOxygenVolumeFoldVfx, composedLook, oxygenVolumeFoldVfx,
-        expectedOxygenVolumeFoldState,
-      })})`);
     const carbonDioxideBodyVfx = await evaluate(cdp,
       `document.querySelector('canvas.world-canvas')?.dataset.carbonDioxideBodyVfx ?? 'missing'`,
     );
@@ -15451,7 +15422,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       sootyPowderBodyVfx, thermiteBodyVfx,
       bglaBodyVfx,
       smokeBillowDepthVfx, powderStability,
-      deutBodyVfx, hydrogenBodyVfx, oxygenVolumeFoldVfx, carbonDioxideBodyVfx,
+      deutBodyVfx, hydrogenBodyVfx, carbonDioxideBodyVfx,
       carbonDioxideCoreFoldVfx, concreteMesostrataRetentionVfx,
       solidBodyVfx, radioactiveSolidBodyVfx, iszsCrystallineVfx, vibrMacroReliefVfx,
       iszsCrystalHierarchyVfx,
@@ -15488,7 +15459,6 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       && reference.waterVolumeRecessionVfx === capture.waterVolumeRecessionVfx
       && reference.oilMotionVfx === capture.oilMotionVfx
       && reference.oilDepthTransmissionVfx === capture.oilDepthTransmissionVfx
-      && reference.oxygenVolumeFoldVfx === capture.oxygenVolumeFoldVfx
       && reference.carbonDioxideBodyVfx === capture.carbonDioxideBodyVfx
       && reference.carbonDioxideCoreFoldVfx === capture.carbonDioxideCoreFoldVfx
       && reference.plantCanopyFoliageVfx === capture.plantCanopyFoliageVfx,
@@ -15611,7 +15581,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       metalWaterContactVfx, waterMetalTransmissionVfx, waterMetalSeparationVfx,
       waterMetalFresnelSpectrumVfx,
       waterBodyVfx, waterVolumeRecessionVfx, powderStability,
-      deutBodyVfx, hydrogenBodyVfx, oxygenVolumeFoldVfx, carbonDioxideBodyVfx,
+      deutBodyVfx, hydrogenBodyVfx, carbonDioxideBodyVfx,
       carbonDioxideCoreFoldVfx, concreteMesostrataRetentionVfx,
       solidBodyVfx, radioactiveSolidBodyVfx, iszsCrystallineVfx, iszsCrystalHierarchyVfx, vibrMacroReliefVfx,
       rockWeatheredFacetVfx, screenshot }) => ({
@@ -15642,7 +15612,6 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       iszsCrystallineVfxEvidence: 'showcase-v6-solidISZS-region',
       deutBodyVfx,
       hydrogenBodyVfx,
-      oxygenVolumeFoldVfx,
       carbonDioxideBodyVfx,
       carbonDioxideCoreFoldVfx,
       carbonDioxideCoreFoldVfxCalibration: 'accepted-e73-focused-and-composed-matrix',
@@ -33750,17 +33719,18 @@ async function auditEightXWaterMetalFresnelSpectrumVfxExclusion(cdp, dpr) {
 
 /** E15: exact-owner atmosphere core/crown/pocket depth over the E04 baseline. */
 async function auditGasCoreDepthVfxExperiment(cdp, mode, dpr) {
-  // Freeze the accepted 2026-08-05 E15 calibration rather than accepting any
-  // arbitrary nonzero grade. The three exact species have intentionally
-  // different channel order, while crown and pocket probes must retain
-  // opposite signed responses over the E04 atmosphere body.
+  // Freeze the accepted E15 baseline rather than accepting any arbitrary
+  // nonzero grade. Exact Oxygen includes its migrated E62 fold here; E62 no
+  // longer has a separate product selector or reload-based calibration route.
+  // The three exact species retain intentionally different channel order, and
+  // crown/pocket probes keep opposing responses over the E04 atmosphere body.
   const calibratedTargetBounds = Object.freeze({
     SMKECore: { rgbRms: [1.7, 2.5], rgbPeak: [4, 8], coverage: [0.50, 0.65], signedMean: [-1.0, -0.3] },
     SMKECrown: { rgbRms: [4.8, 6.3], rgbPeak: [6, 10], coverage: [0.98, 1], signedMean: [4.6, 6.6] },
     SMKEPocket: { rgbRms: [3.9, 5.3], rgbPeak: [4, 8], coverage: [0.98, 1], signedMean: [-5.2, -3.5] },
-    O2Core: { rgbRms: [0.95, 1.75], rgbPeak: [2, 5], coverage: [0.30, 0.46], signedMean: [0.15, 0.85] },
-    O2Crown: { rgbRms: [2.6, 3.7], rgbPeak: [3, 6], coverage: [0.98, 1], signedMean: [2.5, 4.1] },
-    O2Pocket: { rgbRms: [3.7, 5.1], rgbPeak: [4, 8], coverage: [0.98, 1], signedMean: [-5.6, -3.6] },
+    O2Core: { rgbRms: [1.75, 2.15], rgbPeak: [6, 8], coverage: [0.40, 0.48], signedMean: [-0.20, 0.20] },
+    O2Crown: { rgbRms: [8.60, 9.30], rgbPeak: [10, 13], coverage: [0.98, 1], signedMean: [9.00, 9.80] },
+    O2Pocket: { rgbRms: [5.80, 6.50], rgbPeak: [7, 10], coverage: [0.98, 1], signedMean: [-7.0, -6.1] },
     NOBLCore: { rgbRms: [1.4, 2.3], rgbPeak: [3, 6], coverage: [0.78, 0.90], signedMean: [-2.5, -1.45] },
     NOBLCrown: { rgbRms: [4.1, 5.5], rgbPeak: [5, 9], coverage: [0.98, 1], signedMean: [3.4, 4.8] },
     NOBLPocket: { rgbRms: [3.4, 4.6], rgbPeak: [4, 8], coverage: [0.98, 1], signedMean: [-5.5, -3.9] },
@@ -33770,7 +33740,7 @@ async function auditGasCoreDepthVfxExperiment(cdp, mode, dpr) {
     if (sample.name === 'SMKECore' || sample.name === 'SMKEPocket') return blue < green && green < red;
     if (sample.name === 'SMKECrown') return red > green && green > blue;
     if (sample.name === 'O2Core') return blue > green && green > red;
-    if (sample.name === 'O2Crown') return green > blue && blue > red;
+    if (sample.name === 'O2Crown') return green > red && red > blue;
     if (sample.name === 'O2Pocket') return red < green && green < blue;
     if (sample.name === 'NOBLCore' || sample.name === 'NOBLPocket') return green < red && green < blue;
     if (sample.name === 'NOBLCrown') return red > blue && blue > green;
@@ -34073,258 +34043,6 @@ async function auditEightXGasCoreDepthVfxExclusion(cdp, dpr) {
   assert(timing.source === 'gpu-query' || timing.source === 'gpu-fence' || timing.source === 'gpu-finish',
     `true-8x E15 did not complete GPU work (${JSON.stringify(timing)})`);
   return { backing: `${geometry.backing.width}x${geometry.backing.height}`, isolation, timing };
-}
-
-/** E62: exact Oxygen limpid-volume folding over the accepted E04/E15 body. */
-async function auditOxygenVolumeFoldVfxExperiment(cdp, mode, dpr) {
-  // Freeze the accepted E62 fold rather than permitting an arbitrary nonzero
-  // Oxygen tint. The neutral core stays deliberately quiet, while the two
-  // established E15 billow probes retain opposing signed broad-body responses.
-  const calibratedTargetBounds = Object.freeze({
-    O2Core: {
-      rgbRms: [1.05, 1.18], chromaRms: [0.43, 0.53], rgbPeak: [5, 5],
-      coverage: [0.11, 0.17], signedMean: [-0.57, -0.44],
-    },
-    O2Crown: {
-      rgbRms: [5.85, 6.18], chromaRms: [0.98, 1.13], rgbPeak: [9, 9],
-      coverage: [0.98, 1], signedMean: [5.94, 6.29],
-    },
-    O2Pocket: {
-      rgbRms: [1.69, 1.93], chromaRms: [0.54, 0.67], rgbPeak: [3, 3],
-      coverage: [0.94, 1], signedMean: [-2.11, -1.85],
-    },
-  });
-  const scales = [];
-  const requestedScales = renderScaleArgument === undefined
-    ? VOLUME_VFX_SCALES : [Number(renderScaleArgument)];
-  for (const scale of requestedScales) {
-    const captures = {};
-    for (const enabled of [false, true, false]) {
-      const key = enabled ? 'enabled' : captures.disabled ? 'disabledRepeat' : 'disabled';
-      captures[key] = await navigateOxygenVolumeFoldVfxState(cdp, mode, scale, enabled, key);
-    }
-    const { disabled, enabled, disabledRepeat } = captures;
-    assert(JSON.stringify(disabled.fixture) === JSON.stringify(enabled.fixture)
-      && JSON.stringify(disabled.fixture) === JSON.stringify(disabledRepeat.fixture),
-    `E62 ${scale}x fixture metadata changed`);
-    for (const [label, variant] of Object.entries(captures)) {
-      assertGeometry(variant.geometry, `E62 ${label} ${scale}x`, scale);
-      assert(variant.geometry.backend.backend === 'webgl',
-        `E62 ${label} ${scale}x lost WebGL presentation`);
-      assert(variant.hdrPipeline?.state === 'active',
-        `E62 ${label} ${scale}x HDR pipeline was not active (${JSON.stringify(variant.hdrPipeline)})`);
-    }
-    assertCanvasRectsEqual(disabled.geometry.canvas, enabled.geometry.canvas,
-      `E62 ${scale}x disabled/enabled CSS geometry`);
-    assertCanvasRectsEqual(disabled.geometry.canvas, disabledRepeat.geometry.canvas,
-      `E62 ${scale}x disabled/repeated CSS geometry`);
-    assert(JSON.stringify(disabled.geometry.backing) === JSON.stringify(enabled.geometry.backing)
-      && JSON.stringify(disabled.geometry.backing) === JSON.stringify(disabledRepeat.geometry.backing),
-    `E62 ${scale}x backing geometry changed`);
-    assertHdrVfxSemanticEquality(disabled.semantic, enabled.semantic, `E62 ${scale}x disabled/enabled`);
-    assertHdrVfxSemanticEquality(disabled.semantic, disabledRepeat.semantic, `E62 ${scale}x disabled/repeated`);
-    assertVolumeVfxBackingInvariant(disabled.backing, enabled.backing, `E62 ${scale}x disabled/enabled`);
-    assertVolumeVfxBackingInvariant(disabled.backing, disabledRepeat.backing, `E62 ${scale}x disabled/repeated`);
-    assert(JSON.stringify(disabled.rawControls) === JSON.stringify(enabled.rawControls)
-      && JSON.stringify(disabled.rawControls) === JSON.stringify(disabledRepeat.rawControls),
-    `E62 ${scale}x changed an exact protected raw control`);
-    assert(disabled.capture.capture.data === disabledRepeat.capture.capture.data,
-      `E62 ${scale}x repeated off framebuffer was not byte exact`);
-
-    const allTargets = gasCoreDepthVfxTargetRegions(disabled.fixture);
-    const targets = allTargets.filter((region) => region.name.startsWith('O2'));
-    const controls = [
-      ...allTargets.filter((region) => !region.name.startsWith('O2'))
-        .map((region) => ({ ...region, target: false })),
-      ...gasCoreDepthVfxControlRegions(disabled.fixture),
-    ];
-    const responses = await sampleBackdropRefractionRegions(cdp, {
-      straight: disabled.capture.capture.data, refracted: enabled.capture.capture.data,
-      repeatedStraight: disabledRepeat.capture.capture.data,
-    }, [...targets, ...controls], disabled.capture.canvasRect);
-    const targetResponses = responses.slice(0, targets.length);
-    const controlResponses = responses.slice(targets.length);
-    const targetByName = Object.fromEntries(targetResponses.map((sample) => [sample.name, sample]));
-    assert(targetResponses.length === Object.keys(calibratedTargetBounds).length
-      && targetResponses.every((sample) => {
-        const bounds = calibratedTargetBounds[sample.name];
-        return bounds
-          && sample.rgbRms >= bounds.rgbRms[0] && sample.rgbRms <= bounds.rgbRms[1]
-          && sample.chromaRms >= bounds.chromaRms[0] && sample.chromaRms <= bounds.chromaRms[1]
-          && sample.rgbPeak >= bounds.rgbPeak[0] && sample.rgbPeak <= bounds.rgbPeak[1]
-          && sample.coverage >= bounds.coverage[0] && sample.coverage <= bounds.coverage[1]
-          && sample.signedMean >= bounds.signedMean[0] && sample.signedMean <= bounds.signedMean[1];
-      }),
-    `E62 ${scale}x Oxygen fold escaped its calibrated envelope (${JSON.stringify(targetResponses)})`);
-    assert(targetByName.O2Crown?.signedMean >= 0.80
-      && targetByName.O2Pocket?.signedMean <= -0.80,
-    `E62 ${scale}x lost its opposing limpid crown/pocket (${JSON.stringify(targetResponses)})`);
-    assert(targetByName.O2Crown.rgbRms >= targetByName.O2Core.rgbRms * 1.12
-      && targetByName.O2Pocket.rgbRms >= targetByName.O2Core.rgbRms * 1.12,
-    `E62 ${scale}x lost its core-to-fold hierarchy (${JSON.stringify(targetResponses)})`);
-    assert(controlResponses.every((sample) => sample.rgbPeak <= 1),
-      `E62 ${scale}x escaped exact owner/topology/contact controls (${JSON.stringify(controlResponses)})`);
-    assert(responses.every((sample) => sample.repeatRgbPeak === 0),
-      `E62 ${scale}x off -> on -> off was not deterministic (${JSON.stringify(responses)})`);
-    const screenshots = screenshotRequest && (requestedScales.length === 1 || scale === 2)
-      ? await writeOxygenVolumeFoldVfxScreenshots(screenshotRequest, scale, disabled, enabled)
-      : undefined;
-    scales.push({
-      scale, backing: disabled.geometry.backing, alphaSupport: disabled.backing,
-      rawControls: disabled.rawControls, targetResponses, controlResponses,
-      exactRepeatedOff: true, screenshots,
-    });
-  }
-  if (scales.length > 1) {
-    const spread = (values) => Math.max(...values) - Math.min(...values);
-    for (const name of ['O2Core', 'O2Crown', 'O2Pocket']) {
-      const samples = scales.map((entry) => entry.targetResponses.find((sample) => sample.name === name));
-      assert(samples.every(Boolean)
-        && spread(samples.map((sample) => sample.rgbRms)) <= 0.30
-        && spread(samples.map((sample) => sample.signedMean)) <= 0.30
-        && spread(samples.map((sample) => sample.coverage)) <= 0.05
-        && spread(samples.map((sample) => sample.rgbPeak)) <= 2,
-      `E62 ${name} changed with normal output scale (${JSON.stringify(samples)})`);
-    }
-  }
-  const trueEightX = await auditEightXOxygenVolumeFoldVfxExclusion(cdp, dpr);
-  return { scales, trueEightXExcluded: true, trueEightX };
-}
-
-async function navigateOxygenVolumeFoldVfxState(cdp, mode, scale, enabled, label) {
-  const query = new URLSearchParams({
-    scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: 'blank',
-    oxygenVolumeFoldVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
-    volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', gasBodyVfx: '1',
-    gasMotionVfx: '0', powderBodyVfx: '0', powderLightVfx: '0', powderSolidContactVfx: '0',
-    translucentEdgeVfx: '0', organicSubsurfaceVfx: '0', wetSedimentVfx: '0', gasLightVfx: '0',
-    liquidSolidMeniscusVfx: '0', gasCoreDepthVfx: '1',
-    oxygenVolumeFoldVfx: enabled ? '1' : '0', hydrogenBodyVfx: '0', carbonDioxideBodyVfx: '0',
-    fogCoreDiffuseVfx: '0', nobleGasBillowVfx: '0', nobleGasPrismVfx: '0',
-    smokeSoftnessVfx: '0', smokeBillowDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: '0',
-    platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0', glassBodyVfx: '0',
-    oilBodyVfx: '0', rockRoughnessVfx: '0', waterBodyVfx: '0',
-  });
-  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
-  await waitFor(() => evaluate(cdp, `(() => {
-    const parameters = new URLSearchParams(location.search); const audit = window.__ANIFOR_INPUT_AUDIT__;
-    return parameters.get('oxygenVolumeFoldVfxAudit') === '1'
-      && parameters.get('renderScale') === ${JSON.stringify(String(scale))}
-      && parameters.get('renderLook') === 'realistic'
-      && parameters.get('gasBodyVfx') === '1' && parameters.get('gasCoreDepthVfx') === '1'
-      && parameters.get('oxygenVolumeFoldVfx') === ${JSON.stringify(enabled ? '1' : '0')}
-      && typeof audit?.prepareGasCoreDepthVfxFixture === 'function'
-      && typeof audit?.gasCoreDepthVfxFixture === 'function';
-  })()`), 15_000, `E62 ${label} ${scale}x page`);
-  await waitFor(() => evaluate(cdp,
-    `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
-  15_000, `E62 ${label} ${scale}x backend`);
-  const fixture = await evaluate(cdp, `(() => { const audit = window.__ANIFOR_INPUT_AUDIT__;
-    audit.prepareGasCoreDepthVfxFixture(); return audit.gasCoreDepthVfxFixture(); })()`);
-  for (let pass = 0; pass < 5; pass++) {
-    const before = await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.presentationRefreshAudit()');
-    await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.refreshPresentationFields(); true');
-    await waitFor(() => evaluate(cdp,
-      `window.__ANIFOR_INPUT_AUDIT__.presentationRefreshAudit()?.dynamicSequence > ${before.dynamicSequence}`),
-    scale === 4 ? 15_000 : 5_000, `E62 ${label} ${scale}x presentation refresh ${pass + 1}`);
-  }
-  await waitFor(() => gasCoreDepthVfxFixtureReady(cdp, fixture), 20_000,
-    `E62 ${label} ${scale}x fixture hydration`);
-  const hdrPipeline = await evaluate(cdp, `(() => {
-    const canvas = document.querySelector('canvas.semantic-field-canvas');
-    return canvas ? {
-      look: canvas.dataset.renderLook, state: canvas.dataset.hdrPipeline,
-      bloomBacking: canvas.dataset.bloomBacking, gasBodyVfx: canvas.dataset.gasBodyVfx,
-      gasCoreDepthVfx: canvas.dataset.gasCoreDepthVfx,
-      oxygenVolumeFoldVfx: canvas.dataset.oxygenVolumeFoldVfx,
-      hydrogenBodyVfx: canvas.dataset.hydrogenBodyVfx,
-      carbonDioxideBodyVfx: canvas.dataset.carbonDioxideBodyVfx,
-      fogCoreDiffuseVfx: canvas.dataset.fogCoreDiffuseVfx,
-      nobleGasBillowVfx: canvas.dataset.nobleGasBillowVfx,
-      nobleGasPrismVfx: canvas.dataset.nobleGasPrismVfx,
-      smokeSoftnessVfx: canvas.dataset.smokeSoftnessVfx,
-      smokeBillowDepthVfx: canvas.dataset.smokeBillowDepthVfx,
-    } : undefined;
-  })()`);
-  const expectedBloom = `${WORLD_WIDTH * scale / 2}x${WORLD_HEIGHT * scale / 2}`;
-  assert(hdrPipeline?.look === 'realistic' && hdrPipeline?.state === 'active'
-    && hdrPipeline?.bloomBacking === expectedBloom && hdrPipeline?.gasBodyVfx === 'active'
-    && hdrPipeline?.gasCoreDepthVfx === 'active'
-    && hdrPipeline?.oxygenVolumeFoldVfx === (enabled ? 'active' : 'inactive')
-    && ['hydrogenBodyVfx', 'carbonDioxideBodyVfx', 'fogCoreDiffuseVfx',
-      'nobleGasBillowVfx', 'nobleGasPrismVfx', 'smokeSoftnessVfx',
-      'smokeBillowDepthVfx'].every((name) => hdrPipeline[name] === 'inactive'),
-  `E62 ${label} ${scale}x HDR/selector state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
-  const capture = await waitForStablePageCapture(cdp, `E62 ${label} ${scale}x framebuffer`,
-    scale === 4 ? 20_000 : undefined);
-  return {
-    fixture, capture, geometry: await metrics(cdp), semantic: await hdrVfxSemanticDigest(cdp),
-    backing: await sampleVolumeVfxCanvasAlphaSupport(cdp),
-    rawControls: await sampleVolumeVfxRawWorldPixels(cdp, gasCoreDepthVfxRawControlPoints(fixture)),
-    hdrPipeline,
-  };
-}
-
-async function writeOxygenVolumeFoldVfxScreenshots(source, scale, disabled, enabled) {
-  const paths = {
-    off: variantScreenshotPath(source, `e62-oxygen-volume-fold-${scale}x-off`),
-    on: variantScreenshotPath(source, `e62-oxygen-volume-fold-${scale}x-on`),
-  };
-  await writeFile(paths.off, Buffer.from(disabled.capture.capture.data, 'base64'));
-  await writeFile(paths.on, Buffer.from(enabled.capture.capture.data, 'base64'));
-  return paths;
-}
-
-async function auditEightXOxygenVolumeFoldVfxExclusion(cdp, dpr) {
-  await setDesktopMetrics(cdp, 1280, 720, dpr);
-  const query = new URLSearchParams({
-    scene: 'render-lab', inputAudit: '1', blankAudit: '1', renderScale: '8',
-    auditStage: 'eight-oxygen-volume-fold', renderLook: 'realistic',
-    gasBodyVfx: '1', gasCoreDepthVfx: '1', oxygenVolumeFoldVfx: '1',
-  });
-  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
-  const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
-  await waitFor(() => evaluate(cdp, `(() => {
-    const p = new URLSearchParams(location.search);
-    return p.get('renderScale') === '8' && p.get('auditStage') === 'eight-oxygen-volume-fold'
-      && p.get('oxygenVolumeFoldVfx') === '1' && Boolean(window.__ANIFOR_INPUT_AUDIT__);
-  })()`), remainingDeadlineMs(deadline, 'true-8x E62 input audit API'),
-  'true-8x E62 input audit API');
-  const backend = await waitForEightXTerminalBackend(cdp, 'true-8x E62', deadline);
-  assertEightXWebGLBackend(backend, 'true-8x E62');
-  const geometry = await waitForStableCanvas(cdp, 1280, 720, undefined, 45_000,
-    'true-8x E62 geometry');
-  assert(geometry.backing.width === WORLD_WIDTH * 8
-    && geometry.backing.height === WORLD_HEIGHT * 8 && geometry.outputScale === '8',
-  `true-8x E62 lost exact backing (${JSON.stringify(geometry.backing)})`);
-  const isolation = await evaluate(cdp, `(() => {
-    const canvas = document.querySelector('canvas.semantic-field-canvas');
-    return canvas ? {
-      renderer: canvas.dataset.renderer, look: canvas.dataset.renderLook,
-      state: canvas.dataset.hdrPipeline, reason: canvas.dataset.hdrPipelineReason,
-      bloomBacking: canvas.dataset.bloomBacking ?? null,
-      gasBodyVfx: canvas.dataset.gasBodyVfx,
-      gasCoreDepthVfx: canvas.dataset.gasCoreDepthVfx,
-      oxygenVolumeFoldVfx: canvas.dataset.oxygenVolumeFoldVfx,
-    } : undefined;
-  })()`);
-  assert(isolation?.renderer === 'semantic-field-webgl' && isolation.look === 'realistic'
-    && isolation.state === 'inactive' && isolation.reason === 'scale-8'
-    && isolation.bloomBacking === null && isolation.gasBodyVfx === 'inactive'
-    && isolation.gasCoreDepthVfx === 'inactive'
-    && isolation.oxygenVolumeFoldVfx === 'inactive',
-  `true-8x E62 isolation failed (${JSON.stringify(isolation)})`);
-  const timingBudget = remainingDeadlineMs(deadline, 'true-8x E62 GPU completion');
-  const timing = await auditWebGLPresentationTiming(
-    cdp, 1, Math.min(12_000, timingBudget), timingBudget, 1,
-  );
-  assert(timing.source === 'gpu-query' || timing.source === 'gpu-fence'
-    || timing.source === 'gpu-finish',
-  `true-8x E62 did not complete GPU work (${JSON.stringify(timing)})`);
-  return {
-    backing: `${geometry.backing.width}x${geometry.backing.height}`,
-    promotionFence: 'signaled', isolation, timing,
-  };
 }
 
 /** E16: exact Plasma core/shoulder contrast over the established HDR body. */
@@ -50720,7 +50438,7 @@ const CARBON_DIOXIDE_CORE_FOLD_VFX_ISOLATED_SELECTORS = Object.freeze([
   'gasMotionVfx', 'powderBodyVfx', 'powderLightVfx', 'powderSolidContactVfx',
   'translucentEdgeVfx', 'organicSubsurfaceVfx', 'wetSedimentVfx', 'gasLightVfx',
   'liquidSolidMeniscusVfx', 'metalWaterContactVfx', 'waterMetalTransmissionVfx', 'waterMetalSeparationVfx',
-  'gasCoreDepthVfx', 'oxygenVolumeFoldVfx', 'hydrogenBodyVfx',
+  'gasCoreDepthVfx', 'hydrogenBodyVfx',
   'steamCondensateVfx', 'fogCoreDiffuseVfx', 'nobleGasBillowVfx',
   'nobleGasPrismVfx', 'smokeSoftnessVfx', 'smokeBillowDepthVfx',
   'plasmaCoreVfx', 'solidBodyVfx', 'platinumBodyVfx', 'ceramicGlazeVfx',
@@ -51211,7 +50929,7 @@ const STEAM_CONDENSATE_VFX_ISOLATED_SELECTORS = Object.freeze([
   'gasMotionVfx', 'powderBodyVfx', 'powderLightVfx', 'powderSolidContactVfx',
   'translucentEdgeVfx', 'organicSubsurfaceVfx', 'wetSedimentVfx', 'gasLightVfx',
   'liquidSolidMeniscusVfx', 'metalWaterContactVfx', 'waterMetalTransmissionVfx', 'waterMetalSeparationVfx',
-  'gasCoreDepthVfx', 'oxygenVolumeFoldVfx', 'hydrogenBodyVfx',
+  'gasCoreDepthVfx', 'hydrogenBodyVfx',
   'carbonDioxideBodyVfx', 'fogCoreDiffuseVfx', 'nobleGasBillowVfx',
   'nobleGasPrismVfx', 'smokeSoftnessVfx', 'smokeBillowDepthVfx',
   'plasmaCoreVfx', 'solidBodyVfx', 'platinumBodyVfx', 'ceramicGlazeVfx',

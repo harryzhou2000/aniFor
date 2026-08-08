@@ -10,10 +10,20 @@ reusable rendering-experiment framework. The typed Visual Lab state, fixed
 normal-HDR composition seam, and same-page off/A/B capture route are established
 for gas, emission, and connected Water/Oil/Acid surfaces. Keep extending this
 one route and migrate an accepted treatment through it before adding more
-isolated selectors or cloned browser verifiers. Lab variants must reuse live
+isolated selectors or cloned browser verifiers. The first migration is complete:
+E62 Oxygen volume folding is now an accepted E15 baseline, while its legacy
+resolver, uniform, query, dataset, and bespoke verifier have been removed in
+favour of Visual Lab gas target `4`. Same-page variant selection must remain
+owned across asynchronous WebGL promotion; a choice made during the temporary
+Canvas `webgl-starting` phase is seeded before the first WebGL frame. Lab
+variants must reuse live
 presenter textures or already-computed compositor values, remain RGB-only, add
 no field/texture/target/pass/time resource, and resolve inert for Classic,
 Canvas, failed HDR, and true 8×. Variant zero is the pixel-preserving default.
+Keep reserved but unimplemented domains, currently Powder, resolved fully off
+so they do not compile or bind the expanded lab compositor. Powder's safe proof
+exists only in the source-stage settled-Smooth branch; do not fracture the
+fixed HDR seam merely to claim domain coverage.
 The rejected Powder-concavity idea must not be revived by misnaming directional
 slope or adding an unbudgeted sample. Continue material breadth, native material
 behaviour, and graphics:
@@ -1294,9 +1304,9 @@ exact 4896×3072 after a GPU fence. The frozen ramp/core RGB RMS is
 Water. Canvas and true 8× deliberately advertise E61 inactive; the accepted
 true-8× fence completed in `5.2559 s` with zero browser errors.
 
-E62 is the accepted normal-WebGL-only exact Oxygen `39` limpid-volume fold,
-independently measurable with `?oxygenVolumeFoldVfx=0|1` and a strict child of
-E04/E15. It applies only inside E15's exact propagated atmosphere style `4`,
+E62 is the accepted normal-WebGL-only exact Oxygen `39` limpid-volume fold and
+a strict, always-present child of an enabled E04/E15 body. It applies only
+inside E15's exact propagated atmosphere style `4`,
 connected-body, wall-free, non-emissive proof. Recombine only E04/E15's
 already-live static billow and third carrier, cardinal directional relief and
 curvature, cloud-neighbour density, atmosphere alpha, crown/pocket, and optical
@@ -1306,18 +1316,14 @@ spatial volume rather than a uniform Oxygen tint. This is bounded RGB-only
 arithmetic: add no wave, noise, sample, texture, field, resource, pass, target,
 upload, allocation, clock, alpha, support, silhouette, ownership, topology,
 state, or physics decision. Canvas and compact true 8× retain the established
-style-4 presentation and declare no E62 uniform or branch.
-
-`npm run audit:vfx:oxygen-volume-fold` holds E04/E15 active while toggling only
-E62 off→on→off at 1×/2×/4×. Its accepted core/crown/pocket RGB RMS is
-`1.11–1.12`/`6.01–6.02`/`1.80–1.81`, signed mean is
-`−.51…−.50`/`6.10–6.13`/`−1.99…−1.98`, and fixed peaks are `5/9/3`
-bytes. Semantics, atmosphere/alpha/support, walls, raw controls, Smoke/Noble
-and all foreign gas/contact/sparse controls, and repeated-off framebuffers
-remain exact; only the named authored O2 channel may retain the established
-one-byte HDR fringe. Requested-on true 8× reports E04/E15/E62/HDR inactive for
-`scale-8`, presents exact 4896×3072 WebGL, and completes a GPU fence (accepted
-run `5.2279 s`) with zero browser errors.
+style-4 presentation and declare no E62 uniform or branch. E62 no longer owns a
+query, runtime selector, dataset field, or bespoke reload verifier. The E15 gate
+measures the combined accepted Oxygen baseline alongside Smoke and Noble, while
+`npm run audit:visual-lab:oxygen` compares post-composite target-4 alternatives
+through the shared framework. The legacy `audit:vfx:oxygen-volume-fold` command
+is only a compatibility alias for that structural-baseline plus Visual Lab
+route; it is not an E62 off/on toggle. Both routes retain exact semantics,
+atmosphere/framebuffer alpha/support, walls, contacts, and foreign-gas controls.
 
 E63 is the accepted normal-WebGL-only exact NITR/Nitro `32` connected-body
 recomposition, independently measurable with `?nitroBodyVfx=0|1` and a strict
@@ -1967,8 +1973,10 @@ evidence.
 
 Visual-audit lesson: `inputAudit=1` disables opt-in child selectors unless the
 composed route names them explicitly, so canonical evidence must request and
-prove every accepted child it claims (notably E37/E56/E61/E62/E63). Keep the
-audited depth endpoint identical to the shader activation boundary, and describe only
+prove every accepted selectable child it claims (notably E37/E56/E61/E63).
+Migrated E62 has no selector and is proven automatically as part of the enabled
+E15 Oxygen baseline. Keep the audited depth endpoint identical to the shader
+activation boundary, and describe only
 structures the frozen measurements actually establish; an absorptive response
 does not prove a positive caustic arc merely because the shader reuses a
 filament scalar.
@@ -2020,7 +2028,7 @@ only from a new visible fit-view diagnosis. Do not treat a saturated aggregate
 score as evidence that a material already reads well at fit view.
 
 The composed showcase remains a separate roadmap signal. Its refreshed
-E37/E56/E58/E59/E60/E61/E62/E75/E76-active 1×/2×/4× matrix is exact and cross-scale
+E37/E56/E58/E59/E60/E61/E62-baseline/E75/E76-active 1×/2×/4× matrix is exact and cross-scale
 verified with zero browser errors, while E52 remains explicitly inactive
 because showcase v6 has no authoritative BGLA region. Organic remains the
 lowest family, led by exact
@@ -2035,7 +2043,7 @@ support `1`, coverage `.961`, and clipped fraction `0` remain unchanged. The
 final exact ISZS quality is `95.463/98.291/99.174` at 1×/2×/4×. Canonical
 family rank is Organic `79.044`, Contact `91.216`, Gas `95.463`, Solid
 `98.291`, Emission `98.475`, and Powder/Liquid `100`. ISZS is no longer the
-Solid floor or an automatic next diagnosis. With E62 active, exact Oxygen is
+Solid floor or an automatic next diagnosis. With the E62 baseline, exact Oxygen is
 quality `100/100/99.73` at 1×/2×/4×, with `.929` coverage, luma SD
 `5.32–5.33`, microcontrast `.48–.51`, chroma `.45–.49`, and macro range `24`.
 Noble Gas remains the Gas-family floor, so E62 does not manufacture a ranking

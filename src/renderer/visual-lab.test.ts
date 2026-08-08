@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   DISABLED_VISUAL_LAB_STATE,
+  isVisualLabDomainImplemented,
   packVisualLabState,
   resolveVisualLabState,
+  VISUAL_LAB_DOMAIN_CAPABILITY,
   VISUAL_LAB_DOMAIN_CODE,
 } from './visual-lab';
 
@@ -21,7 +23,7 @@ describe('normal-WebGL visual lab state', () => {
       domain: 'gas', domainCode: 3, variant: 0, target: 0, gain: 1,
     });
     expect(resolveVisualLabState(
-      'realistic', 1, '?visualLab=powder&visualVariant=1&visualTarget=12.5&visualGain=-4',
+      'realistic', 1, '?visualLab=liquid&visualVariant=1&visualTarget=12.5&visualGain=-4',
     )).toMatchObject({ variant: 1, target: 0, gain: 0 });
     expect(resolveVisualLabState(
       'realistic', 1, '?visualLab=emission&visualTarget=999&visualGain=Infinity',
@@ -31,7 +33,21 @@ describe('normal-WebGL visual lab state', () => {
     )).toMatchObject({ gain: 2 });
   });
 
-  it('collapses Classic, off, invalid domains, and true 8x to the canonical disabled state', () => {
+  it('centralizes implemented domains while retaining reserved shader codes', () => {
+    expect(VISUAL_LAB_DOMAIN_CAPABILITY.gas).toEqual({
+      implemented: true, targetKind: 'propagated-style',
+    });
+    expect(VISUAL_LAB_DOMAIN_CAPABILITY.powder).toEqual({
+      implemented: false, targetKind: 'semantic-material-id',
+    });
+    expect(isVisualLabDomainImplemented('liquid')).toBe(true);
+    expect(isVisualLabDomainImplemented('powder')).toBe(false);
+    expect(resolveVisualLabState(
+      'realistic', 2, '?visualLab=powder&visualVariant=1&visualTarget=1',
+    )).toBe(DISABLED_VISUAL_LAB_STATE);
+  });
+
+  it('collapses Classic, off, invalid/reserved domains, and true 8x to the disabled state', () => {
     expect(resolveVisualLabState('classic', 2, '?visualLab=gas&visualVariant=1'))
       .toBe(DISABLED_VISUAL_LAB_STATE);
     expect(resolveVisualLabState('realistic', 2, '?visualLab=off&visualVariant=1'))
