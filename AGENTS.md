@@ -3,14 +3,12 @@
 ## Current direction
 
 Pause the detail-first E-number ladder. The active goal is framework leverage,
-not another isolated material treatment. The modular typed Visual Lab facade is
-deployed: gas, liquid, and emission comparison arithmetic lives in domain-local
-modules assembled through one stable shader ABI. Complete its executable
-capability profile next: frozen renderer and capture descriptors must share
-exact domain, target, supported Detail/fallback, evidence, URL, and resource-
-budget semantics, and the generic capture runner must consume them without
-domain branches. Then add named capture recipes and reusable result records so
-a normal A/B idea touches one domain module plus one catalog entry—not presenter
+not another isolated material treatment. The modular typed Visual Lab facade and
+its executable capability profiles are deployed: renderer/capture descriptors
+share exact domain, target, Detail/fallback, evidence, URL, backend/pipeline, and
+resource-budget semantics. Complete the named capture-recipe and content-
+addressed result layer next, then add a small batch index/contact sheet. A normal
+A/B idea should touch one domain module plus one catalog entry—not presenter
 setup, HDR lifecycle, app boot, package-script duplication, or CDP branching.
 
 The typed Visual Lab state, fixed normal-HDR composition seam, promotion-safe
@@ -21,20 +19,19 @@ motion is an accepted E08 baseline and uses the moving-Oil fixture with liquid
 target `8`; E65 Water surface motion is an accepted E08 baseline and uses the
 retained moving-Water fixture with liquid target `2`. Their legacy resolvers,
 uniforms, queries, datasets, and bespoke verifier paths are removed. E65 is also
-deployed. The facade and detached-browser lifecycle checkpoint is also live:
+deployed. The executable capability-profile checkpoint is also live:
 `main_codex` and Pages serve revision
-`cf39b9cbad824e18d5b2a145b2ac3655d73ff5c1` after successful workflow run
-`31276908367` and independent live-revision/asset-closure verification.
+`71304b3465b27a37805955f020c448ba3436afbd` after successful workflow run
+`31278167410` and independent 19-resource live asset-closure verification.
 
-The next stable deployment checkpoint is the capability-profile milestone, not
-a fourth leaf migration. It must enforce exact renderer/capture parity for
-domain, target kind, supported paths, fallback behavior, field evidence, URL
-requirements, and explicit sampler/resource budgets; preserve the fixed
-`domain/variant/target/gain` shader assembly boundary; and keep the generic CDP
-harness branch-free. Checkpoint and deploy it after a production build and real
-normal-WebGL proof. Continue framework work afterward with named capture recipes
-and candidate-result records, then use those for rapid visually judged material
-experiments and promote only selected looks into ordinary baselines. Defer E66
+The next stable deployment checkpoint is the recipe/result milestone, not a
+fourth leaf migration. Named recipes own domain/target/fixture/gain/scale and
+must reject conflicting explicit flags; ad-hoc requests remain supported.
+Reports must carry a deterministic SHA-256 identity over the normalized request
+and ordered off/A/B artifacts. Existing Oxygen, Oil-motion, and Water-motion
+scripts delegate to the catalog without repeating owned flags. Checkpoint and
+deploy this after focused tooling tests and one real named normal-WebGL capture;
+then build a batch result index before resuming material experiments. Defer E66
 because its tangent reads make it resource-sensitive; migrate another accepted
 leaf only when doing so removes more special-case infrastructure than it adds.
 Same-page variant selection must remain owned across asynchronous WebGL promotion; a
@@ -1969,39 +1966,34 @@ inactive at exact `4896×3072`, completes a real GPU fence in about `5.31 s`,
 and reports zero browser errors. Do not add E82 to the compact fragment.
 
 Framework leverage remains the checkpoint priority rather than E83 material
-polish. The fixed `domain/variant/target/gain` Visual Lab state, normal-HDR
-gas/emission/liquid compositor hook, browser setter/dataset diagnostics, and
-off/A/B capture script are complete. E62, E69, and E65 prove that accepted leaf
-treatments can be folded into their parent baselines while deleting selector,
-uniform, query, telemetry, and bespoke-verifier plumbing. The completed E65
-checkpoint is deployed at revision `c85e3cfdd1deb16dd4994a51db29929c01df76a3`;
-do not reopen it merely to add more effect detail.
+polish. The fixed `domain/variant/target/gain` state, domain-local shader facade,
+executable renderer/capture capability profiles, browser diagnostics, and
+off/A/B harness are complete and deployed at revision
+`71304b3465b27a37805955f020c448ba3436afbd`. E62, E69, and E65 prove that
+accepted leaf treatments can be folded into parent baselines while deleting
+selector, uniform, query, telemetry, and bespoke-verifier plumbing. Do not
+reopen them merely to add more effect detail.
 
-The next checkpoint must turn the current seam into a typed adapter facade:
-domain-local shader modules behind a stable assembly ABI, exact-parity renderer
-and capture capability descriptors, and reusable
-fixture/evidence/deployment gates. Keep variant zero pixel-preserving, keep the
-direct true-8× fragment untouched, and treat candidate variants as comparison
-evidence rather than release styling. The frozen fixture catalog continues to
-own scene observation, app preparation, target constraints, field readers, and
-fixed URL flags; the generic CDP harness must remain branch-free. Its startup
-transaction must prove Canvas `webgl-starting` before mutating a fixture and
-staging variant B, and all failure/cleanup paths remain bounded. The stable
-adapter/facade checkpoint requires a production build, real normal-WebGL shader
-proof, reusable off/A/B report, Pages asset-closure verification, and exact live
-revision before rapid material experiments resume. Defer E66 and Powder until
-their extra samples or source-stage stability proof fit this facade without
-creating a second experiment framework.
+The next checkpoint is the named recipe/result layer. Frozen recipes own
+`domain/target/fixture/gain/renderScale`, reject conflicting explicit flags, and
+derive every capability, evidence, and URL rule from the existing descriptors.
+Ad-hoc captures remain supported. Each `report.json` adds a deeply frozen
+`anifor.visual-lab.result/v1` record whose `sha256:` identity covers candidate,
+normalized request, and ordered off/A/B hashes. Keep variant zero pixel-
+preserving, the direct true-8× fragment untouched, and the generic CDP harness
+domain-branch-free. After this checkpoint is deployed, build a batch result
+index/contact sheet before resuming material experiments. Defer E66 and Powder
+until their resource/stability proof fits the existing facade.
 
-The first seam now uses `domain/variant/target/gain` (target is deliberately
-domain-specific, not always a material ID). Ordinary pages compile the original
-five-sampler HDR compositor; only an explicit lab session compiles the
-eight-sampler gas/emission permutation. Use `npm run audit:visual-lab --
---domain=gas --target=1 --render-scale=2` for the canonical built-bundle Smoke
-comparison. The harness owns off/A/B PNGs, `report.json`, semantic/field/frame
-alpha-support invariants, and Chrome cleanup. Its built-bundle `file://` route
-is preferred over an old long-running Vite server. The compositor hook is
-post-bloom, so do not claim that emission lab brightness generates bloom.
+Ordinary pages compile the original five-sampler HDR compositor; only an
+explicit lab session compiles the eight-sampler gas/emission permutation. Use
+`npm run audit:visual-lab -- --candidate=gas-showcase` for a built-bundle named
+capture, or `npm run audit:visual-lab:capture -- --candidate=water-motion` to
+reuse an existing bundle. The harness owns off/A/B PNGs, content-addressed
+`report.json`, semantic/field/frame alpha-support invariants, and Chrome cleanup.
+Its built-bundle `file://` route is preferred over an old long-running Vite
+server. The compositor hook is post-bloom, so do not claim that emission lab
+brightness generates bloom.
 
 Contact-audit lesson: a DPR-1 fit-view PNG may merge opposing subcell lobes into
 one CSS pixel. It remains authoritative for visible seam width, topology, and

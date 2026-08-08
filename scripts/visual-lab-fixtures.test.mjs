@@ -310,6 +310,25 @@ describe('Visual Lab fixture adapters', () => {
       expect(child.stderr).toContain(message);
     }
     const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+    expect(packageJson.scripts['audit:visual-lab:capture'])
+      .toBe('node scripts/visual-lab-audit.mjs --bundle=dist/index.html');
+    expect(packageJson.scripts['audit:visual-lab'])
+      .toBe('npm run build && npm run audit:visual-lab:capture --');
+    for (const [scriptName, candidate] of [
+      ['audit:visual-lab:oxygen', 'oxygen-showcase'],
+      ['audit:visual-lab:oil-motion', 'oil-motion'],
+      ['audit:visual-lab:water-motion', 'water-motion'],
+    ]) {
+      const command = packageJson.scripts[scriptName];
+      expect(command).toContain(`npm run audit:visual-lab:capture -- --candidate=${candidate}`);
+      expect(command).not.toMatch(/--(?:domain|target|fixture|gain|render-scale)=/);
+    }
+    expect(packageJson.scripts['audit:visual-lab:oxygen'])
+      .toContain("pixi-field-presenter.test.ts -t 'keeps accepted E62'");
+    expect(packageJson.scripts['audit:visual-lab:oil-motion'])
+      .toContain("hdr-vfx-pipeline.test.ts -t 'keeps accepted E69 exact-Oil slick'");
+    expect(packageJson.scripts['audit:visual-lab:water-motion'])
+      .toContain("hdr-vfx-pipeline.test.ts -t 'exact-Water velocity'");
     expect(packageJson.scripts['audit:vfx:oil-motion']).toBe('npm run audit:visual-lab:oil-motion');
     expect(packageJson.scripts['audit:vfx:liquid-motion'])
       .toBe('npm run audit:visual-lab:water-motion');

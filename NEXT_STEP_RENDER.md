@@ -1,37 +1,35 @@
 ## Current execution objective — framework leverage
 
 Prioritize an effective rendering-experiment framework over further isolated
-visual-detail work. The modular typed Visual Lab facade is now deployed: gas,
-liquid, and emission candidates live in domain-local shader modules behind one
-stable normal-HDR assembly ABI. The immediate milestone is an executable
-capability profile for that facade: frozen renderer/capture descriptors must
-share exact domain, target, supported Detail/fallback, evidence, URL, and
-resource-budget semantics, and the generic capture runner must consume that
-metadata without domain branches. Follow it with named capture recipes so a new
-normal-scale A/B experiment normally touches one domain module and one catalog
-entry—not presenter setup, app lifecycle, package-script duplication, or CDP
-branching.
+visual-detail work. The modular typed Visual Lab facade and its executable
+capability profiles are deployed: frozen renderer/capture descriptors share
+exact domain, target, Detail/fallback, evidence, URL, backend/pipeline, and
+resource-budget semantics, and the generic runner consumes them without domain
+branches. The immediate milestone is a named capture-recipe catalog plus
+content-addressed result records. A normal-scale A/B experiment should touch one
+domain module and one catalog entry—not presenter setup, app lifecycle,
+package-script duplication, or CDP branching. Follow that with a small batch
+index/contact-sheet layer that compares recorded candidates without changing
+renderer code.
 
 The fixed `domain/variant/target/gain` state, promotion-safe same-page switching,
 declarative fixture startup, and production-bundle off/A/B route already form
 the base. E62 Oxygen, E69 Oil motion, and E65 Water motion have been folded into
 their accepted parent baselines and their one-off selector/telemetry/verifier
-plumbing removed. The modular adapter and detached-browser lifecycle checkpoint
-is complete and deployed: `main_codex` and Pages serve revision
-`cf39b9cbad824e18d5b2a145b2ac3655d73ff5c1` after successful workflow run
-`31276908367` and independent live-revision/asset-closure verification.
+plumbing removed. The executable capability-profile checkpoint is complete and
+deployed: `main_codex` and Pages serve revision
+`71304b3465b27a37805955f020c448ba3436afbd` after successful workflow run
+`31278167410` and independent 19-resource live asset-closure verification.
 
-The next stable deployment checkpoint is the capability-profile milestone, not
-a fourth effect. It must make supported paths, baseline-preserving fallbacks,
-field evidence, fixed capture protocol, and exact per-domain sampler/resource
-budgets machine-readable; enforce renderer/capture parity; keep the harness
-domain-branch-free; and retain reusable cleanup, build, Pages asset-closure,
-and live-revision gates. After deployment, add a named recipe/catalog layer and
-candidate result records so experiments are cheap to invoke, compare, accept,
-or discard. Only then resume rapid material experiments and migrate treatments
-whose visual evidence wins and whose promotion removes more special-case code
-than it adds. Canvas remains the resilient semantic fallback and true 8× stays
-on its compact direct path unless a separately budgeted design proves otherwise.
+The next stable deployment checkpoint is the recipe/result milestone, not a
+fourth effect. Named requests must be immutable, conflicting flag overrides
+must fail, ad-hoc captures must remain available, and every report must carry a
+deterministic SHA-256 identity over its normalized request and ordered off/A/B
+artifacts. Existing Oxygen, Oil-motion, and Water-motion commands must delegate
+to the catalog without repeating domain/target/fixture/scale flags. After
+deployment, add a small batch result index before resuming material experiments.
+Canvas remains the resilient semantic fallback and true 8× stays on its compact
+direct path unless a separately budgeted design proves otherwise.
 
 ## Visual north star
 
@@ -3455,26 +3453,16 @@ and checkpointed early; they do not require another cloned verifier route or a
 broad unit-test matrix. Optional adapters may add experiment-specific regions
 or tighter topology checks when the candidate can affect a protected contract.
 
-E62, E69, and E65 now prove that the framework can absorb accepted leaf
-treatments while removing their selector/plumbing and cloned verifier code. E65
-is the completed deployed migration checkpoint at revision
-`c85e3cfdd1deb16dd4994a51db29929c01df76a3`. The declarative named-fixture/domain
-adapter is complete: frozen catalogs own scenes, constraints, optional app
-preparation, target kinds, field-alpha readers, and fixed query flags, leaving
-the CDP harness branch-free.
-
-The next milestone and next stable deployment boundary is the typed adapter
-facade. Split candidate arithmetic into domain-local modules behind one stable
-shader assembly ABI, and make exact-parity renderer/capture descriptors drive
-their respective tooling. Track every domain's target semantics,
-sampler reads, persistent resources, supported Detail rungs, fallback behaviour,
-fixture/evidence needs, and deployment checks there. A candidate should require
-no presenter, lifecycle, or CDP edit. Defer E66 because its tangent reads are
-resource-sensitive, and defer Powder until its source-stage stability proof can
-fit this fixed seam without creating a second experiment framework. After the
-facade checkpoint is built, browser-proved, and deployed, use short experiment
-branches or consecutive commits for rapid visual comparisons and promote only
-the selected treatments.
+E62, E69, and E65 prove that the framework can absorb accepted leaf treatments
+while deleting selector/plumbing and cloned verifier code. The typed domain
+facade, executable capability profiles, exact 0/7/7 read budgets, declarative
+fixtures, protocol-owned URL/dataset requirements, and bounded Chrome lifecycle
+are complete and deployed at revision
+`71304b3465b27a37805955f020c448ba3436afbd`. The current milestone is operational
+leverage over that seam: named requests, strict option ownership, content-
+addressed reports, and then a batch result index. Defer E66 and Powder until
+their extra samples or source-stage stability proof fit the existing budgeted
+facade without creating a second experiment framework.
 
 ### Visual Lab framework checkpoint
 
@@ -3492,7 +3480,7 @@ being restyled. True 8× remains structurally outside the HDR pipeline.
 `scripts/visual-lab-audit.mjs` is the reusable comparison harness. Prefer its
 built-bundle path, which avoids flaky CDP navigation through an old dev server:
 
-`npm run audit:visual-lab -- --domain=gas --target=1 --render-scale=2`
+`npm run audit:visual-lab -- --candidate=gas-showcase`
 
 It writes `off.png`, `a.png`, `b.png`, and `report.json`, and clears its own
 Chrome process group/profile even on failure. The accepted framework proof ran
@@ -3507,7 +3495,7 @@ already-computed transmitted/reflected radiance. It adds no sampler, texture
 read, field, target, pass, upload, allocation, clock, alpha, support, ownership,
 or topology decision. Its canonical Water run is:
 
-`npm run audit:visual-lab -- --domain=liquid --target=2 --render-scale=2`
+`npm run audit:visual-lab -- --candidate=water-motion`
 
 That production-bundle run completed at exact `1224×768` WebGL/HDR with distinct
 A/B captures, zero browser errors, and exact semantic, liquid-field alpha, and
@@ -3523,26 +3511,30 @@ promotion before running off/A/B. The domain capability table is renderer-owned;
 reserved Powder resolves fully disabled instead of compiling and binding an
 eight-sampler compositor that has no Powder implementation.
 
-### Next stable deploy checkpoint — typed adapter facade
+### Next stable deploy checkpoint — named recipes and result records
 
-This checkpoint is infrastructure, not a new look. Gas, liquid, and emission
-must expose typed domain-local candidate modules through the unchanged
-`domain/variant/target/gain` shader-facing state. Renderer and capture metadata
-must use the same tested domain and target-kind vocabulary. The following
-framework increment should extend their frozen descriptors with resource
-budgets, supported scales/fallbacks, fixtures, preparation, evidence readers,
-and fixed URL state. The compositor assembly seam
-must remain stable, variant zero must remain pixel-preserving, the generic CDP
-harness must remain free of domain/fixture branches, and unsupported Powder must
-remain inert.
+This checkpoint is infrastructure, not a new look. The frozen recipe catalog
+owns `domain/target/fixture/gain/renderScale`; `--candidate=<name>` rejects every
+explicit recipe-owned flag, while base URL, bundle, output directory, Chrome,
+and GPU remain composable environment options. The initial catalog is
+`gas-showcase`, `oxygen-showcase`, `oil-motion`, and `water-motion`.
 
-The reusable gate for that checkpoint is: focused descriptor/assembly checks, a
-production build, one real normal-WebGL off/A/B capture per implemented domain,
-semantic/field/framebuffer-alpha invariance, bounded Chrome cleanup, CI success,
-Pages asset-closure verification, and an exact live `revision.txt` match. Deploy
-the facade checkpoint to `main_codex` only after those gates pass. Rapid material
-experiments are the following phase; subjective candidates should not expand
-this infrastructure contract or restart the per-effect selector ladder.
+Build and capture a named request with:
+
+`npm run audit:visual-lab -- --candidate=water-motion`
+
+Reuse an existing production bundle with:
+
+`npm run audit:visual-lab:capture -- --candidate=water-motion`
+
+Every report retains full capability/protocol evidence and adds
+`anifor.visual-lab.result/v1`: candidate name, normalized request, ordered
+off/A/B hashes, and a deterministic `sha256:` identity over that exact record.
+The reusable gate is focused catalog/result tests, a production build, one real
+named WebGL/HDR capture with invariant alpha/support, bounded Chrome cleanup,
+CI success, Pages asset closure, and exact live revision. The following
+framework increment is a batch index/contact sheet over these records; it must
+not add renderer selectors or CDP domain branches.
 
 E62 Oxygen volume folding is the first migrated accepted treatment. Its
 established exact-Oxygen arithmetic remains inside the E15 body proof, preserving
@@ -3599,29 +3591,32 @@ motion cue. No sample, texture, field, target, pass, upload, allocation, clock,
 alpha, support, ownership, or compact-8× branch was added.
 
 The migration was checkpointed as
-`c85e3cfdd1deb16dd4994a51db29929c01df76a3`, promoted to `main_codex`, and
-deployed successfully by workflow run `31274976219`. Pages serves that exact
-revision. Treat E65 as complete; the next deployment is the typed adapter/facade
-checkpoint above.
+`c85e3cfdd1deb16dd4994a51db29929c01df76a3`; the later executable capability
+checkpoint is deployed at `71304b3465b27a37805955f020c448ba3436afbd` by
+workflow run `31278167410`. Treat E65 and the capability facade as complete; the
+next deployment is the recipe/result checkpoint above.
 
 The hook runs after bloom extraction. Emission experiments can reshape final
 radiance but cannot seed new bloom until a deliberately budgeted pre-extract
-hook exists. `scripts/visual-lab-fixtures.mjs` now supplies the declarative
-domain and named-fixture catalogs. It derives CLI validation/help, fixed URL
-flags, report target kinds, field-alpha readers, bootstrap scenes, and optional
-app-method/argument preparation. Its one serialized startup transaction observes
+hook exists. `scripts/visual-lab-fixtures.mjs` supplies declarative domain and
+named-fixture catalogs; `scripts/visual-lab-recipes.mjs` adds validated named
+requests without duplicating capability metadata; and
+`scripts/visual-lab-result.mjs` gives every capture a canonical content identity.
+The catalogs derive CLI validation/help, fixed URL flags, report target kinds,
+field-alpha readers, bootstrap scenes, and optional app-method/argument
+preparation. The serialized startup transaction observes
 the mounted scene and Canvas `webgl-starting` state before any mutation, then
 prepares and stages variant B synchronously; missing or throwing preparers return
 immediate structured failures rather than consuming the 60-second readiness
-budget. Nine small framework tests cover the catalogs, startup ordering,
-fail-fast diagnostics, CLI constraints, and compatibility aliases, and they are
-part of `npm test`. Prepared Oil, prepared Water, and scene-owned showcase
-captures pass at canonical 2× with exact topology/alpha invariants and zero
-browser errors. Immediate work is the modular typed adapter facade and its
-reusable evidence/deployment gate. Defer E66 and Powder until the fixed HDR seam
-can receive their stability/body proof without a second source-shader experiment
-framework. Do not resume per-material selector growth before the facade
-checkpoint is deployed.
+budget. Twenty-eight focused Visual Lab tooling tests cover capability/fixture
+catalogs, recipe validation, result identities, startup ordering, fail-fast CLI
+ownership, URL construction, and compatibility aliases; the detached-process
+lifecycle tests remain alongside them in `npm test`. The named Water candidate
+passes at canonical 2× with exact topology/alpha invariants, distinct off/A/B
+images, zero browser errors, and a deterministic content-addressed result.
+Immediate work is checkpoint/deployment of this recipe/result layer, followed by
+a batch result index. Defer E66 and Powder until the fixed HDR seam can receive
+their stability/body proof without a second experiment framework.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

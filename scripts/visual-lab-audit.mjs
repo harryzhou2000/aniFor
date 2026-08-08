@@ -30,6 +30,10 @@ import {
   visualLabDomainNames, visualLabFixtureNames,
 } from './visual-lab-fixtures.mjs';
 import {
+  resolveVisualLabCaptureRecipe, visualLabCaptureRecipeNames,
+} from './visual-lab-recipes.mjs';
+import { createVisualLabResultRecord } from './visual-lab-result.mjs';
+import {
   requestBrowserShutdown, terminateDetachedProcess,
 } from './detached-process.mjs';
 
@@ -49,6 +53,7 @@ const HELP = `Usage:
 Options (use --name=value):
   --base-url=http://127.0.0.1:5173/  Dev URL or file:///.../dist/index.html
   --bundle=dist/index.html              Built bundle entry (overrides default URL)
+  --candidate=<name>                   Named request: ${visualLabCaptureRecipeNames().join('|')}
   --domain=${visualLabDomainNames().join('|')}         Lab domain (default: gas)
   --target=0..255                      Domain target selector; 0 is wildcard
   --fixture=${visualLabFixtureNames().join('|')}        App-owned fixture (default: showcase)
@@ -64,8 +69,8 @@ Outputs: off.png, a.png, b.png, and report.json in --output-dir.`;
 function parseArguments(argv) {
   if (argv.includes('--help')) return { help: true };
   const known = new Set([
-    'base-url', 'bundle', 'domain', 'target', 'fixture', 'gain', 'render-scale', 'output-dir',
-    'chrome', 'gpu',
+    'base-url', 'bundle', 'candidate', 'domain', 'target', 'fixture', 'gain', 'render-scale',
+    'output-dir', 'chrome', 'gpu',
   ]);
   const values = new Map();
   for (const argument of argv) {
@@ -75,24 +80,39 @@ function parseArguments(argv) {
     const separator = argument.indexOf('=');
     const name = argument.slice(2, separator);
     if (!known.has(name)) throw new Error(`Unknown option --${name}`);
+    if (values.has(name)) throw new Error(`Option --${name} may only be provided once`);
     values.set(name, argument.slice(separator + 1));
   }
 
-  const domain = values.get('domain') ?? 'gas';
+  const candidate = values.has('candidate')
+    ? resolveVisualLabCaptureRecipe(values.get('candidate')) : null;
+  if (candidate !== null) {
+    const ownedOptions = ['domain', 'target', 'fixture', 'gain', 'render-scale'];
+    const conflicts = ownedOptions.filter((name) => values.has(name));
+    if (conflicts.length > 0) {
+      throw new Error(
+        `--candidate=${candidate.name} owns ${ownedOptions.map((name) => `--${name}`).join(', ')};`
+        + ` remove conflicting ${conflicts.map((name) => `--${name}`).join(', ')}`,
+      );
+    }
+  }
+
+  const domain = candidate?.domain ?? values.get('domain') ?? 'gas';
   const domainAdapter = resolveVisualLabDomain(domain);
-  const target = Number(values.get('target') ?? 0);
+  const target = candidate?.target ?? Number(values.get('target') ?? 0);
   if (!Number.isInteger(target) || target < 0 || target > 255) {
     throw new Error('--target must be an integer from 0 through 255');
   }
-  const fixture = values.get('fixture') ?? 'showcase';
+  const fixture = candidate?.fixture ?? values.get('fixture') ?? 'showcase';
   const fixtureAdapter = resolveVisualLabFixture(fixture, domain, target);
-  const gain = Number(values.get('gain') ?? 1);
+  const gain = candidate?.gain ?? Number(values.get('gain') ?? 1);
   if (!Number.isFinite(gain) || gain <= 0 || gain > 2) {
     throw new Error('--gain must be greater than 0 and no greater than 2');
   }
   const defaultRenderScale = domainAdapter.executionProfile.detailScales.includes(2)
     ? 2 : domainAdapter.executionProfile.detailScales[0];
-  const renderScale = Number(values.get('render-scale') ?? defaultRenderScale);
+  const renderScale = candidate?.renderScale
+    ?? Number(values.get('render-scale') ?? defaultRenderScale);
   if (!domainAdapter.executionProfile.detailScales.includes(renderScale)) {
     throw new Error(
       `--render-scale for ${domain} must be ${
@@ -127,10 +147,12 @@ function parseArguments(argv) {
   }
 
   const fixtureSuffix = fixture === 'showcase' ? '' : `-${fixture}`;
-  const defaultOutput = path.join(tmpdir(), `anifor-visual-lab-${domain}${fixtureSuffix}`);
+  const outputIdentity = candidate?.name ?? `${domain}${fixtureSuffix}`;
+  const defaultOutput = path.join(tmpdir(), `anifor-visual-lab-${outputIdentity}`);
   return Object.freeze({
     help: false,
     baseUrl,
+    candidate: candidate?.name ?? null,
     domain,
     domainAdapter,
     target,
@@ -259,8 +281,20 @@ async function main() {
     if (!compactCaptures.a.distinctFromOff && !compactCaptures.b.distinctFromOff) {
       warnings.push('A and B PNGs are byte-identical to off; check target ownership or gain');
     }
+    const result = createVisualLabResultRecord(options.candidate, {
+      domain: options.domain,
+      target: options.target,
+      fixture: options.fixture,
+      gain: options.gain,
+      renderScale: options.renderScale,
+    }, {
+      off: compactCaptures.off.sha256,
+      a: compactCaptures.a.sha256,
+      b: compactCaptures.b.sha256,
+    });
     const report = {
       tool: 'visual-lab-audit-v1',
+      result,
       url: url.href,
       domain: options.domain,
       target: options.target,
