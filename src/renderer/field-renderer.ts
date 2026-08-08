@@ -3,6 +3,7 @@ import type { SimulationBackend } from '../simulation';
 import { clientToViewport, ViewTransform, type Point, type ViewState } from './view-transform';
 import { clientToVisualViewport, contentBoxFromBounds, viewportToClient } from './client-coordinate-map';
 import type { PixiFieldPresenter, WebGLPresentationTiming } from './pixi-field-presenter';
+import type { VisualLabVariant } from './visual-lab';
 import {
   backingSize, CANVAS_FALLBACK_DIMENSION_BUDGET, CANVAS_FALLBACK_PIXEL_BUDGET,
   resolveFieldOutputScale, safeDeviceWebGLOutputScale, safeWebGLOutputScale,
@@ -946,6 +947,11 @@ export class MaterialRenderer {
     // The presenter owns the uniform mutation and submitted frame. A missing
     // presenter is the resilient Canvas path, where E82 is deliberately inert.
     this.presenter?.setCeramicBlackbodyVfxEnabled(enabled);
+  }
+
+  /** Normal-HDR visual-lab A/B selector; Canvas and true 8x remain inert. */
+  setVisualLabVariant(variant: VisualLabVariant): void {
+    this.presenter?.setVisualLabVariant(variant);
   }
 
   /** Native DLAY countdown is a state-owned RGB cue, never a JavaScript timer. */

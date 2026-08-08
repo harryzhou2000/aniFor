@@ -663,6 +663,9 @@ export class Game {
       setCeramicBlackbodyVfx: (enabled) => {
         this.renderer.setCeramicBlackbodyVfxEnabled(enabled);
       },
+      setVisualLabVariant: (variant) => {
+        this.renderer.setVisualLabVariant(variant);
+      },
       setRoleMaterialStyling: (enabled) => {
         this.renderer.setRoleMaterialStylingEnabled(enabled);
       },

@@ -11,6 +11,7 @@
     "typecheck": "tsc -b",
     "test": "vitest run src",
     "audit:browser-input": "node scripts/verify-browser-input.mjs",
+    "audit:visual-lab": "npm run build && node scripts/visual-lab-audit.mjs --bundle=dist/index.html",
     "audit:viewport:desktop": "node scripts/verify-browser-input.mjs --desktop-input-only --webgl-only",
     "audit:viewport:mobile": "node scripts/verify-browser-input.mjs --mobile-only --webgl-only",
     "audit:viewport:mobile-gesture": "node scripts/verify-browser-input.mjs --mobile-gesture-only --webgl-only",

@@ -2,8 +2,10 @@ import {
   Application, Container, Mesh, MeshGeometry, RenderTexture, Shader, Texture, UniformGroup,
 } from 'pixi.js';
 import type { TextureSource } from 'pixi.js';
+import { HDR_VOLUME_LAB_GLSL } from './hdr-volume-lab';
 import type { FieldOutputScale } from './render-resolution';
 import type { RenderLook } from './render-look';
+import { packVisualLabState, type VisualLabState } from './visual-lab';
 
 export type HDRPipelineReason = 'classic' | 'scale-8' | 'not-webgl2'
   | 'float-color-unavailable' | 'mrt-unavailable' | 'float-framebuffer-incomplete'
@@ -26,10 +28,12 @@ export interface HDRPipelineInfo {
   readonly liquidMotionVfx?: boolean;
   readonly oilMotionVfx?: boolean;
   readonly waterCurvatureVfx?: boolean;
+  readonly visualLabDomain?: VisualLabState['domain'];
+  readonly visualLabVariant?: VisualLabState['variant'];
 }
 
-/** Existing presenter textures reused by the HDR liquid-transport composite. */
-export interface HDRLiquidSurfaceResources {
+/** Existing presenter textures reused by the normal-scale HDR compositor. */
+export interface HDRCompositionResources {
   readonly enabled: boolean;
   readonly motionEnabled: boolean;
   readonly oilMotionEnabled: boolean;
@@ -37,6 +41,12 @@ export interface HDRLiquidSurfaceResources {
   readonly semanticTexture: TextureSource;
   readonly wallTexture: TextureSource;
   readonly liquidTexture: TextureSource;
+  readonly atmosphereTexture: TextureSource;
+  readonly atmosphereStyleTexture: TextureSource;
+  readonly emissionTexture: TextureSource;
+  readonly atmosphereTexel: readonly [number, number];
+  readonly emissionTexel: readonly [number, number];
+  readonly visualLab: Readonly<VisualLabState>;
 }
 
 interface RenderPassRenderer {
@@ -105,7 +115,7 @@ void main() {
 }
 `;
 
-export const HDR_TONEMAP_FRAGMENT = `
+const createHDRTonemapFragment = (visualLabEnabled: boolean): string => `
 in vec2 vUv;
 out vec4 finalColor;
 uniform sampler2D uHdrTexture;
@@ -113,7 +123,17 @@ uniform sampler2D uBloomTexture;
 uniform sampler2D uSemanticTexture;
 uniform sampler2D uWallTexture;
 uniform sampler2D uLiquidTexture;
+${visualLabEnabled ? `
+uniform sampler2D uAtmosphereTexture;
+uniform sampler2D uAtmosphereStyleTexture;
+uniform sampler2D uEmissionTexture;
+` : ''}
 uniform vec2 uWorldTexel;
+${visualLabEnabled ? `
+uniform vec2 uAtmosphereTexel;
+uniform vec2 uEmissionTexel;
+uniform vec4 uVisualLab;
+` : ''}
 uniform float uLiquidSurfaceVfx;
 uniform float uLiquidMotionVfx;
 uniform float uOilMotionVfx;
@@ -157,6 +177,8 @@ float emptyMaterial(float candidate) {
 vec3 straightRadiance(vec4 sampleValue) {
   return sampleValue.a > 0.0001 ? sampleValue.rgb / sampleValue.a : vec3(0.0);
 }
+
+${visualLabEnabled ? HDR_VOLUME_LAB_GLSL : ''}
 
 /**
  * E08 transports only colour already present in the completed HDR scene. The
@@ -412,6 +434,7 @@ void main() {
       radiance = liquidSurfaceTransport(radiance, material, semanticCentre);
     }
   }
+  ${visualLabEnabled ? 'radiance = applyHdrVolumeLab(radiance, vUv);' : ''}
   // Bloom is presentation-only RGB. Existing scene alpha remains the sole
   // owner of silhouettes, gaps, and sparse material topology.
   float support = smoothstep(0.002, 0.10, scene.a);
@@ -429,6 +452,12 @@ void main() {
   finalColor = vec4(displayColor * scene.a, scene.a);
 }
 `;
+
+/** Default compositor: retained independently so ordinary pages compile no lab code. */
+export const HDR_TONEMAP_FRAGMENT = createHDRTonemapFragment(false);
+
+/** Explicit visual-lab compositor; supports same-page off/A/B switching. */
+export const HDR_VISUAL_LAB_TONEMAP_FRAGMENT = createHDRTonemapFragment(true);
 
 /**
  * Proves the WebGL2 features needed by the first HDR experiment on the actual
@@ -499,6 +528,7 @@ export class HDRVfxPipeline {
   private readonly extractScene = new Container();
   private readonly blurScene = new Container();
   private readonly compositeScene = new Container();
+  private compositeUniforms?: UniformGroup;
 
   private constructor(
     private readonly renderer: RenderPassRenderer,
@@ -507,7 +537,7 @@ export class HDRVfxPipeline {
     height: number,
     outputScale: FieldOutputScale,
     look: Exclude<RenderLook, 'classic'>,
-    liquidSurface: HDRLiquidSurfaceResources,
+    composition: HDRCompositionResources,
   ) {
     const bloomWidth = Math.max(1, Math.ceil(width / 2));
     const bloomHeight = Math.max(1, Math.ceil(height / 2));
@@ -559,51 +589,81 @@ export class HDRVfxPipeline {
         },
         'hdr-bloom-blur',
       ));
+      const visualLabEnabled = composition.visualLab.domain !== 'off';
+      const compositeUniforms = new UniformGroup({
+        uBloomIntensity: { value: look === 'neon-lab' ? 0.62 : 0.34, type: 'f32' },
+        uExposure: { value: look === 'neon-lab' ? 1.04 : 1.0, type: 'f32' },
+        uSaturation: { value: look === 'neon-lab' ? 1.14 : 1.01, type: 'f32' },
+        uWorldTexel: {
+          value: new Float32Array([1 / width, 1 / height]), type: 'vec2<f32>',
+        },
+        ...(visualLabEnabled ? {
+          uAtmosphereTexel: {
+            value: new Float32Array(composition.atmosphereTexel), type: 'vec2<f32>',
+          },
+        } : {}),
+        ...(visualLabEnabled ? {
+          uEmissionTexel: {
+            value: new Float32Array(composition.emissionTexel), type: 'vec2<f32>',
+          },
+        } : {}),
+        ...(visualLabEnabled ? {
+          uVisualLab: {
+            value: packVisualLabState(composition.visualLab),
+            type: 'vec4<f32>',
+          },
+        } : {}),
+        uLiquidSurfaceVfx: { value: composition.enabled ? 1 : 0, type: 'f32' },
+        uLiquidMotionVfx: {
+          value: composition.enabled && composition.motionEnabled ? 1 : 0,
+          type: 'f32',
+        },
+        uOilMotionVfx: {
+          value: composition.enabled && composition.oilMotionEnabled ? 1 : 0,
+          type: 'f32',
+        },
+        uWaterCurvatureVfx: {
+          value: composition.enabled && composition.curvatureEnabled ? 1 : 0,
+          type: 'f32',
+        },
+      });
       this.compositeScene.addChild(createPassMesh(
-        width, height, HDR_TONEMAP_FRAGMENT,
+        width, height,
+        visualLabEnabled ? HDR_VISUAL_LAB_TONEMAP_FRAGMENT : HDR_TONEMAP_FRAGMENT,
         {
-          passUniforms: new UniformGroup({
-            uBloomIntensity: { value: look === 'neon-lab' ? 0.62 : 0.34, type: 'f32' },
-            uExposure: { value: look === 'neon-lab' ? 1.04 : 1.0, type: 'f32' },
-            uSaturation: { value: look === 'neon-lab' ? 1.14 : 1.01, type: 'f32' },
-            uWorldTexel: {
-              value: new Float32Array([1 / width, 1 / height]), type: 'vec2<f32>',
-            },
-            uLiquidSurfaceVfx: { value: liquidSurface.enabled ? 1 : 0, type: 'f32' },
-            uLiquidMotionVfx: {
-              value: liquidSurface.enabled && liquidSurface.motionEnabled ? 1 : 0,
-              type: 'f32',
-            },
-            uOilMotionVfx: {
-              value: liquidSurface.enabled && liquidSurface.oilMotionEnabled ? 1 : 0,
-              type: 'f32',
-            },
-            uWaterCurvatureVfx: {
-              value: liquidSurface.enabled && liquidSurface.curvatureEnabled ? 1 : 0,
-              type: 'f32',
-            },
-          }),
+          passUniforms: compositeUniforms,
           uHdrTexture: hdrTarget.source,
           uHdrSampler: hdrTarget.source.style,
           uBloomTexture: bloomB.source,
           uBloomSampler: bloomB.source.style,
-          uSemanticTexture: liquidSurface.semanticTexture,
-          uSemanticSampler: liquidSurface.semanticTexture.style,
-          uWallTexture: liquidSurface.wallTexture,
-          uWallSampler: liquidSurface.wallTexture.style,
-          uLiquidTexture: liquidSurface.liquidTexture,
-          uLiquidSampler: liquidSurface.liquidTexture.style,
+          uSemanticTexture: composition.semanticTexture,
+          uSemanticSampler: composition.semanticTexture.style,
+          uWallTexture: composition.wallTexture,
+          uWallSampler: composition.wallTexture.style,
+          uLiquidTexture: composition.liquidTexture,
+          uLiquidSampler: composition.liquidTexture.style,
+          ...(visualLabEnabled ? {
+            uAtmosphereTexture: composition.atmosphereTexture,
+            uAtmosphereSampler: composition.atmosphereTexture.style,
+            uAtmosphereStyleTexture: composition.atmosphereStyleTexture,
+            uAtmosphereStyleSampler: composition.atmosphereStyleTexture.style,
+            uEmissionTexture: composition.emissionTexture,
+            uEmissionSampler: composition.emissionTexture.style,
+          } : {}),
         },
         'hdr-aces-composite',
       ));
+      this.compositeUniforms = compositeUniforms;
       this.hdrTarget = hdrTarget;
       this.bloomA = bloomA;
       this.bloomB = bloomB;
       this.info = {
-        active: true, look, liquidSurfaceVfx: liquidSurface.enabled,
-        liquidMotionVfx: liquidSurface.enabled && liquidSurface.motionEnabled,
-        oilMotionVfx: liquidSurface.enabled && liquidSurface.oilMotionEnabled,
-        waterCurvatureVfx: liquidSurface.enabled && liquidSurface.curvatureEnabled,
+        active: true, look, liquidSurfaceVfx: composition.enabled,
+        liquidMotionVfx: composition.enabled && composition.motionEnabled,
+        oilMotionVfx: composition.enabled && composition.oilMotionEnabled,
+        waterCurvatureVfx: composition.enabled && composition.curvatureEnabled,
+        visualLabDomain: composition.visualLab.domain,
+        visualLabVariant: composition.visualLab.variant,
         bloomWidth: bloomWidth * outputScale,
         bloomHeight: bloomHeight * outputScale,
       };
@@ -628,7 +688,7 @@ export class HDRVfxPipeline {
     height: number,
     outputScale: FieldOutputScale,
     look: RenderLook,
-    liquidSurface: HDRLiquidSurfaceResources,
+    composition: HDRCompositionResources,
   ): { readonly pipeline?: HDRVfxPipeline; readonly info: HDRPipelineInfo } {
     if (look === 'classic') return { info: { active: false, look, reason: 'classic' } };
     if (outputScale === 8) return { info: { active: false, look, reason: 'scale-8' } };
@@ -640,7 +700,7 @@ export class HDRVfxPipeline {
     try {
       const pipeline = new HDRVfxPipeline(
         app.renderer as unknown as RenderPassRenderer,
-        sourceScene, width, height, outputScale, look, liquidSurface,
+        sourceScene, width, height, outputScale, look, composition,
       );
       return { pipeline, info: pipeline.info };
     } catch {
@@ -653,6 +713,16 @@ export class HDRVfxPipeline {
     this.renderer.render({ container: this.extractScene, target: this.bloomA, clear: true });
     this.renderer.render({ container: this.blurScene, target: this.bloomB, clear: true });
     this.renderer.render({ container: this.compositeScene, clear: true });
+  }
+
+  /** Updates only the fixed comparison vec4; callers decide when to render. */
+  setVisualLabState(state: Readonly<VisualLabState>): void {
+    const target = this.compositeUniforms?.uniforms.uVisualLab as Float32Array | undefined;
+    if (!target) return;
+    target[0] = state.domainCode;
+    target[1] = state.variant;
+    target[2] = state.target;
+    target[3] = state.gain;
   }
 
   destroy(): void {

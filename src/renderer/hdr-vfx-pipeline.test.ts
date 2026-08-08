@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { HDR_TONEMAP_FRAGMENT, probeHDRPipelineSupport } from './hdr-vfx-pipeline';
+import {
+  HDR_TONEMAP_FRAGMENT, HDR_VISUAL_LAB_TONEMAP_FRAGMENT, probeHDRPipelineSupport,
+} from './hdr-vfx-pipeline';
 
 function uniformSamplers(shader: string): string[] {
   return [...shader.matchAll(/uniform\s+sampler2D\s+(\w+)\s*;/g)]
@@ -154,8 +156,8 @@ describe('HDR VFX capability gate', () => {
   });
 });
 
-describe('HDR liquid-surface composite contract', () => {
-  it('reuses the established scene, bloom, and semantic field inputs', () => {
+describe('HDR composition contract', () => {
+  it('keeps the default compositor on its established five inputs', () => {
     expect(uniformSamplers(HDR_TONEMAP_FRAGMENT)).toEqual([
       'uBloomTexture',
       'uHdrTexture',
@@ -174,6 +176,30 @@ describe('HDR liquid-surface composite contract', () => {
       expect(occurrences(HDR_TONEMAP_FRAGMENT, sampler)).toBeGreaterThan(1);
     }
     expect(occurrences(HDR_TONEMAP_FRAGMENT, 'uWorldTexel')).toBeGreaterThan(1);
+    expect(HDR_TONEMAP_FRAGMENT).not.toContain('uVisualLab');
+    expect(HDR_TONEMAP_FRAGMENT).not.toContain('applyHdrVolumeLab');
+  });
+
+  it('adds the reusable visual lab only to the explicit eight-input compositor', () => {
+    expect(uniformSamplers(HDR_VISUAL_LAB_TONEMAP_FRAGMENT)).toEqual([
+      'uAtmosphereStyleTexture',
+      'uAtmosphereTexture',
+      'uBloomTexture',
+      'uEmissionTexture',
+      'uHdrTexture',
+      'uLiquidTexture',
+      'uSemanticTexture',
+      'uWallTexture',
+    ]);
+    expect(HDR_VISUAL_LAB_TONEMAP_FRAGMENT).toMatch(/uniform\s+vec4\s+uVisualLab\s*;/);
+    expect(HDR_VISUAL_LAB_TONEMAP_FRAGMENT).toContain('vec3 applyHdrVolumeLab(');
+    expect(HDR_VISUAL_LAB_TONEMAP_FRAGMENT).toContain(
+      'radiance = applyHdrVolumeLab(radiance, vUv);',
+    );
+    expect(HDR_VISUAL_LAB_TONEMAP_FRAGMENT).toContain(
+      'if (labVariant < 0.5 || labGain < 0.0001) return radiance;',
+    );
+    expect(HDR_VISUAL_LAB_TONEMAP_FRAGMENT).not.toContain('uVisualLabTime');
   });
 
   it('recognizes only the exact Water, Oil, and Acid material identities', () => {

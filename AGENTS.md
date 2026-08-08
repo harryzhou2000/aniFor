@@ -6,12 +6,15 @@ The E80 dense-body ambient floor, E81 native-PHOT spectral irradiance on exact
 deep Metal, and E82 authoritative-temperature Ceramic blackbody relief are
 accepted across normal WebGL and their compact true-8× exclusions. Pause the
 detail-first E-number ladder here. The primary next objective is a more
-effective rendering-experiment framework: reduce monolithic shader/selector
-pressure, make visual variants cheap to compose and compare, centralize
-experiment metadata and capability/scale budgets, and make deterministic
-visual-lab captures reusable instead of cloning a large audit route for every
-colour or lighting idea. Its first checkpoint should preserve the current
-pixels while establishing the framework seam. The rejected Powder-concavity
+effective rendering-experiment framework. Establish one typed Visual Lab state,
+one fixed normal-HDR composition hook, and one reusable same-page off/A/B
+capture route before adding more isolated selectors. The initial gas/emission
+hook must reuse the presenter's atmosphere/style/emission textures, remain
+RGB-only, add no field/texture/target/pass/time resource, and resolve inert for
+Classic, Canvas, failed HDR, and true 8×. Variant zero is the pixel-preserving
+default. This seam moves rapid aesthetic experiments out of the monolithic
+semantic fragment and makes them cheap to compare without cloning the large
+browser verifier. The rejected Powder-concavity
 idea must not be revived by misnaming directional slope or adding an
 unbudgeted sample. Continue material breadth, native material behaviour, and graphics:
 expose more TPT
@@ -1935,12 +1938,24 @@ space, and repeated-off frames remain exact. Requested-on compact true 8× is
 inactive at exact `4896×3072`, completes a real GPU fence in about `5.31 s`,
 and reports zero browser errors. Do not add E82 to the compact fragment.
 
-The next checkpoint is framework work rather than E83 material polish. Start by
-extracting a declarative experiment registry and reusable visual-comparison
-route around a small accepted slice, while emitting the same uniforms, dataset
-state, query semantics, and GLSL. Do not combine that seam extraction with a
-new visual treatment; a byte-identical architecture checkpoint makes later
-branch-based A/B work faster and easier to revert.
+The next checkpoint is framework work rather than E83 material polish. Finish
+the fixed `domain/variant/target/gain` Visual Lab state, its normal-HDR
+gas/emission compositor hook, browser setter/dataset diagnostics, and a compact
+off/A/B capture script. Keep variant zero byte-identical and keep the direct
+true-8× fragment untouched. The two candidate variants are lab evidence, not
+accepted release styling; selecting or migrating one belongs in a later small
+checkpoint. After the seam is proven, extend it to powder/liquid and only then
+consider declaratively migrating historical selectors.
+
+The first seam now uses `domain/variant/target/gain` (target is deliberately
+domain-specific, not always a material ID). Ordinary pages compile the original
+five-sampler HDR compositor; only an explicit lab session compiles the
+eight-sampler gas/emission permutation. Use `npm run audit:visual-lab --
+--domain=gas --target=1 --render-scale=2` for the canonical built-bundle Smoke
+comparison. The harness owns off/A/B PNGs, `report.json`, semantic/field/frame
+alpha-support invariants, and Chrome cleanup. Its built-bundle `file://` route
+is preferred over an old long-running Vite server. The compositor hook is
+post-bloom, so do not claim that emission lab brightness generates bloom.
 
 Contact-audit lesson: a DPR-1 fit-view PNG may merge opposing subcell lobes into
 one CSS pixel. It remains authoritative for visible seam width, topology, and

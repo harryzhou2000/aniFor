@@ -193,6 +193,8 @@ export interface BrowserInputAuditApi {
   setPhotonMetalIrradianceVfx(enabled: boolean): void;
   /** E82 normal-WebGL Ceramic blackbody body response; true 8x stays inert. */
   setCeramicBlackbodyVfx(enabled: boolean): void;
+  /** Shared normal-HDR visual-lab comparison selector: off, A, or B. */
+  setVisualLabVariant(variant: 0 | 1 | 2): void;
   setRoleMaterialStyling(enabled: boolean): void;
   setCellularMaterialStyling(enabled: boolean): void;
   setStructuralRigidStyling(enabled: boolean): void;

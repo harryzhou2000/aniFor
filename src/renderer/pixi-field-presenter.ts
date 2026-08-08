@@ -39,6 +39,9 @@ import { sampleCanvasFieldAlpha } from './canvas-surface-light';
 import { HDRVfxPipeline, type HDRPipelineInfo } from './hdr-vfx-pipeline';
 import { resolveCeramicBlackbodyVfxEnabled } from './ceramic-blackbody-vfx';
 import {
+  resolveVisualLabState, type VisualLabState, type VisualLabVariant,
+} from './visual-lab';
+import {
   resolveBotanicalBodyVfxEnabled,
   resolveBotanicalMesostructureVfxEnabled,
   resolveBotanicalPigmentVfxEnabled,
@@ -11641,6 +11644,7 @@ export class PixiFieldPresenter {
   private readonly scene = new Container();
   private hdrVfxPipeline?: HDRVfxPipeline;
   private hdrPipelineInfo: HDRPipelineInfo;
+  private visualLabState: Readonly<VisualLabState>;
   private readonly fieldBytes: Uint8Array;
   private readonly fieldSource: BufferImageSource;
   private readonly wallBytes: Uint8Array;
@@ -11825,6 +11829,7 @@ export class PixiFieldPresenter {
       autoGarbageCollect: false,
     });
     const renderLook = resolveRenderLook();
+    this.visualLabState = resolveVisualLabState(renderLook, outputScale);
     const volumeVfxEnabled = resolveVolumeVfxEnabled(renderLook);
     // E05 follows the normal-detail HDR boundary. The compact true-8x shader
     // retains its established powder body and does not declare this uniform.
@@ -12480,6 +12485,16 @@ export class PixiFieldPresenter {
         semanticTexture: this.fieldSource,
         wallTexture: this.wallSource,
         liquidTexture: this.liquidSource,
+        atmosphereTexture: this.atmosphereSource,
+        atmosphereStyleTexture: this.atmosphereStyleSource,
+        emissionTexture: this.emissionSource,
+        atmosphereTexel: [
+          1 / this.fieldSet.atmosphere.width, 1 / this.fieldSet.atmosphere.height,
+        ],
+        emissionTexel: [
+          1 / this.fieldSet.emission.width, 1 / this.fieldSet.emission.height,
+        ],
+        visualLab: this.visualLabState,
       },
     );
     this.hdrVfxPipeline = hdr.pipeline;
@@ -12589,6 +12604,7 @@ export class PixiFieldPresenter {
         preserveDrawingBuffer: typeof location !== 'undefined'
           && new URLSearchParams(location.search).get('inputAudit') === '1'
           && (new URLSearchParams(location.search).get('blankAudit') === '1'
+            || new URLSearchParams(location.search).get('visualLabAudit') === '1'
             || new URLSearchParams(location.search).get('candidateRankAudit') === '1'
             || new URLSearchParams(location.search).get('volumeVfxAudit') === '1'
             || new URLSearchParams(location.search).get('gasBodyVfxAudit') === '1'
@@ -12691,6 +12707,7 @@ export class PixiFieldPresenter {
     presenter.app.canvas.dataset.backingSize = presenter.app.canvas.width + 'x' + presenter.app.canvas.height;
     presenter.app.canvas.dataset.renderLook = presenter.hdrPipelineInfo.look;
     presenter.app.canvas.dataset.hdrPipeline = presenter.hdrPipelineInfo.active ? 'active' : 'inactive';
+    presenter.publishVisualLabDataset();
     presenter.app.canvas.dataset.denseBodyAmbientFill = outputScale < 8
       && Number(presenter.uniforms.uniforms.uDenseBodyAmbientFill) > 0.5
       ? 'active' : 'inactive';
@@ -13461,6 +13478,26 @@ export class PixiFieldPresenter {
     uniforms.uCeramicGlazeVfx = glazeActive ? (active ? 2 : 1) : 0;
     this.app.canvas.dataset.ceramicBlackbodyVfx = active ? 'active' : 'inactive';
     this.renderApplication();
+  }
+
+  /** Fixed normal-HDR A/B bridge; all simulation and camera state stay intact. */
+  setVisualLabVariant(variant: VisualLabVariant): void {
+    const next = Object.freeze({ ...this.visualLabState, variant });
+    this.visualLabState = next;
+    this.hdrVfxPipeline?.setVisualLabState(next);
+    this.publishVisualLabDataset();
+    if (this.hdrVfxPipeline) this.renderApplication();
+  }
+
+  private publishVisualLabDataset(): void {
+    const state = this.visualLabState;
+    const supportedDomain = state.domain === 'gas' || state.domain === 'emission';
+    this.app.canvas.dataset.visualLabDomain = state.domain;
+    this.app.canvas.dataset.visualLabVariant = String(state.variant);
+    this.app.canvas.dataset.visualLabTarget = String(state.target);
+    this.app.canvas.dataset.visualLabGain = String(state.gain);
+    this.app.canvas.dataset.visualLab = this.hdrPipelineInfo.active
+      && supportedDomain && state.variant > 0 && state.gain > 0 ? 'active' : 'inactive';
   }
 
   setRoleMaterialStylingEnabled(enabled: boolean): void {
@@ -14485,6 +14522,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uWetSedimentVfx = 0;
         this.app.canvas.dataset.hdrPipeline = 'inactive';
         this.app.canvas.dataset.hdrPipelineReason = 'runtime-error';
+        this.app.canvas.dataset.visualLab = 'inactive';
         this.app.canvas.dataset.volumeVfx = 'inactive';
         this.app.canvas.dataset.gasBodyVfx = 'inactive';
         this.app.canvas.dataset.gasMotionVfx = 'inactive';
