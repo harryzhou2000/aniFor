@@ -19,7 +19,7 @@
 
 import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
-import { access, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -96,6 +96,12 @@ function parseArguments(argv) {
   if (values.has('base-url') && values.has('bundle')) {
     throw new Error('--base-url and --bundle are mutually exclusive');
   }
+  if (values.has('bundle') && values.get('bundle') === '') {
+    throw new Error('--bundle must name a built index.html file');
+  }
+  if (values.has('output-dir') && values.get('output-dir') === '') {
+    throw new Error('--output-dir must not be empty');
+  }
   let baseUrl;
   try {
     baseUrl = values.has('bundle')
@@ -118,6 +124,7 @@ function parseArguments(argv) {
     gpu,
     outputDir: path.resolve(values.get('output-dir') ?? defaultOutput),
     chrome: values.get('chrome'),
+    bundle: values.has('bundle'),
   });
 }
 
@@ -149,25 +156,43 @@ async function main() {
   }
 
   const url = auditUrl(options);
-  await ensureServer(url);
+  await ensureServer(url, options.bundle);
   await mkdir(options.outputDir, { recursive: true });
   const chromePath = await resolveChrome(options.chrome);
-  const profile = await mkdtemp(path.join(tmpdir(), 'anifor-visual-lab-chrome-'));
-  const gpuFlags = options.gpu === 'swiftshader'
-    ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader']
-    : ['--enable-webgl', '--ignore-gpu-blocklist'];
-  const chrome = spawn(chromePath, [
-    '--headless=new', '--no-sandbox', '--disable-dev-shm-usage',
-    '--no-proxy-server', '--remote-debugging-port=0',
-    ...(url.protocol === 'file:' ? ['--allow-file-access-from-files'] : []),
-    `--user-data-dir=${profile}`, '--window-size=1280,720',
-    '--force-device-scale-factor=1', '--disable-background-timer-throttling',
-    '--disable-renderer-backgrounding', ...gpuFlags, url.href,
-  ], { detached: true, stdio: ['ignore', 'ignore', 'pipe'] });
-
   let cdp;
+  let chrome;
+  let profile;
+  let cleanupPromise;
+  const cleanup = () => {
+    cleanupPromise ??= (async () => {
+      cdp?.close();
+      await terminate(chrome);
+      if (profile) await rm(profile, { recursive: true, force: true });
+    })();
+    return cleanupPromise;
+  };
+  const onSignal = (signal) => {
+    void cleanup().finally(() => process.exit(signal === 'SIGINT' ? 130 : 143));
+  };
+  const onSigint = () => onSignal('SIGINT');
+  const onSigterm = () => onSignal('SIGTERM');
+  process.once('SIGINT', onSigint);
+  process.once('SIGTERM', onSigterm);
   try {
-    const target = await findChromeTarget(chrome);
+    profile = await mkdtemp(path.join(tmpdir(), 'anifor-visual-lab-chrome-'));
+    const gpuFlags = options.gpu === 'swiftshader'
+      ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader']
+      : ['--enable-webgl', '--ignore-gpu-blocklist'];
+    chrome = spawn(chromePath, [
+      '--headless=new', '--no-sandbox', '--disable-dev-shm-usage',
+      '--no-proxy-server', '--remote-debugging-port=0',
+      ...(url.protocol === 'file:' ? ['--allow-file-access-from-files'] : []),
+      `--user-data-dir=${profile}`, '--window-size=1280,720',
+      '--force-device-scale-factor=1', '--disable-background-timer-throttling',
+      '--disable-renderer-backgrounding', ...gpuFlags, url.href,
+    ], { detached: true, stdio: ['ignore', 'ignore', 'pipe'] });
+
+    const target = await findChromeTarget(chrome, url);
     cdp = await Cdp.connect(target.webSocketDebuggerUrl);
     const browserErrors = collectBrowserErrors(cdp);
     await Promise.all([
@@ -251,16 +276,23 @@ async function main() {
     process.stdout.write(JSON.stringify({ ...report, report: reportPath }));
     process.stdout.write('\n');
   } finally {
-    cdp?.close();
-    await terminate(chrome);
-    await rm(profile, { recursive: true, force: true });
+    await cleanup();
+    process.removeListener('SIGINT', onSigint);
+    process.removeListener('SIGTERM', onSigterm);
   }
 }
 
-async function ensureServer(url) {
+async function ensureServer(url, requireBundleFile = false) {
   if (url.protocol === 'file:') {
-    try { await access(fileURLToPath(url)); }
-    catch { throw new Error(`Cannot read production bundle ${fileURLToPath(url)}`); }
+    const entry = fileURLToPath(url);
+    try {
+      if (requireBundleFile) {
+        const entryStat = await stat(entry);
+        if (!entryStat.isFile()) throw new Error('not a file');
+      } else {
+        await access(entry);
+      }
+    } catch { throw new Error(`Cannot read production bundle ${entry}`); }
     return;
   }
   let response;
@@ -290,30 +322,46 @@ async function resolveChrome(explicit) {
   throw new Error('Chrome/Chromium not found; pass --chrome=/path or set CHROME_BIN');
 }
 
-async function findChromeTarget(chrome) {
+async function findChromeTarget(chrome, expectedUrl) {
   let chromeLog = '';
   const browserSocket = await new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (callback) => (value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      chrome.stderr.off('data', onStderr);
+      chrome.off('exit', onExit);
+      chrome.off('error', onError);
+      callback(value);
+    };
     const timeout = setTimeout(() => {
-      reject(new Error(`Chrome DevTools timeout\n${chromeLog.slice(-4_000)}`));
+      finish(reject)(new Error(`Chrome DevTools timeout\n${chromeLog.slice(-4_000)}`));
     }, 15_000);
-    chrome.stderr.on('data', (chunk) => {
+    const onStderr = (chunk) => {
       chromeLog = `${chromeLog}${chunk}`.slice(-8_000);
       const match = chromeLog.match(/DevTools listening on (ws:\/\/[^\s]+)/);
       if (!match) return;
-      clearTimeout(timeout);
-      resolve(match[1]);
-    });
-    chrome.once('exit', (code) => {
-      clearTimeout(timeout);
-      reject(new Error(`Chrome exited before DevTools (${code})\n${chromeLog}`));
-    });
+      finish(resolve)(match[1]);
+    };
+    const onExit = (code) => finish(reject)(
+      new Error(`Chrome exited before DevTools (${code})\n${chromeLog}`),
+    );
+    const onError = (error) => finish(reject)(
+      new Error(`Chrome failed to start: ${error instanceof Error ? error.message : String(error)}`),
+    );
+    chrome.stderr.on('data', onStderr);
+    chrome.once('exit', onExit);
+    chrome.once('error', onError);
   });
   const port = new URL(browserSocket).port;
   return waitFor(async () => {
-    const response = await fetch(`http://127.0.0.1:${port}/json/list`);
+    const response = await fetch(`http://127.0.0.1:${port}/json/list`, {
+      signal: AbortSignal.timeout(2_000),
+    });
     const targets = await response.json();
     return targets.find((candidate) => candidate.type === 'page'
-      && candidate.webSocketDebuggerUrl);
+      && candidate.url === expectedUrl.href && candidate.webSocketDebuggerUrl);
   }, 10_000, 'Chrome page target');
 }
 
