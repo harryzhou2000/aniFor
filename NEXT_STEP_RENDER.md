@@ -3409,14 +3409,15 @@ browser control, and reports its resolved state through stable canvas dataset
 fields. Classic, Canvas, unsupported HDR, and true 8× must resolve to an inert
 state. With variant `0`, the default framebuffer must remain unchanged.
 
-The HDR lab reuses textures already maintained by the presenter. Its first
-bounded domains are atmosphere-owned gas and the shared emission volume; it may
-compose their existing density/style/emission signals after the semantic HDR
-scene without adding a simulation field, texture resource, render target,
-pass, scheduler stage, or time-varying topology. Lab treatments are RGB-only;
-scene alpha remains the sole silhouette owner. This deliberately moves rapid
-gas/emission aesthetic experiments out of the pressure-sensitive 8,355-line
-semantic fragment while retaining the current compact true-8× path unchanged.
+The HDR lab reuses textures already maintained by the presenter and values
+already proved by the compositor. Its bounded domains are atmosphere-owned gas,
+the shared emission volume, and exact connected air-facing Water/Oil/Acid
+surfaces. It may compose those existing signals after the semantic HDR scene
+without adding a simulation field, texture resource, render target, pass,
+scheduler stage, or time-varying topology. Lab treatments are RGB-only; scene
+alpha remains the sole silhouette owner. This deliberately moves rapid
+aesthetic experiments out of the pressure-sensitive semantic fragment while
+retaining the current compact true-8× path unchanged.
 
 Build one reusable capture harness around that seam. It should prepare a named
 deterministic fixture, switch the fixed selector in the same page, write
@@ -3427,18 +3428,19 @@ and checkpointed early; they do not require another cloned verifier route or a
 broad unit-test matrix. Optional adapters may add experiment-specific regions
 or tighter topology checks when the candidate can affect a protected contract.
 
-After this milestone is stable, add powder and liquid hooks to the same state
-and capture protocol, then migrate one accepted gas/emission treatment as the
-proof that framework use removes old selector/plumbing code. Only then consider
-a declarative registry for the historical E-number stack. Track every lab
-domain's sampler reads, persistent resources, supported Detail rungs, and
+After this milestone is stable, add a conservative powder hook to the same
+state and capture protocol, then migrate one accepted gas/emission treatment as
+the proof that framework use removes old selector/plumbing code. Only then
+consider a declarative registry for the historical E-number stack. Track every
+lab domain's sampler reads, persistent resources, supported Detail rungs, and
 fallback behaviour explicitly. Use short experiment branches or consecutive
 checkpoint commits for competing looks and select winners from the generated
 visual comparisons.
 
 ### Visual Lab framework checkpoint
 
-The first framework seam is implemented on `experiment/hdr-volume-lab`.
+The framework seam is implemented on `experiment/hdr-volume-lab` and extended
+on `experiment/visual-lab-liquid`.
 `visual-lab.ts` resolves and packs the fixed `domain/variant/target/gain` state;
 the browser audit API can switch off/A/B in place; and canvas datasets expose
 the live resolved state. The ordinary HDR compositor remains a separate
@@ -3461,11 +3463,24 @@ errors, distinct A/B images, and exact semantic, authoritative-field alpha, and
 framebuffer alpha/support invariance. The gas A/B looks are comparison samples,
 not accepted release styling.
 
+The liquid extension reuses the completed E08 surface-transport proof and its
+already-computed transmitted/reflected radiance. It adds no sampler, texture
+read, field, target, pass, upload, allocation, clock, alpha, support, ownership,
+or topology decision. Its canonical Water run is:
+
+`npm run audit:visual-lab -- --domain=liquid --target=2 --render-scale=2`
+
+That production-bundle run completed at exact `1224×768` WebGL/HDR with distinct
+A/B captures, zero browser errors, and exact semantic, liquid-field alpha, and
+framebuffer alpha/support invariance. The harness now selects its exact page
+target, bounds target discovery, and tears down the detached Chrome process
+group and temporary profile on ordinary exit, failure, SIGINT, or SIGTERM.
+
 The hook runs after bloom extraction. Emission experiments can reshape final
 radiance but cannot seed new bloom until a deliberately budgeted pre-extract
-hook exists. The immediate next framework work is a powder/liquid domain seam
-or migration of one accepted gas treatment; do not resume per-material selector
-growth before one of those proves that the framework deletes old plumbing.
+hook exists. The immediate next framework work is a conservative powder-domain
+seam or migration of one accepted gas/emission treatment; do not resume
+per-material selector growth before the framework deletes old plumbing.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

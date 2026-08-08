@@ -408,6 +408,9 @@ vec3 liquidSurfaceTransport(
     result *= vec3(1.0) - vec3(0.050, 0.070, 0.100)
       * concavePocket * (0.74 + curvatureKey * 0.26);
   }
+  ${visualLabEnabled ? `result = applyHdrLiquidLab(
+    result, material, surface, ripple, outward, transmitted, reflected, wallBacked
+  );` : ''}
   return result;
 }
 

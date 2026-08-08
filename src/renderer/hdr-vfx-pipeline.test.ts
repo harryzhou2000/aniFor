@@ -202,6 +202,22 @@ describe('HDR composition contract', () => {
     expect(HDR_VISUAL_LAB_TONEMAP_FRAGMENT).not.toContain('uVisualLabTime');
   });
 
+  it('reuses completed E08 locals for the liquid lab without another texture read', () => {
+    const helper = HDR_VISUAL_LAB_TONEMAP_FRAGMENT.slice(
+      HDR_VISUAL_LAB_TONEMAP_FRAGMENT.indexOf('vec3 applyHdrLiquidLab('),
+      HDR_VISUAL_LAB_TONEMAP_FRAGMENT.indexOf('vec3 applyHdrVolumeLab('),
+    );
+    expect(helper).toContain('labDomain != 2.0');
+    expect(helper).toContain('wallBacked > 0.5');
+    expect(helper).toContain('max(transmitted, vec3(0.0))');
+    expect(helper).toContain('max(reflected, vec3(0.0))');
+    expect(helper).not.toContain('texture(');
+    expect(HDR_VISUAL_LAB_TONEMAP_FRAGMENT).toContain(
+      'result, material, surface, ripple, outward, transmitted, reflected, wallBacked',
+    );
+    expect(HDR_TONEMAP_FRAGMENT).not.toContain('applyHdrLiquidLab');
+  });
+
   it('recognizes only the exact Water, Oil, and Acid material identities', () => {
     expect(HDR_TONEMAP_FRAGMENT).toMatch(/const\s+float\s+MATERIAL_WATER\s*=\s*2\.0\s*;/);
     expect(HDR_TONEMAP_FRAGMENT).toMatch(/const\s+float\s+MATERIAL_OIL\s*=\s*8\.0\s*;/);

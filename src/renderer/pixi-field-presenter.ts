@@ -13491,7 +13491,8 @@ export class PixiFieldPresenter {
 
   private publishVisualLabDataset(): void {
     const state = this.visualLabState;
-    const supportedDomain = state.domain === 'gas' || state.domain === 'emission';
+    const supportedDomain = state.domain === 'liquid'
+      || state.domain === 'gas' || state.domain === 'emission';
     this.app.canvas.dataset.visualLabDomain = state.domain;
     this.app.canvas.dataset.visualLabVariant = String(state.variant);
     this.app.canvas.dataset.visualLabTarget = String(state.target);

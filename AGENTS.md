@@ -5,18 +5,18 @@
 The E80 dense-body ambient floor, E81 native-PHOT spectral irradiance on exact
 deep Metal, and E82 authoritative-temperature Ceramic blackbody relief are
 accepted across normal WebGL and their compact true-8× exclusions. Pause the
-detail-first E-number ladder here. The primary next objective is a more
-effective rendering-experiment framework. Establish one typed Visual Lab state,
-one fixed normal-HDR composition hook, and one reusable same-page off/A/B
-capture route before adding more isolated selectors. The initial gas/emission
-hook must reuse the presenter's atmosphere/style/emission textures, remain
-RGB-only, add no field/texture/target/pass/time resource, and resolve inert for
-Classic, Canvas, failed HDR, and true 8×. Variant zero is the pixel-preserving
-default. This seam moves rapid aesthetic experiments out of the monolithic
-semantic fragment and makes them cheap to compare without cloning the large
-browser verifier. The rejected Powder-concavity
-idea must not be revived by misnaming directional slope or adding an
-unbudgeted sample. Continue material breadth, native material behaviour, and graphics:
+detail-first E-number ladder here. The primary objective is now an effective,
+reusable rendering-experiment framework. The typed Visual Lab state, fixed
+normal-HDR composition seam, and same-page off/A/B capture route are established
+for gas, emission, and connected Water/Oil/Acid surfaces. Keep extending this
+one route and migrate an accepted treatment through it before adding more
+isolated selectors or cloned browser verifiers. Lab variants must reuse live
+presenter textures or already-computed compositor values, remain RGB-only, add
+no field/texture/target/pass/time resource, and resolve inert for Classic,
+Canvas, failed HDR, and true 8×. Variant zero is the pixel-preserving default.
+The rejected Powder-concavity idea must not be revived by misnaming directional
+slope or adding an unbudgeted sample. Continue material breadth, native material
+behaviour, and graphics:
 expose more TPT
 forces/sources, radioactive matter, botanical growth, phase changes, and
 reactions; give material families distinctive topology-preserving body optics,

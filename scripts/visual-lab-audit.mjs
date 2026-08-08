@@ -40,8 +40,8 @@ const HELP = `Usage:
 Options (use --name=value):
   --base-url=http://127.0.0.1:5173/  Dev URL or file:///.../dist/index.html
   --bundle=dist/index.html                Built bundle entry (overrides default URL)
-  --domain=gas|emission                 Lab domain (default: gas)
-  --target=0..255                       Gas style byte or emission material ID
+  --domain=gas|liquid|emission         Lab domain (default: gas)
+  --target=0..255                      Gas style byte or liquid/emission material ID
   --gain=0.01..2                        RGB-only experiment gain (default: 1)
   --render-scale=1|2|4                  Normal WebGL scale (default: 2)
   --output-dir=/tmp/anifor-visual-lab-gas
@@ -73,8 +73,8 @@ function parseArguments(argv) {
   }
 
   const domain = values.get('domain') ?? 'gas';
-  if (domain !== 'gas' && domain !== 'emission') {
-    throw new Error('--domain must be gas or emission');
+  if (domain !== 'gas' && domain !== 'liquid' && domain !== 'emission') {
+    throw new Error('--domain must be gas, liquid, or emission');
   }
   const target = Number(values.get('target') ?? 0);
   if (!Number.isInteger(target) || target < 0 || target > 255) {
@@ -141,9 +141,13 @@ function auditUrl(options) {
   parameters.set('visualLab', options.domain);
   parameters.set('visualVariant', '0');
   // The target is domain-specific: gas consumes a propagated atmosphere style
-  // byte, while emission consumes a semantic material ID.
+  // byte, while liquid and emission consume semantic material IDs.
   parameters.set('visualTarget', String(options.target));
   parameters.set('visualGain', String(options.gain));
+  if (options.domain === 'liquid') {
+    parameters.set('liquidBodyVfx', '1');
+    parameters.set('liquidSurfaceVfx', '1');
+  }
   parameters.delete('renderer');
   return url;
 }
@@ -527,7 +531,9 @@ async function snapshotState(cdp, domain) {
     }
     const readField = ${JSON.stringify(domain)} === 'gas'
       ? (x, y) => audit.atmosphereFieldAlpha(x, y)
-      : (x, y) => audit.emissionFieldAlpha(x, y);
+      : (${JSON.stringify(domain)} === 'liquid'
+        ? (x, y) => audit.liquidFieldAlpha(x, y)
+        : (x, y) => audit.emissionFieldAlpha(x, y));
     const fieldAlpha = digestBytes(readField, audit.width, audit.height);
     const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
     if (!gl) throw new Error('semantic-field canvas has no readable WebGL context');
