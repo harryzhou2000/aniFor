@@ -730,9 +730,10 @@ node scripts/verify-browser-input.mjs --composed-rank-only --webgl-only \
 ```
 
 The composed route explicitly requests accepted E75
-`plantCanopyLifecycleVfx=1` and E76 `waterMetalSeparationVfx=1`, and proves both
-live WebGL dataset states at every captured scale; generic `inputAudit=1` would
-otherwise keep either child off.
+`plantCanopyLifecycleVfx=1`, E76 `waterMetalSeparationVfx=1`, and E77
+`nobleGasCoreReliefVfx=1`, and proves all three live WebGL dataset states at
+every captured scale; generic `inputAudit=1` would otherwise keep these
+opt-in children off.
 The current `organicPlant` showcase body intentionally carries zero lifecycle
 payload, so the focused native lifecycle atlas remains the authority for E75's
 actual two-tree response. Composed telemetry proves selector integration and
@@ -747,6 +748,39 @@ benefit: 1× Water/Metal rises from `87.058` to `88.756` with chromatic separati
 `.6500→.7000`; 2×/4× remain `91.216/91.667`. Run the dedicated gate with
 `npm run audit:vfx:water-metal-separation`; it also proves requested-on E76 is
 inactive at exact true 8× and completes through `gpu-fence`.
+
+E77 adds restrained exact-Noble dense-core relief as a strict E31/E25/E04
+normal-WebGL child. Run:
+
+```bash
+npm run audit:vfx:noble-gas-core-relief
+
+# Attribute the production-scene change explicitly:
+npm run build
+node scripts/verify-browser-input.mjs --composed-rank-only --webgl-only \
+  --production-bundle --render-look=realistic --capture-dpr=1 \
+  --noble-gas-core-relief-vfx=0
+node scripts/verify-browser-input.mjs --composed-rank-only --webgl-only \
+  --production-bundle --render-look=realistic --capture-dpr=1 \
+  --noble-gas-core-relief-vfx=1
+```
+
+The focused gate freezes a smooth positive crown and negative pocket at
+1×/2×/4×, exact off→on→off repetition, unchanged atmosphere/semantic/alpha/
+wall state, and exact raw topology, isolated sibling-gas, sparse, and contact
+controls. The named adjacent Noble/FOG seam permits only the measured HDR-
+composed footprint (Noble peak `4`, foreign FOG peak `2` bytes). Its
+calibrated crown RGB RMS is `2.06/2.08/2.07`; pocket RGB RMS is
+`2.73/2.67/2.67`, with response microcontrast `.25–.33`. Requested-on true 8×
+is deliberately excluded from the normal-detail shader, promotes at exact
+`4896×3072`, and must signal the real GPU fence. The accepted composed A/B
+raises Noble quality from `95.351/95.463/95.463` to `100/100/100`, increases
+luma deviation from `3.51/3.52/3.52` to `4.11/4.11/4.12`, retains `.965`
+coverage, and clips no pixels. If an isolated candidate looks darker but lowers
+the composed score, reject it; the abandoned uniform-absorption version did
+exactly that. The selector defaults off under generic `inputAudit=1` unless the
+route explicitly requests it, so parent E25/E31 audits keep their frozen
+reference frames.
 
 The browser obtains regions and exact semantic expectations from the app-owned
 `MATERIAL_SHOWCASE_AUDIT`; the driver must not maintain copied coordinates.

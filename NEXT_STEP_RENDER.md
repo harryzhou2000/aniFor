@@ -3188,19 +3188,67 @@ while keeping support recall `1`, coverage `.947`, macro range `45`, and zero
 clipping. Canonical 2× and 4× remain stable at `91.216/91.667`, so this closes
 the visible low-resolution regression without manufacturing a wider boundary.
 
-### Next visual diagnostic — E77 Noble Gas billow/core relief
+### E77 — accepted Noble Gas billow/core relief
 
-The protected zero-state PLNT showcase remains the lowest survey score but is
-not eligible for another state-free octave. The next eligible ranked weakness
-is Noble Gas billow depth (`.808`, family quality `95.463`). First test a
-normal-WebGL-only strict E31 child (and therefore E25 descendant), nested inside
-its exact style-7 `noblePrismSupport` proof. Reuse only existing optical depth,
-gas crown/pocket, and directional-relief carriers for restrained dense-core
-convex/pocket separation. Do not repeat E31's wave-C prism mix or add a generic
-Noble tint, sample, wave/noise octave, texture, field, pass, allocation, clock,
+E77 closes the post-E76 exact-Noble billow-depth deficit as a
+normal-WebGL-only strict E31 child (and therefore E25/E04 descendant),
+independently switchable with `?nobleGasCoreReliefVfx=0|1`. It is nested inside
+exact style-7 `noblePrismSupport` and expands the accepted E31 composite around
+the live `gasBase` albedo. Existing optical depth, atmosphere density,
+cardinal-neighbour support, gas crown/pocket, and directional relief provide
+all geometry. It adds no repeated wave-C prism mix, generic Noble tint, sample,
+wave/noise octave, texture, field, pass, target, upload, allocation, clock,
 alpha/support, silhouette, ownership, topology, state, or physics decision.
-Preserve sparse carriers, gaps, other gases, contacts, walls, Canvas, and
-compact true 8× as controls.
+
+The calibrated 1×/2×/4× off→on→off matrix measures crown RGB RMS
+`2.06/2.08/2.07`, signed luma `1.59/1.61/1.60`, and coverage
+`.467/.483/.472`. The recessed pocket measures RGB RMS `2.73/2.67/2.67`,
+signed luma `-2.06/-2.01/-2.01`, and coverage `.943/.914/.886`; response
+microcontrast remains `.25–.33`. Repeated-off framebuffers are byte exact.
+Authored voids and channels, sparse carriers/gaps, isolated Smoke/Oxygen/
+Hydrogen/FOG/CFLM, Water/Metal contacts, walls, fields, alpha/support, and
+semantic hashes remain exact. The adjacent Noble/FOG seam keeps exact raw
+ownership and permits only its measured HDR-composed footprint (Noble peak
+`4`, foreign FOG peak `2` bytes). Run
+`npm run audit:vfx:noble-gas-core-relief`.
+Requested-on true 8× promotes exact `4896×3072`, exposes E77 inactive with
+reason `scale-8`, and completes through `gpu-fence` in about `5.16 s`.
+
+The explicit composed A/B is the visual acceptance authority. E77 raises Noble
+Gas quality from `95.351/95.463/95.463` to `100/100/100` at 1×/2×/4×, luma
+deviation from `3.51/3.52/3.52` to `4.11/4.11/4.12`, and macro luma range from
+`15` to `18`; coverage stays `.965` and clipping stays zero. Pure
+curvature/directional arithmetic was inert in the saturated core. A rejected
+uniform absorption candidate instead reduced the score to roughly
+`92.5–92.8` by compressing the accepted luma structure. Keep the final
+contrast-expansion approach: it deepens E31's existing low-frequency composite
+without inventing a new carrier or particle texture. The canonical composed
+route now explicitly requests E77 active; its CLI switch remains available for
+the recorded attribution A/B.
+
+### Next visual diagnostic — E78 Water/Metal Fresnel-spectrum separation
+
+The protected zero-payload PLNT showcase remains the lowest composed score and
+must not receive another state-free procedural octave. After E77, the next
+eligible deficit is Water/Metal contact chromatic separation (`.675`, quality
+`91.216` at canonical 2×); E76 repaired the 1× regression but left a real
+canonical/4× perceptual deficit. Test one normal-WebGL-only strict E76 child,
+`?waterMetalFresnelSpectrumVfx=0|1`, that applies an approximately Rec.709-
+luma-neutral opposing chroma rotation to the already-proven exact Water/Metal
+contact. Reuse only E56/E76's `wetContactBand`, crown/pocket/facing and
+`liquidFresnelContour`, plus E37/E76's signed Metal `phaseContactTone`. Do not
+add another band, procedural carrier, coordinate pattern, sample, resource, or
+material reach.
+
+Use the existing horizontal/vertical Water/Metal fixture and preserve
+Water/Glass, Oil/Glass, Acid/Brick, Oil/Metal, deep cores, gaps, walls, traits,
+emission, holes/channels, powder, gas, and blank controls. Acceptance requires
+an explicit canonical 2× composed chromatic-separation improvement—not merely
+a 1× bump—while luma, seam width, alpha/support, topology, scale stability, and
+true-8× exclusion remain bounded. This is already a three-level contact chain:
+if a luma-neutral rotation cannot improve the canonical evidence, reject E78
+instead of stacking another interface-colour layer. Any accepted child must
+also retain E77's Noble Gas score and the Canvas fallback contract.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

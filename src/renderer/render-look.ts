@@ -419,6 +419,25 @@ export function resolveNobleGasPrismVfxEnabled(
 }
 
 /**
+ * E77 gives the accepted E31 prismatic Noble Gas volume a separately
+ * measurable dense-core relief. It is a strict child of the exact billow and
+ * consequently cannot revive either E25 or E04. Generic input fixtures keep
+ * their accepted Noble reference unless they explicitly request this child.
+ */
+export function resolveNobleGasCoreReliefVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveNobleGasPrismVfxEnabled(look, search)) return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('nobleGasCoreReliefVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return true;
+}
+
+/**
  * Gives a dense exact Plasma body a restrained contained core. The normal
  * WebGL presenter reuses its existing semantic core and emission-field support;
  * an explicit override keeps E16 independently measurable while ordinary HDR

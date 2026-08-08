@@ -3798,6 +3798,74 @@ describe('Pixi presenter startup configuration', () => {
     expect(preserveDrawingBuffer).toContain("get('nobleGasPrismVfxAudit') === '1'");
   });
 
+  it('keeps E77 Noble Gas core relief inside E31, normal-WebGL-only, and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e31Start = normal.indexOf('      // E31 gives exact Noble Gas');
+    const e77Start = normal.indexOf('          // E77 separates', e31Start);
+    const e77End = normal.indexOf('      // E07:', e77Start);
+    const e31 = normal.slice(e31Start, e77End);
+    const e77 = normal.slice(e77Start, e77End);
+    const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveDrawingBufferEnd = source.indexOf(
+      'resolution: outputScale', preserveDrawingBufferStart,
+    );
+    const preserveDrawingBuffer = source.slice(
+      preserveDrawingBufferStart, preserveDrawingBufferEnd,
+    );
+
+    expect(eightStart).toBeGreaterThanOrEqual(0);
+    expect(normalStart).toBeGreaterThan(eightStart);
+    expect(normalEnd).toBeGreaterThan(normalStart);
+    expect(e31Start).toBeGreaterThanOrEqual(0);
+    expect(e77Start).toBeGreaterThan(e31Start);
+    expect(e77End).toBeGreaterThan(e77Start);
+    expect(normal).toContain('uniform float uNobleGasCoreReliefVfx;');
+    expect(normal.match(/uNobleGasCoreReliefVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uNobleGasCoreReliefVfx');
+    expect(eight).not.toContain('nobleGasCoreReliefVfx');
+    expect(canvasSource).not.toContain('nobleGasCoreReliefVfx');
+    for (const parentGuard of [
+      'uNobleGasPrismVfx > 0.5', 'uNobleGasBillowVfx > 0.5',
+      'uGasIdentityStyling > 0.5', 'wall < 0.5', '!materialEmissive',
+      'abs(noblePrismStyle - 7.0)', 'noblePrismOwner > 0.5',
+    ]) expect(e31).toContain(parentGuard);
+    for (const establishedInput of [
+      'noblePrismSupport', 'noblePrismSpectrum', 'gasBase', 'nobleCoreLumaDelta',
+      'atmosphereState.a',
+      'cloudNeighbourMean', 'gasCrown', 'gasPocket',
+      'gasDirectionalRelief', 'opticalDepth',
+    ]) expect(e77).toContain(establishedInput);
+    expect(e77).not.toContain('noblePrismPhase');
+    expect(e77).not.toContain('gasVfxWaveC');
+    expect(e77).not.toContain('gasVfxBillow');
+    expect(e77).not.toContain('fieldPosition');
+    expect(e77).not.toContain('sin(');
+    expect(e77).not.toContain('texture(');
+    expect(e77).not.toContain('texelFetch(');
+    expect(e77).not.toContain('uTime');
+    expect(e77).not.toContain('gl_FragCoord');
+    expect(e77).not.toContain('discard');
+    expect(e77).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(e77).not.toMatch(/\b(?:atmosphereState|finalColor)\.a\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uNobleGasCoreReliefVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toMatch(
+      /const nobleGasCoreReliefVfxEnabled = outputScale < 8\s*&& resolveNobleGasCoreReliefVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain(
+      'uNobleGasCoreReliefVfx: {\n        value: nobleGasCoreReliefVfxEnabled ? 1 : 0',
+    );
+    expect(source).toContain('presenter.app.canvas.dataset.nobleGasCoreReliefVfx');
+    expect(source).toContain("this.app.canvas.dataset.nobleGasCoreReliefVfx = 'inactive';");
+    expect(preserveDrawingBuffer).toContain("get('nobleGasCoreReliefVfxAudit') === '1'");
+  });
+
   it('keeps E27 Smoke softness exact-style, E04-dependent, normal-WebGL-only, and RGB-only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');

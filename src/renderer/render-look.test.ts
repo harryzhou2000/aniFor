@@ -28,6 +28,7 @@ import {
   resolveOilMotionVfxEnabled,
   resolveWaterCurvatureVfxEnabled,
   resolveNobleGasBillowVfxEnabled, resolveNobleGasPrismVfxEnabled,
+  resolveNobleGasCoreReliefVfxEnabled,
   resolveHydrogenBodyVfxEnabled,
   resolveOxygenVolumeFoldVfxEnabled,
   resolveSmokeBillowDepthVfxEnabled,
@@ -358,6 +359,37 @@ describe('resolveRenderLook', () => {
     expect(resolveNobleGasPrismVfxEnabled(
       'realistic', '?nobleGasPrismVfx=false',
     )).toBe(false);
+  });
+
+  it('keeps Noble Gas core relief audit-isolated beneath the full E04/E25/E31 ancestry', () => {
+    expect(resolveNobleGasCoreReliefVfxEnabled(
+      'classic', '?nobleGasCoreReliefVfx=1',
+    )).toBe(false);
+    expect(resolveNobleGasCoreReliefVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveNobleGasCoreReliefVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveNobleGasCoreReliefVfxEnabled(
+      'realistic', '?inputAudit=1',
+    )).toBe(false);
+    expect(resolveNobleGasCoreReliefVfxEnabled(
+      'realistic', '?inputAudit=1&nobleGasCoreReliefVfx=true',
+    )).toBe(true);
+    for (const disabled of ['0', 'off', 'false']) {
+      expect(resolveNobleGasCoreReliefVfxEnabled(
+        'realistic', `?nobleGasCoreReliefVfx=${disabled}`,
+      )).toBe(false);
+    }
+    expect(resolveNobleGasCoreReliefVfxEnabled(
+      'realistic', '?gasBodyVfx=0&nobleGasBillowVfx=1&nobleGasPrismVfx=1&nobleGasCoreReliefVfx=1',
+    )).toBe(false);
+    expect(resolveNobleGasCoreReliefVfxEnabled(
+      'realistic', '?nobleGasBillowVfx=0&nobleGasPrismVfx=1&nobleGasCoreReliefVfx=1',
+    )).toBe(false);
+    expect(resolveNobleGasCoreReliefVfxEnabled(
+      'realistic', '?nobleGasPrismVfx=0&nobleGasCoreReliefVfx=1',
+    )).toBe(false);
+    expect(resolveNobleGasCoreReliefVfxEnabled(
+      'realistic', '?volumeVfx=0&gasBodyVfx=1&nobleGasBillowVfx=1&nobleGasPrismVfx=1&nobleGasCoreReliefVfx=on',
+    )).toBe(true);
   });
 
   it('keeps exact Smoke soft volume subordinate to the stable gas body', () => {

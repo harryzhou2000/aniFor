@@ -88,6 +88,7 @@
     "audit:vfx:nitro-body": "npm run build && node scripts/verify-browser-input.mjs --nitro-body-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:noble-gas-billow": "npm run build && node scripts/verify-browser-input.mjs --noble-gas-billow-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:noble-gas-prism": "npm run build && node scripts/verify-browser-input.mjs --noble-gas-prism-vfx-only --webgl-only --production-bundle --capture-dpr=1",
+    "audit:vfx:noble-gas-core-relief": "npm run build && node scripts/verify-browser-input.mjs --noble-gas-core-relief-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:smoke-softness": "npm run build && node scripts/verify-browser-input.mjs --smoke-softness-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:smoke-billow-depth": "npm run build && node scripts/verify-browser-input.mjs --smoke-billow-depth-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:botanical-mesostructure": "npm run build && node scripts/verify-browser-input.mjs --botanical-mesostructure-vfx-only --webgl-only --production-bundle --capture-dpr=1",
