@@ -140,6 +140,8 @@ describe('Quartz mesostructure VFX audit fixture', () => {
     expect(countVelocityCells(simulation.velocity())).toBe(fixture.expected.movingVelocityCells);
   });
 
+  // Rebuilds and byte-compares four canonical 612x384 planes. Parallel CI can
+  // exceed Vitest's generic five-second budget without changing the result.
   it('keeps independent regions in bounds and resets every plane deterministically', () => {
     const fixture = QUARTZ_MESOSTRUCTURE_VFX_AUDIT;
     const world: QuartzMesostructureVfxRect = { x: 0, y: 0, width: WIDTH, height: HEIGHT };
@@ -181,7 +183,7 @@ describe('Quartz mesostructure VFX audit fixture', () => {
     expect(() => prepareQuartzMesostructureVfxAuditFixture(
       new DeterministicBackend(WIDTH, HEIGHT),
     )).toThrow('requires canonical wall, velocity, and state planes');
-  });
+  }, 15_000);
 });
 
 function prepared(): RenderLabBackend {
