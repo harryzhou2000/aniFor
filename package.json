@@ -9,7 +9,7 @@
     "build": "tsc -b && vite build && bash scripts/finalize-pages-build.sh",
     "preview": "vite preview",
     "typecheck": "tsc -b",
-    "test": "vitest run src",
+    "test": "vitest run src && vitest run scripts/visual-lab-fixtures.test.mjs",
     "audit:browser-input": "node scripts/verify-browser-input.mjs",
     "audit:visual-lab": "npm run build && node scripts/visual-lab-audit.mjs --bundle=dist/index.html",
     "audit:visual-lab:oxygen": "npm run build && npx vitest run src/renderer/pixi-field-presenter.test.ts -t 'keeps accepted E62' && node scripts/visual-lab-audit.mjs --bundle=dist/index.html --domain=gas --target=4 --render-scale=2",

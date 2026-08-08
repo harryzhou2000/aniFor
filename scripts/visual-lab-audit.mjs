@@ -23,6 +23,10 @@ import { access, mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import {
+  buildVisualLabStartupExpression, resolveVisualLabDomain, resolveVisualLabFixture,
+  visualLabDomainNames, visualLabFixtureNames,
+} from './visual-lab-fixtures.mjs';
 
 const CDP_CONNECT_TIMEOUT_MS = 10_000;
 const CDP_COMMAND_TIMEOUT_MS = 20_000;
@@ -40,9 +44,9 @@ const HELP = `Usage:
 Options (use --name=value):
   --base-url=http://127.0.0.1:5173/  Dev URL or file:///.../dist/index.html
   --bundle=dist/index.html              Built bundle entry (overrides default URL)
-  --domain=gas|liquid|emission         Lab domain (default: gas)
+  --domain=${visualLabDomainNames().join('|')}         Lab domain (default: gas)
   --target=0..255                      Gas style byte or liquid/emission material ID
-  --fixture=showcase|oil-motion        App-owned fixture (default: showcase)
+  --fixture=${visualLabFixtureNames().join('|')}        App-owned fixture (default: showcase)
   --gain=0.01..2                       RGB-only experiment gain (default: 1)
   --render-scale=1|2|4                 Normal WebGL scale (default: 2)
   --output-dir=/tmp/anifor-visual-lab-gas
@@ -74,20 +78,13 @@ function parseArguments(argv) {
   }
 
   const domain = values.get('domain') ?? 'gas';
-  if (domain !== 'gas' && domain !== 'liquid' && domain !== 'emission') {
-    throw new Error('--domain must be gas, liquid, or emission');
-  }
+  const domainAdapter = resolveVisualLabDomain(domain);
   const target = Number(values.get('target') ?? 0);
   if (!Number.isInteger(target) || target < 0 || target > 255) {
     throw new Error('--target must be an integer from 0 through 255');
   }
   const fixture = values.get('fixture') ?? 'showcase';
-  if (fixture !== 'showcase' && fixture !== 'oil-motion') {
-    throw new Error('--fixture must be showcase or oil-motion');
-  }
-  if (fixture === 'oil-motion' && (domain !== 'liquid' || target !== 8)) {
-    throw new Error('--fixture=oil-motion requires --domain=liquid --target=8');
-  }
+  const fixtureAdapter = resolveVisualLabFixture(fixture, domain, target);
   const gain = Number(values.get('gain') ?? 1);
   if (!Number.isFinite(gain) || gain <= 0 || gain > 2) {
     throw new Error('--gain must be greater than 0 and no greater than 2');
@@ -127,8 +124,10 @@ function parseArguments(argv) {
     help: false,
     baseUrl,
     domain,
+    domainAdapter,
     target,
     fixture,
+    fixtureAdapter,
     gain,
     renderScale,
     gpu,
@@ -141,7 +140,7 @@ function parseArguments(argv) {
 function auditUrl(options) {
   const url = new URL(options.baseUrl);
   const parameters = url.searchParams;
-  parameters.set('scene', 'showcase');
+  parameters.set('scene', options.fixtureAdapter.scene);
   parameters.set('inputAudit', '1');
   parameters.set('auditStage', 'visual-lab');
   parameters.set('renderLook', 'realistic');
@@ -154,9 +153,8 @@ function auditUrl(options) {
   // byte, while liquid and emission consume semantic material IDs.
   parameters.set('visualTarget', String(options.target));
   parameters.set('visualGain', String(options.gain));
-  if (options.domain === 'liquid') {
-    parameters.set('liquidBodyVfx', '1');
-    parameters.set('liquidSurfaceVfx', '1');
+  for (const [name, value] of Object.entries(options.domainAdapter.urlParameters)) {
+    parameters.set(name, value);
   }
   parameters.delete('renderer');
   return url;
@@ -220,7 +218,10 @@ async function main() {
       && startupSelection.backendReasonBeforeSelection === 'webgl-starting'
       && startupSelection.stagedBeforeWebGL === true
       && startupSelection.fixture === options.fixture
-      && startupSelection.fixturePrepared === true,
+      && startupSelection.fixturePrepared === true
+      && startupSelection.scene === options.fixtureAdapter.scene
+      && startupSelection.preparation
+        === (options.fixtureAdapter.preparation?.method ?? 'scene'),
     `Visual Lab selector was not staged during bounded Canvas startup: ${JSON.stringify(startupSelection)}`);
     await waitForPage(cdp, options, 2);
 
@@ -231,7 +232,7 @@ async function main() {
         requestAnimationFrame(() => resolve(true))));
     })()`);
     await waitFor(async () => {
-      const snapshot = await snapshotState(cdp, options.domain);
+      const snapshot = await snapshotState(cdp, options.domainAdapter.fieldAlphaMethod);
       return snapshot.semantic.occupied > 0
         && snapshot.fieldAlpha.nonzero > 0
         && snapshot.framebufferAlpha.nonzero > 0;
@@ -276,8 +277,9 @@ async function main() {
       domain: options.domain,
       target: options.target,
       fixture: options.fixture,
-      targetKind: options.domain === 'gas'
-        ? 'propagated-atmosphere-style-byte' : 'semantic-material-id',
+      fixtureScene: options.fixtureAdapter.scene,
+      fixturePreparation: options.fixtureAdapter.preparation?.method ?? 'scene',
+      targetKind: options.domainAdapter.targetKind,
       gain: options.gain,
       renderScale: options.renderScale,
       gpu: options.gpu,
@@ -405,35 +407,22 @@ function collectBrowserErrors(cdp) {
 }
 
 async function stageVariantDuringStartup(cdp, options) {
-  return waitFor(() => evaluate(cdp, `(() => {
-    const audit = window.__ANIFOR_INPUT_AUDIT__;
-    if (!audit || typeof audit.setVisualLabVariant !== 'function') return false;
-    const fixture = ${JSON.stringify(options.fixture)};
-    let fixturePrepared = fixture === 'showcase';
-    if (fixture === 'oil-motion') {
-      if (typeof audit.prepareOilMotionVfxFixture !== 'function') return false;
-      audit.prepareOilMotionVfxFixture('moving');
-      fixturePrepared = true;
-    }
-    const before = audit.backend();
-    audit.setVisualLabVariant(2);
-    return {
-      requestedVariant: 2,
-      fixture,
-      fixturePrepared,
-      backendBeforeSelection: before.backend,
-      backendReasonBeforeSelection: before.reason,
-      stagedBeforeWebGL: before.backend !== 'webgl',
-    };
-  })()`), PAGE_STARTUP_TIMEOUT_MS, `${options.fixture} startup audit bridge`);
+  const expression = buildVisualLabStartupExpression(options.fixtureAdapter, 2);
+  return waitFor(
+    () => evaluate(cdp, expression),
+    PAGE_STARTUP_TIMEOUT_MS,
+    `${options.fixture} startup audit bridge`,
+  );
 }
 
 async function waitForPage(cdp, options, expectedVariant) {
   const readinessExpression = `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     const canvas = document.querySelector('.semantic-field-canvas');
-    const root = document.querySelector('[data-scene="showcase"]');
-    if (!audit || !canvas || !root || typeof audit.setVisualLabVariant !== 'function') {
+    const root = document.querySelector('[data-scene]');
+    if (!audit || !canvas || !root
+      || root.dataset.scene !== ${JSON.stringify(options.fixtureAdapter.scene)}
+      || typeof audit.setVisualLabVariant !== 'function') {
       return false;
     }
     const dataset = canvas.dataset;
@@ -494,7 +483,7 @@ async function captureVariant(cdp, options, variant) {
       && Number(canvas.dataset.visualLabGain) === ${options.gain};
   })()`), VARIANT_SETTLE_TIMEOUT_MS, `${variant.name} lab dataset`);
 
-  const state = await snapshotState(cdp, options.domain);
+  const state = await snapshotState(cdp, options.domainAdapter.fieldAlphaMethod);
   assertVariantState(state, options, variant);
   const clip = await evaluate(cdp, `(() => {
     const rect = document.querySelector('.semantic-field-canvas').getBoundingClientRect();
@@ -542,7 +531,7 @@ function assertVariantState(state, options, variant) {
   assert(state.framebufferAlpha.nonzero > 0, `${variant.name} WebGL framebuffer alpha is empty`);
 }
 
-async function snapshotState(cdp, domain) {
+async function snapshotState(cdp, fieldAlphaMethod) {
   return evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     const canvas = document.querySelector('.semantic-field-canvas');
@@ -572,11 +561,11 @@ async function snapshotState(cdp, domain) {
         (countHash ^ material.materialCounts[index] ^ index) >>> 0, 16777619,
       ) >>> 0;
     }
-    const readField = ${JSON.stringify(domain)} === 'gas'
-      ? (x, y) => audit.atmosphereFieldAlpha(x, y)
-      : (${JSON.stringify(domain)} === 'liquid'
-        ? (x, y) => audit.liquidFieldAlpha(x, y)
-        : (x, y) => audit.emissionFieldAlpha(x, y));
+    const fieldAlphaMethod = ${JSON.stringify(fieldAlphaMethod)};
+    if (typeof audit[fieldAlphaMethod] !== 'function') {
+      throw new Error('visual-lab field alpha reader is unavailable: ' + fieldAlphaMethod);
+    }
+    const readField = (x, y) => audit[fieldAlphaMethod](x, y);
     const fieldAlpha = digestBytes(readField, audit.width, audit.height);
     const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
     if (!gl) throw new Error('semantic-field canvas has no readable WebGL context');

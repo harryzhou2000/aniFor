@@ -3438,11 +3438,14 @@ broad unit-test matrix. Optional adapters may add experiment-specific regions
 or tighter topology checks when the candidate can affect a protected contract.
 
 E62 and E69 now prove that the framework can absorb accepted leaf treatments
-while removing their selector/plumbing and cloned verifier code. The next
-milestone is a declarative named-fixture/domain adapter, followed by the bounded
-E65 leaf if its parent E08 evidence remains exact. Defer E66 because its tangent
-reads are resource-sensitive, and defer Powder until its source-stage stability
-proof can fit this fixed seam without creating a second experiment framework.
+while removing their selector/plumbing and cloned verifier code. The declarative
+named-fixture/domain adapter is complete: frozen catalogs now own scenes,
+constraints, optional app preparation, target kinds, field-alpha readers, and
+fixed query flags, leaving the CDP harness branch-free. The next milestone is
+the bounded E65 leaf if its parent E08 evidence remains exact. Defer E66 because
+its tangent reads are resource-sensitive, and defer Powder until its source-
+stage stability proof can fit this fixed seam without creating a second
+experiment framework.
 Track every lab domain's sampler reads, persistent resources, supported Detail
 rungs, and fallback behaviour explicitly. Use short experiment branches or
 consecutive checkpoint commits for competing looks and select winners from the
@@ -3530,10 +3533,21 @@ retaining exact control assertions and the real true-8× fence.
 
 The hook runs after bloom extraction. Emission experiments can reshape final
 radiance but cannot seed new bloom until a deliberately budgeted pre-extract
-hook exists. The immediate next framework work is a declarative fixture/domain
-adapter and then the bounded E65 leaf migration. Defer E66 and Powder
-until the fixed HDR seam can receive its stability/body proof without a second
-source-shader experiment framework. Do not resume per-material selector growth.
+hook exists. `scripts/visual-lab-fixtures.mjs` now supplies the declarative
+domain and named-fixture catalogs. It derives CLI validation/help, fixed URL
+flags, report target kinds, field-alpha readers, bootstrap scenes, and optional
+app-method/argument preparation. Its one serialized startup transaction observes
+the mounted scene and Canvas `webgl-starting` state before any mutation, then
+prepares and stages variant B synchronously; missing or throwing preparers return
+immediate structured failures rather than consuming the 60-second readiness
+budget. Eight small framework tests cover the catalogs, startup ordering,
+fail-fast diagnostics, CLI constraints, and compatibility aliases, and they are
+part of `npm test`. Real prepared-Oil and scene-owned showcase captures both pass
+at canonical 2× with exact topology/alpha invariants and zero browser errors.
+The immediate next framework work is the bounded E65 leaf migration. Defer E66
+and Powder until the fixed HDR seam can receive their stability/body proof
+without a second source-shader experiment framework. Do not resume per-material
+selector growth.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

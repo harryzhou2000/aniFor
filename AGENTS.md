@@ -15,11 +15,15 @@ complete. E62 Oxygen volume folding is an accepted E15 baseline and uses Visual
 Lab gas target `4` for alternatives. E69 Oil surface motion is an accepted E08
 baseline and uses an app-owned moving-Oil fixture with Visual Lab liquid target
 `8`. Their legacy resolvers, uniforms, queries, datasets, and bespoke verifier
-paths have been removed. The next framework step is a declarative fixture/domain
-adapter and then the similarly bounded E65 leaf; defer E66 because its tangent
-reads make it a resource-sensitive migration. Same-page variant selection must
-remain owned across asynchronous WebGL promotion; a choice made during the temporary
-Canvas `webgl-starting` phase is seeded before the first WebGL frame. Lab
+paths have been removed. The declarative fixture/domain adapter is complete:
+one frozen catalog owns domain target kinds, alpha readers, and URL flags, while
+another owns fixture scenes, exact domain/target constraints, and optional
+app-method/argument preparation. The CDP harness must not regain fixture/domain
+branches. The next framework step is the similarly bounded E65 leaf; defer E66
+because its tangent reads make it a resource-sensitive migration. Same-page
+variant selection must remain owned across asynchronous WebGL promotion; a
+choice made during the temporary Canvas `webgl-starting` phase is seeded before
+the first WebGL frame. Lab
 variants must reuse live
 presenter textures or already-computed compositor values, remain RGB-only, add
 no field/texture/target/pass/time resource, and resolve inert for Classic,
@@ -1946,10 +1950,15 @@ off/A/B capture script are complete. E62 and E69 prove that accepted leaf
 treatments can be folded into their parent baselines while deleting selector,
 uniform, query, telemetry, and bespoke-verifier plumbing. Keep variant zero
 pixel-preserving, keep the direct true-8× fragment untouched, and treat candidate
-variants as comparison evidence rather than release styling. Next consolidate
-named fixture/domain adapters, then migrate E65 if its parent gate stays exact;
-defer E66 and Powder until their additional samples or source-stage stability
-proof fit the resource contract without creating a second experiment framework.
+variants as comparison evidence rather than release styling. The frozen
+`scripts/visual-lab-fixtures.mjs` catalogs now centralize named fixture/domain
+routing, startup scene observation, app-owned preparation, target constraints,
+field-alpha readers, report target kinds, and fixed URL flags. The startup
+transaction must prove Canvas `webgl-starting` before mutating a fixture and
+staging variant B; missing or throwing preparers fail immediately with a
+structured diagnostic. Migrate E65 next if its parent gate stays exact; defer
+E66 and Powder until their additional samples or source-stage stability proof
+fit the resource contract without creating a second experiment framework.
 
 The first seam now uses `domain/variant/target/gain` (target is deliberately
 domain-specific, not always a material ID). Ordinary pages compile the original
