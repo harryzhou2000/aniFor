@@ -821,7 +821,7 @@ describe('Visual Lab batch runner', () => {
         }, {
           runCandidate: async (call) => {
             const chrome = spawn(process.execPath, [
-              '-e', 'setInterval(() => {}, 1000)', `--user-data-dir=${profile}`,
+              '-e', 'setInterval(() => {}, 1000)', '--', `--user-data-dir=${profile}`,
             ], {
               detached: true,
               stdio: 'ignore',
@@ -871,7 +871,7 @@ describe('Visual Lab batch runner', () => {
       const profile = await mkdtemp(path.join(tmpdir(), 'anifor-visual-lab-chrome-'));
       await mkdir(secondCandidate, { recursive: true });
       const chrome = spawn(process.execPath, [
-        '-e', 'setInterval(() => {}, 1000)', `--user-data-dir=${profile}`,
+        '-e', 'setInterval(() => {}, 1000)', '--', `--user-data-dir=${profile}`,
       ], { detached: true, stdio: 'ignore' });
       const chromePid = chrome.pid;
       chrome.unref();
@@ -914,7 +914,7 @@ describe('Visual Lab batch runner', () => {
       await writeFile(bundle, '<!doctype html>');
       await writeFile(failurePath, 'capture-failed\nprior diagnostic survives until success\n');
       const chrome = spawn(process.execPath, [
-        '-e', 'setInterval(() => {}, 1000)', `--user-data-dir=${profile}`,
+        '-e', 'setInterval(() => {}, 1000)', '--', `--user-data-dir=${profile}`,
       ], { detached: true, stdio: 'ignore' });
       const chromePid = chrome.pid;
       chrome.unref();
