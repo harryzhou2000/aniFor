@@ -74,6 +74,7 @@ import {
   resolveMetalWaterContactVfxEnabled,
   resolveWaterMetalTransmissionVfxEnabled,
   resolveWaterMetalSeparationVfxEnabled,
+  resolveWaterMetalFresnelSpectrumVfxEnabled,
   resolveLiquidSurfaceVfxEnabled, resolveLiquidMotionVfxEnabled,
   resolveOilMotionVfxEnabled,
   resolveWaterCurvatureVfxEnabled,
@@ -3357,6 +3358,7 @@ uniform float uLiquidSolidMeniscusVfx;
 uniform float uMetalWaterContactVfx;
 uniform float uWaterMetalTransmissionVfx;
 uniform float uWaterMetalSeparationVfx;
+uniform float uWaterMetalFresnelSpectrumVfx;
 uniform float uPowderBodyVfx;
 uniform float uConcreteMesostrataRetentionVfx;
 uniform float uSootyPowderBodyVfx;
@@ -7933,6 +7935,21 @@ void main() {
           color *= vec3(1.0) - vec3(0.62, 0.22, 0.04)
             * max(wetContactBand, crossPhaseContact.x * 0.16)
             * (0.022 + wetContactPocket * 0.092);
+          // E78: rotate only E76's already-proven Water/Metal contour toward
+          // a cooler Fresnel spectrum without adding luminance or another
+          // spatial carrier. The signed vector is Rec.709-neutral to rounding;
+          // existing band, crown, pocket, and Fresnel values own all geometry.
+          // The outer exact-contact guard supplies a bounded floor only on the
+          // interface-facing subcell already carrying exact-Metal evidence;
+          // the far half of Water's semantic cell remains untouched.
+          // RGB only; no declaration, sample, resource, alpha, support,
+          // silhouette, topology, ownership, state, or physics decision.
+          if (uWaterMetalFresnelSpectrumVfx > 0.5) {
+            color += vec3(-0.34, -0.05, 1.50)
+              * max(max(wetContactBand, crossPhaseContact.x * 0.16), 0.28)
+              * (0.25 + wetContactCrown * 0.34 + liquidFresnelContour * 0.28)
+              * (1.0 - wetContactPocket * 0.45) * 0.032;
+          }
         }
       }
     }
@@ -10955,6 +10972,13 @@ void main() {
         * (0.015 + abs(phaseContactTone) * 0.78);
       color *= vec3(1.0) - vec3(0.02, 0.28, 0.62)
         * (0.012 + abs(phaseContactTone) * 0.60);
+      // E78's opposing warm spectrum is nested in the same exact Metal/Water
+      // proof and uses only E37's signed seam tone. This Rec.709-neutral RGB
+      // rotation adds no band, declaration, sample, resource, or topology.
+      if (uWaterMetalFresnelSpectrumVfx > 0.5) {
+        color += vec3(0.50, 0.05, -1.97)
+          * (0.012 + abs(phaseContactTone) * 0.52) * 0.36;
+      }
     }
   }
   // Geological owners may use the shared solid-body proof even when their
@@ -11995,6 +12019,10 @@ export class PixiFieldPresenter {
     // true-8x shader declares neither its selector nor its arithmetic.
     const waterMetalSeparationVfxEnabled = outputScale < 8
       && resolveWaterMetalSeparationVfxEnabled(renderLook);
+    // E78 is a normal-detail spectral rotation inside E76's exact pair. The
+    // compact true-8x shader declares neither its selector nor its arithmetic.
+    const waterMetalFresnelSpectrumVfxEnabled = outputScale < 8
+      && resolveWaterMetalFresnelSpectrumVfxEnabled(renderLook);
     // E08 is a normal-detail HDR-composite experiment. Its displaced transport
     // reuses existing presenter textures and never enters the direct 8x shader.
     const liquidSurfaceVfxEnabled = outputScale < 8
@@ -12103,6 +12131,9 @@ export class PixiFieldPresenter {
       },
       uWaterMetalSeparationVfx: {
         value: waterMetalSeparationVfxEnabled ? outputScale : 0, type: 'f32',
+      },
+      uWaterMetalFresnelSpectrumVfx: {
+        value: waterMetalFresnelSpectrumVfxEnabled ? outputScale : 0, type: 'f32',
       },
       uPowderBodyVfx: { value: powderBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uConcreteMesostrataRetentionVfx: {
@@ -12383,6 +12414,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uMetalWaterContactVfx = 0;
       this.uniforms.uniforms.uWaterMetalTransmissionVfx = 0;
       this.uniforms.uniforms.uWaterMetalSeparationVfx = 0;
+      this.uniforms.uniforms.uWaterMetalFresnelSpectrumVfx = 0;
       this.uniforms.uniforms.uPowderBodyVfx = 0;
       this.uniforms.uniforms.uConcreteMesostrataRetentionVfx = 0;
       this.uniforms.uniforms.uSootyPowderBodyVfx = 0;
@@ -12466,6 +12498,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('metalWaterContactVfxAudit') === '1'
             || new URLSearchParams(location.search).get('waterMetalTransmissionVfxAudit') === '1'
             || new URLSearchParams(location.search).get('waterMetalSeparationVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('waterMetalFresnelSpectrumVfxAudit') === '1'
             || new URLSearchParams(location.search).get('woodBarkReliefVfxAudit') === '1'
             || new URLSearchParams(location.search).get('woodTanninVfxAudit') === '1'
             || new URLSearchParams(location.search).get('glassBodyVfxAudit') === '1'
@@ -12684,6 +12717,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.waterMetalSeparationVfx = Number(
       presenter.uniforms.uniforms.uWaterMetalSeparationVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.waterMetalFresnelSpectrumVfx = Number(
+      presenter.uniforms.uniforms.uWaterMetalFresnelSpectrumVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidSurfaceVfx = presenter.hdrPipelineInfo.active
       && presenter.hdrPipelineInfo.liquidSurfaceVfx ? 'active' : 'inactive';
@@ -14244,6 +14280,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uMetalWaterContactVfx = 0;
         this.uniforms.uniforms.uWaterMetalTransmissionVfx = 0;
         this.uniforms.uniforms.uWaterMetalSeparationVfx = 0;
+        this.uniforms.uniforms.uWaterMetalFresnelSpectrumVfx = 0;
         this.uniforms.uniforms.uPowderBodyVfx = 0;
         this.uniforms.uniforms.uConcreteMesostrataRetentionVfx = 0;
         this.uniforms.uniforms.uSootyPowderBodyVfx = 0;
@@ -14317,6 +14354,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.metalWaterContactVfx = 'inactive';
         this.app.canvas.dataset.waterMetalTransmissionVfx = 'inactive';
         this.app.canvas.dataset.waterMetalSeparationVfx = 'inactive';
+        this.app.canvas.dataset.waterMetalFresnelSpectrumVfx = 'inactive';
         this.app.canvas.dataset.liquidSurfaceVfx = 'inactive';
         this.app.canvas.dataset.liquidMotionVfx = 'inactive';
         this.app.canvas.dataset.oilMotionVfx = 'inactive';

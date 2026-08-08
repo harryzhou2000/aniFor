@@ -985,6 +985,75 @@ describe('Pixi presenter startup configuration', () => {
     );
   });
 
+  it('keeps E78 a luma-neutral, declaration-free normal-WebGL child of E76', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const waterStart = normal.indexOf('          // E78: rotate only E76');
+    const waterEnd = normal.indexOf('        }\n      }\n    }', waterStart);
+    const metalStart = normal.indexOf("      // E78's opposing warm spectrum");
+    const metalEnd = normal.indexOf('    }\n  }\n  // Geological owners', metalStart);
+    const water = normal.slice(waterStart, waterEnd);
+    const metal = normal.slice(metalStart, metalEnd);
+    const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveDrawingBufferEnd = source.indexOf(
+      'resolution: outputScale', preserveDrawingBufferStart,
+    );
+    const preserveDrawingBuffer = source.slice(
+      preserveDrawingBufferStart, preserveDrawingBufferEnd,
+    );
+
+    expect(waterStart).toBeGreaterThanOrEqual(0);
+    expect(waterEnd).toBeGreaterThan(waterStart);
+    expect(metalStart).toBeGreaterThanOrEqual(0);
+    expect(metalEnd).toBeGreaterThan(metalStart);
+    expect(normal).toContain('uniform float uWaterMetalFresnelSpectrumVfx;');
+    expect(normal.match(/uWaterMetalFresnelSpectrumVfx > 0\.5/g)).toHaveLength(2);
+    expect(eight).not.toContain('uWaterMetalFresnelSpectrumVfx');
+    expect(eight).not.toContain('waterMetalFresnelSpectrumVfx');
+    expect(canvasSource).not.toContain('waterMetalFresnelSpectrumVfx');
+    for (const carrier of [
+      'wetContactBand', 'crossPhaseContact.x', 'wetContactCrown',
+      'wetContactPocket', 'liquidFresnelContour',
+    ]) expect(water).toContain(carrier);
+    expect(water).toContain('vec3(-0.34, -0.05, 1.50)');
+    expect(metal).toContain('phaseContactTone');
+    expect(metal).toContain('vec3(0.50, 0.05, -1.97)');
+    expect(Math.abs(-0.34 * 0.2126 - 0.05 * 0.7152 + 1.50 * 0.0722))
+      .toBeLessThan(0.001);
+    expect(Math.abs(0.50 * 0.2126 + 0.05 * 0.7152 - 1.97 * 0.0722))
+      .toBeLessThan(0.001);
+    for (const branch of [water, metal]) {
+      expect(branch).not.toContain('contactSample(');
+      expect(branch).not.toContain('texture(');
+      expect(branch).not.toContain('texelFetch(');
+      expect(branch).not.toContain('uTime');
+      expect(branch).not.toContain('gl_FragCoord');
+      expect(branch).not.toContain('sin(');
+      expect(branch).not.toMatch(/\b(?:float|vec[234])\s+[A-Za-z_]/);
+      expect(branch).not.toMatch(/\b(?:alpha|support)\s*[+*]?=/);
+    }
+    expect(source).toMatch(
+      /const waterMetalFresnelSpectrumVfxEnabled = outputScale < 8\s*&& resolveWaterMetalFresnelSpectrumVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain(
+      'value: waterMetalFresnelSpectrumVfxEnabled ? outputScale : 0',
+    );
+    expect(source.match(/this\.uniforms\.uniforms\.uWaterMetalFresnelSpectrumVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toContain('presenter.app.canvas.dataset.waterMetalFresnelSpectrumVfx');
+    expect(source).toContain(
+      "this.app.canvas.dataset.waterMetalFresnelSpectrumVfx = 'inactive';",
+    );
+    expect(preserveDrawingBuffer).toContain(
+      "get('waterMetalFresnelSpectrumVfxAudit') === '1'",
+    );
+  });
+
   it('keeps E18 Platinum body optics exact-owner and normal-WebGL-only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');

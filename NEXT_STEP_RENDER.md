@@ -3226,29 +3226,51 @@ without inventing a new carrier or particle texture. The canonical composed
 route now explicitly requests E77 active; its CLI switch remains available for
 the recorded attribution A/B.
 
-### Next visual diagnostic — E78 Water/Metal Fresnel-spectrum separation
+### E78 — accepted Water/Metal Fresnel-spectrum separation
 
-The protected zero-payload PLNT showcase remains the lowest composed score and
-must not receive another state-free procedural octave. After E77, the next
-eligible deficit is Water/Metal contact chromatic separation (`.675`, quality
-`91.216` at canonical 2×); E76 repaired the 1× regression but left a real
-canonical/4× perceptual deficit. Test one normal-WebGL-only strict E76 child,
-`?waterMetalFresnelSpectrumVfx=0|1`, that applies an approximately Rec.709-
-luma-neutral opposing chroma rotation to the already-proven exact Water/Metal
-contact. Reuse only E56/E76's `wetContactBand`, crown/pocket/facing and
-`liquidFresnelContour`, plus E37/E76's signed Metal `phaseContactTone`. Do not
-add another band, procedural carrier, coordinate pattern, sample, resource, or
-material reach.
+E78 is the accepted normal-WebGL-only strict E76 child, independently
+selectable with `?waterMetalFresnelSpectrumVfx=0|1`. It applies opposing signed
+RGB rotations only inside E76's already-proven exact Water/Metal contact:
+Water moves toward a cool blue Fresnel shoulder and Metal toward a restrained
+warm return. Both vectors are Rec.709-neutral to rounding. The declaration-free
+branches reuse only E56/E76's band/crown/pocket/Fresnel carriers and E37/E76's
+signed Metal seam tone; they add no band, coordinate pattern, sample, texture,
+field, resource, pass, target, upload, allocation, clock, alpha/support,
+silhouette, topology, ownership, state, or physics decision. Canvas and compact
+true 8× retain their established E76-control presentations byte-for-byte.
 
-Use the existing horizontal/vertical Water/Metal fixture and preserve
-Water/Glass, Oil/Glass, Acid/Brick, Oil/Metal, deep cores, gaps, walls, traits,
-emission, holes/channels, powder, gas, and blank controls. Acceptance requires
-an explicit canonical 2× composed chromatic-separation improvement—not merely
-a 1× bump—while luma, seam width, alpha/support, topology, scale stability, and
-true-8× exclusion remain bounded. This is already a three-level contact chain:
-if a luma-neutral rotation cannot improve the canonical evidence, reject E78
-instead of stacking another interface-colour layer. Any accepted child must
-also retain E77's Noble Gas score and the Canvas fallback contract.
+`npm run audit:vfx:water-metal-fresnel-spectrum` runs exact off→on→off
+horizontal and vertical cards at 1×/2×/4×. The final-backing proof records a
+1× paired-seam chroma energy of `2.6574/2.7727` across the two orientations.
+At 2×, Water's cool-lobe mean is `.8819/.9053` and Metal's warm-lobe mean is
+`2.1690/2.0303`; at 4× they are `.8536/.9025` and `2.1505/1.8968`.
+Water/Metal peaks remain `2/4` bytes, absolute luma means remain below `.032`
+byte, the resolved 2×/4× seam is one world cell wide, and every repeated-off
+backing is exact. The 1× categorical pair is two cells wide; cross-scale paired
+chroma ratios remain at or below `1.9811`, and orientation ratios at or below
+`1.0732`. Water/Glass, Oil/Glass, Acid/Brick, Oil/Metal, deep cores, gaps,
+walls, traits, emission, holes/channels, powder, gas, and blank controls remain
+exact. The only accepted final-page neighbour footprint is the named
+`mixedTripleSolid` probe at one display byte; its raw ownership remains exact.
+
+The canonical 2× composed A/B is the visual acceptance authority: Water/Metal
+chromatic separation rises from `.6750` to `.6875` and contact quality from
+`91.216` to `91.667`, while support recall stays `1`, coverage `.947`, luma SD
+`10.55`, macro range `45`, dominant component `1`, clipping `0`, and E77 Noble
+Gas quality `100`. A `1.75×` stronger candidate produced no further composed
+gain and was rejected rather than accumulating invisible backing intensity.
+The accepted amplitude is now explicit in the composed product stack.
+Requested-on true 8× reports E78/HDR inactive with reason `scale-8`, presents exact
+`4896×3072`, and completes through a real GPU fence in about `5.30 s`.
+
+Fit-view audit lesson: a DPR-1 CSS screenshot cannot always resolve two opposing
+subcell lobes at a one-cell interface. Use it for visible seam width, topology,
+and the composed score; prove exact Water/Metal owner direction from the final
+WebGL backing at 2×/4×. At 1×, report an honest paired seam instead of claiming
+owner-resolved subcells. Do not add another Water/Metal colour layer after this
+four-level chain. Select the next experiment from a fresh fit-view diagnosis of
+powder, liquid, gas, or emission volume rather than chasing the remaining broad
+contact-ranker quantisation.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

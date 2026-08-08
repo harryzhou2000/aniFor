@@ -54,6 +54,7 @@ import {
   resolveMetalWaterContactVfxEnabled,
   resolveWaterMetalTransmissionVfxEnabled,
   resolveWaterMetalSeparationVfxEnabled,
+  resolveWaterMetalFresnelSpectrumVfxEnabled,
   resolveSolidBodyVfxEnabled,
   resolveConcreteMesostrataRetentionVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled,
@@ -561,6 +562,32 @@ describe('resolveRenderLook', () => {
     )).toBe(false);
     expect(resolveWaterMetalSeparationVfxEnabled(
       'realistic', '?waterMetalSeparationVfx=off',
+    )).toBe(false);
+  });
+
+  it('keeps Water/Metal Fresnel spectrum subordinate to E76 and frozen in input audits', () => {
+    expect(resolveWaterMetalFresnelSpectrumVfxEnabled(
+      'classic', '?waterMetalFresnelSpectrumVfx=on',
+    )).toBe(false);
+    expect(resolveWaterMetalFresnelSpectrumVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveWaterMetalFresnelSpectrumVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveWaterMetalFresnelSpectrumVfxEnabled(
+      'realistic', '?inputAudit=1',
+    )).toBe(false);
+    expect(resolveWaterMetalFresnelSpectrumVfxEnabled(
+      'realistic', '?inputAudit=1&waterMetalTransmissionVfx=true&waterMetalSeparationVfx=true&waterMetalFresnelSpectrumVfx=true',
+    )).toBe(true);
+    expect(resolveWaterMetalFresnelSpectrumVfxEnabled(
+      'realistic', '?inputAudit=1&waterMetalFresnelSpectrumVfx=true',
+    )).toBe(false);
+    expect(resolveWaterMetalFresnelSpectrumVfxEnabled(
+      'realistic', '?waterMetalSeparationVfx=0&waterMetalFresnelSpectrumVfx=on',
+    )).toBe(false);
+    expect(resolveWaterMetalFresnelSpectrumVfxEnabled(
+      'realistic', '?waterMetalTransmissionVfx=0&waterMetalSeparationVfx=on&waterMetalFresnelSpectrumVfx=on',
+    )).toBe(false);
+    expect(resolveWaterMetalFresnelSpectrumVfxEnabled(
+      'realistic', '?waterMetalFresnelSpectrumVfx=off',
     )).toBe(false);
   });
 

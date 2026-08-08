@@ -356,6 +356,12 @@ const waterMetalSeparationVfxOnly = process.argv.includes('--water-metal-separat
 if (waterMetalSeparationVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--water-metal-separation-vfx-only requires --webgl-only');
 }
+// E78 is a luma-neutral Water/Metal Fresnel-spectrum child of E76. It shares
+// the exact paused contact atlas; Canvas and compact true 8x stay controls.
+const waterMetalFresnelSpectrumVfxOnly = process.argv.includes('--water-metal-fresnel-spectrum-vfx-only');
+if (waterMetalFresnelSpectrumVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--water-metal-fresnel-spectrum-vfx-only requires --webgl-only');
+}
 // E15 is a normal-detail atmosphere-core response over E04 ownership. Its
 // focused route keeps Canvas and the compact direct 8x mesh as controls.
 const gasCoreDepthVfxOnly = process.argv.includes('--gas-core-depth-vfx-only');
@@ -678,7 +684,7 @@ const focusedVfxOnlyFlags = [
   powderLightVfxOnly, powderSolidContactVfxOnly,
   translucentEdgeVfxOnly, organicSubsurfaceVfxOnly, wetSedimentVfxOnly, gasLightVfxOnly,
   liquidSolidMeniscusVfxOnly, metalWaterContactVfxOnly, waterMetalTransmissionVfxOnly,
-  waterMetalSeparationVfxOnly,
+  waterMetalSeparationVfxOnly, waterMetalFresnelSpectrumVfxOnly,
   gasCoreDepthVfxOnly, oxygenVolumeFoldVfxOnly,
   plasmaCoreVfxOnly, solidBodyVfxOnly,
   platinumBodyVfxOnly, ceramicGlazeVfxOnly, botanicalBodyVfxOnly, glassBodyVfxOnly,
@@ -701,7 +707,7 @@ const focusedVfxOnlyFlags = [
   woodTanninVfxOnly,
 ];
 if (focusedVfxOnlyFlags.filter(Boolean).length > 1) {
-  throw new Error('HDR/volume/liquid-body/liquid-surface/liquid-motion/oil-motion/water-curvature/fire-flame/cflm-cold-flame/gas-body/gas-motion/powder-body/concrete-mesostrata-retention/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/water-metal-transmission/water-metal-separation/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/oil-depth-transmission/rock-roughness/rock-mesostructure/rock-weathered-facet/water-body/water-volume-recession/acid-body/soap-body/nitro-body/sooty-powder-body/thermite-body/snowpack-body/quartz-mesostructure/c4-body/deut-body/hydrogen-body/carbon-dioxide-body/carbon-dioxide-core-fold/steam-condensate/fog-core-diffuse/radioactive-solid-body/iszs-crystalline/iszs-crystal-hierarchy/vibr-macro-relief/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/plant-canopy-tissue/plant-canopy-interlock/plant-canopy-hierarchy/plant-canopy-foliage/plant-canopy-lifecycle/wood-tannin focused audits are mutually exclusive');
+  throw new Error('HDR/volume/liquid-body/liquid-surface/liquid-motion/oil-motion/water-curvature/fire-flame/cflm-cold-flame/gas-body/gas-motion/powder-body/concrete-mesostrata-retention/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/water-metal-transmission/water-metal-separation/water-metal-fresnel-spectrum/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/oil-depth-transmission/rock-roughness/rock-mesostructure/rock-weathered-facet/water-body/water-volume-recession/acid-body/soap-body/nitro-body/sooty-powder-body/thermite-body/snowpack-body/quartz-mesostructure/c4-body/deut-body/hydrogen-body/carbon-dioxide-body/carbon-dioxide-core-fold/steam-condensate/fog-core-diffuse/radioactive-solid-body/iszs-crystalline/iszs-crystal-hierarchy/vibr-macro-relief/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/plant-canopy-tissue/plant-canopy-interlock/plant-canopy-hierarchy/plant-canopy-foliage/plant-canopy-lifecycle/wood-tannin focused audits are mutually exclusive');
 }
 
 const layoutOnly = process.argv.includes('--layout-only');
@@ -789,7 +795,7 @@ const productionBundle = process.argv.includes('--production-bundle');
 const usesProductionBundle = productionBundle || showcaseScreenshotOnly || composedRankOnly
   || candidateRankOnly || nitroBodyVfxOnly || hdrVfxOnly || volumeVfxOnly || plantCanopyInterlockVfxOnly || plantCanopyHierarchyVfxOnly || plantCanopyFoliageVfxOnly || plantCanopyLifecycleVfxOnly || oilDepthTransmissionVfxOnly
   || liquidBodyVfxOnly || liquidSurfaceVfxOnly || liquidMotionVfxOnly || oilMotionVfxOnly || waterCurvatureVfxOnly || fireFlameVfxOnly || cflmColdFlameVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-  || powderBodyVfxOnly || concreteMesostrataRetentionVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || waterMetalSeparationVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || bglaBodyVfxOnly || bglaClusterVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || carbonDioxideCoreFoldVfxOnly || steamCondensateVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || nobleGasCoreReliefVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+  || powderBodyVfxOnly || concreteMesostrataRetentionVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || waterMetalSeparationVfxOnly || waterMetalFresnelSpectrumVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || bglaBodyVfxOnly || bglaClusterVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || carbonDioxideCoreFoldVfxOnly || steamCondensateVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || nobleGasCoreReliefVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
   || deviceIdentityGraphicsOnly
   || fieldProfileGraphicsOnly
@@ -897,6 +903,9 @@ const waterMetalTransmissionVfxArgument = process.argv.find(
 const waterMetalSeparationVfxArgument = process.argv.find(
   (argument) => argument.startsWith('--water-metal-separation-vfx='),
  )?.slice('--water-metal-separation-vfx='.length);
+const waterMetalFresnelSpectrumVfxArgument = process.argv.find(
+  (argument) => argument.startsWith('--water-metal-fresnel-spectrum-vfx='),
+)?.slice('--water-metal-fresnel-spectrum-vfx='.length);
 const gasCoreDepthVfxArgument = process.argv.find((argument) => argument.startsWith('--gas-core-depth-vfx='))
   ?.slice('--gas-core-depth-vfx='.length);
 const nobleGasBillowVfxArgument = process.argv.find((argument) => argument.startsWith('--noble-gas-billow-vfx='))
@@ -1066,6 +1075,10 @@ if (waterMetalSeparationVfxArgument !== undefined
   && !['0', '1'].includes(waterMetalSeparationVfxArgument)) {
   throw new Error('--water-metal-separation-vfx must be 0 or 1');
 }
+if (waterMetalFresnelSpectrumVfxArgument !== undefined
+  && !['0', '1', 'off', 'on'].includes(waterMetalFresnelSpectrumVfxArgument)) {
+  throw new Error('--water-metal-fresnel-spectrum-vfx must be 0, 1, off, or on');
+}
 if (focusedVfxOnlyFlags.some(Boolean) && metalWaterContactVfxArgument !== undefined) {
   throw new Error('focused VFX audits own metalWaterContactVfx state; omit --metal-water-contact-vfx');
 }
@@ -1074,6 +1087,9 @@ if (focusedVfxOnlyFlags.some(Boolean) && waterMetalTransmissionVfxArgument !== u
 }
 if (focusedVfxOnlyFlags.some(Boolean) && waterMetalSeparationVfxArgument !== undefined) {
   throw new Error('focused VFX audits own waterMetalSeparationVfx state; omit --water-metal-separation-vfx');
+}
+if (focusedVfxOnlyFlags.some(Boolean) && waterMetalFresnelSpectrumVfxArgument !== undefined) {
+  throw new Error('focused VFX audits own waterMetalFresnelSpectrumVfx state; omit --water-metal-fresnel-spectrum-vfx');
 }
 if (focusedVfxOnlyFlags.some(Boolean) && sootyPowderBodyVfxArgument !== undefined) {
   throw new Error('focused VFX audits own sootyPowderBodyVfx state; omit --sooty-powder-body-vfx');
@@ -2869,6 +2885,13 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, waterMetalSeparationVfx, browserErrors: errors.length };
+    }
+    if (waterMetalFresnelSpectrumVfxOnly) {
+      assert(mode === 'webgl', '--water-metal-fresnel-spectrum-vfx-only requires --webgl-only');
+      const waterMetalFresnelSpectrumVfx = await auditWaterMetalFresnelSpectrumVfxExperiment(cdp, mode, dpr);
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, waterMetalFresnelSpectrumVfx, browserErrors: errors.length };
     }
     if (gasCoreDepthVfxOnly) {
       assert(mode === 'webgl', '--gas-core-depth-vfx-only requires --webgl-only');
@@ -14625,6 +14648,9 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
   // E76 is likewise opt-in for input audits. Keep the composed product stack
   // explicit so its fit-view separation is present at every sampled scale.
   const composedWaterMetalSeparationVfx = waterMetalSeparationVfxArgument ?? '1';
+  // E78 is default-on in the accepted product stack. Forward all accepted
+  // spellings so composed captures can still reproduce its attribution A/B.
+  const composedWaterMetalFresnelSpectrumVfx = waterMetalFresnelSpectrumVfxArgument ?? '1';
   // E61 is default-on in ordinary realistic/neon play but deliberately frozen
   // by inputAudit. Name the accepted deep-Water child in canonical evidence.
   const composedWaterVolumeRecessionVfx = '1';
@@ -14703,6 +14729,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       metalWaterContactVfx: composedMetalWaterContactVfx,
       waterMetalTransmissionVfx: composedWaterMetalTransmissionVfx,
       waterMetalSeparationVfx: composedWaterMetalSeparationVfx,
+      waterMetalFresnelSpectrumVfx: composedWaterMetalFresnelSpectrumVfx,
       waterVolumeRecessionVfx: composedWaterVolumeRecessionVfx,
       oilMotionVfx: composedOilMotionVfx,
       oilDepthTransmissionVfx: composedOilDepthTransmissionVfx,
@@ -14763,6 +14790,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
         && parameters.get('metalWaterContactVfx') === ${JSON.stringify(composedMetalWaterContactVfx)}
         && parameters.get('waterMetalTransmissionVfx') === ${JSON.stringify(composedWaterMetalTransmissionVfx)}
         && parameters.get('waterMetalSeparationVfx') === ${JSON.stringify(composedWaterMetalSeparationVfx)}
+        && parameters.get('waterMetalFresnelSpectrumVfx') === ${JSON.stringify(composedWaterMetalFresnelSpectrumVfx)}
         && parameters.get('waterVolumeRecessionVfx') === ${JSON.stringify(composedWaterVolumeRecessionVfx)}
         && parameters.get('oilMotionVfx') === ${JSON.stringify(composedOilMotionVfx)}
         && parameters.get('oilDepthTransmissionVfx') === ${JSON.stringify(composedOilDepthTransmissionVfx)}
@@ -15073,6 +15101,17 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
         waterMetalTransmissionArgument: composedWaterMetalTransmissionVfx,
         waterMetalSeparationVfx, expectedWaterMetalSeparationState,
       })})`);
+    const waterMetalFresnelSpectrumVfx = await evaluate(cdp,
+      `document.querySelector('canvas.world-canvas')?.dataset.waterMetalFresnelSpectrumVfx ?? 'missing'`,
+    );
+    const expectedWaterMetalFresnelSpectrumState = expectedWaterMetalSeparationState === 'active'
+      && ['1', 'on'].includes(composedWaterMetalFresnelSpectrumVfx) ? 'active' : 'inactive';
+    assert(waterMetalFresnelSpectrumVfx === expectedWaterMetalFresnelSpectrumState,
+      `composed rank ${scale}x Water/Metal Fresnel-spectrum selector resolved incorrectly (${JSON.stringify({
+        argument: composedWaterMetalFresnelSpectrumVfx,
+        separationArgument: composedWaterMetalSeparationVfx,
+        waterMetalFresnelSpectrumVfx, expectedWaterMetalFresnelSpectrumState,
+      })})`);
     const waterBodyVfx = await evaluate(cdp,
       `document.querySelector('canvas.world-canvas')?.dataset.waterBodyVfx ?? 'missing'`,
     );
@@ -15349,6 +15388,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       iszsCrystalHierarchyVfx,
       rockWeatheredFacetVfx,
       metalWaterContactVfx, waterMetalTransmissionVfx, waterMetalSeparationVfx,
+      waterMetalFresnelSpectrumVfx,
       waterBodyVfx, waterVolumeRecessionVfx,
       ...(screenshot ? { screenshot } : {}),
     });
@@ -15500,6 +15540,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       oilVolumeFinishVfx, oilDepthTransmissionVfx, oilMotionVfx,
       smokeBillowDepthVfx, thermiteBodyVfx, bglaBodyVfx, soapBodyVfx,
       metalWaterContactVfx, waterMetalTransmissionVfx, waterMetalSeparationVfx,
+      waterMetalFresnelSpectrumVfx,
       waterBodyVfx, waterVolumeRecessionVfx, powderStability,
       deutBodyVfx, hydrogenBodyVfx, oxygenVolumeFoldVfx, carbonDioxideBodyVfx,
       carbonDioxideCoreFoldVfx, concreteMesostrataRetentionVfx,
@@ -15548,6 +15589,9 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       metalWaterContactVfx,
       waterMetalTransmissionVfx,
       waterMetalSeparationVfx,
+      waterMetalFresnelSpectrumVfx,
+      waterMetalFresnelSpectrumVfxCalibration:
+        WATER_METAL_FRESNEL_SPECTRUM_VFX_ACCEPTANCE.calibration,
       waterBodyVfx,
       waterVolumeRecessionVfx,
       semanticHash: semantic.hash,
@@ -32031,12 +32075,14 @@ async function navigateMetalWaterContactVfxState(
   cdp, mode, scale, enabled, label, {
     waterMetalTransmission = false,
     waterMetalSeparation = false,
+    waterMetalFresnelSpectrum = false,
     rawControlPoints = metalWaterContactVfxRawControlPoints,
   } = {},
 ) {
   const query = metalWaterContactVfxQuery({
     scale, enabled, auditStage: 'blank', liquidBody: true,
     liquidSolidMeniscus: true, solidBody: true, waterMetalTransmission, waterMetalSeparation,
+    waterMetalFresnelSpectrum,
   });
   await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
   const pageTimeout = scale === 4 ? 90_000 : scale === 2 ? 45_000 : 20_000;
@@ -32049,6 +32095,7 @@ async function navigateMetalWaterContactVfxState(
       && p.get('metalWaterContactVfx') === ${JSON.stringify(enabled ? '1' : '0')}
       && p.get('waterMetalTransmissionVfx') === ${JSON.stringify(waterMetalTransmission ? '1' : '0')}
       && p.get('waterMetalSeparationVfx') === ${JSON.stringify(waterMetalSeparation ? '1' : '0')}
+      && p.get('waterMetalFresnelSpectrumVfx') === ${JSON.stringify(waterMetalFresnelSpectrum ? '1' : '0')}
       && typeof audit?.prepareLiquidSolidMeniscusVfxFixture === 'function'
       && typeof audit?.liquidSolidMeniscusVfxFixture === 'function';
   })()`), pageTimeout, `E37 ${label} ${scale}x page`);
@@ -32077,6 +32124,8 @@ async function navigateMetalWaterContactVfxState(
     (name) => name !== 'waterMetalTransmissionVfx' || !waterMetalTransmission,
   ).filter(
     (name) => name !== 'waterMetalSeparationVfx' || !waterMetalSeparation,
+  ).filter(
+    (name) => name !== 'waterMetalFresnelSpectrumVfx' || !waterMetalFresnelSpectrum,
   );
   assert(hdrPipeline?.look === 'realistic' && hdrPipeline.state === 'active'
     && hdrPipeline.bloomBacking === expectedBloom && hdrPipeline.liquidBodyVfx === 'active'
@@ -32084,6 +32133,7 @@ async function navigateMetalWaterContactVfxState(
     && hdrPipeline.metalWaterContactVfx === (enabled ? 'active' : 'inactive')
     && hdrPipeline.waterMetalTransmissionVfx === (waterMetalTransmission ? 'active' : 'inactive')
     && hdrPipeline.waterMetalSeparationVfx === (waterMetalSeparation ? 'active' : 'inactive')
+    && hdrPipeline.waterMetalFresnelSpectrumVfx === (waterMetalFresnelSpectrum ? 'active' : 'inactive')
     && inactive.every((name) => hdrPipeline[name] === 'inactive'),
   `E37 ${label} ${scale}x HDR/selector state resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
   const capture = await waitForStablePageCapture(cdp,
@@ -32129,6 +32179,7 @@ function metalWaterContactVfxQuery({
   scale, enabled, auditStage, liquidBody, liquidSolidMeniscus, solidBody,
   waterMetalTransmission = false,
   waterMetalSeparation = false,
+  waterMetalFresnelSpectrum = false,
 }) {
   return new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage,
@@ -32144,6 +32195,10 @@ function metalWaterContactVfxQuery({
     waterMetalTransmissionVfx: waterMetalTransmission ? '1' : '0', gasCoreDepthVfx: '0',
     waterMetalSeparationVfx: waterMetalSeparation ? '1' : '0',
     waterMetalSeparationVfxAudit: waterMetalSeparation ? '1' : '0',
+    // Every E37/E56/E76 fixture URL explicitly fences the E78 child unless
+    // its own focused route opts in. This preserves the frozen parent rails.
+    waterMetalFresnelSpectrumVfx: waterMetalFresnelSpectrum ? '1' : '0',
+    waterMetalFresnelSpectrumVfxAudit: waterMetalFresnelSpectrum ? '1' : '0',
     nobleGasBillowVfx: '0', nobleGasPrismVfx: '0', smokeSoftnessVfx: '0',
     smokeBillowDepthVfx: '0', plasmaCoreVfx: '0', solidBodyVfx: solidBody ? '1' : '0',
     platinumBodyVfx: '0', ceramicGlazeVfx: '0', botanicalBodyVfx: '0',
@@ -32160,7 +32215,7 @@ function metalWaterContactVfxInactiveSelectorNames() {
     'volumeVfx', 'liquidSurfaceVfx', 'gasBodyVfx', 'gasMotionVfx', 'powderBodyVfx',
     'powderLightVfx', 'powderSolidContactVfx', 'translucentEdgeVfx',
     'organicSubsurfaceVfx', 'wetSedimentVfx', 'gasLightVfx', 'gasCoreDepthVfx',
-    'waterMetalTransmissionVfx', 'waterMetalSeparationVfx', 'nobleGasBillowVfx', 'nobleGasPrismVfx', 'smokeSoftnessVfx',
+    'waterMetalTransmissionVfx', 'waterMetalSeparationVfx', 'waterMetalFresnelSpectrumVfx', 'nobleGasBillowVfx', 'nobleGasPrismVfx', 'smokeSoftnessVfx',
     'smokeBillowDepthVfx', 'plasmaCoreVfx', 'platinumBodyVfx', 'ceramicGlazeVfx',
     'botanicalBodyVfx', 'botanicalMesostructureVfx', 'botanicalPigmentVfx',
     'plantLaminaVfx', 'plantLobeDepthVfx', 'plantCanopyMassVfx', 'woodBarkReliefVfx',
@@ -32175,7 +32230,7 @@ async function metalWaterContactVfxPipelineState(cdp, timeoutMs) {
     const names = ['volumeVfx', 'liquidBodyVfx', 'liquidSurfaceVfx', 'gasBodyVfx',
       'gasMotionVfx', 'powderBodyVfx', 'powderLightVfx', 'powderSolidContactVfx',
       'translucentEdgeVfx', 'organicSubsurfaceVfx', 'wetSedimentVfx', 'gasLightVfx',
-      'liquidSolidMeniscusVfx', 'metalWaterContactVfx', 'waterMetalTransmissionVfx', 'waterMetalSeparationVfx', 'gasCoreDepthVfx',
+      'liquidSolidMeniscusVfx', 'metalWaterContactVfx', 'waterMetalTransmissionVfx', 'waterMetalSeparationVfx', 'waterMetalFresnelSpectrumVfx', 'gasCoreDepthVfx',
       'nobleGasBillowVfx', 'nobleGasPrismVfx', 'smokeSoftnessVfx',
       'smokeBillowDepthVfx', 'plasmaCoreVfx', 'solidBodyVfx', 'platinumBodyVfx',
       'ceramicGlazeVfx', 'botanicalBodyVfx', 'botanicalMesostructureVfx',
@@ -32814,7 +32869,9 @@ async function auditWaterMetalSeparationVfxExperiment(cdp, mode, dpr) {
         && variant.hdrPipeline.solidBodyVfx === 'active'
         && variant.hdrPipeline.metalWaterContactVfx === 'active'
         && variant.hdrPipeline.waterMetalTransmissionVfx === 'active'
-        && variant.hdrPipeline.waterMetalSeparationVfx === expectedChild,
+        && variant.hdrPipeline.waterMetalSeparationVfx === expectedChild
+        // E76 owns a frozen baseline for the new E78 child.
+        && variant.hdrPipeline.waterMetalFresnelSpectrumVfx === 'inactive',
       `E76 ${label} ${scale}x parent/child selector state resolved incorrectly (${JSON.stringify(variant.hdrPipeline)})`);
     }
     assertCanvasRectsEqual(disabled.geometry.canvas, enabled.geometry.canvas,
@@ -32998,13 +33055,15 @@ async function auditWaterMetalSeparationVfxDependencies(cdp, mode) {
       && state.solidBodyVfx === expectedSolidBody
       && state.metalWaterContactVfx === (expectedE37 ? 'active' : 'inactive')
       && state.waterMetalTransmissionVfx === (expectedE56 ? 'active' : 'inactive')
-      && state.waterMetalSeparationVfx === expectedE76,
+      && state.waterMetalSeparationVfx === expectedE76
+      && state.waterMetalFresnelSpectrumVfx === 'inactive',
     `E76 ${definition.name} dependency resolved incorrectly (${JSON.stringify({ definition, state })})`);
     probes.push({ name: definition.name, liquidBodyVfx: state.liquidBodyVfx,
       liquidSolidMeniscusVfx: state.liquidSolidMeniscusVfx, solidBodyVfx: state.solidBodyVfx,
       metalWaterContactVfx: state.metalWaterContactVfx,
       waterMetalTransmissionVfx: state.waterMetalTransmissionVfx,
-      waterMetalSeparationVfx: state.waterMetalSeparationVfx });
+      waterMetalSeparationVfx: state.waterMetalSeparationVfx,
+      waterMetalFresnelSpectrumVfx: state.waterMetalFresnelSpectrumVfx });
   }
   return probes;
 }
@@ -33040,12 +33099,580 @@ async function auditEightXWaterMetalSeparationVfxExclusion(cdp, dpr) {
     && isolation.liquidSolidMeniscusVfx === 'inactive' && isolation.solidBodyVfx === 'inactive'
     && isolation.metalWaterContactVfx === 'inactive'
     && isolation.waterMetalTransmissionVfx === 'inactive'
-    && isolation.waterMetalSeparationVfx === 'inactive',
+    && isolation.waterMetalSeparationVfx === 'inactive'
+    && isolation.waterMetalFresnelSpectrumVfx === 'inactive',
   `true-8x E76 isolation failed (${JSON.stringify(isolation)})`);
   const timingBudget = remainingDeadlineMs(deadline, 'true-8x E76 GPU completion');
   const timing = await auditWebGLPresentationTiming(cdp, 1, Math.min(12_000, timingBudget), timingBudget, 1);
   assert(timing.source === 'gpu-fence',
     `true-8x E76 did not complete GPU work (${JSON.stringify(timing)})`);
+  return {
+    backing: `${geometry.backing.width}x${geometry.backing.height}`,
+    promotionFence: 'signaled', isolation, timing,
+  };
+}
+
+/**
+ * E78: Water/Metal Fresnel-spectrum separation over the accepted E76 stack.
+ *
+ * Frozen from the accepted 2026-08-08 1x/2x/4x final-backing matrix. The
+ * fitted-page rails remain asymmetric because one CSS pixel may merge the two
+ * subcell lobes; owner direction is proved independently in the native backing.
+ */
+const WATER_METAL_FRESNEL_SPECTRUM_VFX_ACCEPTANCE = Object.freeze({
+  calibration: 'accepted-e78-final-backing-and-composed-matrix',
+  response: Object.freeze({
+    // Fit-view PNGs report seam/topology only. Their lower bounds are zero
+    // because one CSS pixel can legitimately contain both opposite lobes.
+    rgbRms: [0, 1.2],
+    // sampleBackdropRefractionRegions.rms is Rec.709 response-luma RMS.
+    lumaRms: [0, 0.4],
+    chromaRms: [0, 1.2],
+    rgbPeak: [0, 3],
+    coverage: [0, 0.05],
+    responseMicroContrast: [0, 0.5],
+  }),
+  native: Object.freeze({
+    pairedChromaEnergy: Object.freeze({ 1: [2.4, 3.1], 2: [1.3, 1.75], 4: [1.25, 1.75] }),
+    waterCoolMean: [0.75, 1.05],
+    metalWarmMean: [1.7, 2.4],
+    lumaRms: [0, 0.3],
+    absoluteLumaMean: [0, 0.1],
+    pairedRgbPeak: [2, 4],
+    waterRgbPeak: [1, 3],
+    metalRgbPeak: [3, 5],
+    seamWidthP95: Object.freeze({ 1: 2, 2: 1, 4: 1 }),
+  }),
+  seamWidthCoverage: [0, 0.05],
+  maximumCrossScaleRatio: 2.2,
+  maximumOrientationRatio: 1.15,
+});
+
+async function auditWaterMetalFresnelSpectrumVfxExperiment(cdp, mode, dpr) {
+  const scales = [];
+  const requestedScales = renderScaleArgument === undefined
+    ? VOLUME_VFX_SCALES : [Number(renderScaleArgument)];
+  for (const scale of requestedScales) {
+    const captures = {};
+    for (const enabled of [false, true, false]) {
+      const key = enabled ? 'enabled' : captures.disabled ? 'disabledRepeat' : 'disabled';
+      // E78 retains E03/E14/E17/E37/E56/E76 and toggles only its own child.
+      captures[key] = await navigateMetalWaterContactVfxState(
+        cdp, mode, scale, true, key, {
+          waterMetalTransmission: true,
+          waterMetalSeparation: true,
+          waterMetalFresnelSpectrum: enabled,
+          rawControlPoints: waterMetalFresnelSpectrumVfxRawControlPoints,
+        },
+      );
+      // This is the final normal-WebGL backing, not a resized page PNG. The
+      // navigation helper has already waited for the relevant settled frame.
+      captures[key].nativeBacking = await sampleWaterMetalFresnelSpectrumBacking(
+        cdp, captures[key].fixture,
+      );
+    }
+    const { disabled, enabled, disabledRepeat } = captures;
+    assert(JSON.stringify(disabled.fixture) === JSON.stringify(enabled.fixture)
+      && JSON.stringify(disabled.fixture) === JSON.stringify(disabledRepeat.fixture),
+    `E78 ${scale}x fixture metadata changed`);
+    for (const [label, variant] of Object.entries(captures)) {
+      assertGeometry(variant.geometry, `E78 ${label} ${scale}x`, scale);
+      assert(variant.geometry.backend.backend === 'webgl',
+        `E78 ${label} ${scale}x lost WebGL presentation`);
+      const expectedChild = label === 'enabled' ? 'active' : 'inactive';
+      assert(variant.hdrPipeline?.state === 'active'
+        && variant.hdrPipeline.liquidBodyVfx === 'active'
+        && variant.hdrPipeline.liquidSolidMeniscusVfx === 'active'
+        && variant.hdrPipeline.solidBodyVfx === 'active'
+        && variant.hdrPipeline.metalWaterContactVfx === 'active'
+        && variant.hdrPipeline.waterMetalTransmissionVfx === 'active'
+        && variant.hdrPipeline.waterMetalSeparationVfx === 'active'
+        && variant.hdrPipeline.waterMetalFresnelSpectrumVfx === expectedChild,
+      `E78 ${label} ${scale}x parent/child selector state resolved incorrectly (${JSON.stringify(variant.hdrPipeline)})`);
+    }
+    assertCanvasRectsEqual(disabled.geometry.canvas, enabled.geometry.canvas,
+      `E78 ${scale}x disabled/enabled CSS geometry`);
+    assertCanvasRectsEqual(disabled.geometry.canvas, disabledRepeat.geometry.canvas,
+      `E78 ${scale}x disabled/repeated CSS geometry`);
+    assert(JSON.stringify(disabled.geometry.backing) === JSON.stringify(enabled.geometry.backing)
+      && JSON.stringify(disabled.geometry.backing) === JSON.stringify(disabledRepeat.geometry.backing),
+    `E78 ${scale}x backing geometry changed`);
+    assertHdrVfxSemanticEquality(disabled.semantic, enabled.semantic,
+      `E78 ${scale}x disabled/enabled`);
+    assertHdrVfxSemanticEquality(disabled.semantic, disabledRepeat.semantic,
+      `E78 ${scale}x disabled/repeated`);
+    assertVolumeVfxBackingInvariant(disabled.backing, enabled.backing,
+      `E78 ${scale}x disabled/enabled`);
+    assertVolumeVfxBackingInvariant(disabled.backing, disabledRepeat.backing,
+      `E78 ${scale}x disabled/repeated`);
+    assert(JSON.stringify(disabled.rawControls) === JSON.stringify(enabled.rawControls)
+      && JSON.stringify(disabled.rawControls) === JSON.stringify(disabledRepeat.rawControls),
+    `E78 ${scale}x changed an exact protected raw control`);
+    assert(disabled.capture.capture.data === disabledRepeat.capture.capture.data,
+      `E78 ${scale}x repeated off framebuffer was not byte exact`);
+
+    const nativeBacking = summarizeWaterMetalFresnelSpectrumBacking(
+      disabled.nativeBacking, enabled.nativeBacking, disabledRepeat.nativeBacking,
+    );
+    assert(nativeBacking.outputScale === scale
+      && nativeBacking.alphaSupportExact && nativeBacking.repeatedOffExact,
+    `E78 ${scale}x native backing changed alpha/support or did not restore (${JSON.stringify(nativeBacking)})`);
+    // The direct 1x backing has precisely one sample per cell. It can prove a
+    // bounded colour seam but cannot truthfully attribute a subcell shoulder
+    // to one owner. 2x/4x have native subcell samples and must prove both
+    // directions independently before the later PNG diagnostic is consulted.
+    const nativeRail = WATER_METAL_FRESNEL_SPECTRUM_VFX_ACCEPTANCE.native;
+    const pairedChromaRail = nativeRail.pairedChromaEnergy[scale];
+    if (scale === 1) {
+      assert(nativeBacking.cards.every((card) => card.mode === 'paired-seam'
+        && card.paired.chromaEnergy >= pairedChromaRail[0]
+        && card.paired.chromaEnergy <= pairedChromaRail[1]
+        && card.paired.lumaRms >= nativeRail.lumaRms[0]
+        && card.paired.lumaRms <= nativeRail.lumaRms[1]
+        && Math.abs(card.paired.lumaMean) <= nativeRail.absoluteLumaMean[1]
+        && card.paired.rgbPeak >= nativeRail.pairedRgbPeak[0]
+        && card.paired.rgbPeak <= nativeRail.pairedRgbPeak[1]
+        && card.paired.repeatedRgbPeak === 0
+        && card.seamWidth.p95 <= nativeRail.seamWidthP95[scale]),
+      `E78 ${scale}x paired native seam is absent, bright, wide, or unstable (${JSON.stringify(nativeBacking)})`);
+    } else {
+      assert(nativeBacking.cards.every((card) => card.mode === 'owner-lobes'
+        && card.paired.chromaEnergy >= pairedChromaRail[0]
+        && card.paired.chromaEnergy <= pairedChromaRail[1]
+        && card.water.coolMean >= nativeRail.waterCoolMean[0]
+        && card.water.coolMean <= nativeRail.waterCoolMean[1]
+        && card.metal.warmMean >= nativeRail.metalWarmMean[0]
+        && card.metal.warmMean <= nativeRail.metalWarmMean[1]
+        && card.water.lumaRms <= nativeRail.lumaRms[1]
+        && card.metal.lumaRms <= nativeRail.lumaRms[1]
+        && Math.abs(card.water.lumaMean) <= nativeRail.absoluteLumaMean[1]
+        && Math.abs(card.metal.lumaMean) <= nativeRail.absoluteLumaMean[1]
+        && card.water.rgbPeak >= nativeRail.waterRgbPeak[0]
+        && card.water.rgbPeak <= nativeRail.waterRgbPeak[1]
+        && card.metal.rgbPeak >= nativeRail.metalRgbPeak[0]
+        && card.metal.rgbPeak <= nativeRail.metalRgbPeak[1]
+        && card.water.repeatedRgbPeak === 0 && card.metal.repeatedRgbPeak === 0
+        && card.seamWidth.p95 <= nativeRail.seamWidthP95[scale]),
+      `E78 ${scale}x native Water/Metal Fresnel lobes lost spectral direction, luma neutrality, or seam containment (${JSON.stringify(nativeBacking)})`);
+    }
+
+    // Keep the fitted-page sample as a visible seam/topology diagnostic, but
+    // a <1 CSS-pixel subcell lobe is not owner-resolvable evidence here.
+    const targets = waterMetalFresnelSpectrumVfxTargetRegions(disabled.fixture);
+    const controls = waterMetalFresnelSpectrumVfxControlRegions(disabled.fixture);
+    const responses = await sampleBackdropRefractionRegions(cdp, {
+      straight: disabled.capture.capture.data,
+      refracted: enabled.capture.capture.data,
+      repeatedStraight: disabledRepeat.capture.capture.data,
+    }, [...targets, ...controls], disabled.capture.canvasRect);
+    const targetResponses = responses.slice(0, targets.length);
+    const controlResponses = responses.slice(targets.length);
+    const rail = WATER_METAL_FRESNEL_SPECTRUM_VFX_ACCEPTANCE.response;
+    const withinProvisionalRail = (sample) => sample.rgbRms >= rail.rgbRms[0]
+      && sample.rgbRms <= rail.rgbRms[1]
+      && sample.rms >= rail.lumaRms[0] && sample.rms <= rail.lumaRms[1]
+      && sample.rms <= Math.max(0.5, sample.chromaRms * 0.8)
+      && sample.chromaRms >= rail.chromaRms[0] && sample.chromaRms <= rail.chromaRms[1]
+      && sample.rgbPeak >= rail.rgbPeak[0] && sample.rgbPeak <= rail.rgbPeak[1]
+      && sample.coverage >= rail.coverage[0] && sample.coverage <= rail.coverage[1]
+      && sample.responseMicroContrast >= rail.responseMicroContrast[0]
+      && sample.responseMicroContrast <= rail.responseMicroContrast[1];
+    assert(targetResponses.length === 4 && targetResponses.every(withinProvisionalRail),
+      `E78 ${scale}x fit-view seam/topology response escaped its accepted envelope (${JSON.stringify(targetResponses)})`);
+    const fitViewSeam = {
+      maxRgbRms: Math.max(...targetResponses.map((sample) => sample.rgbRms)),
+      maxChromaRms: Math.max(...targetResponses.map((sample) => sample.chromaRms)),
+      maxLumaRms: Math.max(...targetResponses.map((sample) => sample.rms)),
+      changedTargets: targetResponses.filter((sample) => sample.rgbPeak > 0).map((sample) => sample.name),
+    };
+    assert(targetResponses.every((sample) => sample.coverage
+      >= WATER_METAL_FRESNEL_SPECTRUM_VFX_ACCEPTANCE.seamWidthCoverage[0]
+      && sample.coverage
+        <= WATER_METAL_FRESNEL_SPECTRUM_VFX_ACCEPTANCE.seamWidthCoverage[1]),
+    `E78 ${scale}x widened the Water/Metal seam beyond its accepted rail (${JSON.stringify(targetResponses)})`);
+    // E78's shader eligibility is exact. The post-HDR page compositor may
+    // nevertheless filter one display byte into the already-named solid side
+    // of the mixed triple junction; freeze that single footprint explicitly
+    // rather than weakening every foreign-owner control.
+    const boundedControl = (sample) => sample.rgbPeak === 0
+      || (sample.name === 'mixedTripleSolid' && sample.rgbPeak <= 1 && sample.rgbRms <= 1);
+    assert(controlResponses.every(boundedControl),
+      `E78 ${scale}x escaped Water/Metal/topology/raw controls (${JSON.stringify(controlResponses)})`);
+    assert(responses.every((sample) => sample.repeatRgbPeak === 0),
+      `E78 ${scale}x off -> on -> off was not deterministic (${JSON.stringify(responses)})`);
+    const screenshots = screenshotRequest && (requestedScales.length === 1 || scale === 2)
+      ? await writeWaterMetalFresnelSpectrumVfxScreenshots(screenshotRequest, scale, disabled, enabled)
+      : undefined;
+    scales.push({
+      scale, backing: disabled.geometry.backing, alphaSupport: disabled.backing,
+      rawControls: disabled.rawControls, nativeBacking, fitViewSeam,
+      targetResponses, controlResponses, responses,
+      exactRepeatedOff: true, screenshots,
+    });
+  }
+  let crossScaleConsistency;
+  if (scales.length === VOLUME_VFX_SCALES.length) {
+    // Cross-scale strength belongs to the native paired seam. A CSS crop may
+    // merge the two owner lobes at 1x, so its four visual strips are not a
+    // valid cross-scale owner-spectral oracle.
+    const orientations = ['horizontal', 'vertical'];
+    const responseFor = (entry, orientation) => entry.nativeBacking.cards
+      .find((card) => card.orientation === orientation)?.paired.chromaEnergy ?? 0;
+    const targetRatios = orientations.map((orientation) => {
+      const strengths = scales.map((entry) => responseFor(entry, orientation));
+      return {
+        name: orientation,
+        strengths,
+        ratio: Math.max(...strengths) / Math.max(0.001, Math.min(...strengths)),
+      };
+    });
+    const orientationRatios = scales.map((entry) => {
+      const strengths = orientations.map((orientation) => responseFor(entry, orientation));
+      return { scale: entry.scale, ratio: Math.max(...strengths) / Math.max(0.001, Math.min(...strengths)) };
+    });
+    const limit = WATER_METAL_FRESNEL_SPECTRUM_VFX_ACCEPTANCE.maximumCrossScaleRatio;
+    assert(targetRatios.every(({ ratio }) => Number.isFinite(ratio) && ratio <= limit)
+      && orientationRatios.every(({ ratio }) => Number.isFinite(ratio) && ratio
+        <= WATER_METAL_FRESNEL_SPECTRUM_VFX_ACCEPTANCE.maximumOrientationRatio),
+    `E78 Water/Metal Fresnel spectrum drifted across scale/orientation (${JSON.stringify({ targetRatios, orientationRatios })})`);
+    crossScaleConsistency = { targetRatios, orientationRatios, maximumRatio: limit };
+  }
+  const dependencyProbes = await auditWaterMetalFresnelSpectrumVfxDependencies(cdp, mode);
+  const trueEightX = await auditEightXWaterMetalFresnelSpectrumVfxExclusion(cdp, dpr);
+  return {
+    acceptance: WATER_METAL_FRESNEL_SPECTRUM_VFX_ACCEPTANCE,
+    scales, crossScaleConsistency, dependencyProbes, trueEightXExcluded: true, trueEightX,
+  };
+}
+
+function waterMetalFresnelSpectrumVfxTargetRegions(fixture) {
+  // E56's exact-Metal proof comes from the current 2x2 contact stencil. At
+  // 2x/4x only the interface-facing half of Water's final cell contains that
+  // tag; a geometric-centre CSS strip can round onto the other half and report
+  // a false zero even though the presented boundary is coloured. Measure the
+  // two proven subcell shoulders explicitly, while retaining a long tangential
+  // strip so this remains fit-view presentation evidence rather than one lucky
+  // framebuffer sample.
+  const strip = (name, point, orientation, side) => ({
+    name,
+    x: point.x + (orientation === 'vertical' ? (side === 'Water' ? 0.75 : 0.25) : 0.5),
+    y: point.y + (orientation === 'horizontal' ? (side === 'Water' ? 0.75 : 0.25) : 0.5),
+    radiusX: orientation === 'horizontal' ? 18 : 0.18,
+    radiusY: orientation === 'horizontal' ? 0.18 : 18,
+    auditRect: true,
+  });
+  return fixture.cards.filter(({ code }) => code === 'WATR_METL').flatMap((card) => [
+    strip(`${card.code}_${card.orientation}_Water`, card.liquidContactProbe, card.orientation, 'Water'),
+    strip(`${card.code}_${card.orientation}_Metal`, card.solidContactProbe, card.orientation, 'Metal'),
+  ]);
+}
+
+function waterMetalFresnelSpectrumVfxControlRegions(fixture) {
+  return waterMetalSeparationVfxControlRegions(fixture)
+    .filter(({ name }) => !/^WATR_METL_.*_Metal$/.test(name));
+}
+
+function waterMetalFresnelSpectrumVfxRawControlPoints(fixture) {
+  return waterMetalSeparationVfxRawControlPoints(fixture);
+}
+
+/**
+ * One bounded final-WebGL-backing read for E78. Page screenshots intentionally
+ * remain a fit-view diagnostic; they cannot split two subcell shoulders that
+ * land in the same CSS pixel. This reuses the established direct readPixels
+ * pattern rather than adding a presentation resource or a renderer hook.
+ */
+async function sampleWaterMetalFresnelSpectrumBacking(cdp, fixture) {
+  return evaluate(cdp, `(() => {
+    const canvas = document.querySelector('canvas.semantic-field-canvas');
+    const gl = canvas?.getContext('webgl2') || canvas?.getContext('webgl');
+    if (!(canvas instanceof HTMLCanvasElement) || !gl) {
+      throw new Error('E78 native WebGL backing unavailable');
+    }
+    const raw = new Uint8Array(canvas.width * canvas.height * 4);
+    gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, raw);
+    const scaleX = canvas.width / ${WORLD_WIDTH};
+    const scaleY = canvas.height / ${WORLD_HEIGHT};
+    if (!Number.isInteger(scaleX) || !Number.isInteger(scaleY) || scaleX !== scaleY) {
+      throw new Error('E78 native backing has non-integral world scale ' + scaleX + 'x' + scaleY);
+    }
+    const readWorldRect = (rect) => {
+      const left = Math.max(0, Math.floor(rect.x * scaleX));
+      const right = Math.min(canvas.width, Math.ceil((rect.x + rect.width) * scaleX));
+      const top = Math.max(0, Math.floor(rect.y * scaleY));
+      const bottom = Math.min(canvas.height, Math.ceil((rect.y + rect.height) * scaleY));
+      const pixels = new Uint8Array(Math.max(0, right - left) * Math.max(0, bottom - top) * 4);
+      let destination = 0;
+      for (let y = top; y < bottom; y++) {
+        const rawY = canvas.height - 1 - y;
+        const start = (rawY * canvas.width + left) * 4;
+        const end = start + (right - left) * 4;
+        pixels.set(raw.subarray(start, end), destination);
+        destination += end - start;
+      }
+      return {
+        x: left, y: top, width: right - left, height: bottom - top,
+        rgba: Array.from(pixels),
+      };
+    };
+    const cards = ${JSON.stringify(fixture.cards)}.filter((card) => card.code === 'WATR_METL')
+      .map((card) => {
+        const inset = 6;
+        const seam = card.orientation === 'horizontal'
+          ? { x: card.liquid.x + inset, y: card.liquidContactProbe.y,
+            width: card.liquid.width - inset * 2, height: 2 }
+          : { x: card.liquidContactProbe.x, y: card.liquid.y + inset,
+            width: 2, height: card.liquid.height - inset * 2 };
+        return { orientation: card.orientation, seam: readWorldRect(seam) };
+      });
+    return { width: canvas.width, height: canvas.height, outputScale: scaleX, cards };
+  })()`);
+}
+
+function summarizeWaterMetalFresnelSpectrumBacking(flat, styled, repeated) {
+  const sameGeometry = flat?.width === styled?.width && flat.width === repeated?.width
+    && flat.height === styled.height && flat.height === repeated.height
+    && flat.outputScale === styled.outputScale && flat.outputScale === repeated.outputScale;
+  assert(sameGeometry && Array.isArray(flat.cards) && flat.cards.length === 2
+    && flat.cards.length === styled.cards.length && flat.cards.length === repeated.cards.length,
+  `E78 native backing geometry changed (${JSON.stringify({ flat, styled, repeated })})`);
+  const outputScale = flat.outputScale;
+  const comparePixels = (base, changed, returned) => {
+    assert(base.length === changed.length && base.length === returned.length,
+      'E78 native backing sample length changed');
+    let squaredRgb = 0;
+    let squaredLuma = 0;
+    let coolSum = 0;
+    let warmSum = 0;
+    let chromaEnergy = 0;
+    let lumaSum = 0;
+    let rgbPeak = 0;
+    let repeatedRgbPeak = 0;
+    let alphaExact = true;
+    let supportExact = true;
+    for (let offset = 0; offset < base.length; offset += 4) {
+      const red = changed[offset] - base[offset];
+      const green = changed[offset + 1] - base[offset + 1];
+      const blue = changed[offset + 2] - base[offset + 2];
+      const luma = red * 0.2126 + green * 0.7152 + blue * 0.0722;
+      const cool = blue - red;
+      squaredRgb += red * red + green * green + blue * blue;
+      squaredLuma += luma * luma;
+      coolSum += cool;
+      warmSum -= cool;
+      chromaEnergy += Math.abs(cool);
+      lumaSum += luma;
+      rgbPeak = Math.max(rgbPeak, Math.abs(red), Math.abs(green), Math.abs(blue));
+      repeatedRgbPeak = Math.max(repeatedRgbPeak,
+        Math.abs(returned[offset] - base[offset]), Math.abs(returned[offset + 1] - base[offset + 1]),
+        Math.abs(returned[offset + 2] - base[offset + 2]));
+      alphaExact &&= base[offset + 3] === changed[offset + 3]
+        && base[offset + 3] === returned[offset + 3];
+      supportExact &&= (base[offset + 3] > 0) === (changed[offset + 3] > 0)
+        && (base[offset + 3] > 0) === (returned[offset + 3] > 0);
+    }
+    const count = Math.max(1, base.length / 4);
+    return {
+      rgbRms: round(Math.sqrt(squaredRgb / (count * 3)), 4),
+      lumaRms: round(Math.sqrt(squaredLuma / count), 4),
+      lumaMean: round(lumaSum / count, 4),
+      coolMean: round(coolSum / count, 4),
+      warmMean: round(warmSum / count, 4),
+      chromaEnergy: round(chromaEnergy / count, 4),
+      rgbPeak, repeatedRgbPeak, alphaExact, supportExact,
+    };
+  };
+  const seamWidth = (base, changed, width, height, orientation) => {
+    const normalLength = orientation === 'horizontal' ? height : width;
+    const longLength = orientation === 'horizontal' ? width : height;
+    const spans = [];
+    for (let long = 0; long < longLength; long++) {
+      let first = -1;
+      let last = -1;
+      for (let normal = 0; normal < normalLength; normal++) {
+        const x = orientation === 'horizontal' ? long : normal;
+        const y = orientation === 'horizontal' ? normal : long;
+        const offset = (y * width + x) * 4;
+        const changedPixel = Math.max(
+          Math.abs(changed[offset] - base[offset]),
+          Math.abs(changed[offset + 1] - base[offset + 1]),
+          Math.abs(changed[offset + 2] - base[offset + 2]),
+        ) >= 1;
+        if (changedPixel) {
+          if (first < 0) first = normal;
+          last = normal;
+        }
+      }
+      if (first >= 0) spans.push((last - first + 1) / outputScale);
+    }
+    spans.sort((left, right) => left - right);
+    const percentile = (fraction) => spans.length
+      ? spans[Math.min(spans.length - 1, Math.floor((spans.length - 1) * fraction))] : 0;
+    return {
+      changedLongFraction: round(spans.length / Math.max(1, longLength), 4),
+      median: round(percentile(0.5), 4), p95: round(percentile(0.95), 4),
+    };
+  };
+  const cards = flat.cards.map((baseCard, index) => {
+    const changedCard = styled.cards[index];
+    const returnedCard = repeated.cards[index];
+    assert(baseCard.orientation === changedCard.orientation
+      && baseCard.orientation === returnedCard.orientation
+      && baseCard.seam.width === changedCard.seam.width
+      && baseCard.seam.height === changedCard.seam.height
+      && baseCard.seam.width === returnedCard.seam.width
+      && baseCard.seam.height === returnedCard.seam.height,
+    `E78 native ${baseCard.orientation} seam geometry changed`);
+    const { width, height, rgba: base } = baseCard.seam;
+    const changed = changedCard.seam.rgba;
+    const returned = returnedCard.seam.rgba;
+    const sidePixels = (pixels, side) => {
+      const values = [];
+      const waterFirst = side === 'water';
+      if (baseCard.orientation === 'horizontal') {
+        const split = Math.floor(height / 2);
+        const start = waterFirst ? 0 : split;
+        const end = waterFirst ? split : height;
+        for (let y = start; y < end; y++) values.push(...pixels.slice(y * width * 4, (y + 1) * width * 4));
+      } else {
+        const split = Math.floor(width / 2);
+        for (let y = 0; y < height; y++) {
+          const start = (y * width + (waterFirst ? 0 : split)) * 4;
+          const end = (y * width + (waterFirst ? split : width)) * 4;
+          values.push(...pixels.slice(start, end));
+        }
+      }
+      return values;
+    };
+    const water = comparePixels(sidePixels(base, 'water'), sidePixels(changed, 'water'), sidePixels(returned, 'water'));
+    const metal = comparePixels(sidePixels(base, 'metal'), sidePixels(changed, 'metal'), sidePixels(returned, 'metal'));
+    const paired = comparePixels(base, changed, returned);
+    const common = {
+      orientation: baseCard.orientation,
+      mode: outputScale === 1 ? 'paired-seam' : 'owner-lobes',
+      paired, seamWidth: seamWidth(base, changed, width, height, baseCard.orientation),
+      alphaSupportExact: water.alphaExact && metal.alphaExact && paired.alphaExact
+        && water.supportExact && metal.supportExact && paired.supportExact,
+      repeatedOffExact: water.repeatedRgbPeak === 0 && metal.repeatedRgbPeak === 0
+        && paired.repeatedRgbPeak === 0,
+    };
+    // At 1x the owner partitions are one final sample each. Keep them out of
+    // the reported proof rather than advertising an unresolvable subcell lobe.
+    return outputScale === 1 ? common : { ...common, water, metal };
+  });
+  return {
+    backing: `${flat.width}x${flat.height}`, outputScale, cards,
+    alphaSupportExact: cards.every((card) => card.alphaSupportExact),
+    repeatedOffExact: cards.every((card) => card.repeatedOffExact),
+  };
+}
+
+async function writeWaterMetalFresnelSpectrumVfxScreenshots(source, scale, disabled, enabled) {
+  const paths = {
+    off: variantScreenshotPath(source, `e78-water-metal-fresnel-spectrum-${scale}x-off`),
+    on: variantScreenshotPath(source, `e78-water-metal-fresnel-spectrum-${scale}x-on`),
+  };
+  await writeFile(paths.off, Buffer.from(disabled.capture.capture.data, 'base64'));
+  await writeFile(paths.on, Buffer.from(enabled.capture.capture.data, 'base64'));
+  return paths;
+}
+
+async function auditWaterMetalFresnelSpectrumVfxDependencies(cdp, mode) {
+  const definitions = [
+    { name: 'all-parents-on', liquidBody: true, liquidSolidMeniscus: true, solidBody: true, metalWater: true, transmission: true, separation: true },
+    { name: 'e76-parent-off', liquidBody: true, liquidSolidMeniscus: true, solidBody: true, metalWater: true, transmission: true, separation: false },
+    { name: 'e56-parent-off', liquidBody: true, liquidSolidMeniscus: true, solidBody: true, metalWater: true, transmission: false, separation: true },
+    { name: 'e37-parent-off', liquidBody: true, liquidSolidMeniscus: true, solidBody: true, metalWater: false, transmission: true, separation: true },
+    { name: 'solid-parent-off', liquidBody: true, liquidSolidMeniscus: true, solidBody: false, metalWater: true, transmission: true, separation: true },
+    { name: 'meniscus-parent-off', liquidBody: true, liquidSolidMeniscus: false, solidBody: true, metalWater: true, transmission: true, separation: true },
+    { name: 'liquid-grandparent-off', liquidBody: false, liquidSolidMeniscus: true, solidBody: true, metalWater: true, transmission: true, separation: true },
+  ];
+  const probes = [];
+  for (const definition of definitions) {
+    const query = metalWaterContactVfxQuery({
+      scale: 2, auditStage: `e78-dependency-${definition.name}`,
+      enabled: definition.metalWater, waterMetalTransmission: definition.transmission,
+      waterMetalSeparation: definition.separation, waterMetalFresnelSpectrum: true,
+      ...definition,
+    });
+    await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+    await waitFor(() => evaluate(cdp, `(() => {
+      const p = new URLSearchParams(location.search);
+      return p.get('metalWaterContactVfxAudit') === '1'
+        && p.get('auditStage') === ${JSON.stringify(`e78-dependency-${definition.name}`)}
+        && p.get('waterMetalFresnelSpectrumVfx') === '1' && p.get('renderScale') === '2'
+        && Boolean(window.__ANIFOR_INPUT_AUDIT__);
+    })()`), 30_000, `E78 ${definition.name} dependency page`);
+    await waitFor(() => evaluate(cdp,
+      `window.__ANIFOR_INPUT_AUDIT__.backend().backend === ${JSON.stringify(mode)}`),
+    30_000, `E78 ${definition.name} dependency backend`);
+    const state = await metalWaterContactVfxPipelineState(cdp);
+    const expectedLiquidBody = definition.liquidBody ? 'active' : 'inactive';
+    const expectedMeniscus = definition.liquidBody && definition.liquidSolidMeniscus ? 'active' : 'inactive';
+    const expectedSolidBody = definition.solidBody ? 'active' : 'inactive';
+    const expectedE37 = definition.metalWater && expectedMeniscus === 'active' && expectedSolidBody === 'active';
+    const expectedE56 = expectedE37 && definition.transmission;
+    const expectedE76 = expectedE56 && definition.separation;
+    const expectedE78 = expectedE76 ? 'active' : 'inactive';
+    assert(state?.renderer === 'semantic-field-webgl' && state.look === 'realistic'
+      && state.state === 'active' && state.bloomBacking === `${WORLD_WIDTH}x${WORLD_HEIGHT}`
+      && state.liquidBodyVfx === expectedLiquidBody
+      && state.liquidSolidMeniscusVfx === expectedMeniscus
+      && state.solidBodyVfx === expectedSolidBody
+      && state.metalWaterContactVfx === (expectedE37 ? 'active' : 'inactive')
+      && state.waterMetalTransmissionVfx === (expectedE56 ? 'active' : 'inactive')
+      && state.waterMetalSeparationVfx === (expectedE76 ? 'active' : 'inactive')
+      && state.waterMetalFresnelSpectrumVfx === expectedE78,
+    `E78 ${definition.name} dependency resolved incorrectly (${JSON.stringify({ definition, state })})`);
+    probes.push({ name: definition.name, liquidBodyVfx: state.liquidBodyVfx,
+      liquidSolidMeniscusVfx: state.liquidSolidMeniscusVfx, solidBodyVfx: state.solidBodyVfx,
+      metalWaterContactVfx: state.metalWaterContactVfx,
+      waterMetalTransmissionVfx: state.waterMetalTransmissionVfx,
+      waterMetalSeparationVfx: state.waterMetalSeparationVfx,
+      waterMetalFresnelSpectrumVfx: state.waterMetalFresnelSpectrumVfx });
+  }
+  return probes;
+}
+
+async function auditEightXWaterMetalFresnelSpectrumVfxExclusion(cdp, dpr) {
+  await setDesktopMetrics(cdp, 1280, 720, dpr);
+  const query = metalWaterContactVfxQuery({
+    scale: 8, enabled: true, waterMetalTransmission: true, waterMetalSeparation: true,
+    waterMetalFresnelSpectrum: true, auditStage: 'eight-water-metal-fresnel-spectrum',
+    liquidBody: true, liquidSolidMeniscus: true, solidBody: true,
+  });
+  await cdp.send('Page.navigate', { url: `${AUDIT_BASE_URL}?${query}` });
+  const deadline = Date.now() + EIGHT_X_PRESENTATION_DEADLINE_MS;
+  await waitFor(() => evaluate(cdp, `(() => {
+    const p = new URLSearchParams(location.search);
+    return p.get('renderScale') === '8' && p.get('auditStage') === 'eight-water-metal-fresnel-spectrum'
+      && p.get('metalWaterContactVfx') === '1' && p.get('waterMetalTransmissionVfx') === '1'
+      && p.get('waterMetalSeparationVfx') === '1' && p.get('waterMetalFresnelSpectrumVfx') === '1'
+      && Boolean(window.__ANIFOR_INPUT_AUDIT__);
+  })()`), remainingDeadlineMs(deadline, 'true-8x E78 input audit API'), 'true-8x E78 input audit API');
+  const backend = await waitForEightXTerminalBackend(cdp, 'true-8x E78', deadline);
+  assertEightXWebGLBackend(backend, 'true-8x E78');
+  const geometry = await waitForStableCanvas(cdp, 1280, 720, undefined,
+    Math.min(45_000, remainingDeadlineMs(deadline, 'true-8x E78 geometry')), 'true-8x E78 geometry');
+  assert(geometry.backing.width === WORLD_WIDTH * 8
+    && geometry.backing.height === WORLD_HEIGHT * 8 && geometry.outputScale === '8',
+  `true-8x E78 lost exact backing (${JSON.stringify(geometry.backing)})`);
+  const isolation = await metalWaterContactVfxPipelineState(
+    cdp, Math.min(1_000, remainingDeadlineMs(deadline, 'true-8x E78 isolation')),
+  );
+  assert(isolation?.renderer === 'semantic-field-webgl' && isolation.look === 'realistic'
+    && isolation.state === 'inactive' && isolation.reason === 'scale-8'
+    && isolation.bloomBacking === null && isolation.liquidBodyVfx === 'inactive'
+    && isolation.liquidSolidMeniscusVfx === 'inactive' && isolation.solidBodyVfx === 'inactive'
+    && isolation.metalWaterContactVfx === 'inactive'
+    && isolation.waterMetalTransmissionVfx === 'inactive'
+    && isolation.waterMetalSeparationVfx === 'inactive'
+    && isolation.waterMetalFresnelSpectrumVfx === 'inactive',
+  `true-8x E78 isolation failed (${JSON.stringify(isolation)})`);
+  const timingBudget = remainingDeadlineMs(deadline, 'true-8x E78 GPU completion');
+  const timing = await auditWebGLPresentationTiming(cdp, 1, Math.min(12_000, timingBudget), timingBudget, 1);
+  assert(timing.source === 'gpu-fence',
+    `true-8x E78 did not complete GPU work (${JSON.stringify(timing)})`);
   return {
     backing: `${geometry.backing.width}x${geometry.backing.height}`,
     promotionFence: 'signaled', isolation, timing,

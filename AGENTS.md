@@ -1775,16 +1775,24 @@ low-frequency carrier without rebuilding the prism phase or creating particle
 detail. Any future tuning must preserve the calibrated focused rails and the
 composed non-regression, not merely make a screenshot darker.
 
-The next eligible ranked visual deficit is Water/Metal contact chromatic
-separation (`.675`, quality `91.216` at canonical 2×); the lower zero-payload
-PLNT score remains an ineligible ranker blind spot. E78 should first test a
-normal-WebGL-only strict E76 child that applies an approximately Rec.709-luma-
-neutral opposing Fresnel-spectrum rotation only inside the already-proven exact
-Water/Metal contact. Reuse the existing E56/E76 Water band/crown/pocket/facing
-and E37/E76 Metal signed seam tone; add no fourth band, procedural carrier,
-sample, resource, or material reach. Require a canonical 2× composed gain with
-bounded luma/seam width and exact topology/alpha/controls. If it cannot improve
-that evidence, reject the diagnostic rather than stacking another colour layer.
+E78 is the accepted normal-WebGL-only strict E76 Water/Metal Fresnel-spectrum
+child. Its approximately Rec.709-neutral opposing RGB rotations reuse only
+E56/E76's Water band/crown/pocket/Fresnel carriers and E37/E76's Metal signed
+seam tone. Add no fourth band, coordinate carrier, sample, resource, or material
+reach. The frozen final-backing matrix proves one-cell resolved seams at 2×/4×,
+Water cool means `.854–.905`, Metal warm means `1.897–2.169`, peaks `2/4`,
+absolute luma means below `.032`, byte-exact off restoration, and compact true-
+8× exclusion. The canonical 2× A/B raises chromatic separation `.6750→.6875`
+and quality `91.216→91.667` without changing luma, coverage, macro range,
+support, clipping, or E77. Do not stack another Water/Metal colour layer.
+
+Contact-audit lesson: a DPR-1 fit-view PNG may merge opposing subcell lobes into
+one CSS pixel. It remains authoritative for visible seam width, topology, and
+the composed score, but not for exact owner attribution. At 2×/4×, read the
+settled final WebGL backing and partition samples by the known semantic contact;
+at 1×, report a paired seam instead of inventing owner-resolved subcells. Keep
+`preserveDrawingBuffer` audit-only and release no new product resource for this
+evidence.
 
 Visual-audit lesson: `inputAudit=1` disables opt-in child selectors unless the
 composed route names them explicitly, so canonical evidence must request and
