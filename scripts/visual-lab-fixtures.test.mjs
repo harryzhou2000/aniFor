@@ -36,7 +36,7 @@ describe('Visual Lab fixture adapters', () => {
   });
 
   it('keeps the general showcase compatible with every implemented capture domain', () => {
-    expect(visualLabFixtureNames()).toEqual(['showcase', 'oil-motion']);
+    expect(visualLabFixtureNames()).toEqual(['showcase', 'oil-motion', 'water-motion']);
     for (const domain of ['gas', 'liquid', 'emission']) {
       expect(resolveVisualLabFixture('showcase', domain, 255).name).toBe('showcase');
     }
@@ -53,13 +53,28 @@ describe('Visual Lab fixture adapters', () => {
     expect(Object.isFrozen(adapter.preparation.args)).toBe(true);
   });
 
+  it('declares Water preparation and its exact liquid target without harness branching', () => {
+    const adapter = resolveVisualLabFixture('water-motion', 'liquid', 2);
+    expect(adapter).toMatchObject({
+      name: 'water-motion',
+      scene: 'showcase',
+      preparation: { method: 'prepareLiquidMotionVfxFixture', args: ['moving'] },
+    });
+    expect(Object.isFrozen(adapter)).toBe(true);
+    expect(Object.isFrozen(adapter.preparation.args)).toBe(true);
+  });
+
   it('rejects unknown fixtures and incompatible domain/target pairs early', () => {
     expect(() => resolveVisualLabFixture('missing', 'gas', 1))
-      .toThrow('--fixture must be showcase or oil-motion');
+      .toThrow('--fixture must be showcase, oil-motion, or water-motion');
     expect(() => resolveVisualLabFixture('oil-motion', 'gas', 8))
       .toThrow('--fixture=oil-motion requires --domain=liquid --target=8');
     expect(() => resolveVisualLabFixture('oil-motion', 'liquid', 2))
       .toThrow('--fixture=oil-motion requires --domain=liquid --target=8');
+    expect(() => resolveVisualLabFixture('water-motion', 'gas', 2))
+      .toThrow('--fixture=water-motion requires --domain=liquid --target=2');
+    expect(() => resolveVisualLabFixture('water-motion', 'liquid', 8))
+      .toThrow('--fixture=water-motion requires --domain=liquid --target=2');
   });
 
   it('keeps every adapter and nested constraint JSON-serializable and immutable', () => {
@@ -91,6 +106,20 @@ describe('Visual Lab fixture adapters', () => {
     expect(calls).toEqual(['backend', 'prepare:moving', 'variant:2']);
     expect(result).toMatchObject({
       fixture: 'oil-motion', scene: 'showcase', fixturePrepared: true,
+      stagedBeforeWebGL: true, backendReasonBeforeSelection: 'webgl-starting',
+    });
+
+    calls.length = 0;
+    const waterResult = runStartupExpression(
+      resolveVisualLabFixture('water-motion', 'liquid', 2), {
+        backend: audit.backend,
+        prepareLiquidMotionVfxFixture: (mode) => calls.push(`prepare-water:${mode}`),
+        setVisualLabVariant: audit.setVisualLabVariant,
+      },
+    );
+    expect(calls).toEqual(['backend', 'prepare-water:moving', 'variant:2']);
+    expect(waterResult).toMatchObject({
+      fixture: 'water-motion', scene: 'showcase', fixturePrepared: true,
       stagedBeforeWebGL: true, backendReasonBeforeSelection: 'webgl-starting',
     });
   });
@@ -142,6 +171,7 @@ describe('Visual Lab fixture adapters', () => {
       ['--domain=powder', '--domain must be gas, liquid, or emission'],
       ['--target=256', '--target must be an integer from 0 through 255'],
       ['--fixture=oil-motion', '--fixture=oil-motion requires --domain=liquid --target=8'],
+      ['--fixture=water-motion', '--fixture=water-motion requires --domain=liquid --target=2'],
     ]) {
       const child = spawnSync(process.execPath, [auditScript.pathname, argument], {
         encoding: 'utf8', timeout: 5_000,
@@ -151,6 +181,8 @@ describe('Visual Lab fixture adapters', () => {
     }
     const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
     expect(packageJson.scripts['audit:vfx:oil-motion']).toBe('npm run audit:visual-lab:oil-motion');
+    expect(packageJson.scripts['audit:vfx:liquid-motion'])
+      .toBe('npm run audit:visual-lab:water-motion');
     expect(packageJson.scripts['audit:vfx:oxygen-volume-fold'])
       .toBe('npm run audit:visual-lab:oxygen');
   });

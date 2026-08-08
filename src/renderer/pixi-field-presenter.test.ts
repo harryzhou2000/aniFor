@@ -4359,7 +4359,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight).not.toContain('liquidSurfaceVfx');
   });
 
-  it('routes E65 liquid motion through E08 semantic velocity without an 8x branch', () => {
+  it('keeps accepted E65 Water motion in the E08 baseline without a selector or 8x branch', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const hdrSource = readFileSync(new URL('./hdr-vfx-pipeline.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
@@ -4369,20 +4369,18 @@ describe('Pixi presenter startup configuration', () => {
     const hdrCreateEnd = source.indexOf(');', hdrCreateStart);
     const hdrCreate = source.slice(hdrCreateStart, hdrCreateEnd);
 
-    expect(source).toContain('resolveLiquidMotionVfxEnabled');
-    expect(source).toMatch(
-      /const liquidMotionVfxEnabled = outputScale < 8\s*&& resolveLiquidMotionVfxEnabled\(renderLook\);/,
-    );
-    expect(hdrCreate).toContain('motionEnabled: liquidMotionVfxEnabled');
     for (const existingResource of [
       'this.fieldSource', 'this.wallSource', 'this.liquidSource',
     ]) expect(hdrCreate).toContain(existingResource);
-    expect(source).toMatch(
-      /presenter\.app\.canvas\.dataset\.liquidMotionVfx\s*=[\s\S]*?\? 'active' : 'inactive';/,
+    expect(source).not.toContain('resolveLiquidMotionVfxEnabled');
+    expect(source).not.toContain('liquidMotionVfxEnabled');
+    expect(source).not.toContain('motionEnabled:');
+    expect(source).not.toContain('liquidMotionVfxAudit');
+    expect(source).not.toContain('dataset.liquidMotionVfx');
+    expect(hdrSource).not.toContain('uLiquidMotionVfx');
+    expect(hdrSource).toMatch(
+      /float liquidMotion\s*=\s*exactMaterial\(material, MATERIAL_WATER\)\s*\*\s*smoothstep\(0\.10, 0\.58, motionEnergy\)/,
     );
-    expect(source).toContain("this.app.canvas.dataset.liquidMotionVfx = 'inactive';");
-    expect(source).toContain("get('liquidMotionVfxAudit') === '1'");
-    expect(hdrSource).toContain('uLiquidMotionVfx');
     expect(hdrSource).toContain('state.ba * 2.0 - 1.0');
     expect(eight).not.toContain('liquidMotionVfx');
     expect(eight).not.toContain('uLiquidMotionVfx');

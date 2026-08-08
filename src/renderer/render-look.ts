@@ -69,27 +69,9 @@ export function resolveLiquidSurfaceVfxEnabled(
 }
 
 /**
- * E65 adds velocity-reactive transport only after E08 has proved an exact,
- * connected liquid surface. Audit URLs stay on the frozen E08 reference until
- * they explicitly request this child; ordinary non-Classic play enables it.
- */
-export function resolveLiquidMotionVfxEnabled(
-  look: RenderLook,
-  search = globalThis.location?.search ?? '',
-): boolean {
-  if (!resolveLiquidSurfaceVfxEnabled(look, search)) return false;
-  const parameters = new URLSearchParams(search);
-  const requested = parameters.get('liquidMotionVfx');
-  if (requested === '0' || requested === 'off' || requested === 'false') return false;
-  if (requested === '1' || requested === 'on' || requested === 'true') return true;
-  if (parameters.get('inputAudit') === '1') return false;
-  return true;
-}
-
-/**
  * E66 gives exact Water a curvature-flow-inspired meniscus only after E08 has
- * established a connected liquid/air surface. It is independent of E65's
- * velocity response so a resting curved shore still reads as a fluid surface.
+ * established a connected liquid/air surface, so a resting curved shore still
+ * reads as a fluid surface.
  * Audit URLs retain their frozen reference until they request this child.
  */
 export function resolveWaterCurvatureVfxEnabled(

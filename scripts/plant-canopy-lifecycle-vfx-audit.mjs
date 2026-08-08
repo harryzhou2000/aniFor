@@ -195,7 +195,7 @@ function focusedQuery(scale, enabled, stage) {
   return new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: stage,
     plantCanopyLifecycleVfxAudit: '1', renderScale: String(scale), renderLook: 'realistic',
-    volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0', liquidMotionVfx: '0',
+    volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0',
     gasBodyVfx: '0', gasMotionVfx: '0', powderBodyVfx: '0', solidBodyVfx: '0',
     botanicalBodyVfx: '1', botanicalMesostructureVfx: '1', botanicalPigmentVfx: '1',
     plantLaminaVfx: '1', plantLobeDepthVfx: '1', plantCanopyMassVfx: '1',

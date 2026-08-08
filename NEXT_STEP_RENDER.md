@@ -17,6 +17,14 @@ experiments carried by this framework rather than new one-off infrastructure.
 Canvas stays a resilient semantic fallback and true 8× stays on its compact
 direct path unless a separately budgeted design proves otherwise.
 
+The immediate framework objective is now authoring efficiency rather than a
+fourth material tweak: define stable domain-local candidate ABIs and keep every
+fixture, target, preparation method, alpha reader, and capability constraint in
+frozen descriptors. Adding an off/A/B comparison should normally touch one
+small candidate module plus one descriptor, with no presenter lifecycle or CDP
+harness branch. Promote another accepted leaf only when the migration deletes
+more one-off surface area than it adds.
+
 ## Visual north star
 
 Define the art target first: **physically-inspired stylized realism** — soft directional lighting, HDR emission, true fluid surfaces, depth through absorption and scatter. Every effect below serves that. I'd also lock in two reference presets early (e.g. "Realistic" and "Neon Lab") so aesthetic decisions stay coherent.
@@ -2808,9 +2816,9 @@ fixture remains the acceptance contract. Choose any later experiment only from
 a new visible fit-view diagnosis. Preserve the E14 1× stencil snap and all
 E01–E67 selectors and controls.
 
-E65 is the first accepted Phase-2 velocity-reactive liquid checkpoint. It is a
-strict normal-WebGL child of E08/E03, independently selectable with
-`?liquidMotionVfx=0|1`. Exact authoritative Water reuses the semantic texture's
+E65 is the first accepted Phase-2 velocity-reactive liquid checkpoint. It is now
+part of the selectorless normal-WebGL E08/E03 baseline. Exact authoritative
+Water reuses the semantic texture's
 already-packed signed velocity `.ba` and E08's existing centre/four-cardinal
 semantic reads. Coherent motion bends the established same-owner transmission
 lookup and adds a world-anchored cyan-white crest only where E08 has already
@@ -2822,26 +2830,25 @@ one-cell Water, isolated Water, authored holes/chimneys, Water/Metal and
 Water/Oil contacts, co-located native walls, Canvas, and compact true 8× are
 exact controls.
 
-`npm run audit:vfx:liquid-motion` owns a paused topology-identical
-still/moving fixture with 53,121 Water, 7,232 Oil, 4,992 Acid, 2,240 Metal,
-1,232 native-wall, and exactly 34,013 moving-velocity cells. Its WebGL
-moving and fully still off→on→off proofs are byte-exact for the complete
-framebuffer, semantics, material/wall topology, packed/staged velocity, alpha,
-and support at 1×/2×/4×. The accepted moving-surface response has RGB RMS
-`1.60/1.52/1.31`, spatial RMS `1.475/1.409/1.244`, peak `9/9/8`, coverage
-`.154/.119/.086`, and signed mean `.53/.49/.36`; every named control is an
-exact RGB no-op and the fully still fixture remains exact with the selector on.
-Requested-on true 8× reports E03/E08/E65/HDR inactive for `scale-8`, keeps the
-fixture absent, presents exact 4896×3072 WebGL, and completed the accepted GPU
-fence in `5.3166 s` in the strengthened full matrix with zero browser errors.
+`npm run audit:vfx:liquid-motion` now aliases
+`npm run audit:visual-lab:water-motion`. The generic production-bundle harness
+prepares the retained paused moving fixture during temporary Canvas startup,
+then captures same-page off/A/B at exact liquid target `2` after WebGL promotion.
+Preserve its 53,121 Water, 7,232 Oil, 4,992 Acid, 2,240 Metal, 1,232 native-wall,
+and 34,013 moving-velocity-cell topology. The canonical 2× migration proof kept
+semantic, liquid-field, framebuffer-alpha, and support hashes exact, produced
+distinct A/B captures, and reported zero browser errors. The former bespoke
+selector matrix and its 1×/2×/4× response bounds remain historical acceptance
+evidence. E08 now owns the ordinary baseline and compact true-8× exclusion.
 This closes the first whitecap/flow-refraction slice only; detached spray,
 geometric-alpha curvature-flow smoothing, and advected gas/fire volumes remain
 open Phase-2 work.
 
 E66 is the accepted exact-Water curvature-flow-inspired optical-meniscus
 checkpoint, independently selectable with `?waterCurvatureVfx=0|1`. It is a
-strict normal-WebGL HDR child of E08/E03 but remains independent of E65, so a
-resting curved shoreline may respond without velocity. At true 1×/2×/4× it
+strict normal-WebGL HDR child of E08/E03. Its curvature arithmetic remains
+velocity-independent, so a resting curved shoreline may respond while accepted
+E65 motion stays present for moving Water. At true 1×/2×/4× it
 reuses `uLiquidTexture` and takes exactly two guarded tangent samples at ±12
 world cells around an already-proven ordinary connected Water surface. Their
 signed curvature residual gives a bounded cyan lift to convex crests and blue
@@ -2856,11 +2863,14 @@ space, Canvas, and compact true 8× are exact controls.
 still off→on→off fixtures at 1×/2×/4×. Both must retain exact semantic,
 material, wall, velocity, alpha, and support state, byte-identical repeated-off
 frames, positive convex response, negative concave response, and exact flat-
-shore/protected controls. Requested-on true 8× must report E03/E08/E65/E66/
+shore/protected controls. Requested-on true 8× must report E03/E08/E66/
 HDR inactive for `scale-8`, keep the dense fixture absent, present exact
 4896×3072 WebGL, and complete the canonical GPU-fence proof while preserving
-the recovery contract (accepted full-matrix fence `5.2063 s`, zero browser
-errors). Detached spray remains deferred until a real air-side state/support
+the recovery contract. With accepted E65 composed underneath, moving/still
+target differences stay bounded to RGB RMS `.25`, spatial RMS `.20`, signed
+mean `.15`, coverage `.08`, and peak `2`; cross-scale coverage span is at most
+`.20`. The selectorless full-matrix fence completed in `5.2426 s` with zero
+browser errors. Detached spray remains deferred until a real air-side state/support
 source exists.
 
 E67 is the accepted exact-Fire temperature/velocity identity checkpoint,
@@ -3040,9 +3050,9 @@ retain the accepted E38 presentation.
 `npm run audit:vfx:oil-depth-transmission` runs deterministic off→on→off
 captures at 1×/2×/4× over the established exact-Oil fixture while E03/E22/E38
 remain active. Raw RGBA, semantics, liquid depth, liquid-field ownership,
-native walls, alpha/support, and repeated-off framebuffers stay exact. E65 is
-pinned off and this static fixture authors no
-Oil velocity, so the accepted E69 baseline is naturally inert. Accepted
+native walls, alpha/support, and repeated-off framebuffers stay exact. The
+accepted E65 baseline is exact-Water-only and this static fixture authors no Oil
+velocity, so both E65 and the accepted E69 baseline are naturally inert. Accepted
 transition RGB channel means are roughly
 `+2.18…+2.25`, `+1.36…+1.42`, and `+0.40…+0.41`; deep means are roughly
 `−1.45`, `−2.00…−2.01`, and `−2.77…−2.79`. The open and wall-backed complete
@@ -3437,15 +3447,17 @@ and checkpointed early; they do not require another cloned verifier route or a
 broad unit-test matrix. Optional adapters may add experiment-specific regions
 or tighter topology checks when the candidate can affect a protected contract.
 
-E62 and E69 now prove that the framework can absorb accepted leaf treatments
+E62, E69, and E65 now prove that the framework can absorb accepted leaf
+treatments
 while removing their selector/plumbing and cloned verifier code. The declarative
 named-fixture/domain adapter is complete: frozen catalogs now own scenes,
 constraints, optional app preparation, target kinds, field-alpha readers, and
-fixed query flags, leaving the CDP harness branch-free. The next milestone is
-the bounded E65 leaf if its parent E08 evidence remains exact. Defer E66 because
-its tangent reads are resource-sensitive, and defer Powder until its source-
-stage stability proof can fit this fixed seam without creating a second
-experiment framework.
+fixed query flags, leaving the CDP harness branch-free. The next milestone is a
+stable domain-local candidate-module ABI and descriptor-owned capability map so
+new comparisons avoid presenter/lifecycle/CDP edits. Defer E66 because its
+tangent reads are resource-sensitive, and defer Powder until its source-stage
+stability proof can fit this fixed seam without creating a second experiment
+framework.
 Track every lab domain's sampler reads, persistent resources, supported Detail
 rungs, and fallback behaviour explicitly. Use short experiment branches or
 consecutive checkpoint commits for competing looks and select winners from the
@@ -3530,6 +3542,27 @@ sample, texture, field, target, pass, upload, allocation, or clock. The parent
 E08 browser gate now settles WebGL evidence on completed renderer frames rather
 than exact whole-page PNG repetition, avoiding compositor-only page churn while
 retaining exact control assertions and the real true-8× fence.
+Its off/on/off sequence owns one post-fence PNG per independent navigation. At
+normal 4× only, the caller permits a bounded 45-second compositor/CDP transfer
+after the unchanged 30-second GPU-health fence; all other capture defaults stay
+at 30 seconds.
+
+E65 Water surface motion is the third migrated accepted treatment. Exact-Water
+velocity/refraction and whitecap arithmetic is always present inside E08; the
+resolver, uniform, query, dataset telemetry, and approximately 600 lines of
+standalone browser-verifier plumbing are removed. Its retained app-owned fixture
+is declared by the frozen adapter catalog and prepared without a harness branch:
+
+`npm run audit:visual-lab:water-motion`
+
+The legacy `audit:vfx:liquid-motion` name aliases that command. The canonical
+2× production-bundle run staged the moving-Water fixture during Canvas startup,
+promoted it to WebGL/HDR, produced distinct off/A/B captures at target `2`, kept
+semantic/liquid-field/framebuffer-alpha/support hashes exact, and reported zero
+browser errors. The lab hook reuses owner-selected E08 motion and flow-facing
+locals for both Water and Oil while remaining texture-free; Acid receives no
+motion cue. No sample, texture, field, target, pass, upload, allocation, clock,
+alpha, support, ownership, or compact-8× branch was added.
 
 The hook runs after bloom extraction. Emission experiments can reshape final
 radiance but cannot seed new bloom until a deliberately budgeted pre-extract
@@ -3540,14 +3573,14 @@ app-method/argument preparation. Its one serialized startup transaction observes
 the mounted scene and Canvas `webgl-starting` state before any mutation, then
 prepares and stages variant B synchronously; missing or throwing preparers return
 immediate structured failures rather than consuming the 60-second readiness
-budget. Eight small framework tests cover the catalogs, startup ordering,
+budget. Nine small framework tests cover the catalogs, startup ordering,
 fail-fast diagnostics, CLI constraints, and compatibility aliases, and they are
-part of `npm test`. Real prepared-Oil and scene-owned showcase captures both pass
-at canonical 2× with exact topology/alpha invariants and zero browser errors.
-The immediate next framework work is the bounded E65 leaf migration. Defer E66
-and Powder until the fixed HDR seam can receive their stability/body proof
-without a second source-shader experiment framework. Do not resume per-material
-selector growth.
+part of `npm test`. Prepared Oil, prepared Water, and scene-owned showcase
+captures pass at canonical 2× with exact topology/alpha invariants and zero
+browser errors. The immediate next framework work is the smaller candidate-
+authoring ABI and descriptor-owned capability setup. Defer E66 and Powder until
+the fixed HDR seam can receive their stability/body proof without a second
+source-shader experiment framework. Do not resume per-material selector growth.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

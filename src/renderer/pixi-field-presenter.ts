@@ -79,7 +79,7 @@ import {
   resolveWaterMetalTransmissionVfxEnabled,
   resolveWaterMetalSeparationVfxEnabled,
   resolveWaterMetalFresnelSpectrumVfxEnabled,
-  resolveLiquidSurfaceVfxEnabled, resolveLiquidMotionVfxEnabled,
+  resolveLiquidSurfaceVfxEnabled,
   resolveWaterCurvatureVfxEnabled,
   resolveAcidBodyVfxEnabled,
   resolveSoapBodyVfxEnabled,
@@ -12150,10 +12150,8 @@ export class PixiFieldPresenter {
     // reuses existing presenter textures and never enters the direct 8x shader.
     const liquidSurfaceVfxEnabled = outputScale < 8
       && resolveLiquidSurfaceVfxEnabled(renderLook);
-    // E65 consumes velocity already packed in E08's semantic texture. It adds
-    // no pass or resource and remains absent with the entire HDR path at 8x.
-    const liquidMotionVfxEnabled = outputScale < 8
-      && resolveLiquidMotionVfxEnabled(renderLook);
+    // Accepted E65 Water motion now lives inside E08's normal-scale baseline.
+    // It adds no selector, pass, or resource and remains absent with HDR at 8x.
     // E66 is a Water-only arithmetic fold over E08's existing density stencil.
     // It remains absent with the HDR path at true 8x and allocates no resource.
     const waterCurvatureVfxEnabled = outputScale < 8
@@ -12468,7 +12466,6 @@ export class PixiFieldPresenter {
       this.app, this.scene, width, height, outputScale, renderLook,
       {
         enabled: liquidSurfaceVfxEnabled,
-        motionEnabled: liquidMotionVfxEnabled,
         curvatureEnabled: waterCurvatureVfxEnabled,
         semanticTexture: this.fieldSource,
         wallTexture: this.wallSource,
@@ -12654,7 +12651,6 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('nitroBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSolidMeniscusVfxAudit') === '1'
             || new URLSearchParams(location.search).get('liquidSurfaceVfxAudit') === '1'
-            || new URLSearchParams(location.search).get('liquidMotionVfxAudit') === '1'
             || new URLSearchParams(location.search).get('waterCurvatureVfxAudit') === '1'
             || new URLSearchParams(location.search).get('powderBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('sootyPowderBodyVfxAudit') === '1'
@@ -12873,8 +12869,6 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidSurfaceVfx = presenter.hdrPipelineInfo.active
       && presenter.hdrPipelineInfo.liquidSurfaceVfx ? 'active' : 'inactive';
-    presenter.app.canvas.dataset.liquidMotionVfx = presenter.hdrPipelineInfo.active
-      && presenter.hdrPipelineInfo.liquidMotionVfx ? 'active' : 'inactive';
     presenter.app.canvas.dataset.waterCurvatureVfx = presenter.hdrPipelineInfo.active
       && presenter.hdrPipelineInfo.waterCurvatureVfx ? 'active' : 'inactive';
     presenter.app.canvas.dataset.powderBodyVfx = Number(presenter.uniforms.uniforms.uPowderBodyVfx) > 0.5
@@ -14564,7 +14558,6 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.waterMetalSeparationVfx = 'inactive';
         this.app.canvas.dataset.waterMetalFresnelSpectrumVfx = 'inactive';
         this.app.canvas.dataset.liquidSurfaceVfx = 'inactive';
-        this.app.canvas.dataset.liquidMotionVfx = 'inactive';
         this.app.canvas.dataset.waterCurvatureVfx = 'inactive';
         this.app.canvas.dataset.powderBodyVfx = 'inactive';
         this.app.canvas.dataset.concreteMesostrataRetentionVfx = 'inactive';

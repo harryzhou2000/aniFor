@@ -75,6 +75,13 @@ export const VISUAL_LAB_FIXTURE_ADAPTERS = Object.freeze([
     preparation: freezePreparation('prepareOilMotionVfxFixture', ['moving']),
     requirement: '--domain=liquid --target=8',
   }),
+  freezeAdapter({
+    name: 'water-motion',
+    scene: 'showcase',
+    constraints: [freezeConstraint('liquid', [2])],
+    preparation: freezePreparation('prepareLiquidMotionVfxFixture', ['moving']),
+    requirement: '--domain=liquid --target=2',
+  }),
 ]);
 
 const DOMAIN_BY_NAME = new Map(

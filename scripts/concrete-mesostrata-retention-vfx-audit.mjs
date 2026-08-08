@@ -331,7 +331,7 @@ function focusedQuery(scale, enabled, stage, parentEnabled = true) {
     scene: 'render-lab', inputAudit: '1', blankAudit: '1', auditStage: stage,
     concreteMesostrataRetentionVfxAudit: '1', renderScale: String(scale),
     renderLook: 'realistic', volumeVfx: '0', liquidBodyVfx: '0', liquidSurfaceVfx: '0',
-    liquidMotionVfx: '0', waterCurvatureVfx: '0',
+    waterCurvatureVfx: '0',
     fireFlameVfx: '0', cflmColdFlameVfx: '0', gasBodyVfx: '0', gasMotionVfx: '0',
     powderBodyVfx: parentEnabled ? '1' : '0',
     concreteMesostrataRetentionVfx: enabled ? '1' : '0',

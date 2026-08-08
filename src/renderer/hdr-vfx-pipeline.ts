@@ -27,14 +27,12 @@ export interface HDRPipelineInfo {
   readonly bloomWidth?: number;
   readonly bloomHeight?: number;
   readonly liquidSurfaceVfx?: boolean;
-  readonly liquidMotionVfx?: boolean;
   readonly waterCurvatureVfx?: boolean;
 }
 
 /** Existing presenter textures reused by the normal-scale HDR compositor. */
 export interface HDRCompositionResources {
   readonly enabled: boolean;
-  readonly motionEnabled: boolean;
   readonly curvatureEnabled: boolean;
   readonly semanticTexture: TextureSource;
   readonly wallTexture: TextureSource;
@@ -133,7 +131,6 @@ uniform vec2 uEmissionTexel;
 uniform vec4 uVisualLab;
 ` : ''}
 uniform float uLiquidSurfaceVfx;
-uniform float uLiquidMotionVfx;
 uniform float uWaterCurvatureVfx;
 uniform float uBloomIntensity;
 uniform float uExposure;
@@ -251,8 +248,9 @@ vec3 liquidSurfaceTransport(
   float motionSpeed = length(centreVelocity);
   float velocityShear = length(centreVelocity - neighbourVelocity);
   float motionEnergy = max(motionSpeed * 0.90, velocityShear * 1.35);
-  float liquidMotion = uLiquidMotionVfx
-    * exactMaterial(material, MATERIAL_WATER)
+  // Migrated E65 is part of the accepted E08 baseline: exact Water reuses the
+  // semantic velocity samples already required by the connected surface.
+  float liquidMotion = exactMaterial(material, MATERIAL_WATER)
     * smoothstep(0.10, 0.58, motionEnergy);
   // Migrated E69 is part of the accepted E08 baseline: the same already-
   // sampled native velocity and connected surface proof drive only exact Oil.
@@ -406,8 +404,8 @@ vec3 liquidSurfaceTransport(
   }
   ${visualLabEnabled ? `result = applyHdrLiquidLab(
     result, material, surface, ripple, outward, transmitted, reflected,
-    wallBacked, oilMotion, motionFacing,
-    clamp(dot(oilFlowDirection, outward), -1.0, 1.0)
+    wallBacked, max(liquidMotion, oilMotion), motionFacing,
+    clamp(dot(transportDirection, outward), -1.0, 1.0)
   );` : ''}
   return result;
 }
@@ -615,10 +613,6 @@ export class HDRVfxPipeline {
           },
         } : {}),
         uLiquidSurfaceVfx: { value: composition.enabled ? 1 : 0, type: 'f32' },
-        uLiquidMotionVfx: {
-          value: composition.enabled && composition.motionEnabled ? 1 : 0,
-          type: 'f32',
-        },
         uWaterCurvatureVfx: {
           value: composition.enabled && composition.curvatureEnabled ? 1 : 0,
           type: 'f32',
@@ -656,7 +650,6 @@ export class HDRVfxPipeline {
       this.bloomB = bloomB;
       this.info = {
         active: true, look, liquidSurfaceVfx: composition.enabled,
-        liquidMotionVfx: composition.enabled && composition.motionEnabled,
         waterCurvatureVfx: composition.enabled && composition.curvatureEnabled,
         bloomWidth: bloomWidth * outputScale,
         bloomHeight: bloomHeight * outputScale,

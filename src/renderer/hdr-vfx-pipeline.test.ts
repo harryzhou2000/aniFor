@@ -166,7 +166,7 @@ describe('HDR composition contract', () => {
       'uWallTexture',
     ]);
     expect(HDR_TONEMAP_FRAGMENT).toMatch(/uniform\s+float\s+uLiquidSurfaceVfx\s*;/);
-    expect(HDR_TONEMAP_FRAGMENT).toMatch(/uniform\s+float\s+uLiquidMotionVfx\s*;/);
+    expect(HDR_TONEMAP_FRAGMENT).not.toContain('uLiquidMotionVfx');
     expect(HDR_TONEMAP_FRAGMENT).toMatch(/uniform\s+float\s+uWaterCurvatureVfx\s*;/);
     expect(HDR_TONEMAP_FRAGMENT).toMatch(/uniform\s+vec2\s+uWorldTexel\s*;/);
 
@@ -211,10 +211,11 @@ describe('HDR composition contract', () => {
     expect(helper).toContain('max(transmitted, vec3(0.0))');
     expect(helper).toContain('max(reflected, vec3(0.0))');
     expect(helper).not.toContain('texture(');
-    expect(helper).toContain('float oilLeading');
-    expect(helper).toContain('float oilWake');
+    expect(helper).toContain('float familyMotion');
+    expect(helper).toContain('float motionLeading');
+    expect(helper).toContain('float motionWake');
     expect(HDR_VISUAL_LAB_TONEMAP_FRAGMENT).toMatch(
-      /result, material, surface, ripple, outward, transmitted, reflected,\s*wallBacked, oilMotion, motionFacing/,
+      /result, material, surface, ripple, outward, transmitted, reflected,\s*wallBacked, max\(liquidMotion, oilMotion\), motionFacing/,
     );
     expect(HDR_TONEMAP_FRAGMENT).not.toContain('applyHdrLiquidLab');
   });
@@ -244,13 +245,14 @@ describe('HDR composition contract', () => {
       expect(HDR_TONEMAP_FRAGMENT).toContain(`vec4 ${cardinal} = semanticState(`);
     }
     expect(HDR_TONEMAP_FRAGMENT).toMatch(
-      /float\s+liquidMotion\s*=\s*uLiquidMotionVfx[\s\S]*?exactMaterial\(material, MATERIAL_WATER\)/,
+      /float\s+liquidMotion\s*=\s*exactMaterial\(material, MATERIAL_WATER\)\s*\*\s*smoothstep\(0\.10, 0\.58, motionEnergy\)/,
     );
     expect(HDR_TONEMAP_FRAGMENT).toContain('velocityShear');
     expect(HDR_TONEMAP_FRAGMENT).toContain('liquidAgitation');
     expect(HDR_TONEMAP_FRAGMENT).toContain('whitecap');
     expect(HDR_TONEMAP_FRAGMENT).not.toContain('uVelocityTexture');
     expect(HDR_TONEMAP_FRAGMENT).not.toContain('uMotionTexture');
+    expect(HDR_TONEMAP_FRAGMENT).not.toContain('uLiquidMotionVfx');
     expect(HDR_TONEMAP_FRAGMENT).not.toContain('uTime');
   });
 
