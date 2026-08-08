@@ -2350,7 +2350,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   coverage `.971`, macro range `50`, zero dark/clipped fraction, and exact
   semantics across the full composed matrix.
 
-**Next visual experiments:** E03–E72 provide accepted liquid body/surface,
+**Next visual experiments:** E03–E76 provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -3161,15 +3161,46 @@ a reason to add another unguided PLNT octave. The next eligible ranked defect
 is Water/Metal contact chromatic separation at `87.058/91.216/91.667`, with a
 canonical component score of `.675`.
 
-### Next visual diagnostic — E76 Water/Metal contact optical separation
+### E76 — accepted bilateral Water/Metal fit-view separation
 
-Investigate a normal-WebGL-only strict E37/E56 child that reuses their existing
-exact-owner contact band, crown/pocket response, and already-fetched semantic
-and liquid-field samples to strengthen fit-view material separation. Do not add
-a sample, texture, field, resource, pass, target, upload, allocation, clock,
+E76 is the accepted normal-WebGL-only strict E56/E37 child, independently
+selectable with `?waterMetalSeparationVfx=0|1`. It reuses E56's exact Water-side
+band/crown/pocket and E37's exact Metal-side signed seam tone: Water receives a
+restrained cool key and blue-preserving pocket response while Metal receives a
+small opposing warm reflection. The two declaration-free branches add no
+sample, texture, field, resource, pass, target, upload, allocation, clock,
 alpha/support, silhouette, topology, ownership, state, or physics decision.
-Preserve Water/Glass and all non-Metal liquid contacts, dense cores, gaps,
-walls, traits, emission, Canvas fallback, and compact true 8× as controls.
+
+The frozen 1×/2×/4× off→on→off matrix measures horizontal Water RGB RMS
+`1.71/1.68/1.70`, vertical Water `1.64/.82/.93`, horizontal Metal
+`2.35/1.90/1.91`, and vertical Metal `1.51/.82/.93`, with peaks `2–5` and a
+maximum cross-scale/orientation response ratio `2.3171`. Semantics, alpha,
+support, backing geometry, repeated-off frames, Water/Glass, Oil/Glass,
+Acid/Brick, Oil/Metal, deep cores, gaps, walls, traits, emission, holes,
+channels, sparse liquid, powder, gas, blank space, and Canvas remain controls.
+The only bounded neighbour responses are the authored WATR/METL strips and the
+existing mixed-contact capsule. Requested-on true 8× stays inactive at exact
+`4896×3072` and completes through a real `gpu-fence` in about `5.14 s`.
+
+In the composed matrix E76 improves the weakest fit-view 1× Water/Metal score
+from `87.058` to `88.756`, raising chromatic separation from `.6500` to `.7000`
+while keeping support recall `1`, coverage `.947`, macro range `45`, and zero
+clipping. Canonical 2× and 4× remain stable at `91.216/91.667`, so this closes
+the visible low-resolution regression without manufacturing a wider boundary.
+
+### Next visual diagnostic — E77 Noble Gas billow/core relief
+
+The protected zero-state PLNT showcase remains the lowest survey score but is
+not eligible for another state-free octave. The next eligible ranked weakness
+is Noble Gas billow depth (`.808`, family quality `95.463`). First test a
+normal-WebGL-only strict E31 child (and therefore E25 descendant), nested inside
+its exact style-7 `noblePrismSupport` proof. Reuse only existing optical depth,
+gas crown/pocket, and directional-relief carriers for restrained dense-core
+convex/pocket separation. Do not repeat E31's wave-C prism mix or add a generic
+Noble tint, sample, wave/noise octave, texture, field, pass, allocation, clock,
+alpha/support, silhouette, ownership, topology, state, or physics decision.
+Preserve sparse carriers, gaps, other gases, contacts, walls, Canvas, and
+compact true 8× as controls.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

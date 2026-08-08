@@ -935,6 +935,56 @@ describe('Pixi presenter startup configuration', () => {
     );
   });
 
+  it('keeps E76 a declaration-free RGB-only child of the accepted Water/Metal contact', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e76Start = normal.indexOf('        // E76:');
+    const e76End = normal.indexOf('      }\n    }\n    // Twenty ordinary', e76Start);
+    const e76 = normal.slice(e76Start, e76End);
+    const e76MetalStart = normal.indexOf("    // E76's Water-side cool key");
+    const e76MetalEnd = normal.indexOf('  }\n  // Geological owners', e76MetalStart);
+    const e76Metal = normal.slice(e76MetalStart, e76MetalEnd);
+
+    expect(e76Start).toBeGreaterThanOrEqual(0);
+    expect(e76End).toBeGreaterThan(e76Start);
+    expect(e76MetalStart).toBeGreaterThanOrEqual(0);
+    expect(e76MetalEnd).toBeGreaterThan(e76MetalStart);
+    expect(normal).toContain('uniform float uWaterMetalSeparationVfx;');
+    expect(eight).not.toContain('uWaterMetalSeparationVfx');
+    expect(eight).not.toContain('waterMetalSeparationVfx');
+    expect(canvasSource).not.toContain('waterMetalSeparationVfx');
+    for (const inheritedCarrier of [
+      'uWaterMetalSeparationVfx > 0.5', 'wetContactBand',
+      'crossPhaseContact.x', 'wetContactCrown', 'wetContactPocket',
+    ]) expect(e76).toContain(inheritedCarrier);
+    expect(e76).not.toContain('contactSample(');
+    expect(e76).not.toContain('texture(');
+    expect(e76).not.toContain('uTime');
+    expect(e76).not.toContain('gl_FragCoord');
+    expect(e76).not.toMatch(/\b(?:float|vec[234])\s+[A-Za-z_]/);
+    expect(e76).not.toMatch(/\b(?:alpha|support)\s*[+*]?=/);
+    expect(e76Metal).toContain('uWaterMetalSeparationVfx > 0.5');
+    expect(e76Metal).toContain('phaseContactTone');
+    expect(e76Metal).not.toContain('contactSample(');
+    expect(e76Metal).not.toContain('texture(');
+    expect(e76Metal).not.toMatch(/\b(?:float|vec[234])\s+[A-Za-z_]/);
+    expect(e76Metal).not.toMatch(/\b(?:alpha|support)\s*[+*]?=/);
+    expect(source).toContain('value: waterMetalSeparationVfxEnabled ? outputScale : 0');
+    expect(source.match(/this\.uniforms\.uniforms\.uWaterMetalSeparationVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toContain('presenter.app.canvas.dataset.waterMetalSeparationVfx');
+    expect(source).toContain("this.app.canvas.dataset.waterMetalSeparationVfx = 'inactive';");
+    expect(source).toContain("get('waterMetalSeparationVfxAudit') === '1'");
+    expect(source).toMatch(
+      /const waterMetalSeparationVfxEnabled = outputScale < 8\s*&& resolveWaterMetalSeparationVfxEnabled\(renderLook\);/,
+    );
+  });
+
   it('keeps E18 Platinum body optics exact-owner and normal-WebGL-only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');

@@ -507,6 +507,24 @@ export function resolveWaterMetalTransmissionVfxEnabled(
 }
 
 /**
+ * E76 separates only the already-transmissive Water/Metal interface at
+ * fit-view. It cannot recreate E56/E37 ownership, and generic input audits
+ * preserve their accepted transmission reference unless they explicitly opt in.
+ */
+export function resolveWaterMetalSeparationVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveWaterMetalTransmissionVfxEnabled(look, search)) return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('waterMetalSeparationVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return true;
+}
+
+/**
  * Rebalances only deep native ROCK after E17 has proved the opaque-body
  * topology. The correction is deliberately subordinate to solid-body VFX: it
  * may reduce ROCK's inherited SmoothRigid polish, but it cannot recreate E17

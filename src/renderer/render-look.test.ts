@@ -52,6 +52,7 @@ import {
   resolveRockWeatheredFacetVfxEnabled,
   resolveMetalWaterContactVfxEnabled,
   resolveWaterMetalTransmissionVfxEnabled,
+  resolveWaterMetalSeparationVfxEnabled,
   resolveSolidBodyVfxEnabled,
   resolveConcreteMesostrataRetentionVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled,
@@ -493,6 +494,41 @@ describe('resolveRenderLook', () => {
     )).toBe(false);
     expect(resolveWaterMetalTransmissionVfxEnabled(
       'realistic', '?waterMetalTransmissionVfx=off',
+    )).toBe(false);
+  });
+
+  it('keeps Water/Metal separation subordinate to E56 and frozen in input audits', () => {
+    expect(resolveWaterMetalSeparationVfxEnabled(
+      'classic', '?waterMetalSeparationVfx=on',
+    )).toBe(false);
+    expect(resolveWaterMetalSeparationVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveWaterMetalSeparationVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveWaterMetalSeparationVfxEnabled(
+      'realistic', '?inputAudit=1',
+    )).toBe(false);
+    expect(resolveWaterMetalSeparationVfxEnabled(
+      'realistic', '?inputAudit=1&waterMetalTransmissionVfx=true&waterMetalSeparationVfx=true',
+    )).toBe(true);
+    expect(resolveWaterMetalSeparationVfxEnabled(
+      'realistic', '?inputAudit=1&waterMetalSeparationVfx=true',
+    )).toBe(false);
+    expect(resolveWaterMetalSeparationVfxEnabled(
+      'realistic', '?waterMetalTransmissionVfx=0&waterMetalSeparationVfx=on',
+    )).toBe(false);
+    expect(resolveWaterMetalSeparationVfxEnabled(
+      'realistic', '?metalWaterContactVfx=0&waterMetalTransmissionVfx=on&waterMetalSeparationVfx=on',
+    )).toBe(false);
+    expect(resolveWaterMetalSeparationVfxEnabled(
+      'realistic', '?solidBodyVfx=0&metalWaterContactVfx=on&waterMetalTransmissionVfx=on&waterMetalSeparationVfx=on',
+    )).toBe(false);
+    expect(resolveWaterMetalSeparationVfxEnabled(
+      'realistic', '?liquidSolidMeniscusVfx=0&metalWaterContactVfx=on&waterMetalTransmissionVfx=on&waterMetalSeparationVfx=on',
+    )).toBe(false);
+    expect(resolveWaterMetalSeparationVfxEnabled(
+      'realistic', '?volumeVfx=0&waterMetalTransmissionVfx=on&waterMetalSeparationVfx=on',
+    )).toBe(false);
+    expect(resolveWaterMetalSeparationVfxEnabled(
+      'realistic', '?waterMetalSeparationVfx=off',
     )).toBe(false);
   });
 

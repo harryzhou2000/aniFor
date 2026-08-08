@@ -72,6 +72,7 @@ import {
   resolveLiquidBodyVfxEnabled, resolveLiquidSolidMeniscusVfxEnabled,
   resolveMetalWaterContactVfxEnabled,
   resolveWaterMetalTransmissionVfxEnabled,
+  resolveWaterMetalSeparationVfxEnabled,
   resolveLiquidSurfaceVfxEnabled, resolveLiquidMotionVfxEnabled,
   resolveOilMotionVfxEnabled,
   resolveWaterCurvatureVfxEnabled,
@@ -3353,6 +3354,7 @@ uniform float uWaterVolumeRecessionVfx;
 uniform float uLiquidSolidMeniscusVfx;
 uniform float uMetalWaterContactVfx;
 uniform float uWaterMetalTransmissionVfx;
+uniform float uWaterMetalSeparationVfx;
 uniform float uPowderBodyVfx;
 uniform float uConcreteMesostrataRetentionVfx;
 uniform float uSootyPowderBodyVfx;
@@ -7872,6 +7874,21 @@ void main() {
         color += vec3(0.032, 0.012, -0.028)
           * max(wetContactBand, crossPhaseContact.x * 0.16)
           * (0.45 + wetContactPocket * 0.55);
+        // E76: at fit view the accepted E37/E56 interface can still collapse
+        // into one low-chroma cyan/grey band. Reuse exactly the same Water-side
+        // ownership proof and contour carriers to put a restrained cool key on
+        // the exposed crown and blue-preserving absorption into the submerged
+        // pocket. This child is deliberately declaration-free: it adds no
+        // sample, resource, alpha, support, silhouette, topology, or state.
+        if (uWaterMetalSeparationVfx > 0.5) {
+          color += (vec3(1.12) - clamp(color, 0.0, 1.12))
+            * vec3(0.10, 0.76, 1.00)
+            * max(wetContactBand, crossPhaseContact.x * 0.16)
+            * (0.032 + wetContactCrown * 0.120);
+          color *= vec3(1.0) - vec3(0.62, 0.22, 0.04)
+            * max(wetContactBand, crossPhaseContact.x * 0.16)
+            * (0.022 + wetContactPocket * 0.092);
+        }
       }
     }
     // Twenty ordinary, unusual, metallic, cryogenic, and radioactive liquids retain a world-anchored material signature
@@ -10883,6 +10900,17 @@ void main() {
       * (2.0 / 255.0);
     color += max(phaseContactTone, 0.0) * vec3(0.95, 0.25, -0.80)
       + max(-phaseContactTone, 0.0) * vec3(0.78, 0.10, -0.82);
+    // E76's Water-side cool key can be filtered into this immediate edge by
+    // the HDR compositor. Reuse E37's exact Metal proof and signed seam tone
+    // for a small opposing warm reflection, so the pair separates rather than
+    // becoming a wider cyan band. Keep this declaration- and sample-free.
+    if (uWaterMetalSeparationVfx > 0.5) {
+      color += (vec3(1.08) - clamp(color, 0.0, 1.08))
+        * vec3(1.00, 0.46, 0.10)
+        * (0.015 + abs(phaseContactTone) * 0.78);
+      color *= vec3(1.0) - vec3(0.02, 0.28, 0.62)
+        * (0.012 + abs(phaseContactTone) * 0.60);
+    }
   }
   // Geological owners may use the shared solid-body proof even when their
   // optical class is granular (Coal). Keeping this after the family branches
@@ -11914,6 +11942,10 @@ export class PixiFieldPresenter {
     // It reuses the same four probes and remains absent from compact true 8x.
     const waterMetalTransmissionVfxEnabled = outputScale < 8
       && resolveWaterMetalTransmissionVfxEnabled(renderLook);
+    // E76 remains a normal-detail, exact Water-side child of E56. The compact
+    // true-8x shader declares neither its selector nor its arithmetic.
+    const waterMetalSeparationVfxEnabled = outputScale < 8
+      && resolveWaterMetalSeparationVfxEnabled(renderLook);
     // E08 is a normal-detail HDR-composite experiment. Its displaced transport
     // reuses existing presenter textures and never enters the direct 8x shader.
     const liquidSurfaceVfxEnabled = outputScale < 8
@@ -12016,6 +12048,9 @@ export class PixiFieldPresenter {
       },
       uWaterMetalTransmissionVfx: {
         value: waterMetalTransmissionVfxEnabled ? outputScale : 0, type: 'f32',
+      },
+      uWaterMetalSeparationVfx: {
+        value: waterMetalSeparationVfxEnabled ? outputScale : 0, type: 'f32',
       },
       uPowderBodyVfx: { value: powderBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uConcreteMesostrataRetentionVfx: {
@@ -12294,6 +12329,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
       this.uniforms.uniforms.uMetalWaterContactVfx = 0;
       this.uniforms.uniforms.uWaterMetalTransmissionVfx = 0;
+      this.uniforms.uniforms.uWaterMetalSeparationVfx = 0;
       this.uniforms.uniforms.uPowderBodyVfx = 0;
       this.uniforms.uniforms.uConcreteMesostrataRetentionVfx = 0;
       this.uniforms.uniforms.uSootyPowderBodyVfx = 0;
@@ -12375,6 +12411,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('plantCanopyLifecycleVfxAudit') === '1'
             || new URLSearchParams(location.search).get('metalWaterContactVfxAudit') === '1'
             || new URLSearchParams(location.search).get('waterMetalTransmissionVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('waterMetalSeparationVfxAudit') === '1'
             || new URLSearchParams(location.search).get('woodBarkReliefVfxAudit') === '1'
             || new URLSearchParams(location.search).get('woodTanninVfxAudit') === '1'
             || new URLSearchParams(location.search).get('glassBodyVfxAudit') === '1'
@@ -12587,6 +12624,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.waterMetalTransmissionVfx = Number(
       presenter.uniforms.uniforms.uWaterMetalTransmissionVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.waterMetalSeparationVfx = Number(
+      presenter.uniforms.uniforms.uWaterMetalSeparationVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.liquidSurfaceVfx = presenter.hdrPipelineInfo.active
       && presenter.hdrPipelineInfo.liquidSurfaceVfx ? 'active' : 'inactive';
@@ -14145,6 +14185,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uLiquidSolidMeniscusVfx = 0;
         this.uniforms.uniforms.uMetalWaterContactVfx = 0;
         this.uniforms.uniforms.uWaterMetalTransmissionVfx = 0;
+        this.uniforms.uniforms.uWaterMetalSeparationVfx = 0;
         this.uniforms.uniforms.uPowderBodyVfx = 0;
         this.uniforms.uniforms.uConcreteMesostrataRetentionVfx = 0;
         this.uniforms.uniforms.uSootyPowderBodyVfx = 0;
@@ -14216,6 +14257,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.liquidSolidMeniscusVfx = 'inactive';
         this.app.canvas.dataset.metalWaterContactVfx = 'inactive';
         this.app.canvas.dataset.waterMetalTransmissionVfx = 'inactive';
+        this.app.canvas.dataset.waterMetalSeparationVfx = 'inactive';
         this.app.canvas.dataset.liquidSurfaceVfx = 'inactive';
         this.app.canvas.dataset.liquidMotionVfx = 'inactive';
         this.app.canvas.dataset.oilMotionVfx = 'inactive';

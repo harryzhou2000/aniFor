@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E74. E12 is the
+The accepted visual experiment ladder now runs through E76. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -1716,13 +1716,36 @@ contacts, walls, and Canvas remain exact controls. Requested-on populated true
 The post-E75 composed 1×/2×/4× matrix now requests and proves E75 active at
 every normal scale. Its `organicPlant` probe intentionally remains a
 zero-payload E71 control, so its `67.566/71.608/72.916` score is not evidence
-for another PLNT octave. The next eligible ranked defect is Water/Metal contact
-chromatic separation at `87.058/91.216/91.667` (canonical component `.675`).
-E76 should first test a normal-WebGL-only strict E37/E56 child that reuses their
-existing contact band, crown/pocket, exact-owner, and field samples to improve
-material separation at fit view. Add no sample, resource, support, alpha,
-topology, ownership, or physics decision; preserve Water/Glass, non-Metal
-liquid contacts, cores, walls, Canvas, and compact true 8× as controls.
+for another PLNT octave.
+
+E76 is the accepted normal-WebGL-only bilateral Water/Metal fit-view separation
+checkpoint and strict E56/E37 child, independently selectable with
+`?waterMetalSeparationVfx=0|1`. It reuses E56's exact Water band/crown/pocket
+and E37's exact Metal signed seam tone for opposing cool-Water and warm-Metal
+RGB responses. Both branches remain declaration- and sample-free, adding no
+resource, field, pass, target, upload, allocation, clock, alpha/support,
+silhouette, topology, ownership, state, or physics decision. The frozen
+1×/2×/4× matrix measures horizontal Water RGB RMS `1.71/1.68/1.70`, vertical
+Water `1.64/.82/.93`, horizontal Metal `2.35/1.90/1.91`, and vertical Metal
+`1.51/.82/.93`, with peaks `2–5` and maximum scale/orientation ratio `2.3171`.
+All foreign contacts, deep cores, topology, walls, traits, emission, Canvas,
+and repeated-off controls remain exact; only the authored pair and bounded
+mixed-contact neighbour may respond. Requested-on true 8× remains inactive at
+exact `4896×3072` and completes a real `gpu-fence` in about `5.14 s`.
+
+The composed route now explicitly requests and proves E76 active. At 1× it
+raises Water/Metal quality from `87.058` to `88.756` and chromatic separation
+from `.6500` to `.7000`, with support recall `1`, coverage `.947`, macro range
+`45`, and zero clipping. The 2×/4× scores remain stable at `91.216/91.667`.
+The next eligible ranked weakness is Noble Gas billow depth (`.808`, canonical
+family quality `95.463`), not the protected zero-state PLNT reference. E77
+should first be a normal-WebGL-only strict E31 child (and E25 descendant),
+nested inside its exact style-7 `noblePrismSupport` proof. Reuse only existing
+optical depth, gas crown/pocket, and directional relief for dense-core convex/
+pocket separation; do not repeat E31's wave-C prism mix or add a generic tint,
+sample, wave/noise octave, resource, support, alpha, topology, ownership, or
+physics decision. Preserve sparse carriers, gaps, other gases, contacts, walls,
+Canvas, and compact true 8×.
 
 Visual-audit lesson: `inputAudit=1` disables opt-in child selectors unless the
 composed route names them explicitly, so canonical evidence must request and
@@ -1779,7 +1802,7 @@ only from a new visible fit-view diagnosis. Do not treat a saturated aggregate
 score as evidence that a material already reads well at fit view.
 
 The composed showcase remains a separate roadmap signal. Its refreshed
-E37/E56/E58/E59/E60/E61/E62-active 1×/2×/4× matrix is exact and cross-scale
+E37/E56/E58/E59/E60/E61/E62/E75/E76-active 1×/2×/4× matrix is exact and cross-scale
 verified with zero browser errors, while E52 remains explicitly inactive
 because showcase v6 has no authoritative BGLA region. Organic remains the
 lowest family, led by exact
@@ -1801,11 +1824,13 @@ Noble Gas remains the Gas-family floor, so E62 does not manufacture a ranking
 win by perturbing unrelated species. Do not stack another PLNT, Water/Metal,
 ROCK, VIBR, ISZS, Oxygen, or generic-gas layer merely to chase rank. Select a
 future target only from a new visible fit-view diagnosis; PLNT mesostructure,
-Water/Metal chromatic separation, and Noble Gas billow depth remain contextual
-cues rather than an implementation queue.
+the post-E76 Water/Metal remainder, and Noble Gas billow depth remain contextual
+cues rather than an automatic implementation queue.
 
-The current Contact score is `87.058/91.216/91.667` at 1×/2×/4× with E37,
-E56, and E61 explicitly active. Its broad `contactWaterMetal` rank box includes
+The current Contact score is `88.756/91.216/91.667` at 1×/2×/4× with E37,
+E56, E61, and E76 explicitly active. E76 raises the 1× chromatic-separation
+component from `.6500` to `.7000` while keeping support and coverage exact; its
+2×/4× scores remain unchanged. The broad `contactWaterMetal` rank box includes
 a saturated clean-Water shoulder as well as the immediate seam; E61 may own the
 former but E24's foreign-contact guard excludes the latter. Keep the narrow
 E61-active `boundedSeamRelief` cross-scale allowance at `0.18` for this one

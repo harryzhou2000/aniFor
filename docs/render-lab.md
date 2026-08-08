@@ -730,13 +730,23 @@ node scripts/verify-browser-input.mjs --composed-rank-only --webgl-only \
 ```
 
 The composed route explicitly requests accepted E75
-`plantCanopyLifecycleVfx=1` and proves the live WebGL dataset state at every
-captured scale; generic `inputAudit=1` would otherwise keep that child off.
+`plantCanopyLifecycleVfx=1` and E76 `waterMetalSeparationVfx=1`, and proves both
+live WebGL dataset states at every captured scale; generic `inputAudit=1` would
+otherwise keep either child off.
 The current `organicPlant` showcase body intentionally carries zero lifecycle
 payload, so the focused native lifecycle atlas remains the authority for E75's
 actual two-tree response. Composed telemetry proves selector integration and
 continues to grade the protected zero-state E71 body without inventing native
 growth state in a product fixture.
+
+E76's focused Water/Metal atlas toggles only its child over accepted E03/E14/
+E17/E37/E56. Its bilateral off→on→off strips preserve semantic and alpha/support
+bytes while measuring a cool Water response and opposing warm Metal return at
+1×/2×/4×. The composed score is the acceptance authority for the stated fit-view
+benefit: 1× Water/Metal rises from `87.058` to `88.756` with chromatic separation
+`.6500→.7000`; 2×/4× remain `91.216/91.667`. Run the dedicated gate with
+`npm run audit:vfx:water-metal-separation`; it also proves requested-on E76 is
+inactive at exact true 8× and completes through `gpu-fence`.
 
 The browser obtains regions and exact semantic expectations from the app-owned
 `MATERIAL_SHOWCASE_AUDIT`; the driver must not maintain copied coordinates.
