@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E73. E12 is the
+The accepted visual experiment ladder now runs through E74. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -1649,14 +1649,62 @@ full support, one dominant component, and zero dark/clipped fraction. This
 fit-view floor is part of acceptance so an isolated-fixture pass cannot return
 the product scene to a flat grey lozenge.
 
-The next visual diagnostic is exact settled Concrete's 4× detail retention,
-not another Carbon Dioxide layer. The latest composed survey reports Concrete
-quality `100/100/97.588`, luma deviation `7.55/7.68/5.49`, microcontrast
-`6.24/6.95/4.78`, macro range `17/14/11`, coverage `.942`, full support, and
-zero clipping at 1×/2×/4×. Investigate only through the existing deep, stable,
-dry, trait-free, non-emissive Smooth-powder proof; preserve Sand/Clay,
-Local/Grains, unstable/wet/thin/hole/notch/wall/seam controls and the true-8×
-fence contract.
+E74 is the accepted exact-Concrete 4× detail-retention checkpoint. It is
+independently selectable with `?concreteMesostrataRetentionVfx=0|1`, strictly
+subordinate to E05 and the settled mesostrata selector, and enabled by the
+presenter only at normal WebGL 4×. Exact material 26 may reuse the existing 4×
+mineral/facet attenuation and the established slope-directed mesostrata delta
+only after the live wall and raw suspension-alpha guards pass. It changes RGB
+only and adds no sample, sampler, texture, field, resource, pass, target,
+upload, allocation, clock, alpha, support, silhouette, ownership, topology,
+state, or physics decision. Canvas, 1×, 2×, Local, Grains, and compact true 8×
+contain no E74 response.
+
+`npm run audit:vfx:concrete-mesostrata-retention` freezes the inactive /
+inactive / active 1×/2×/4× matrix and requested-on true-8× exclusion. At 4×,
+the accepted core and settled near-surface response have RGB RMS `3.9539` and
+`3.857`, peak `10/11`, and coverage `.9918/.9797`. The two detail regions have
+RGB RMS `3.8189/3.8118`, mesostrata RMS `.9313/.9215`, cell RMS
+`3.2689/3.2632`, microchroma retention `1.2249/1.2216`, downsample retention
+`.9889/.9887`, and lattice ratio `6.1521/6.0849`. The signed response is also
+frozen: both core probes remain absorptive, the left detail key remains
+positive, and the right detail pocket remains negative rather than merely
+matching an unsigned magnitude. Full Sand/Stone/Clay cards, Concrete holes,
+fine structures, the complete wet-contact strip and Water side, wall
+coexistence, guarded blank, semantics, walls, auxiliary state, velocity,
+alpha/support, Local/Grains, and repeated-off framebuffers remain exact across
+the toggle. A separate child-requested/parent-disabled 4× pair is framebuffer,
+state, Local, and Grains exact, proving E74 cannot revive E05.
+
+Requested-on true 8× now prepares the populated four-material powder atlas
+instead of fencing a blank scene. E74, E05, and HDR remain inactive at exact
+4896×3072; Concrete core/surface/detail, Sand/Stone/Clay, thin/single/unstable
+Concrete, wet Concrete/Water, and native-wall controls remain visibly composed,
+while the authored Concrete hole and guarded blank remain empty. The queued
+post-fixture frame completes a real GPU fence inside the one 30-second deadline
+(`5.2138 s` in the latest accepted 4× route), with zero browser errors.
+
+The canonical composed matrix explicitly requests E74. Concrete remains
+unchanged at 1×/2× and moves from the pre-E74 4× diagnostic
+`5.49/4.78/2.19/11/31` to accepted luma deviation / microcontrast / chromatic
+contrast / macro range / total range `7.99/6.76/2.69/13/46`; the complete
+1×/2×/4× sequence is `7.55/7.68/7.99`, `6.24/6.95/6.76`,
+`3.23/3.04/2.69`, `17/14/13`, and `44/45/46`. Coverage stays `.942` with all
+`2318` support pixels recalled, one dominant component, and zero dark,
+pinned, or clipped fraction.
+
+The next visual diagnostic is E75 lifecycle-grounded native-tree PLNT canopy
+orientation, selected by the fresh post-E74 composed matrix rather than by a
+stale family ranking. Plant is the weakest visible probe at quality
+`67.566/71.608/72.916` for 1×/2×/4×, with mesostructure the weakest component.
+The accepted E36→E71 canopy hierarchy intentionally serves only zero-payload
+PLNT, while authentic present+tree PLNT currently receives native palette and
+vein marks without a coherent body-scale canopy. Reuse its already-fetched
+direction, phase, hydration, and active-growth bits to orient existing broad
+canopy carriers; do not add another free-running procedural octave. Preserve
+E20/E26/E28/E32/E34/E36/E53/E55/E58/E71, zero/presence-only/non-tree PLNT,
+inactive tree and SEED semantics, holes/fine branches/contacts/walls, Canvas
+fallback, and the true-8× fence.
 
 Visual-audit lesson: `inputAudit=1` disables opt-in child selectors unless the
 composed route names them explicitly, so canonical evidence must request and

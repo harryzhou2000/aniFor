@@ -1070,6 +1070,24 @@ export function resolvePowderBodyVfxEnabled(
 }
 
 /**
+ * E74 retains only exact Concrete's deep settled mesostrata after E05 has
+ * established the dry Smooth powder body. Focused input audits keep this child
+ * off unless they explicitly request it, and it can never revive E05.
+ */
+export function resolveConcreteMesostrataRetentionVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolvePowderBodyVfxEnabled(look, search)) return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('concreteMesostrataRetentionVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return true;
+}
+
+/**
  * Re-composes only exact native Gunpowder and BCOL after E05 has established
  * a dry, settled Smooth powder body. The independently measurable child can
  * never resurrect that parent when the broad powder-body experiment is off.

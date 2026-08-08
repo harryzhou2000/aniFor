@@ -38,6 +38,8 @@
     "audit:vfx:gas-body": "npm run build && node scripts/verify-browser-input.mjs --gas-body-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:gas-motion": "npm run build && node scripts/verify-browser-input.mjs --gas-motion-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:powder-body": "npm run build && node scripts/verify-browser-input.mjs --powder-body-vfx-only --webgl-only --production-bundle --capture-dpr=1",
+    "audit:vfx:concrete-mesostrata-retention": "npm run build && node scripts/verify-browser-input.mjs --concrete-mesostrata-retention-vfx-only --webgl-only --production-bundle --capture-dpr=1",
+    "audit:vfx:concrete-mesostrata-retention:4x": "npm run build && node scripts/verify-browser-input.mjs --concrete-mesostrata-retention-vfx-only --render-scale=4 --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:sooty-powder-body": "npm run build && node scripts/verify-browser-input.mjs --sooty-powder-body-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:thermite-body": "npm run build && node scripts/verify-browser-input.mjs --thermite-body-vfx-only --webgl-only --production-bundle --capture-dpr=1",
     "audit:vfx:snowpack-body": "npm run build && node scripts/verify-browser-input.mjs --snowpack-body-vfx-only --webgl-only --production-bundle --capture-dpr=1",

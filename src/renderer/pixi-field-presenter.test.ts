@@ -6666,8 +6666,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('float fourXMineralRecovery = smoothstep(2.75, 4.0, detailEstimate);');
     expect(source).toContain('float fourXSmoothCalm = fourXMineralRecovery');
     expect(source).toContain('* step(1.5, uPowderStyle) * stablePowderMineral;');
+    expect(source).toContain('float fourXCalmCoefficient = mix(0.70, 0.39, concreteFourXRetention);');
     expect(source).toContain('float lowDetailMineralGain = 1.0 + 0.85 * lowDetailTaper');
-    expect(source).toContain('+ 0.90 * fourXMineralRecovery * (1.0 - 0.70 * fourXSmoothCalm);');
+    expect(source).toContain('+ 0.90 * fourXMineralRecovery * (1.0 - fourXCalmCoefficient * fourXSmoothCalm);');
     expect(source).toContain('mix(1.0, 1.20, settledMineralRetention)');
     expect(source).toContain('float broadPowderPigmentDamping = 1.0 - smoothstep(');
     expect(source).toContain('0.72, 0.98, powderVisualCohesion');
@@ -6682,7 +6683,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('min(cellGrainRetention, 1.20), settledPowderColorCalm * 0.85');
     expect(source).toContain('powderBodyBase, settledPowderColorCalm * commonEarthenPowder * 0.42');
     expect(source).toContain('float deepPowderChromaDamping = mix(1.0, 0.78, deepStoneBody);');
-    expect(source).toContain('float fourXMicroRetention = 1.0 - 0.45 * fourXSmoothCalm;');
+    expect(source).toContain('float fourXMicroCoefficient = mix(0.45, 0.24, concreteFourXRetention);');
+    expect(source).toContain('float fourXMicroRetention = 1.0 - fourXMicroCoefficient * fourXSmoothCalm;');
     expect(source).toContain('+ fourXMicroRetention * (');
     expect(source).toContain('color += base * grain * vec3(0.178, 0.044, -0.112)');
     expect(source).toContain('* stablePowderMineral * lowDetailMineralGain * powderContourTextureRetention');
@@ -6788,6 +6790,49 @@ describe('Pixi presenter startup configuration', () => {
     expect(`${eightHelper}${eightBranch}${normal}`).not.toContain('texture(');
     expect(`${eightHelper}${eightBranch}${normal}`).not.toContain('uTime');
     expect(`${eightHelper}${eightBranch}${normal}`).not.toMatch(/\balpha\s*[+*]?=/);
+  });
+
+  it('retains exact settled Concrete detail only in normal-WebGL 4x without a new carrier', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\ninterface PixiFieldPresenterOptions', eightEnd);
+    const eight = source.slice(eightStart, eightEnd);
+    const normal = source.slice(eightEnd, normalEnd);
+    const correctionStart = normal.indexOf('// E74 restores part of the already-owned mineral carrier');
+    const correctionEnd = normal.indexOf('// At fit view the low-detail recovery', correctionStart);
+    const microStart = normal.indexOf('float fourXMicroCoefficient', correctionEnd);
+    const microEnd = normal.indexOf('float powderMineralFactor', microStart);
+    const mesostrataStart = normal.indexOf('// E74 compensates only the exact settled Concrete carrier');
+    const mesostrataEnd = normal.indexOf('      float powderContourChroma', mesostrataStart);
+    const correction = normal.slice(correctionStart, correctionEnd)
+      + normal.slice(microStart, microEnd)
+      + normal.slice(mesostrataStart, mesostrataEnd);
+
+    expect(correctionStart).toBeGreaterThan(0);
+    expect(microStart).toBeGreaterThan(correctionEnd);
+    expect(mesostrataStart).toBeGreaterThan(correctionStart);
+    expect(source).toMatch(
+      /const concreteMesostrataRetentionVfxEnabled = outputScale === 4\s*&& resolveConcreteMesostrataRetentionVfxEnabled\(renderLook\);/,
+    );
+    expect(normal).toContain('uniform float uConcreteMesostrataRetentionVfx;');
+    expect(eight).not.toContain('uConcreteMesostrataRetentionVfx');
+    expect(correction).toContain('material == 26.0');
+    expect(correction).toContain('uPowderMesostrataStyling > 0.5');
+    expect(correction).toContain('wall < 0.5');
+    expect(correction).toContain('suspensionState.a <= 0.001');
+    expect(correction).toContain('mix(0.70, 0.39, concreteFourXRetention)');
+    expect(correction).toContain('mix(0.45, 0.24, concreteFourXRetention)');
+    expect(correction).toContain('if (concreteFourXRetention > 0.5)');
+    expect(correction).toContain('powderMesostrataDelta * 2.60');
+    expect(correction).not.toContain('texture(');
+    expect(correction).not.toContain('uTime');
+    expect(correction).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source).toContain('dataset.concreteMesostrataRetentionVfx = Number(');
+    expect(source.match(
+      /this\.uniforms\.uniforms\.uConcreteMesostrataRetentionVfx = 0;/g,
+    )).toHaveLength(2);
+    expect(source).toContain("this.app.canvas.dataset.concreteMesostrataRetentionVfx = 'inactive';");
   });
 
   it('redraws when audit powder body depth changes', () => {

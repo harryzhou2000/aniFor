@@ -91,6 +91,7 @@ import {
   resolveRockRoughnessVfxEnabled,
   resolveRockWeatheredFacetVfxEnabled,
   resolveSolidBodyVfxEnabled,
+  resolveConcreteMesostrataRetentionVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled, resolveRenderLook,
   resolveSootyPowderBodyVfxEnabled,
   resolveSnowpackBodyVfxEnabled,
@@ -3351,6 +3352,7 @@ uniform float uLiquidSolidMeniscusVfx;
 uniform float uMetalWaterContactVfx;
 uniform float uWaterMetalTransmissionVfx;
 uniform float uPowderBodyVfx;
+uniform float uConcreteMesostrataRetentionVfx;
 uniform float uSootyPowderBodyVfx;
 uniform float uThermiteBodyVfx;
 uniform float uSnowpackBodyVfx;
@@ -8992,9 +8994,16 @@ void main() {
       // Local, Grains, and true 8x retain their independent reference paths.
       float fourXSmoothCalm = fourXMineralRecovery
         * step(1.5, uPowderStyle) * stablePowderMineral;
+      // E74 restores part of the already-owned mineral carrier only for exact
+      // Concrete at the 4x JS gate. Keep both corrections subordinate to the
+      // same deep settled proof so loose/thin/wet/contact matter cannot move.
+      float concreteFourXRetention = uConcreteMesostrataRetentionVfx > 0.5
+        && uPowderMesostrataStyling > 0.5 && material == 26.0
+        && wall < 0.5 && suspensionState.a <= 0.001 ? 1.0 : 0.0;
+      float fourXCalmCoefficient = mix(0.70, 0.39, concreteFourXRetention);
       float lowDetailMineralGain = 1.0 + 0.85 * lowDetailTaper
         + 1.05 * lowDetailShoulder
-        + 0.90 * fourXMineralRecovery * (1.0 - 0.70 * fourXSmoothCalm);
+        + 0.90 * fourXMineralRecovery * (1.0 - fourXCalmCoefficient * fourXSmoothCalm);
       cellGrainRetention = mix(1.0, cellGrainRetention * lowDetailMineralGain,
         settledMineralRetention);
       // At fit view the low-detail recovery must leave a material readable, but
@@ -9036,7 +9045,8 @@ void main() {
       // The same deep 4x proof attenuates only random cell/facet amplitude.
       // Family mesostrata, radioactive identity, body depth, and the mean
       // mineral albedo remain on their established paths.
-      float fourXMicroRetention = 1.0 - 0.45 * fourXSmoothCalm;
+      float fourXMicroCoefficient = mix(0.45, 0.24, concreteFourXRetention);
+      float fourXMicroRetention = 1.0 - fourXMicroCoefficient * fourXSmoothCalm;
       float powderMineralFactor = 0.91
         + fourXMicroRetention * (
           grain * (0.20 + roughSurface * 0.05) * cellGrainRetention * facetGain
@@ -9303,9 +9313,18 @@ void main() {
         || material == 26.0 || material == 28.0) ? 1.0 : 0.0;
       color = mix(color, powderBodyBase, settledPowderColorCalm * commonEarthenPowder * 0.42);
       if (powderMesostrataStrength > 0.0) {
-        color = clamp(color + settledPowderMesostrataDelta(
+        vec3 powderMesostrataDelta = settledPowderMesostrataDelta(
           material, fieldPosition, powderMesostrataSlope
-        ) * powderMesostrataStrength, 0.0, 1.0);
+        ) * powderMesostrataStrength;
+        color = clamp(color + powderMesostrataDelta, 0.0, 1.0);
+        // E74 compensates only the exact settled Concrete carrier at 4x,
+        // where CSS presentation otherwise averages away a material amount of
+        // its accepted world-anchored aggregate cadence. JS owns the strict
+        // scale gate; this branch reuses the existing body proof and changes
+        // RGB only—no sample, support, topology, field, or clock is added.
+        if (concreteFourXRetention > 0.5) {
+          color = clamp(color + powderMesostrataDelta * 2.60, 0.0, 1.0);
+        }
       }
       color *= 1.0 + powderMacroRelief;
       float powderContourChroma = localPowderShape.x < 0.92
@@ -11564,6 +11583,11 @@ export class PixiFieldPresenter {
     // retains its established powder body and does not declare this uniform.
     const powderBodyVfxEnabled = outputScale < 8
       && resolvePowderBodyVfxEnabled(renderLook);
+    // E74 is a normal-WebGL 4x presentation compensation over E05's existing
+    // exact-Concrete mesostrata carrier. Other Detail rungs keep their accepted
+    // response, and the compact true-8x shader declares no E74 uniform/branch.
+    const concreteMesostrataRetentionVfxEnabled = outputScale === 4
+      && resolveConcreteMesostrataRetentionVfxEnabled(renderLook);
     // E40 is exact-owner arithmetic inside E05's stable Smooth body. Compact
     // true-8x retains the accepted sooty identity and declares no E40 branch.
     const sootyPowderBodyVfxEnabled = outputScale < 8
@@ -11947,6 +11971,9 @@ export class PixiFieldPresenter {
         value: waterMetalTransmissionVfxEnabled ? outputScale : 0, type: 'f32',
       },
       uPowderBodyVfx: { value: powderBodyVfxEnabled ? 1 : 0, type: 'f32' },
+      uConcreteMesostrataRetentionVfx: {
+        value: concreteMesostrataRetentionVfxEnabled ? 1 : 0, type: 'f32',
+      },
       uSootyPowderBodyVfx: { value: sootyPowderBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uThermiteBodyVfx: { value: thermiteBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uSnowpackBodyVfx: { value: snowpackBodyVfxEnabled ? 1 : 0, type: 'f32' },
@@ -12220,6 +12247,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uMetalWaterContactVfx = 0;
       this.uniforms.uniforms.uWaterMetalTransmissionVfx = 0;
       this.uniforms.uniforms.uPowderBodyVfx = 0;
+      this.uniforms.uniforms.uConcreteMesostrataRetentionVfx = 0;
       this.uniforms.uniforms.uSootyPowderBodyVfx = 0;
       this.uniforms.uniforms.uThermiteBodyVfx = 0;
       this.uniforms.uniforms.uSnowpackBodyVfx = 0;
@@ -12518,6 +12546,9 @@ export class PixiFieldPresenter {
       && presenter.hdrPipelineInfo.waterCurvatureVfx ? 'active' : 'inactive';
     presenter.app.canvas.dataset.powderBodyVfx = Number(presenter.uniforms.uniforms.uPowderBodyVfx) > 0.5
       ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.concreteMesostrataRetentionVfx = Number(
+      presenter.uniforms.uniforms.uConcreteMesostrataRetentionVfx
+    ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.sootyPowderBodyVfx = Number(
       presenter.uniforms.uniforms.uSootyPowderBodyVfx
     ) > 0.5 ? 'active' : 'inactive';
@@ -14062,6 +14093,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uMetalWaterContactVfx = 0;
         this.uniforms.uniforms.uWaterMetalTransmissionVfx = 0;
         this.uniforms.uniforms.uPowderBodyVfx = 0;
+        this.uniforms.uniforms.uConcreteMesostrataRetentionVfx = 0;
         this.uniforms.uniforms.uSootyPowderBodyVfx = 0;
         this.uniforms.uniforms.uThermiteBodyVfx = 0;
         this.uniforms.uniforms.uSnowpackBodyVfx = 0;
@@ -14135,6 +14167,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.oilMotionVfx = 'inactive';
         this.app.canvas.dataset.waterCurvatureVfx = 'inactive';
         this.app.canvas.dataset.powderBodyVfx = 'inactive';
+        this.app.canvas.dataset.concreteMesostrataRetentionVfx = 'inactive';
         this.app.canvas.dataset.sootyPowderBodyVfx = 'inactive';
         this.app.canvas.dataset.thermiteBodyVfx = 'inactive';
         this.app.canvas.dataset.snowpackBodyVfx = 'inactive';

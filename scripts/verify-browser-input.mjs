@@ -33,6 +33,9 @@ import { auditStorStateGraphics } from './stor-state-graphics-audit.mjs';
 import { auditDlayStateGraphics } from './dlay-state-graphics-audit.mjs';
 import { auditWifiStateGraphics } from './wifi-state-graphics-audit.mjs';
 import { auditPowderMesostrataGraphics } from './powder-mesostrata-graphics-audit.mjs';
+import {
+  auditConcreteMesostrataRetentionVfx,
+} from './concrete-mesostrata-retention-vfx-audit.mjs';
 import { auditGeologicalSolidGraphics } from './geological-solid-graphics-audit.mjs';
 import { auditThermalCatalyticRigidGraphics } from './thermal-catalytic-rigid-graphics-audit.mjs';
 import { auditGooSolidGraphics } from './goo-solid-graphics-audit.mjs';
@@ -280,6 +283,14 @@ if (gasMotionVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
 const powderBodyVfxOnly = process.argv.includes('--powder-body-vfx-only');
 if (powderBodyVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--powder-body-vfx-only requires --webgl-only');
+}
+// E74 isolates exact settled Concrete's normal-detail retention over the
+// accepted E05/Smooth-mesostrata baseline. Compact true 8x is exclusion-only.
+const concreteMesostrataRetentionVfxOnly = process.argv.includes(
+  '--concrete-mesostrata-retention-vfx-only',
+);
+if (concreteMesostrataRetentionVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
+  throw new Error('--concrete-mesostrata-retention-vfx-only requires --webgl-only');
 }
 // E06 reuses the accepted E02/E05 baseline and changes only dry settled
 // Smooth-powder light transport in the normal-detail HDR presenter.
@@ -641,7 +652,8 @@ const focusedVfxOnlyFlags = [
   hdrVfxOnly, volumeVfxOnly, liquidBodyVfxOnly, liquidSurfaceVfxOnly, liquidMotionVfxOnly,
   oilMotionVfxOnly,
   waterCurvatureVfxOnly, fireFlameVfxOnly, cflmColdFlameVfxOnly, gasBodyVfxOnly,
-  gasMotionVfxOnly, powderBodyVfxOnly, powderLightVfxOnly, powderSolidContactVfxOnly,
+  gasMotionVfxOnly, powderBodyVfxOnly, concreteMesostrataRetentionVfxOnly,
+  powderLightVfxOnly, powderSolidContactVfxOnly,
   translucentEdgeVfxOnly, organicSubsurfaceVfxOnly, wetSedimentVfxOnly, gasLightVfxOnly,
   liquidSolidMeniscusVfxOnly, metalWaterContactVfxOnly, waterMetalTransmissionVfxOnly,
   gasCoreDepthVfxOnly, oxygenVolumeFoldVfxOnly,
@@ -666,7 +678,7 @@ const focusedVfxOnlyFlags = [
   woodTanninVfxOnly,
 ];
 if (focusedVfxOnlyFlags.filter(Boolean).length > 1) {
-  throw new Error('HDR/volume/liquid-body/liquid-surface/liquid-motion/oil-motion/water-curvature/fire-flame/cflm-cold-flame/gas-body/gas-motion/powder-body/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/water-metal-transmission/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/oil-depth-transmission/rock-roughness/rock-mesostructure/rock-weathered-facet/water-body/water-volume-recession/acid-body/soap-body/nitro-body/sooty-powder-body/thermite-body/snowpack-body/quartz-mesostructure/c4-body/deut-body/hydrogen-body/carbon-dioxide-body/carbon-dioxide-core-fold/steam-condensate/fog-core-diffuse/radioactive-solid-body/iszs-crystalline/iszs-crystal-hierarchy/vibr-macro-relief/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/plant-canopy-tissue/plant-canopy-interlock/plant-canopy-hierarchy/plant-canopy-foliage/wood-tannin focused audits are mutually exclusive');
+  throw new Error('HDR/volume/liquid-body/liquid-surface/liquid-motion/oil-motion/water-curvature/fire-flame/cflm-cold-flame/gas-body/gas-motion/powder-body/concrete-mesostrata-retention/powder-light/powder-solid-contact/translucent-edge/organic-subsurface/wet-sediment/gas-light/liquid-solid-meniscus/metal-water-contact/water-metal-transmission/gas-core-depth/plasma-core/solid-body/platinum-body/ceramic-glaze/botanical-body/glass-body/oil-body/oil-depth-transmission/rock-roughness/rock-mesostructure/rock-weathered-facet/water-body/water-volume-recession/acid-body/soap-body/nitro-body/sooty-powder-body/thermite-body/snowpack-body/quartz-mesostructure/c4-body/deut-body/hydrogen-body/carbon-dioxide-body/carbon-dioxide-core-fold/steam-condensate/fog-core-diffuse/radioactive-solid-body/iszs-crystalline/iszs-crystal-hierarchy/vibr-macro-relief/noble-gas-billow/noble-gas-prism/smoke-softness/smoke-billow-depth/botanical-mesostructure/wood-bark-relief/botanical-pigment/plant-lamina/plant-lobe-depth/plant-canopy-mass/plant-canopy-tissue/plant-canopy-interlock/plant-canopy-hierarchy/plant-canopy-foliage/wood-tannin focused audits are mutually exclusive');
 }
 
 const layoutOnly = process.argv.includes('--layout-only');
@@ -754,7 +766,7 @@ const productionBundle = process.argv.includes('--production-bundle');
 const usesProductionBundle = productionBundle || showcaseScreenshotOnly || composedRankOnly
   || candidateRankOnly || nitroBodyVfxOnly || hdrVfxOnly || volumeVfxOnly || plantCanopyInterlockVfxOnly || plantCanopyHierarchyVfxOnly || plantCanopyFoliageVfxOnly || oilDepthTransmissionVfxOnly
   || liquidBodyVfxOnly || liquidSurfaceVfxOnly || liquidMotionVfxOnly || oilMotionVfxOnly || waterCurvatureVfxOnly || fireFlameVfxOnly || cflmColdFlameVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-  || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || bglaBodyVfxOnly || bglaClusterVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || carbonDioxideCoreFoldVfxOnly || steamCondensateVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+  || powderBodyVfxOnly || concreteMesostrataRetentionVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || gasCoreDepthVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || bglaBodyVfxOnly || bglaClusterVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || carbonDioxideCoreFoldVfxOnly || steamCondensateVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
   || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly || unusualSolidGraphicsOnly
   || deviceIdentityGraphicsOnly
   || fieldProfileGraphicsOnly
@@ -1296,6 +1308,13 @@ if (powderBodyVfxOnly && powderLightVfxArgument !== undefined) {
 if (powderBodyVfxOnly && gasMotionVfxArgument !== undefined) {
   throw new Error('--powder-body-vfx-only keeps gas-motion VFX defaulted; omit --gas-motion-vfx');
 }
+if (concreteMesostrataRetentionVfxOnly
+  && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined
+    || liquidSurfaceVfxArgument !== undefined || gasBodyVfxArgument !== undefined
+    || gasMotionVfxArgument !== undefined || powderBodyVfxArgument !== undefined
+    || powderLightVfxArgument !== undefined)) {
+  throw new Error('--concrete-mesostrata-retention-vfx-only owns its E05 baseline and off -> on -> off sequence; omit VFX overrides');
+}
 if (powderLightVfxOnly && (volumeVfxArgument !== undefined || liquidBodyVfxArgument !== undefined
   || gasBodyVfxArgument !== undefined || powderBodyVfxArgument !== undefined)) {
   throw new Error('--powder-light-vfx-only owns its fixed E02/E05 baseline; omit other VFX overrides');
@@ -1654,6 +1673,9 @@ if (liquidSurfaceVfxOnly && renderScaleArgument === '8') {
 if (powderBodyVfxOnly && renderScaleArgument === '8') {
   throw new Error('--powder-body-vfx-only is a normal-detail 1x/2x/4x experiment');
 }
+if (concreteMesostrataRetentionVfxOnly && renderScaleArgument === '8') {
+  throw new Error('--concrete-mesostrata-retention-vfx-only is a normal-detail 1x/2x/4x experiment');
+}
 if (powderLightVfxOnly && renderScaleArgument === '8') {
   throw new Error('--powder-light-vfx-only is a normal-detail 1x/2x/4x experiment');
 }
@@ -1904,7 +1926,7 @@ async function main() {
     const reducedAudit = quickScreenshot || showcaseScreenshotOnly || composedRankOnly
       || candidateRankOnly || nitroBodyVfxOnly || hdrVfxOnly || volumeVfxOnly || plantCanopyInterlockVfxOnly || plantCanopyHierarchyVfxOnly || plantCanopyFoliageVfxOnly || oilDepthTransmissionVfxOnly
       || liquidBodyVfxOnly || liquidSurfaceVfxOnly || liquidMotionVfxOnly || oilMotionVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-      || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || gasCoreDepthVfxOnly || oxygenVolumeFoldVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || carbonDioxideCoreFoldVfxOnly || steamCondensateVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
+      || powderBodyVfxOnly || concreteMesostrataRetentionVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || gasCoreDepthVfxOnly || oxygenVolumeFoldVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || carbonDioxideCoreFoldVfxOnly || steamCondensateVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || layoutOnly || mobileOnly || mobileGestureOnly
       || desktopInputOnly || visualScaleMatrixOnly || powderBodyOnly || liquidDepthOnly
       || solidDepthOnly || gasChromaOnly || surfaceContourOnly || solidFieldOnly
       || roleGraphicsOnly || cellularGraphicsOnly || sensorGraphicsOnly
@@ -2003,7 +2025,7 @@ async function auditMode(mode) {
   const startsBlank = !canvasFallbackAudit && (hdrVfxOnly || volumeVfxOnly
     || plantCanopyHierarchyVfxOnly || plantCanopyFoliageVfxOnly || oilDepthTransmissionVfxOnly
     || liquidBodyVfxOnly || liquidSurfaceVfxOnly || liquidMotionVfxOnly || oilMotionVfxOnly || waterCurvatureVfxOnly || fireFlameVfxOnly || cflmColdFlameVfxOnly || gasBodyVfxOnly || gasMotionVfxOnly
-  || powderBodyVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || gasCoreDepthVfxOnly || oxygenVolumeFoldVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || bglaBodyVfxOnly || bglaClusterVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || carbonDioxideCoreFoldVfxOnly || steamCondensateVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
+  || powderBodyVfxOnly || concreteMesostrataRetentionVfxOnly || powderLightVfxOnly || powderSolidContactVfxOnly || translucentEdgeVfxOnly || organicSubsurfaceVfxOnly || wetSedimentVfxOnly || gasLightVfxOnly || liquidSolidMeniscusVfxOnly || metalWaterContactVfxOnly || waterMetalTransmissionVfxOnly || gasCoreDepthVfxOnly || oxygenVolumeFoldVfxOnly || plasmaCoreVfxOnly || solidBodyVfxOnly || platinumBodyVfxOnly || ceramicGlazeVfxOnly || botanicalBodyVfxOnly || glassBodyVfxOnly || oilBodyVfxOnly || rockRoughnessVfxOnly || rockMesostructureVfxOnly || rockWeatheredFacetVfxOnly || waterBodyVfxOnly || waterVolumeRecessionVfxOnly || acidBodyVfxOnly || soapBodyVfxOnly || sootyPowderBodyVfxOnly || thermiteBodyVfxOnly || snowpackBodyVfxOnly || quartzMesostructureVfxOnly || c4BodyVfxOnly || bglaBodyVfxOnly || bglaClusterVfxOnly || deutBodyVfxOnly || hydrogenBodyVfxOnly || carbonDioxideBodyVfxOnly || carbonDioxideCoreFoldVfxOnly || steamCondensateVfxOnly || fogCoreDiffuseVfxOnly || radioactiveSolidBodyVfxOnly || iszsCrystallineVfxOnly || iszsCrystalHierarchyVfxOnly || nobleGasBillowVfxOnly || nobleGasPrismVfxOnly || smokeSoftnessVfxOnly || smokeBillowDepthVfxOnly || botanicalMesostructureVfxOnly || woodBarkReliefVfxOnly || botanicalPigmentVfxOnly || plantLaminaVfxOnly || plantLobeDepthVfxOnly || woodTanninVfxOnly || cellularGraphicsOnly || sensorGraphicsOnly
     || unusualPowderGraphicsOnly || earthenPowderGraphicsOnly || explosivePowderGraphicsOnly
     || unusualSolidGraphicsOnly || deviceIdentityGraphicsOnly || fieldProfileGraphicsOnly
     || electricDischargeGraphicsOnly || liquidIdentityGraphicsOnly
@@ -2053,6 +2075,11 @@ async function auditMode(mode) {
     ...(gasBodyVfxArgument ? { gasBodyVfx: gasBodyVfxArgument } : {}),
     ...(gasMotionVfxArgument ? { gasMotionVfx: gasMotionVfxArgument } : {}),
     ...(powderBodyVfxArgument ? { powderBodyVfx: powderBodyVfxArgument } : {}),
+    // E74 is input-audit opt-in and owns its navigation-based off -> on -> off
+    // loop. Every focused route starts from the exact child-off baseline.
+    ...(focusedVfxOnlyFlags.some(Boolean)
+      ? { concreteMesostrataRetentionVfx: '0' }
+      : showcaseScreenshotOnly ? { concreteMesostrataRetentionVfx: '1' } : {}),
     ...(sootyPowderBodyVfxArgument ? { sootyPowderBodyVfx: sootyPowderBodyVfxArgument } : {}),
     ...(thermiteBodyVfxArgument ? { thermiteBodyVfx: thermiteBodyVfxArgument } : {}),
     ...(snowpackBodyVfxArgument ? { snowpackBodyVfx: snowpackBodyVfxArgument } : {}),
@@ -2421,6 +2448,7 @@ async function auditMode(mode) {
         const ready = parameters.get('scene') === 'showcase'
           && parameters.get('inputAudit') === '1'
           && parameters.get('renderScale') === ${JSON.stringify(renderScaleArgument ?? '2')}
+          && parameters.get('concreteMesostrataRetentionVfx') === '1'
           && document.querySelector('[data-scene="showcase"]') !== null
           && Boolean(window.__ANIFOR_INPUT_AUDIT__);
         if (!ready) throw new Error('Showcase page not ready: ' + JSON.stringify({
@@ -2440,6 +2468,7 @@ async function auditMode(mode) {
           state: canvas.dataset.hdrPipeline,
           reason: canvas.dataset.hdrPipelineReason,
           bloomBacking: canvas.dataset.bloomBacking,
+          concreteMesostrataRetentionVfx: canvas.dataset.concreteMesostrataRetentionVfx,
         } : undefined;
       })()`);
       if (mode === 'webgl' && renderLook && renderLook !== 'classic') {
@@ -2453,6 +2482,16 @@ async function auditMode(mode) {
             ? hdrPipeline?.state === 'active' || (!requireHdrPipeline && supportedFallback)
             : hdrPipeline?.state === 'inactive' && hdrPipeline?.reason === 'scale-8'),
         `${mode}: requested HDR look resolved incorrectly (${JSON.stringify(hdrPipeline)})`);
+      }
+      if (mode === 'webgl') {
+        const expectedConcreteRetention = Number(renderScaleArgument ?? 2) === 4
+          && hdrPipeline?.state === 'active' && hdrPipeline?.look !== 'classic'
+          ? 'active' : 'inactive';
+        assert(hdrPipeline?.concreteMesostrataRetentionVfx === expectedConcreteRetention,
+          `${mode}: showcase Concrete retention selector resolved incorrectly (${JSON.stringify({
+            outputScale: Number(renderScaleArgument ?? 2), hdrPipeline,
+            expectedConcreteRetention,
+          })})`);
       }
       // The paused showcase is authored after renderer initialization. Its
       // slow powder owners must complete the same bounded 0 -> 255 stability
@@ -2500,6 +2539,9 @@ async function auditMode(mode) {
         const audit = window.__ANIFOR_INPUT_AUDIT__;
         return {
           powderStyle: document.querySelector('canvas.semantic-field-canvas')?.dataset.powderStyle,
+          concreteMesostrataRetentionVfx: document.querySelector(
+            'canvas.semantic-field-canvas',
+          )?.dataset.concreteMesostrataRetentionVfx ?? 'unavailable',
           auxiliary: Object.fromEntries(Object.entries({
             sand: [220, 300], clay: [140, 300], stone: [100, 340],
             uranium: [540, 170], device: [537, 255],
@@ -2634,6 +2676,31 @@ async function auditMode(mode) {
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, gasMotionVfx, browserErrors: errors.length };
+    }
+    if (concreteMesostrataRetentionVfxOnly) {
+      assert(mode === 'webgl', '--concrete-mesostrata-retention-vfx-only requires --webgl-only');
+      const concreteMesostrataRetentionVfx = await auditConcreteMesostrataRetentionVfx({
+        cdp,
+        mode,
+        dpr,
+        auditBaseUrl: AUDIT_BASE_URL,
+        renderScaleArgument,
+        evaluate,
+        waitFor,
+        waitForStablePageCapture,
+        setDesktopMetrics,
+        waitForEightXTerminalBackend,
+        assertEightXWebGLBackend,
+        auditWebGLPresentationTiming,
+        remainingDeadlineMs,
+        capturePageScreenshotWithin,
+        sampleVolumeVfxCanvasAlphaSupport,
+        sampleVolumeVfxRawWorldPixels,
+        assert,
+      });
+      assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
+      cdp.close();
+      return { backend: mode, concreteMesostrataRetentionVfx, browserErrors: errors.length };
     }
     if (powderBodyVfxOnly) {
       assert(mode === 'webgl', '--powder-body-vfx-only requires --webgl-only');
@@ -14450,6 +14517,10 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
   // E73 remains numerically provisional, but the canonical product survey
   // explicitly exercises it so selector ancestry is visible at every scale.
   const composedCarbonDioxideCoreFoldVfx = '1';
+  // E74 is default-on only in ordinary 4x play and deliberately opt-in under
+  // inputAudit. Request it at every composed rung so telemetry proves the
+  // intended inactive/inactive/active 1x/2x/4x selector matrix.
+  const composedConcreteMesostrataRetentionVfx = '1';
   const composedThermiteBodyVfx = thermiteBodyVfxArgument ?? '1';
   // Showcase v6 adds an authoritative deep SOAP body and a scored liquidSoap
   // region, so this selector telemetry is coupled to real composed evidence.
@@ -14475,6 +14546,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       oxygenVolumeFoldVfx: composedOxygenVolumeFoldVfx,
       carbonDioxideBodyVfx: composedCarbonDioxideBodyVfx,
       carbonDioxideCoreFoldVfx: composedCarbonDioxideCoreFoldVfx,
+      concreteMesostrataRetentionVfx: composedConcreteMesostrataRetentionVfx,
       thermiteBodyVfx: composedThermiteBodyVfx,
       // Showcase v6 has no authoritative BGLA evidence; keep E52 fenced off
       // instead of silently grading some unrelated powder through its selector.
@@ -14533,6 +14605,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
         && parameters.get('oxygenVolumeFoldVfx') === ${JSON.stringify(composedOxygenVolumeFoldVfx)}
         && parameters.get('carbonDioxideBodyVfx') === ${JSON.stringify(composedCarbonDioxideBodyVfx)}
         && parameters.get('carbonDioxideCoreFoldVfx') === ${JSON.stringify(composedCarbonDioxideCoreFoldVfx)}
+        && parameters.get('concreteMesostrataRetentionVfx') === ${JSON.stringify(composedConcreteMesostrataRetentionVfx)}
         && parameters.get('thermiteBodyVfx') === ${JSON.stringify(composedThermiteBodyVfx)}
         && parameters.get('bglaBodyVfx') === '0'
         && parameters.get('soapBodyVfx') === ${JSON.stringify(composedSoapBodyVfx)}
@@ -14681,6 +14754,17 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       `composed rank ${scale}x Soap body selector resolved incorrectly (${JSON.stringify({
         argument: composedSoapBodyVfx, composedLook, soapBodyVfx, expectedSoapBodyState,
         evidence: 'showcase-v6-liquidSoap-region',
+      })})`);
+    const concreteMesostrataRetentionVfx = await evaluate(cdp,
+      `document.querySelector('canvas.world-canvas')?.dataset.concreteMesostrataRetentionVfx ?? 'missing'`,
+    );
+    const expectedConcreteMesostrataRetentionState = scale === 4
+      && composedLook !== 'classic' && composedConcreteMesostrataRetentionVfx === '1'
+      ? 'active' : 'inactive';
+    assert(concreteMesostrataRetentionVfx === expectedConcreteMesostrataRetentionState,
+      `composed rank ${scale}x Concrete mesostrata-retention selector resolved incorrectly (${JSON.stringify({
+        argument: composedConcreteMesostrataRetentionVfx, composedLook, scale,
+        concreteMesostrataRetentionVfx, expectedConcreteMesostrataRetentionState,
       })})`);
     const sootyPowderBodyVfx = await evaluate(cdp,
       `document.querySelector('canvas.world-canvas')?.dataset.sootyPowderBodyVfx ?? 'missing'`,
@@ -14989,6 +15073,38 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
         evidence: scoreComposedMediaSample(sample, contract.profile),
       };
     });
+    const composedConcrete = regions.find(({ name }) => name === 'powderConcrete');
+    const concreteDetailWithinAcceptedScale = scale === 4
+      ? composedConcrete?.lumaStdDev >= 7.85 && composedConcrete.lumaStdDev <= 8.05
+        && composedConcrete.microContrast >= 6.65 && composedConcrete.microContrast <= 6.90
+        && composedConcrete.chromaticContrast >= 2.65 && composedConcrete.chromaticContrast <= 2.80
+        && composedConcrete.macroLumaRange >= 13 && composedConcrete.macroLumaRange <= 14
+        && composedConcrete.lumaRange >= 45 && composedConcrete.lumaRange <= 47
+      : scale === 2
+        ? composedConcrete?.lumaStdDev >= 7.60 && composedConcrete.lumaStdDev <= 7.75
+          && composedConcrete.microContrast >= 6.85 && composedConcrete.microContrast <= 7.05
+          && composedConcrete.chromaticContrast >= 2.95 && composedConcrete.chromaticContrast <= 3.15
+          && composedConcrete.macroLumaRange >= 13 && composedConcrete.macroLumaRange <= 15
+          && composedConcrete.lumaRange >= 44 && composedConcrete.lumaRange <= 46
+        : composedConcrete?.lumaStdDev >= 7.45 && composedConcrete.lumaStdDev <= 7.65
+          && composedConcrete.microContrast >= 6.15 && composedConcrete.microContrast <= 6.35
+          && composedConcrete.chromaticContrast >= 3.15 && composedConcrete.chromaticContrast <= 3.30
+          && composedConcrete.macroLumaRange >= 16 && composedConcrete.macroLumaRange <= 18
+          && composedConcrete.lumaRange >= 43 && composedConcrete.lumaRange <= 45;
+    assert(composedConcrete?.family === 'powder'
+      && composedConcrete.profile === 'granular-body'
+      && composedConcrete.supportPixels === 2318
+      && composedConcrete.visible === 2318
+      && composedConcrete.supportRecall === 1
+      && composedConcrete.coverage === 0.942
+      && composedConcrete.dominantComponent === 1
+      && composedConcrete.darkFraction === 0
+      && composedConcrete.pinnedFraction === 0
+      && composedConcrete.clippedFraction === 0
+      && concreteDetailWithinAcceptedScale,
+    `composed rank ${scale}x lost E74 Concrete detail/topology acceptance (${JSON.stringify(
+      composedConcrete,
+    )})`);
     const composedCarbonDioxide = regions.find(({ name }) => name === 'gasCarbonDioxide');
     if (expectedCarbonDioxideCoreFoldState === 'active') {
       assert(composedCarbonDioxide?.family === 'gas'
@@ -15046,7 +15162,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       bglaBodyVfx,
       smokeBillowDepthVfx, powderStability,
       deutBodyVfx, hydrogenBodyVfx, oxygenVolumeFoldVfx, carbonDioxideBodyVfx,
-      carbonDioxideCoreFoldVfx,
+      carbonDioxideCoreFoldVfx, concreteMesostrataRetentionVfx,
       solidBodyVfx, radioactiveSolidBodyVfx, iszsCrystallineVfx, vibrMacroReliefVfx,
       iszsCrystalHierarchyVfx,
       rockWeatheredFacetVfx,
@@ -15130,7 +15246,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
   }
   const twoX = captures.find(({ scale }) => scale === 2);
   const fourX = captures.find(({ scale }) => scale === 4);
-  for (const name of ['powderSand', 'solidRock']) {
+  for (const name of ['powderSand', 'powderConcrete', 'solidRock']) {
     const referenceRegion = twoX?.regions.find((sample) => sample.name === name);
     const highDetailRegion = fourX?.regions.find((sample) => sample.name === name);
     if (!referenceRegion || !highDetailRegion) continue;
@@ -15201,7 +15317,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       metalWaterContactVfx, waterMetalTransmissionVfx,
       waterBodyVfx, waterVolumeRecessionVfx, powderStability,
       deutBodyVfx, hydrogenBodyVfx, oxygenVolumeFoldVfx, carbonDioxideBodyVfx,
-      carbonDioxideCoreFoldVfx,
+      carbonDioxideCoreFoldVfx, concreteMesostrataRetentionVfx,
       solidBodyVfx, radioactiveSolidBodyVfx, iszsCrystallineVfx, iszsCrystalHierarchyVfx, vibrMacroReliefVfx,
       rockWeatheredFacetVfx, screenshot }) => ({
       scale,
@@ -15233,6 +15349,8 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
       carbonDioxideBodyVfx,
       carbonDioxideCoreFoldVfx,
       carbonDioxideCoreFoldVfxCalibration: 'accepted-e73-focused-and-composed-matrix',
+      concreteMesostrataRetentionVfx,
+      concreteMesostrataRetentionVfxCalibration: 'accepted-e74-focused-and-composed-matrix',
       solidBodyVfx,
       radioactiveSolidBodyVfx,
       iszsCrystallineVfx,
@@ -15281,6 +15399,7 @@ async function auditComposedRankShowcase(cdp, mode, dpr) {
     soapBodyVfxEvidence: 'showcase-v6-liquidSoap-region',
     iszsCrystallineVfxEvidence: 'showcase-v6-solidISZS-region',
     carbonDioxideCoreFoldVfxCalibration: 'accepted-e73-focused-and-composed-matrix',
+    concreteMesostrataRetentionVfxCalibration: 'accepted-e74-focused-and-composed-matrix',
   };
 }
 

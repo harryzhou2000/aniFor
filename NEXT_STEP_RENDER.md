@@ -3091,17 +3091,61 @@ dominant component, and zero dark/clipped fraction at 1×/2×/4×. The fit-view
 acceptance rail prevents the isolated fixture from hiding a return to the old
 flat grey lozenge.
 
-### Next visual diagnostic — Concrete 4× detail retention
+### Accepted E74 — exact Concrete 4× mesostrata/detail retention
 
-Treat exact settled Concrete as a diagnostic candidate, not an accepted
-checkpoint. The latest composed survey reports quality `100/100/97.588`, luma
-deviation `7.55/7.68/5.49`, microcontrast `6.24/6.95/4.78`, macro range
-`17/14/11`, coverage `.942`, full support, and zero clipping at 1×/2×/4×.
-Investigate only through the existing deep, stable, dry, trait-free,
-non-emissive Smooth-powder proof. Preserve Sand/Clay, Local/Grains,
-unstable/wet/thin/hole/notch/wall/seam controls, and require focused
-1×/2×/4× off→on→off plus requested-on true-8× fence evidence before accepting
-any new Concrete layer.
+E74 is normal-WebGL-only and independently selectable with
+`?concreteMesostrataRetentionVfx=0|1`. The presenter activates it only at 4×;
+1×/2×, Canvas, Local, Grains, and compact true 8× are exact exclusions. It is
+a strict child of E05 and the settled mesostrata selector. Exact Concrete 26
+reuses only the existing 4× mineral/facet attenuation and established
+slope-directed mesostrata delta after the live wall and raw suspension-alpha
+guards pass. The effect is RGB-only and adds no sample, sampler, texture,
+field, resource, pass, target, upload, allocation, clock, alpha, support,
+silhouette, ownership, topology, state, or physics decision.
+
+`npm run audit:vfx:concrete-mesostrata-retention` freezes off→on→off evidence
+for the inactive/inactive/active 1×/2×/4× selector matrix. At 4× the accepted
+core and settled near-surface responses have RGB RMS `3.9539/3.857`, peaks
+`10/11`, and coverage `.9918/.9797`. The two detail regions have RGB RMS
+`3.8189/3.8118`, mesostrata RMS `.9313/.9215`, cell RMS `3.2689/3.2632`,
+microchroma retention `1.2249/1.2216`, downsample retention `.9889/.9887`,
+and lattice ratio `6.1521/6.0849`. Full non-Concrete cards plus Concrete
+hole, thin/single/unstable structure, the complete wet-contact strip and Water
+side, native wall, guarded blank, semantic/wall/auxiliary/velocity planes,
+alpha/support, Local/Grains, and repeated-off framebuffers remain exact.
+The signed response is frozen as well: core/surface and the right detail pocket
+remain negative, while the left detail key remains positive. A separate 4×
+child-requested/parent-disabled pair is exact in Smooth, Local, Grains,
+semantic/state, and protected-region evidence, so E74 cannot revive E05.
+
+Requested-on true 8× now prepares and displays the populated four-material
+powder atlas rather than testing only blank startup. E74/E05/HDR remain inactive
+at exact 4896×3072, but dense/detail/fine/wet/wall material controls are visibly
+present and the authored hole/guarded blank remain empty. Its post-fixture frame
+completed a real `gpu-fence` within the one 30-second deadline (`5.2138 s` in
+the latest accepted 4× route) with zero browser errors.
+
+The canonical composed matrix explicitly requests E74. Concrete's pre-E74 4×
+luma deviation / microcontrast / chromatic contrast / macro range / total
+range `5.49/4.78/2.19/11/31` becomes `7.99/6.76/2.69/13/46`. The complete
+1×/2×/4× sequence is `7.55/7.68/7.99`, `6.24/6.95/6.76`,
+`3.23/3.04/2.69`, `17/14/13`, and `44/45/46`. Coverage remains `.942`, all
+`2318` support pixels are recalled in one component, and dark, pinned, and
+clipped fractions stay zero.
+
+### Next visual diagnostic — E75 lifecycle-grounded native-tree PLNT canopy orientation
+
+The fresh post-E74 composed matrix selects Plant as the weakest visible probe
+at quality `67.566/71.608/72.916` for 1×/2×/4×, with mesostructure weakest.
+The accepted E36→E71 hierarchy deliberately admits only zero-payload PLNT;
+present+tree native PLNT receives inherited colour/vein cues later but no
+coherent canopy body organization. Investigate a normal-WebGL-only strict E71
+child that reuses already-fetched present/tree/direction/phase/hydration/active
+state to orient the existing broad canopy carriers. Do not add another noise
+octave, sample, resource, clock, topology, ownership, or physics decision.
+Preserve the accepted E20/E26/E28/E32/E34/E36/E53/E55/E58/E71 hierarchy,
+zero/presence-only/non-tree and inactive-tree PLNT, all SEED semantics, holes,
+fine branches, contacts, walls, Canvas fallback, and the true-8× fence contract.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 

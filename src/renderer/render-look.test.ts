@@ -52,6 +52,7 @@ import {
   resolveMetalWaterContactVfxEnabled,
   resolveWaterMetalTransmissionVfxEnabled,
   resolveSolidBodyVfxEnabled,
+  resolveConcreteMesostrataRetentionVfxEnabled,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled,
   resolveSootyPowderBodyVfxEnabled,
   resolveBglaBodyVfxEnabled,
@@ -1427,6 +1428,36 @@ describe('resolveRenderLook', () => {
     expect(resolvePowderBodyVfxEnabled(
       'neon-lab', '?volumeVfx=1&powderBodyVfx=off',
     )).toBe(false);
+  });
+
+  it('keeps exact Concrete mesostrata retention subordinate to E05 and opt-in for input audits', () => {
+    expect(resolveConcreteMesostrataRetentionVfxEnabled(
+      'classic', '?concreteMesostrataRetentionVfx=on',
+    )).toBe(false);
+    expect(resolveConcreteMesostrataRetentionVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveConcreteMesostrataRetentionVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveConcreteMesostrataRetentionVfxEnabled(
+      'realistic', '?powderBodyVfx=0&concreteMesostrataRetentionVfx=1',
+    )).toBe(false);
+    expect(resolveConcreteMesostrataRetentionVfxEnabled(
+      'realistic', '?volumeVfx=0&powderBodyVfx=1&concreteMesostrataRetentionVfx=true',
+    )).toBe(true);
+    expect(resolveConcreteMesostrataRetentionVfxEnabled(
+      'realistic', '?inputAudit=1',
+    )).toBe(false);
+    expect(resolveConcreteMesostrataRetentionVfxEnabled(
+      'realistic', '?inputAudit=1&concreteMesostrataRetentionVfx=on',
+    )).toBe(true);
+    for (const requested of ['0', 'off', 'false']) {
+      expect(resolveConcreteMesostrataRetentionVfxEnabled(
+        'realistic', `?concreteMesostrataRetentionVfx=${requested}`,
+      )).toBe(false);
+    }
+    for (const requested of ['1', 'on', 'true']) {
+      expect(resolveConcreteMesostrataRetentionVfxEnabled(
+        'realistic', `?concreteMesostrataRetentionVfx=${requested}`,
+      )).toBe(true);
+    }
   });
 
   it('keeps exact sooty-powder recomposition subordinate to the E05 body', () => {
