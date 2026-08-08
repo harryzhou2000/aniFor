@@ -1,0 +1,1113 @@
+import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import {
+  access, lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile,
+} from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { deflateSync } from 'node:zlib';
+import { afterEach, describe, expect, it } from 'vitest';
+
+import {
+  createVisualLabBatchIndex,
+  parseVisualLabBatchArguments,
+  renderVisualLabContactSheet,
+  runVisualLabBatch,
+  VISUAL_LAB_BATCH_SCHEMA,
+} from './visual-lab-batch.mjs';
+import {
+  resolveVisualLabDomain,
+  resolveVisualLabFixture,
+  VISUAL_LAB_CAPTURE_PROTOCOL,
+} from './visual-lab-fixtures.mjs';
+import { resolveVisualLabCaptureRecipe } from './visual-lab-recipes.mjs';
+import { createVisualLabResultRecord } from './visual-lab-result.mjs';
+import { isDetachedProcessGroupAlive } from './detached-process.mjs';
+
+const temporaryDirectories = [];
+
+afterEach(async () => {
+  await Promise.all(temporaryDirectories.splice(0).map((directory) => (
+    rm(directory, { recursive: true, force: true })
+  )));
+});
+
+const makeTemporaryDirectory = async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), 'visual-lab-batch-test-'));
+  temporaryDirectories.push(directory);
+  return directory;
+};
+
+const linuxProcessStartToken = async (pid) => {
+  const source = await readFile(`/proc/${pid}/stat`, 'utf8');
+  const commandEnd = source.lastIndexOf(')');
+  const fields = source.slice(commandEnd + 1).trim().split(/\s+/);
+  return fields[19];
+};
+
+const lifecycleOwnerForTest = (outputDirectory, candidate) => createHash('sha256')
+  .update(`${path.resolve(outputDirectory)}\0${candidate}`, 'utf8').digest('hex');
+
+const requestFor = (candidate) => {
+  const recipe = resolveVisualLabCaptureRecipe(candidate);
+  return {
+    domain: recipe.domain,
+    target: recipe.target,
+    fixture: recipe.fixture,
+    gain: recipe.gain,
+    renderScale: recipe.renderScale,
+  };
+};
+
+const stableHashes = (salt = '') => Object.fromEntries(
+  ['off', 'a', 'b'].map((variant, index) => [
+    variant,
+    createHash('sha256').update(`${salt}:${variant}:${index}`).digest('hex'),
+  ]),
+);
+
+const stableResult = (candidate, salt = candidate) => createVisualLabResultRecord(
+  candidate,
+  requestFor(candidate),
+  stableHashes(salt),
+);
+
+const crc32 = (bytes) => {
+  let value = 0xFFFFFFFF;
+  for (const byte of bytes) {
+    value ^= byte;
+    for (let bit = 0; bit < 8; bit++) {
+      value = (value >>> 1) ^ (value & 1 ? 0xEDB88320 : 0);
+    }
+  }
+  return (value ^ 0xFFFFFFFF) >>> 0;
+};
+
+const pngChunk = (type, data) => {
+  const typeBytes = Buffer.from(type, 'ascii');
+  const chunk = Buffer.alloc(12 + data.length);
+  chunk.writeUInt32BE(data.length, 0);
+  typeBytes.copy(chunk, 4);
+  data.copy(chunk, 8);
+  chunk.writeUInt32BE(crc32(Buffer.concat([typeBytes, data])), 8 + data.length);
+  return chunk;
+};
+
+const minimalPng = (width, height, seed) => {
+  const signature = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr.set([8, 6, 0, 0, 0], 8);
+  const stride = width * 4 + 1;
+  const pixels = Buffer.alloc(stride * height);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const offset = y * stride + 1 + x * 4;
+      pixels[offset] = (seed + x * 17) & 0xFF;
+      pixels[offset + 1] = (seed + y * 29) & 0xFF;
+      pixels[offset + 2] = (seed + x + y) & 0xFF;
+      pixels[offset + 3] = 0xFF;
+    }
+  }
+  return Buffer.concat([
+    signature,
+    pngChunk('IHDR', ihdr),
+    pngChunk('IDAT', deflateSync(pixels)),
+    pngChunk('IEND', Buffer.alloc(0)),
+  ]);
+};
+
+const invalidCompressedPng = (width, height) => {
+  const signature = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr.set([8, 6, 0, 0, 0], 8);
+  return Buffer.concat([
+    signature,
+    pngChunk('IHDR', ihdr),
+    pngChunk('IDAT', Buffer.from('not a zlib stream')),
+    pngChunk('IEND', Buffer.alloc(0)),
+  ]);
+};
+
+const compressedTailPng = (width, height) => {
+  const signature = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr.set([8, 6, 0, 0, 0], 8);
+  const pixels = Buffer.alloc((width * 4 + 1) * height);
+  const compressed = Buffer.concat([deflateSync(pixels), Buffer.from('trailing-zlib-bytes')]);
+  return Buffer.concat([
+    signature,
+    pngChunk('IHDR', ihdr),
+    pngChunk('IDAT', compressed),
+    pngChunk('IEND', Buffer.alloc(0)),
+  ]);
+};
+
+const writeValidCapture = async (directory, candidate, options = {}) => {
+  await mkdir(directory, { recursive: true });
+  const recipe = resolveVisualLabCaptureRecipe(candidate);
+  const domain = resolveVisualLabDomain(recipe.domain);
+  const fixture = resolveVisualLabFixture(recipe.fixture, recipe.domain, recipe.target);
+  const seed = createHash('sha256')
+    .update(`${candidate}:${options.salt ?? 'default'}`).digest()[0];
+  const buffers = Object.fromEntries(['off', 'a', 'b'].map((variant, index) => {
+    const dimensions = options.dimensions?.[variant] ?? { width: 2, height: 1 };
+    return [
+      variant,
+      options.imageBytes?.[variant]
+        ?? minimalPng(dimensions.width, dimensions.height, seed + index * 31),
+    ];
+  }));
+  const hashes = Object.fromEntries(Object.entries(buffers).map(([variant, bytes]) => [
+    variant, createHash('sha256').update(bytes).digest('hex'),
+  ]));
+  for (const [variant, bytes] of Object.entries(buffers)) {
+    await writeFile(path.join(directory, `${variant}.png`), bytes);
+  }
+  const result = createVisualLabResultRecord(candidate, requestFor(candidate), hashes);
+  const backingSize = `${612 * recipe.renderScale}x${384 * recipe.renderScale}`;
+  const fixturePreparation = fixture.preparation?.method ?? 'scene';
+  const report = {
+    tool: 'visual-lab-audit-v1',
+    result,
+    domain: recipe.domain,
+    target: recipe.target,
+    fixture: recipe.fixture,
+    fixtureScene: fixture.scene,
+    fixturePreparation,
+    targetKind: domain.targetKind,
+    domainCapability: {
+      targetKind: domain.targetKind,
+      executionProfile: domain.executionProfile,
+      evidence: domain.evidence,
+      fixedUrlParameters: domain.fixedUrlParameters,
+    },
+    captureProtocol: VISUAL_LAB_CAPTURE_PROTOCOL,
+    gain: recipe.gain,
+    renderScale: recipe.renderScale,
+    startupSelection: {
+      requestedVariant: 2,
+      fixture: recipe.fixture,
+      scene: fixture.scene,
+      preparation: fixturePreparation,
+      fixturePrepared: true,
+      backendBeforeSelection: 'canvas2d',
+      backendReasonBeforeSelection: 'webgl-starting',
+      stagedBeforeWebGL: true,
+    },
+    backend: domain.executionProfile.backend,
+    hdrPipeline: VISUAL_LAB_CAPTURE_PROTOCOL.datasetRequirements.hdrPipeline,
+    backingSize,
+    captures: Object.fromEntries(['off', 'a', 'b'].map((variant, index) => [variant, {
+      png: `/unrelated/absolute/machine/path/${candidate}/${variant}.png`,
+      bytes: buffers[variant].byteLength,
+      width: options.dimensions?.[variant]?.width ?? 2,
+      height: options.dimensions?.[variant]?.height ?? 1,
+      cssWidth: Math.max(1, options.dimensions?.[variant]?.width ?? 2),
+      cssHeight: Math.max(1, options.dimensions?.[variant]?.height ?? 1),
+      clipScale: 1,
+      sha256: hashes[variant],
+      distinctFromOff: hashes[variant] !== hashes.off,
+      dataset: {
+        renderer: VISUAL_LAB_CAPTURE_PROTOCOL.datasetRequirements.renderer,
+        hdrPipeline: VISUAL_LAB_CAPTURE_PROTOCOL.datasetRequirements.hdrPipeline,
+        renderLook: VISUAL_LAB_CAPTURE_PROTOCOL.fixedUrlParameters.renderLook,
+        outputScale: String(recipe.renderScale),
+        backingSize,
+        visualLab: index === 0 ? 'inactive' : 'active',
+        visualLabDomain: recipe.domain,
+        visualLabVariant: String(index),
+        visualLabTarget: String(recipe.target),
+        visualLabGain: String(recipe.gain),
+      },
+    }])),
+    warnings: options.warnings ?? [],
+    invariants: {
+      semantic: true,
+      fieldAlpha: true,
+      framebufferAlpha: true,
+    },
+    browserErrors: 0,
+  };
+  if (options.mutateReport) options.mutateReport(report);
+  await writeFile(path.join(directory, 'report.json'), `${JSON.stringify(report)}\n`);
+  return { buffers, hashes, report, result };
+};
+
+describe('Visual Lab batch index', () => {
+  it('normalizes records into a deterministic deeply frozen schema', () => {
+    const gas = stableResult('gas-showcase');
+    const reorderedGas = {
+      captureSha256: gas.captureSha256,
+      request: gas.request,
+      candidate: gas.candidate,
+      id: gas.id,
+      schema: gas.schema,
+    };
+    const first = createVisualLabBatchIndex([
+      { candidate: 'water-motion', status: 'failed', failure: 'capture-failed' },
+      { candidate: 'gas-showcase', status: 'passed', result: reorderedGas, warnings: [] },
+    ]);
+    const second = createVisualLabBatchIndex([
+      { candidate: 'gas-showcase', status: 'passed', result: gas, warnings: [] },
+      { candidate: 'water-motion', status: 'failed', failure: 'capture-failed' },
+    ]);
+
+    expect(JSON.stringify(first)).toBe(JSON.stringify(second));
+    expect(first).toEqual({
+      schema: VISUAL_LAB_BATCH_SCHEMA,
+      complete: false,
+      summary: { selected: 2, passed: 1, failed: 1 },
+      candidates: [
+        {
+          candidate: 'gas-showcase',
+          status: 'passed',
+          result: gas,
+          artifacts: {
+            report: 'candidates/gas-showcase/report.json',
+            off: 'candidates/gas-showcase/off.png',
+            a: 'candidates/gas-showcase/a.png',
+            b: 'candidates/gas-showcase/b.png',
+          },
+          warnings: [],
+        },
+        {
+          candidate: 'water-motion',
+          status: 'failed',
+          failure: 'capture-failed',
+          artifacts: { diagnostic: 'candidates/water-motion/failure.log' },
+        },
+      ],
+    });
+    expect(Object.isFrozen(first)).toBe(true);
+    expect(first.complete).toBe(false);
+    expect(Object.isFrozen(first.summary)).toBe(true);
+    expect(Object.isFrozen(first.candidates)).toBe(true);
+    expect(first.candidates.every(Object.isFrozen)).toBe(true);
+    expect(JSON.stringify(first)).not.toMatch(/\/tmp|unrelated\/absolute|timestamp/i);
+
+    const complete = createVisualLabBatchIndex([
+      { candidate: 'gas-showcase', status: 'passed', result: gas, warnings: [] },
+    ]);
+    expect(complete.complete).toBe(true);
+    expect(renderVisualLabContactSheet(complete))
+      .toContain('<strong>Complete</strong> · 1/1 passed');
+  });
+
+  it('rejects duplicate candidates, malformed results, warnings, and failure codes', () => {
+    const result = stableResult('gas-showcase');
+    expect(() => createVisualLabBatchIndex([])).toThrow('non-empty array');
+    expect(() => createVisualLabBatchIndex([
+      { candidate: 'gas-showcase', status: 'passed', result, warnings: [] },
+      { candidate: 'gas-showcase', status: 'failed', failure: 'capture-failed' },
+    ])).toThrow('Duplicate batch candidate');
+    expect(() => createVisualLabBatchIndex([{
+      candidate: 'gas-showcase', status: 'passed',
+      result: { ...result, id: `sha256:${'0'.repeat(64)}` }, warnings: [],
+    }])).toThrow('content-addressed record does not match recipe');
+    const wrongRequest = createVisualLabResultRecord(
+      'gas-showcase', { ...requestFor('gas-showcase'), target: 4 }, result.captureSha256,
+    );
+    expect(() => createVisualLabBatchIndex([{
+      candidate: 'gas-showcase', status: 'passed', result: wrongRequest, warnings: [],
+    }])).toThrow('content-addressed record does not match recipe');
+    expect(() => createVisualLabBatchIndex([{
+      candidate: 'gas-showcase', status: 'passed', result, warnings: [3],
+    }])).toThrow('warnings');
+    expect(() => createVisualLabBatchIndex([{
+      candidate: 'gas-showcase', status: 'failed', failure: 'unknown',
+    }])).toThrow('invalid status or failure code');
+  });
+
+  it('renders escaped, relative, off/A/B static contact cards', () => {
+    const index = createVisualLabBatchIndex([
+      {
+        candidate: 'gas-showcase', status: 'passed', result: stableResult('gas-showcase'),
+        warnings: ['<unsafe & "quoted">'],
+      },
+      { candidate: 'water-motion', status: 'failed', failure: 'artifact-invalid' },
+    ]);
+    const html = renderVisualLabContactSheet(index);
+
+    expect(html).toContain('<!doctype html>');
+    expect(html).toContain('<strong>Incomplete</strong> · 1/2 passed');
+    expect(html).toContain('&lt;unsafe &amp; &quot;quoted&quot;&gt;');
+    expect(html).not.toContain('<unsafe');
+    expect(html).not.toContain('<script');
+    expect(html).toContain('./candidates/gas-showcase/report.json');
+    expect(html).toContain('./candidates/water-motion/failure.log');
+    const off = html.indexOf('./candidates/gas-showcase/off.png');
+    const a = html.indexOf('./candidates/gas-showcase/a.png');
+    const b = html.indexOf('./candidates/gas-showcase/b.png');
+    expect(off).toBeGreaterThan(0);
+    expect(off).toBeLessThan(a);
+    expect(a).toBeLessThan(b);
+    expect(renderVisualLabContactSheet(index)).toBe(html);
+  });
+});
+
+describe('Visual Lab batch runner', () => {
+  it('runs catalog-ordered candidates sequentially and isolates exit and timeout failures', async () => {
+    const root = await makeTemporaryDirectory();
+    const bundle = path.join(root, 'dist', 'index.html');
+    const outputDirectory = path.join(root, 'batch');
+    await mkdir(path.dirname(bundle), { recursive: true });
+    await writeFile(bundle, '<!doctype html>');
+    const retainedNote = path.join(
+      outputDirectory, 'candidates', 'gas-showcase', 'review-notes.txt',
+    );
+    await mkdir(path.dirname(retainedNote), { recursive: true });
+    await writeFile(retainedNote, 'keep this user-owned comparison note');
+    const calls = [];
+    let active = 0;
+    let maximumActive = 0;
+    const runner = async (call) => {
+      active++;
+      maximumActive = Math.max(maximumActive, active);
+      calls.push(call);
+      await Promise.resolve();
+      await writeValidCapture(call.candidateDirectory, call.recipe.name);
+      active--;
+      if (call.recipe.name === 'oxygen-showcase') return { code: 9, signal: null };
+      if (call.recipe.name === 'oil-motion') {
+        return { code: 0, signal: 'SIGTERM', timedOut: true };
+      }
+      return { code: 0, signal: null, timedOut: false };
+    };
+
+    const result = await runVisualLabBatch({
+      candidates: ['water-motion', 'oil-motion', 'oxygen-showcase', 'gas-showcase'],
+      bundle,
+      outputDir: outputDirectory,
+      gpu: 'swiftshader',
+      chrome: '/fake/chrome',
+      candidateTimeoutMs: 123_456,
+    }, {
+      runCandidate: runner,
+      command: '/fake/node',
+      auditScript: '/fake/visual-lab-audit.mjs',
+      cwd: root,
+    });
+
+    expect(maximumActive).toBe(1);
+    expect(calls.map(({ recipe }) => recipe.name)).toEqual([
+      'gas-showcase', 'oxygen-showcase', 'oil-motion', 'water-motion',
+    ]);
+    for (const call of calls) {
+      expect(call.command).toBe('/fake/node');
+      expect(call.args).toContain(`--bundle=${path.resolve(bundle)}`);
+      expect(call.args).toContain(`--candidate=${call.recipe.name}`);
+      expect(call.args).toContain('--gpu=swiftshader');
+      expect(call.args).toContain('--chrome=/fake/chrome');
+      expect(call.args.join(' ')).not.toMatch(/npm|build/);
+      expect(call.timeoutMs).toBe(123_456);
+    }
+    expect(result).toMatchObject({ ok: false, exitCode: 1 });
+    expect(result.index.complete).toBe(false);
+    expect(result.index.summary).toEqual({ selected: 4, passed: 2, failed: 2 });
+    expect(result.index.candidates.map(({ status }) => status)).toEqual([
+      'passed', 'failed', 'failed', 'passed',
+    ]);
+    expect(result.index.candidates[1].failure).toBe('capture-failed');
+    expect(result.index.candidates[2].failure).toBe('capture-failed');
+    expect(await readFile(
+      path.join(outputDirectory, 'candidates', 'oxygen-showcase', 'failure.log'), 'utf8',
+    )).toContain('Audit child exited with code 9');
+    expect(await readFile(
+      path.join(outputDirectory, 'candidates', 'oil-motion', 'failure.log'), 'utf8',
+    )).toContain('Audit child timed out after 123456 ms');
+    expect(await readFile(retainedNote, 'utf8')).toBe('keep this user-owned comparison note');
+    expect(JSON.parse(await readFile(result.indexPath, 'utf8'))).toEqual(result.index);
+    expect(await readFile(result.contactSheetPath, 'utf8'))
+      .toContain('<strong>Incomplete</strong> · 2/4 passed');
+  });
+
+  it('continues after a runner exception and does not accept a report from the failed run', async () => {
+    const root = await makeTemporaryDirectory();
+    const bundle = path.join(root, 'index.html');
+    const outputDirectory = path.join(root, 'batch');
+    await writeFile(bundle, '<!doctype html>');
+    const visited = [];
+    const timeouts = [];
+    const result = await runVisualLabBatch({
+      candidates: ['gas-showcase', 'water-motion'],
+      bundle,
+      outputDir: outputDirectory,
+    }, {
+      runCandidate: async (call) => {
+        visited.push(call.recipe.name);
+        timeouts.push(call.timeoutMs);
+        await writeValidCapture(call.candidateDirectory, call.recipe.name);
+        if (call.recipe.name === 'gas-showcase') throw new Error('synthetic spawn failure');
+        return { code: 0, signal: null };
+      },
+    });
+
+    expect(visited).toEqual(['gas-showcase', 'water-motion']);
+    expect(timeouts).toEqual([300_000, 300_000]);
+    expect(result.index.candidates[0]).toMatchObject({
+      candidate: 'gas-showcase', status: 'failed', failure: 'capture-failed',
+    });
+    expect(result.index.candidates[1].status).toBe('passed');
+    const originalFailure = await readFile(
+      path.join(outputDirectory, 'candidates', 'gas-showcase', 'failure.log'), 'utf8',
+    );
+
+    let reindexRunnerCalls = 0;
+    const reindexed = await runVisualLabBatch({
+      candidates: ['water-motion', 'gas-showcase'],
+      outputDir: outputDirectory,
+      indexOnly: true,
+    }, {
+      runCandidate: async () => { reindexRunnerCalls++; return { code: 0 }; },
+    });
+    expect(reindexRunnerCalls).toBe(0);
+    expect(reindexed.index.candidates.map(({ candidate, status, failure }) => (
+      [candidate, status, failure]
+    ))).toEqual([
+      ['gas-showcase', 'failed', 'capture-failed'],
+      ['water-motion', 'passed', undefined],
+    ]);
+    expect(await readFile(
+      path.join(outputDirectory, 'candidates', 'gas-showcase', 'failure.log'), 'utf8',
+    )).toBe(originalFailure);
+  });
+
+  it('invalidates a prior complete sheet before an interrupted rerun mutates candidates', async () => {
+    const root = await makeTemporaryDirectory();
+    const bundle = path.join(root, 'index.html');
+    const outputDirectory = path.join(root, 'batch');
+    const indexPath = path.join(outputDirectory, 'index.json');
+    const contactSheetPath = path.join(outputDirectory, 'index.html');
+    await mkdir(outputDirectory, { recursive: true });
+    await writeFile(bundle, '<!doctype html>');
+    await writeFile(indexPath, '{"complete":true}\n');
+    await writeFile(contactSheetPath, '<strong>Complete</strong>');
+    const priorFailurePath = path.join(
+      outputDirectory, 'candidates', 'gas-showcase', 'failure.log',
+    );
+    await mkdir(path.dirname(priorFailurePath), { recursive: true });
+    await writeFile(priorFailurePath, 'capture-failed\nprior actionable diagnostic\n');
+    const controller = new AbortController();
+
+    await expect(runVisualLabBatch({
+      candidates: ['gas-showcase'],
+      bundle,
+      outputDir: outputDirectory,
+      signal: controller.signal,
+    }, {
+      runCandidate: async () => {
+        controller.abort(new Error('synthetic interruption'));
+        return { code: 0, signal: null, timedOut: false };
+      },
+    })).rejects.toThrow('synthetic interruption');
+
+    await expect(readFile(indexPath, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(readFile(contactSheetPath, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(await readFile(priorFailurePath, 'utf8'))
+      .toBe('capture-failed\nprior actionable diagnostic\n');
+  });
+
+  it('publishes the contact sheet before the complete machine index', async () => {
+    const root = await makeTemporaryDirectory();
+    const bundle = path.join(root, 'index.html');
+    const outputDirectory = path.join(root, 'batch');
+    const indexPath = path.join(outputDirectory, 'index.json');
+    await writeFile(bundle, '<!doctype html>');
+    const published = [];
+
+    await expect(runVisualLabBatch({
+      candidates: ['gas-showcase'], bundle, outputDir: outputDirectory,
+    }, {
+      runCandidate: async (call) => {
+        await writeValidCapture(call.candidateDirectory, call.recipe.name);
+        return { code: 0, signal: null, timedOut: false };
+      },
+      publishFile: async (file) => {
+        published.push(path.basename(file));
+        throw new Error('synthetic contact-sheet publication failure');
+      },
+    })).rejects.toThrow('synthetic contact-sheet publication failure');
+
+    expect(published).toEqual(['index.html']);
+    await expect(access(indexPath)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('indexes existing reports without a runner and isolates stale or tampered artifacts', async () => {
+    const root = await makeTemporaryDirectory();
+    const outputDirectory = path.join(root, 'batch');
+    const candidateRoot = path.join(outputDirectory, 'candidates');
+    const gasDirectory = path.join(candidateRoot, 'gas-showcase');
+    const oxygenDirectory = path.join(candidateRoot, 'oxygen-showcase');
+    const waterDirectory = path.join(candidateRoot, 'water-motion');
+    await writeValidCapture(gasDirectory, 'gas-showcase', { warnings: ['portable result'] });
+    await writeValidCapture(oxygenDirectory, 'oxygen-showcase', {
+      mutateReport: (report) => {
+        report.result = { ...report.result, id: `sha256:${'0'.repeat(64)}` };
+      },
+    });
+    await writeValidCapture(waterDirectory, 'water-motion');
+    await writeFile(path.join(waterDirectory, 'b.png'), 'tampered bytes');
+    let runnerCalls = 0;
+
+    const options = {
+      candidates: ['gas-showcase', 'oxygen-showcase', 'oil-motion', 'water-motion'],
+      bundle: path.join(root, 'does-not-exist', 'index.html'),
+      outputDir: outputDirectory,
+      indexOnly: true,
+    };
+    const dependencies = {
+      runCandidate: async () => { runnerCalls++; throw new Error('must not run'); },
+    };
+    const first = await runVisualLabBatch(options, dependencies);
+    const firstIndexBytes = await readFile(first.indexPath, 'utf8');
+    const second = await runVisualLabBatch(options, dependencies);
+    const secondIndexBytes = await readFile(second.indexPath, 'utf8');
+
+    expect(runnerCalls).toBe(0);
+    expect(first.ok).toBe(false);
+    expect(first.index.candidates.map(({ status, failure }) => [status, failure])).toEqual([
+      ['passed', undefined],
+      ['failed', 'report-invalid'],
+      ['failed', 'report-missing'],
+      ['failed', 'artifact-invalid'],
+    ]);
+    expect(first.index.candidates[0].result.candidate).toBe('gas-showcase');
+    expect(JSON.stringify(first.index)).not.toContain('/unrelated/absolute/machine/path');
+    expect(firstIndexBytes).toBe(secondIndexBytes);
+    expect(second.index).toEqual(first.index);
+  });
+
+  it('requires all capture invariants and a browser-error-free report', async () => {
+    const root = await makeTemporaryDirectory();
+    const outputDirectory = path.join(root, 'batch');
+    const candidateRoot = path.join(outputDirectory, 'candidates');
+    await writeValidCapture(path.join(candidateRoot, 'gas-showcase'), 'gas-showcase', {
+      mutateReport: (report) => { report.invariants.fieldAlpha = false; },
+    });
+    await writeValidCapture(path.join(candidateRoot, 'oxygen-showcase'), 'oxygen-showcase', {
+      mutateReport: (report) => { report.browserErrors = 1; },
+    });
+
+    const result = await runVisualLabBatch({
+      candidates: ['oxygen-showcase', 'gas-showcase'],
+      outputDir: outputDirectory,
+      indexOnly: true,
+    });
+
+    expect(result.index.candidates.map(({ candidate, failure }) => [candidate, failure])).toEqual([
+      ['gas-showcase', 'report-invalid'],
+      ['oxygen-showcase', 'report-invalid'],
+    ]);
+    expect(await readFile(
+      path.join(candidateRoot, 'gas-showcase', 'failure.log'), 'utf8',
+    )).toContain('invariants must all pass');
+    expect(await readFile(
+      path.join(candidateRoot, 'oxygen-showcase', 'failure.log'), 'utf8',
+    )).toContain('browserErrors must be exactly zero');
+  });
+
+  it('admits only current staged canonical WebGL/HDR capture records', async () => {
+    const root = await makeTemporaryDirectory();
+    const outputDirectory = path.join(root, 'batch');
+    const candidateRoot = path.join(outputDirectory, 'candidates');
+    await writeValidCapture(path.join(candidateRoot, 'gas-showcase'), 'gas-showcase', {
+      mutateReport: (report) => {
+        report.backend = 'canvas2d';
+        report.hdrPipeline = 'inactive';
+      },
+    });
+    await writeValidCapture(path.join(candidateRoot, 'oxygen-showcase'), 'oxygen-showcase', {
+      mutateReport: (report) => { report.startupSelection.stagedBeforeWebGL = false; },
+    });
+    await writeValidCapture(path.join(candidateRoot, 'oil-motion'), 'oil-motion', {
+      mutateReport: (report) => { report.captures.a.dataset.hdrPipeline = 'inactive'; },
+    });
+    await writeValidCapture(path.join(candidateRoot, 'water-motion'), 'water-motion', {
+      mutateReport: (report) => { report.target = 8; },
+    });
+
+    const result = await runVisualLabBatch({
+      candidates: ['water-motion', 'oil-motion', 'oxygen-showcase', 'gas-showcase'],
+      outputDir: outputDirectory,
+      indexOnly: true,
+    });
+
+    expect(result.index.candidates.map(({ candidate, failure }) => [candidate, failure])).toEqual([
+      ['gas-showcase', 'report-invalid'],
+      ['oxygen-showcase', 'report-invalid'],
+      ['oil-motion', 'report-invalid'],
+      ['water-motion', 'report-invalid'],
+    ]);
+    expect(await readFile(
+      path.join(candidateRoot, 'gas-showcase', 'failure.log'), 'utf8',
+    )).toContain('canonical WebGL with active HDR');
+    expect(await readFile(
+      path.join(candidateRoot, 'oxygen-showcase', 'failure.log'), 'utf8',
+    )).toContain('startup selection was not staged');
+    expect(await readFile(
+      path.join(candidateRoot, 'oil-motion', 'failure.log'), 'utf8',
+    )).toContain('capture dataset does not match');
+    expect(await readFile(
+      path.join(candidateRoot, 'water-motion', 'failure.log'), 'utf8',
+    )).toContain('top-level target does not match');
+  });
+
+  it('validates PNG signatures, canonical IHDR, nonzero size, and consistent dimensions', async () => {
+    const root = await makeTemporaryDirectory();
+    const outputDirectory = path.join(root, 'batch');
+    const candidateRoot = path.join(outputDirectory, 'candidates');
+    const brokenIhdr = minimalPng(2, 1, 47);
+    brokenIhdr.write('NOPE', 12, 'ascii');
+    await writeValidCapture(path.join(candidateRoot, 'gas-showcase'), 'gas-showcase', {
+      imageBytes: { a: Buffer.from('not a png') },
+    });
+    await writeValidCapture(path.join(candidateRoot, 'oxygen-showcase'), 'oxygen-showcase', {
+      dimensions: { b: { width: 3, height: 1 } },
+    });
+    await writeValidCapture(path.join(candidateRoot, 'oil-motion'), 'oil-motion', {
+      dimensions: {
+        off: { width: 0, height: 1 },
+        a: { width: 0, height: 1 },
+        b: { width: 0, height: 1 },
+      },
+    });
+    await writeValidCapture(path.join(candidateRoot, 'water-motion'), 'water-motion', {
+      imageBytes: { a: brokenIhdr },
+    });
+
+    const result = await runVisualLabBatch({
+      outputDir: outputDirectory,
+      indexOnly: true,
+    });
+
+    expect(result.index.candidates.every(({ failure }) => failure === 'artifact-invalid')).toBe(true);
+    expect(await readFile(
+      path.join(candidateRoot, 'gas-showcase', 'failure.log'), 'utf8',
+    )).toContain('does not have a PNG signature');
+    expect(await readFile(
+      path.join(candidateRoot, 'oxygen-showcase', 'failure.log'), 'utf8',
+    )).toContain('PNG dimensions are inconsistent');
+    expect(await readFile(
+      path.join(candidateRoot, 'oil-motion', 'failure.log'), 'utf8',
+    )).toContain('has zero PNG dimensions');
+    expect(await readFile(
+      path.join(candidateRoot, 'water-motion', 'failure.log'), 'utf8',
+    )).toContain('canonical IHDR');
+  });
+
+  it('binds PNG byte counts, declared pixel size, and a complete chunk tail', async () => {
+    const root = await makeTemporaryDirectory();
+    const outputDirectory = path.join(root, 'batch');
+    const candidateRoot = path.join(outputDirectory, 'candidates');
+    await writeValidCapture(path.join(candidateRoot, 'gas-showcase'), 'gas-showcase', {
+      mutateReport: (report) => { report.captures.a.bytes++; },
+    });
+    await writeValidCapture(path.join(candidateRoot, 'oxygen-showcase'), 'oxygen-showcase', {
+      mutateReport: (report) => { report.captures.a.width++; },
+    });
+    const truncated = minimalPng(2, 1, 83).subarray(0, -12);
+    await writeValidCapture(path.join(candidateRoot, 'water-motion'), 'water-motion', {
+      imageBytes: { b: truncated },
+    });
+    const trailing = Buffer.concat([minimalPng(2, 1, 97), Buffer.from('tail')]);
+    await writeValidCapture(path.join(candidateRoot, 'oil-motion'), 'oil-motion', {
+      imageBytes: { b: trailing },
+    });
+
+    const result = await runVisualLabBatch({ outputDir: outputDirectory, indexOnly: true });
+
+    expect(result.index.candidates.every(({ failure }) => failure === 'artifact-invalid')).toBe(true);
+    expect(await readFile(
+      path.join(candidateRoot, 'gas-showcase', 'failure.log'), 'utf8',
+    )).toContain('byte count does not match report');
+    expect(await readFile(
+      path.join(candidateRoot, 'oxygen-showcase', 'failure.log'), 'utf8',
+    )).toContain('dimensions do not match report');
+    expect(await readFile(
+      path.join(candidateRoot, 'water-motion', 'failure.log'), 'utf8',
+    )).toContain('complete IHDR/IDAT/IEND');
+    expect(await readFile(
+      path.join(candidateRoot, 'oil-motion', 'failure.log'), 'utf8',
+    )).toContain('invalid IEND tail');
+  });
+
+  it('rejects PNG CRC, compressed payload, and CSS-clip mismatches', async () => {
+    const root = await makeTemporaryDirectory();
+    const outputDirectory = path.join(root, 'batch');
+    const candidateRoot = path.join(outputDirectory, 'candidates');
+    const badCrc = minimalPng(2, 1, 53);
+    badCrc[41] ^= 0xFF;
+    await writeValidCapture(path.join(candidateRoot, 'gas-showcase'), 'gas-showcase', {
+      imageBytes: { a: badCrc },
+    });
+    await writeValidCapture(path.join(candidateRoot, 'water-motion'), 'water-motion', {
+      imageBytes: { a: invalidCompressedPng(2, 1) },
+    });
+    await writeValidCapture(path.join(candidateRoot, 'oxygen-showcase'), 'oxygen-showcase', {
+      mutateReport: (report) => { report.captures.b.cssWidth += 4; },
+    });
+    await writeValidCapture(path.join(candidateRoot, 'oil-motion'), 'oil-motion', {
+      imageBytes: { a: compressedTailPng(2, 1) },
+    });
+
+    const result = await runVisualLabBatch({
+      candidates: ['gas-showcase', 'water-motion', 'oxygen-showcase', 'oil-motion'],
+      outputDir: outputDirectory,
+      indexOnly: true,
+    });
+
+    expect(result.index.candidates.map(({ candidate, failure }) => [candidate, failure])).toEqual([
+      ['gas-showcase', 'artifact-invalid'],
+      ['oxygen-showcase', 'report-invalid'],
+      ['oil-motion', 'artifact-invalid'],
+      ['water-motion', 'artifact-invalid'],
+    ]);
+    expect(await readFile(
+      path.join(candidateRoot, 'gas-showcase', 'failure.log'), 'utf8',
+    )).toContain('invalid IDAT PNG CRC');
+    expect(await readFile(
+      path.join(candidateRoot, 'water-motion', 'failure.log'), 'utf8',
+    )).toContain('invalid compressed PNG image stream');
+    expect(await readFile(
+      path.join(candidateRoot, 'oxygen-showcase', 'failure.log'), 'utf8',
+    )).toContain('scale-1 CSS canvas clip');
+    expect(await readFile(
+      path.join(candidateRoot, 'oil-motion', 'failure.log'), 'utf8',
+    )).toContain('compressed stream has trailing bytes');
+  });
+
+  it('bounds a child that remains unsettled after SIGKILL', async () => {
+    const root = await makeTemporaryDirectory();
+    const bundle = path.join(root, 'index.html');
+    const outputDirectory = path.join(root, 'batch');
+    await writeFile(bundle, '<!doctype html>');
+    const result = await runVisualLabBatch({
+      candidates: ['gas-showcase'], bundle, outputDir: outputDirectory,
+    }, {
+      runCandidate: async (call) => {
+        await writeValidCapture(call.candidateDirectory, call.recipe.name);
+        return {
+          code: null, signal: 'SIGKILL', timedOut: true, killUnsettled: true,
+        };
+      },
+    });
+
+    expect(result.index.candidates[0]).toMatchObject({
+      candidate: 'gas-showcase', status: 'failed', failure: 'capture-failed',
+    });
+    expect(await readFile(
+      path.join(outputDirectory, 'candidates', 'gas-showcase', 'failure.log'), 'utf8',
+    )).toContain('did not settle within 5000 ms after SIGKILL');
+  });
+
+  it.skipIf(process.platform !== 'linux')(
+    'recovers an exact detached Chrome group from the audit lifecycle handoff',
+    async () => {
+      const root = await makeTemporaryDirectory();
+      const bundle = path.join(root, 'index.html');
+      const outputDirectory = path.join(root, 'batch');
+      const profile = await mkdtemp(path.join(tmpdir(), 'anifor-visual-lab-chrome-'));
+      await writeFile(bundle, '<!doctype html>');
+      let chromePid;
+      try {
+        const result = await runVisualLabBatch({
+          candidates: ['gas-showcase'], bundle, outputDir: outputDirectory,
+        }, {
+          runCandidate: async (call) => {
+            const chrome = spawn(process.execPath, [
+              '-e', 'setInterval(() => {}, 1000)', `--user-data-dir=${profile}`,
+            ], {
+              detached: true,
+              stdio: 'ignore',
+            });
+            chromePid = chrome.pid;
+            chrome.unref();
+            await writeFile(call.lifecyclePath, `${JSON.stringify({
+              schema: 'anifor.visual-lab.lifecycle/v1',
+              pid: chromePid,
+              profile,
+              createdAtMs: Date.now(),
+              startToken: await linuxProcessStartToken(chromePid),
+              owner: call.args.find((argument) => argument.startsWith('--lifecycle-owner='))
+                .slice('--lifecycle-owner='.length),
+            })}\n`);
+            await writeValidCapture(call.candidateDirectory, call.recipe.name);
+            return { code: null, signal: 'SIGTERM', timedOut: true };
+          },
+        });
+
+        expect(result.index.candidates[0]).toMatchObject({
+          candidate: 'gas-showcase', status: 'failed', failure: 'capture-failed',
+        });
+        expect(isDetachedProcessGroupAlive(chromePid)).toBe(false);
+        await expect(access(profile)).rejects.toMatchObject({ code: 'ENOENT' });
+        await expect(access(path.join(
+          outputDirectory, 'candidates', 'gas-showcase', 'chrome-lifecycle.json',
+        ))).rejects.toMatchObject({ code: 'ENOENT' });
+      } finally {
+        if (chromePid && isDetachedProcessGroupAlive(chromePid)) {
+          try { process.kill(-chromePid, 'SIGKILL'); } catch { /* already gone */ }
+        }
+        await rm(profile, { recursive: true, force: true });
+      }
+    },
+    10_000,
+  );
+
+  it.skipIf(process.platform !== 'linux')(
+    'rejects a lifecycle handoff replayed into another batch root without signaling it',
+    async () => {
+      const root = await makeTemporaryDirectory();
+      const firstOutput = path.join(root, 'first-batch');
+      const secondOutput = path.join(root, 'second-batch');
+      const secondCandidate = path.join(secondOutput, 'candidates', 'gas-showcase');
+      const lifecyclePath = path.join(secondCandidate, 'chrome-lifecycle.json');
+      const profile = await mkdtemp(path.join(tmpdir(), 'anifor-visual-lab-chrome-'));
+      await mkdir(secondCandidate, { recursive: true });
+      const chrome = spawn(process.execPath, [
+        '-e', 'setInterval(() => {}, 1000)', `--user-data-dir=${profile}`,
+      ], { detached: true, stdio: 'ignore' });
+      const chromePid = chrome.pid;
+      chrome.unref();
+      try {
+        await writeFile(lifecyclePath, `${JSON.stringify({
+          schema: 'anifor.visual-lab.lifecycle/v1',
+          pid: chromePid,
+          profile,
+          createdAtMs: Date.now(),
+          startToken: await linuxProcessStartToken(chromePid),
+          owner: lifecycleOwnerForTest(firstOutput, 'gas-showcase'),
+        })}\n`);
+
+        await expect(runVisualLabBatch({
+          candidates: ['gas-showcase'], outputDir: secondOutput, indexOnly: true,
+        })).rejects.toThrow('Invalid Chrome lifecycle record');
+        expect(isDetachedProcessGroupAlive(chromePid)).toBe(true);
+        await expect(access(lifecyclePath)).resolves.toBeUndefined();
+      } finally {
+        if (isDetachedProcessGroupAlive(chromePid)) {
+          try { process.kill(-chromePid, 'SIGKILL'); } catch { /* already gone */ }
+        }
+        await rm(profile, { recursive: true, force: true });
+      }
+    },
+    10_000,
+  );
+
+  it.skipIf(process.platform !== 'linux')(
+    'recovers a prior crashed-run Chrome handoff before cleanup and current capture',
+    async () => {
+      const root = await makeTemporaryDirectory();
+      const bundle = path.join(root, 'index.html');
+      const outputDirectory = path.join(root, 'batch');
+      const candidateDirectory = path.join(outputDirectory, 'candidates', 'gas-showcase');
+      const lifecyclePath = path.join(candidateDirectory, 'chrome-lifecycle.json');
+      const failurePath = path.join(candidateDirectory, 'failure.log');
+      const profile = await mkdtemp(path.join(tmpdir(), 'anifor-visual-lab-chrome-'));
+      await mkdir(candidateDirectory, { recursive: true });
+      await writeFile(bundle, '<!doctype html>');
+      await writeFile(failurePath, 'capture-failed\nprior diagnostic survives until success\n');
+      const chrome = spawn(process.execPath, [
+        '-e', 'setInterval(() => {}, 1000)', `--user-data-dir=${profile}`,
+      ], { detached: true, stdio: 'ignore' });
+      const chromePid = chrome.pid;
+      chrome.unref();
+      try {
+        await writeFile(lifecyclePath, `${JSON.stringify({
+          schema: 'anifor.visual-lab.lifecycle/v1',
+          pid: chromePid,
+          profile,
+          createdAtMs: Date.now(),
+          startToken: await linuxProcessStartToken(chromePid),
+          owner: lifecycleOwnerForTest(outputDirectory, 'gas-showcase'),
+        })}\n`);
+
+        const result = await runVisualLabBatch({
+          candidates: ['gas-showcase'], bundle, outputDir: outputDirectory,
+        }, {
+          runCandidate: async (call) => {
+            expect(isDetachedProcessGroupAlive(chromePid)).toBe(false);
+            await expect(access(lifecyclePath)).rejects.toMatchObject({ code: 'ENOENT' });
+            expect(await readFile(failurePath, 'utf8'))
+              .toContain('prior diagnostic survives until success');
+            await writeValidCapture(call.candidateDirectory, call.recipe.name);
+            return { code: 0, signal: null, timedOut: false };
+          },
+        });
+
+        expect(result.index.candidates[0].status).toBe('passed');
+        await expect(access(failurePath)).rejects.toMatchObject({ code: 'ENOENT' });
+        await expect(access(profile)).rejects.toMatchObject({ code: 'ENOENT' });
+      } finally {
+        if (isDetachedProcessGroupAlive(chromePid)) {
+          try { process.kill(-chromePid, 'SIGKILL'); } catch { /* already gone */ }
+        }
+        await rm(profile, { recursive: true, force: true });
+      }
+    },
+    10_000,
+  );
+
+  it('serializes batches that share an output directory', async () => {
+    const root = await makeTemporaryDirectory();
+    const bundle = path.join(root, 'index.html');
+    const outputDirectory = path.join(root, 'batch');
+    await writeFile(bundle, '<!doctype html>');
+    let releaseCandidate;
+    let notifyStarted;
+    const started = new Promise((resolve) => { notifyStarted = resolve; });
+    const gate = new Promise((resolve) => { releaseCandidate = resolve; });
+    const first = runVisualLabBatch({
+      candidates: ['gas-showcase'], bundle, outputDir: outputDirectory,
+    }, {
+      runCandidate: async (call) => {
+        notifyStarted();
+        await gate;
+        await writeValidCapture(call.candidateDirectory, call.recipe.name);
+        return { code: 0, signal: null, timedOut: false };
+      },
+    });
+    await started;
+    try {
+      await expect(runVisualLabBatch({
+        candidates: ['gas-showcase'], outputDir: outputDirectory, indexOnly: true,
+      })).rejects.toThrow('already owned by active process');
+    } finally {
+      releaseCandidate();
+    }
+    expect((await first).ok).toBe(true);
+    expect((await runVisualLabBatch({
+      candidates: ['gas-showcase'], outputDir: outputDirectory, indexOnly: true,
+    })).ok).toBe(true);
+  });
+
+  it('atomically replaces a dangling failure-log symlink without following it', async () => {
+    if (process.platform === 'win32') return;
+    const root = await makeTemporaryDirectory();
+    const outputDirectory = path.join(root, 'batch');
+    const candidateDirectory = path.join(outputDirectory, 'candidates', 'gas-showcase');
+    const externalTarget = path.join(root, 'external-diagnostic.txt');
+    const failurePath = path.join(candidateDirectory, 'failure.log');
+    await mkdir(candidateDirectory, { recursive: true });
+    await symlink(externalTarget, failurePath);
+
+    const result = await runVisualLabBatch({
+      candidates: ['gas-showcase'], outputDir: outputDirectory, indexOnly: true,
+    });
+
+    expect(result.index.candidates[0]).toMatchObject({
+      status: 'failed', failure: 'report-missing',
+    });
+    await expect(access(externalTarget)).rejects.toMatchObject({ code: 'ENOENT' });
+    expect((await lstat(failurePath)).isFile()).toBe(true);
+    expect(await readFile(failurePath, 'utf8')).toContain('Cannot read gas-showcase report.json');
+  });
+
+  it('rejects output, candidate-root, and candidate-directory symlink redirection before cleanup', async () => {
+    if (process.platform === 'win32') return;
+    const root = await makeTemporaryDirectory();
+    const redirectedOutput = path.join(root, 'redirected-output');
+    const outputLink = path.join(root, 'output-link');
+    const outputSentinel = path.join(redirectedOutput, 'index.json');
+    await mkdir(redirectedOutput, { recursive: true });
+    await writeFile(outputSentinel, '{"complete":true}\n');
+    await symlink(redirectedOutput, outputLink, 'dir');
+    await expect(runVisualLabBatch({
+      candidates: ['gas-showcase'], outputDir: outputLink, indexOnly: true,
+    })).rejects.toThrow('output directory must not be a symbolic link');
+    expect(await readFile(outputSentinel, 'utf8')).toBe('{"complete":true}\n');
+
+    const ancestorTarget = path.join(root, 'ancestor-target');
+    const ancestorLink = path.join(root, 'ancestor-link');
+    const ancestorSentinel = path.join(ancestorTarget, 'batch', 'index.json');
+    await mkdir(path.dirname(ancestorSentinel), { recursive: true });
+    await writeFile(ancestorSentinel, '{"complete":true}\n');
+    await symlink(ancestorTarget, ancestorLink, 'dir');
+    await expect(runVisualLabBatch({
+      candidates: ['gas-showcase'],
+      outputDir: path.join(ancestorLink, 'batch'),
+      indexOnly: true,
+    })).rejects.toThrow('symbolic-link ancestor');
+    expect(await readFile(ancestorSentinel, 'utf8')).toBe('{"complete":true}\n');
+
+    const redirectedRoot = path.join(root, 'redirected-root');
+    const rootOutput = path.join(root, 'root-link-batch');
+    const priorIndex = path.join(rootOutput, 'index.json');
+    await mkdir(redirectedRoot, { recursive: true });
+    await mkdir(rootOutput, { recursive: true });
+    await writeFile(priorIndex, '{"complete":true}\n');
+    await symlink(redirectedRoot, path.join(rootOutput, 'candidates'), 'dir');
+
+    await expect(runVisualLabBatch({
+      candidates: ['gas-showcase'], outputDir: rootOutput, indexOnly: true,
+    })).rejects.toThrow('candidate root must not be a symbolic link');
+    expect(await readFile(priorIndex, 'utf8')).toBe('{"complete":true}\n');
+
+    const redirectedCandidate = path.join(root, 'redirected-candidate');
+    const candidateOutput = path.join(root, 'candidate-link-batch');
+    const candidateRoot = path.join(candidateOutput, 'candidates');
+    const sentinel = path.join(redirectedCandidate, 'report.json');
+    await mkdir(redirectedCandidate, { recursive: true });
+    await mkdir(candidateRoot, { recursive: true });
+    await writeFile(sentinel, 'external sentinel');
+    await symlink(redirectedCandidate, path.join(candidateRoot, 'gas-showcase'), 'dir');
+
+    await expect(runVisualLabBatch({
+      candidates: ['gas-showcase'], outputDir: candidateOutput, indexOnly: true,
+    })).rejects.toThrow('candidate directory gas-showcase must not be a symbolic link');
+    expect(await readFile(sentinel, 'utf8')).toBe('external sentinel');
+  });
+});
+
+describe('Visual Lab batch CLI', () => {
+  it('parses selected recipes and environment options without recipe-owned flags', () => {
+    expect(parseVisualLabBatchArguments([
+      '--candidates=oxygen-showcase, water-motion',
+      '--bundle=dist/index.html',
+      '--output-dir=/tmp/sheet',
+      '--chrome=/usr/bin/chrome',
+      '--gpu=swiftshader',
+      '--candidate-timeout-ms=123456',
+      '--index-only=1',
+    ])).toEqual({
+      help: false,
+      candidates: ['oxygen-showcase', 'water-motion'],
+      bundle: 'dist/index.html',
+      outputDir: '/tmp/sheet',
+      chrome: '/usr/bin/chrome',
+      gpu: 'swiftshader',
+      candidateTimeoutMs: 123456,
+      indexOnly: true,
+    });
+    expect(parseVisualLabBatchArguments(['--help'])).toEqual({ help: true });
+    expect(parseVisualLabBatchArguments([]).candidateTimeoutMs).toBe(300_000);
+  });
+
+  it('rejects malformed, duplicate, or unknown selections before capture', async () => {
+    expect(() => parseVisualLabBatchArguments(['--candidates=gas-showcase,']))
+      .toThrow('comma-separated list');
+    expect(() => parseVisualLabBatchArguments(['--index-only=yes']))
+      .toThrow('--index-only must be 0 or 1');
+    for (const value of ['0', '-1', '1.5', '2147483648', 'not-a-number']) {
+      expect(() => parseVisualLabBatchArguments([`--candidate-timeout-ms=${value}`]))
+        .toThrow('--candidate-timeout-ms must be a positive integer');
+    }
+    expect(() => parseVisualLabBatchArguments(['--domain=gas']))
+      .toThrow('Unknown option --domain');
+    await expect(runVisualLabBatch({
+      candidates: ['gas-showcase', 'gas-showcase'], indexOnly: true,
+    })).rejects.toThrow('Duplicate --candidates entry');
+    await expect(runVisualLabBatch({
+      candidates: ['missing'], indexOnly: true,
+    })).rejects.toThrow('Unknown Visual Lab capture candidate');
+    await expect(runVisualLabBatch({
+      candidates: ['gas-showcase'], candidateTimeoutMs: 0, indexOnly: true,
+    })).rejects.toThrow('candidate timeout must be a positive integer');
+  });
+});

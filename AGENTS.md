@@ -3,13 +3,14 @@
 ## Current direction
 
 Pause the detail-first E-number ladder. The active goal is framework leverage,
-not another isolated material treatment. The modular typed Visual Lab facade and
-its executable capability profiles are deployed: renderer/capture descriptors
-share exact domain, target, Detail/fallback, evidence, URL, backend/pipeline, and
-resource-budget semantics. Complete the named capture-recipe and content-
-addressed result layer next, then add a small batch index/contact sheet. A normal
-A/B idea should touch one domain module plus one catalog entry—not presenter
-setup, HDR lifecycle, app boot, package-script duplication, or CDP branching.
+not another isolated material treatment. The modular typed Visual Lab facade,
+executable capability profiles, named capture recipes, and content-addressed
+result records are deployed. Renderer and capture descriptors share exact
+domain, target, Detail/fallback, evidence, URL, backend/pipeline, and resource-
+budget semantics. Build the deterministic batch runner and contact-sheet index
+next. A normal A/B idea should touch one domain module plus one catalog entry—
+not presenter setup, HDR lifecycle, app boot, package-script duplication, or
+CDP branching.
 
 The typed Visual Lab state, fixed normal-HDR composition seam, promotion-safe
 same-page off/A/B selection, declarative fixtures, and production-bundle capture
@@ -19,21 +20,20 @@ motion is an accepted E08 baseline and uses the moving-Oil fixture with liquid
 target `8`; E65 Water surface motion is an accepted E08 baseline and uses the
 retained moving-Water fixture with liquid target `2`. Their legacy resolvers,
 uniforms, queries, datasets, and bespoke verifier paths are removed. E65 is also
-deployed. The executable capability-profile checkpoint is also live:
-`main_codex` and Pages serve revision
-`71304b3465b27a37805955f020c448ba3436afbd` after successful workflow run
-`31278167410` and independent 19-resource live asset-closure verification.
+deployed. The recipe/result framework checkpoint is live: `main_codex` and
+Pages serve revision `70d33d8383e75dfb3f071b8e405be2f910d735fa` after
+successful workflow run `31279274149` and independent 19-resource live asset-
+closure verification.
 
-The next stable deployment checkpoint is the recipe/result milestone, not a
-fourth leaf migration. Named recipes own domain/target/fixture/gain/scale and
-must reject conflicting explicit flags; ad-hoc requests remain supported.
-Reports must carry a deterministic SHA-256 identity over the normalized request
-and ordered off/A/B artifacts. Existing Oxygen, Oil-motion, and Water-motion
-scripts delegate to the catalog without repeating owned flags. Checkpoint and
-deploy this after focused tooling tests and one real named normal-WebGL capture;
-then build a batch result index before resuming material experiments. Defer E66
-because its tangent reads make it resource-sensitive; migrate another accepted
-leaf only when doing so removes more special-case infrastructure than it adds.
+The next stable deployment checkpoint is the batch runner/index milestone, not
+a fourth leaf migration. It builds once, runs selected frozen recipes
+sequentially in fresh browser sessions, validates reports against the actual
+off/A/B PNG bytes, and writes a deterministic versioned index plus a static
+relative-path contact sheet. A partial capture may retain per-candidate logs,
+but must not publish a complete index. The sheet is comparison navigation, not
+an aesthetic acceptance score or a renderer artifact. Defer E66 because its
+tangent reads make it resource-sensitive; migrate another accepted leaf only
+when doing so removes more special-case infrastructure than it adds.
 Same-page variant selection must remain owned across asynchronous WebGL promotion; a
 choice made during the temporary Canvas `webgl-starting` phase is seeded before
 the first WebGL frame. Lab
@@ -1967,23 +1967,22 @@ and reports zero browser errors. Do not add E82 to the compact fragment.
 
 Framework leverage remains the checkpoint priority rather than E83 material
 polish. The fixed `domain/variant/target/gain` state, domain-local shader facade,
-executable renderer/capture capability profiles, browser diagnostics, and
-off/A/B harness are complete and deployed at revision
-`71304b3465b27a37805955f020c448ba3436afbd`. E62, E69, and E65 prove that
+executable renderer/capture capability profiles, browser diagnostics, named
+recipes, content-addressed results, and off/A/B harness are complete and
+deployed at revision `70d33d8383e75dfb3f071b8e405be2f910d735fa`. E62, E69,
+and E65 prove that
 accepted leaf treatments can be folded into parent baselines while deleting
 selector, uniform, query, telemetry, and bespoke-verifier plumbing. Do not
 reopen them merely to add more effect detail.
 
-The next checkpoint is the named recipe/result layer. Frozen recipes own
-`domain/target/fixture/gain/renderScale`, reject conflicting explicit flags, and
-derive every capability, evidence, and URL rule from the existing descriptors.
-Ad-hoc captures remain supported. Each `report.json` adds a deeply frozen
-`anifor.visual-lab.result/v1` record whose `sha256:` identity covers candidate,
-normalized request, and ordered off/A/B hashes. Keep variant zero pixel-
-preserving, the direct true-8× fragment untouched, and the generic CDP harness
-domain-branch-free. After this checkpoint is deployed, build a batch result
-index/contact sheet before resuming material experiments. Defer E66 and Powder
-until their resource/stability proof fits the existing facade.
+The next checkpoint is the deterministic batch layer. It consumes frozen
+recipes and `anifor.visual-lab.result/v1` records, captures candidates
+sequentially from one production build, re-hashes local off/A/B artifacts, and
+emits `anifor.visual-lab.batch/v1` plus a static relative-path contact sheet.
+Keep variant zero pixel-preserving, the direct true-8× fragment untouched, and
+the generic CDP harness domain-branch-free. A failed candidate must leave useful
+diagnostics without publishing a complete index. Defer E66 and Powder until
+their resource/stability proof fits the existing facade.
 
 Ordinary pages compile the original five-sampler HDR compositor; only an
 explicit lab session compiles the eight-sampler gas/emission permutation. Use
@@ -1991,6 +1990,29 @@ explicit lab session compiles the eight-sampler gas/emission permutation. Use
 capture, or `npm run audit:visual-lab:capture -- --candidate=water-motion` to
 reuse an existing bundle. The harness owns off/A/B PNGs, content-addressed
 `report.json`, semantic/field/frame alpha-support invariants, and Chrome cleanup.
+Use `npm run audit:visual-lab:batch` to build once and run every recipe, or
+`npm run audit:visual-lab:batch:capture -- --candidates=gas-showcase,water-motion`
+to reuse `dist`. The batch adds no renderer selector, shader resource, fixture
+branch, or CDP domain branch; its contact sheet is human comparison evidence.
+Run recipes sequentially in catalog order with a fresh browser, preserve a
+five-minute default candidate timeout plus bounded cleanup escalation, and
+use the audit lifecycle handoff to verify that the exact detached Chrome group
+and profile are gone. Bind that handoff to the canonical batch root and exact
+candidate as well as PID/start identity/profile, and recover it before any rerun
+cleanup. Serialize one writer per output root. Reject symlinked output paths,
+ancestors, candidate roots, and candidate directories; clear only named tool-
+owned files; and publish diagnostics through an atomic no-follow replacement.
+Treat `failure.log` as an index-only tombstone. Require two consecutive stable
+semantic/field/framebuffer-alpha snapshots before each screenshot, then validate
+current WebGL/HDR evidence, scale-1 CSS clip dimensions, PNG CRC/chunk/budget/
+inflate/filter integrity, and result identity from the actual local bytes.
+`index.json` must use
+relative paths and an explicit `complete` bit meaning every selected candidate
+passed. Invalidate an old complete root sheet before mutating a rerun, publish
+the contact sheet first, and publish the complete machine index last. The
+`audit:visual-lab:batch:capture` route with `--index-only=1` launches neither
+Chrome nor a build. Do not describe this local sheet as a Pages artifact unless
+CI is later changed to publish it.
 Its built-bundle `file://` route is preferred over an old long-running Vite
 server. The compositor hook is post-bloom, so do not claim that emission lab
 brightness generates bloom.

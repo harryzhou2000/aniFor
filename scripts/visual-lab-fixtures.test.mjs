@@ -1,7 +1,15 @@
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
+import { once } from 'node:events';
 import { readFileSync } from 'node:fs';
+import {
+  access, mkdir, mkdtemp, readFile, rm, writeFile,
+} from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { setTimeout as sleep } from 'node:timers/promises';
 import { describe, expect, it } from 'vitest';
 import { VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS } from '../src/renderer/visual-lab.ts';
+import { isDetachedProcessGroupAlive } from './detached-process.mjs';
 import {
   buildVisualLabCaptureUrl,
   buildVisualLabStartupExpression,
@@ -300,6 +308,7 @@ describe('Visual Lab fixture adapters', () => {
         '--render-scale for gas must be 1, 2, 4; unsupported paths preserve the baseline'],
       ['--fixture=oil-motion', '--fixture=oil-motion requires --domain=liquid --target=8'],
       ['--fixture=water-motion', '--fixture=water-motion requires --domain=liquid --target=2'],
+      ['--lifecycle-file=', '--lifecycle-file must not be empty'],
     ]) {
       const child = spawnSync(process.execPath, [
         auditScript.pathname, ...argument.split(' '),
@@ -309,11 +318,20 @@ describe('Visual Lab fixture adapters', () => {
       expect(child.status).toBe(1);
       expect(child.stderr).toContain(message);
     }
+    const help = spawnSync(process.execPath, [auditScript.pathname, '--help'], {
+      encoding: 'utf8', timeout: 5_000,
+    });
+    expect(help.status).toBe(0);
+    expect(help.stdout).toContain('--lifecycle-file=/path/to/state.json');
     const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
     expect(packageJson.scripts['audit:visual-lab:capture'])
       .toBe('node scripts/visual-lab-audit.mjs --bundle=dist/index.html');
     expect(packageJson.scripts['audit:visual-lab'])
       .toBe('npm run build && npm run audit:visual-lab:capture --');
+    expect(packageJson.scripts['audit:visual-lab:batch:capture'])
+      .toBe('node scripts/visual-lab-batch.mjs --bundle=dist/index.html');
+    expect(packageJson.scripts['audit:visual-lab:batch'])
+      .toBe('npm run build && npm run audit:visual-lab:batch:capture --');
     for (const [scriptName, candidate] of [
       ['audit:visual-lab:oxygen', 'oxygen-showcase'],
       ['audit:visual-lab:oil-motion', 'oil-motion'],
@@ -335,4 +353,110 @@ describe('Visual Lab fixture adapters', () => {
     expect(packageJson.scripts['audit:vfx:oxygen-volume-fold'])
       .toBe('npm run audit:visual-lab:oxygen');
   });
+
+  it.skipIf(process.platform === 'win32')(
+    'publishes and clears an optional detached-Chrome lifecycle handoff',
+    async () => {
+      const directory = await mkdtemp(path.join(tmpdir(), 'visual-lab-lifecycle-test-'));
+      const fakeChrome = path.join(directory, 'fake-chrome');
+      const fakeChromePid = path.join(directory, 'fake-chrome.pid');
+      const bundle = path.join(directory, 'index.html');
+      const output = path.join(directory, 'capture');
+      const lifecycle = path.join(directory, 'handoff', 'lifecycle.json');
+      const lifecycleOwner = 'a'.repeat(64);
+      await writeFile(fakeChrome, `#!/usr/bin/env node
+require('node:fs').writeFileSync(${JSON.stringify(fakeChromePid)}, String(process.pid));
+setInterval(() => {}, 1000);
+`, { mode: 0o755 });
+      await writeFile(bundle, '<!doctype html>');
+      await mkdir(output, { recursive: true });
+      const auditScript = new URL('./visual-lab-audit.mjs', import.meta.url);
+      const child = spawn(process.execPath, [
+        auditScript.pathname,
+        `--bundle=${bundle}`,
+        `--output-dir=${output}`,
+        `--chrome=${fakeChrome}`,
+        `--lifecycle-file=${lifecycle}`,
+        `--lifecycle-owner=${lifecycleOwner}`,
+      ], { stdio: ['ignore', 'ignore', 'pipe'] });
+      const exited = once(child, 'exit');
+      let record;
+      let stderr = '';
+      child.stderr.on('data', (chunk) => { stderr += chunk; });
+
+      try {
+        const deadline = Date.now() + 5_000;
+        while (!record && Date.now() < deadline) {
+          try { record = JSON.parse(await readFile(lifecycle, 'utf8')); }
+          catch { await sleep(20); }
+        }
+        expect(record, stderr).toMatchObject({
+          schema: 'anifor.visual-lab.lifecycle/v1',
+          pid: expect.any(Number),
+          profile: expect.any(String),
+          createdAtMs: expect.any(Number),
+          startToken: process.platform === 'linux' ? expect.any(String) : null,
+          owner: lifecycleOwner,
+        });
+        expect(path.isAbsolute(record.profile)).toBe(true);
+        expect(isDetachedProcessGroupAlive(record.pid)).toBe(true);
+        await expect(access(record.profile)).resolves.toBeUndefined();
+
+        child.kill('SIGTERM');
+        const [code] = await exited;
+        expect(code).toBe(143);
+        await expect(access(lifecycle)).rejects.toMatchObject({ code: 'ENOENT' });
+        await expect(access(record.profile)).rejects.toMatchObject({ code: 'ENOENT' });
+        expect(isDetachedProcessGroupAlive(record.pid)).toBe(false);
+      } finally {
+        if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
+        let cleanupPid = record?.pid;
+        if (!cleanupPid) {
+          try { cleanupPid = Number(await readFile(fakeChromePid, 'utf8')); }
+          catch { /* Chrome never spawned */ }
+        }
+        if (Number.isSafeInteger(cleanupPid) && isDetachedProcessGroupAlive(cleanupPid)) {
+          try { process.kill(-cleanupPid, 'SIGKILL'); } catch { /* already gone */ }
+        }
+        await rm(directory, { recursive: true, force: true });
+      }
+    },
+    10_000,
+  );
+
+  it.skipIf(process.platform === 'win32')(
+    'observes an immediately exiting Chrome before lifecycle publication can yield',
+    async () => {
+      const directory = await mkdtemp(path.join(tmpdir(), 'visual-lab-startup-race-test-'));
+      const fakeChrome = path.join(directory, 'fake-chrome');
+      const bundle = path.join(directory, 'index.html');
+      const output = path.join(directory, 'capture');
+      const lifecycle = path.join(directory, 'handoff', 'lifecycle.json');
+      const lifecycleOwner = 'b'.repeat(64);
+      await writeFile(fakeChrome, '#!/usr/bin/env node\nprocess.exit(23);\n', { mode: 0o755 });
+      await writeFile(bundle, '<!doctype html>');
+      const auditScript = new URL('./visual-lab-audit.mjs', import.meta.url);
+      const startedAt = Date.now();
+      const child = spawnSync(process.execPath, [
+        auditScript.pathname,
+        `--bundle=${bundle}`,
+        `--output-dir=${output}`,
+        `--chrome=${fakeChrome}`,
+        `--lifecycle-file=${lifecycle}`,
+        `--lifecycle-owner=${lifecycleOwner}`,
+      ], { encoding: 'utf8', timeout: 5_000 });
+
+      try {
+        expect(child.status).toBe(1);
+        expect(child.error).toBeUndefined();
+        expect(Date.now() - startedAt).toBeLessThan(5_000);
+        expect(child.stderr).not.toContain('Chrome DevTools timeout');
+        expect(child.stderr).toMatch(/Chrome exited before DevTools|ENOENT|no such file/i);
+        await expect(access(lifecycle)).rejects.toMatchObject({ code: 'ENOENT' });
+      } finally {
+        await rm(directory, { recursive: true, force: true });
+      }
+    },
+    10_000,
+  );
 });

@@ -17,9 +17,11 @@
  * targets are semantic material IDs (0 = wildcard).
  */
 
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
-import { access, mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
+import {
+  access, mkdir, mkdtemp, readFile, rename, rm, stat, writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -41,6 +43,8 @@ const CDP_CONNECT_TIMEOUT_MS = 10_000;
 const CDP_COMMAND_TIMEOUT_MS = 20_000;
 const PAGE_STARTUP_TIMEOUT_MS = 60_000;
 const VARIANT_SETTLE_TIMEOUT_MS = 10_000;
+const VISUAL_LAB_LIFECYCLE_SCHEMA = 'anifor.visual-lab.lifecycle/v1';
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const VARIANTS = Object.freeze([
   Object.freeze({ value: 0, name: 'off' }),
   Object.freeze({ value: 1, name: 'a' }),
@@ -62,6 +66,8 @@ Options (use --name=value):
   --output-dir=/tmp/anifor-visual-lab-gas
   --chrome=/path/to/chrome              Otherwise CHROME_BIN/autodetection
   --gpu=auto|swiftshader                Prefer local GPU; CI can force software
+  --lifecycle-file=/path/to/state.json  Optional detached-Chrome cleanup handoff
+  --lifecycle-owner=<sha256>             Required root/candidate identity for that handoff
   --help
 
 Outputs: off.png, a.png, b.png, and report.json in --output-dir.`;
@@ -70,7 +76,7 @@ function parseArguments(argv) {
   if (argv.includes('--help')) return { help: true };
   const known = new Set([
     'base-url', 'bundle', 'candidate', 'domain', 'target', 'fixture', 'gain', 'render-scale',
-    'output-dir', 'chrome', 'gpu',
+    'output-dir', 'chrome', 'gpu', 'lifecycle-file', 'lifecycle-owner',
   ]);
   const values = new Map();
   for (const argument of argv) {
@@ -82,6 +88,17 @@ function parseArguments(argv) {
     if (!known.has(name)) throw new Error(`Unknown option --${name}`);
     if (values.has(name)) throw new Error(`Option --${name} may only be provided once`);
     values.set(name, argument.slice(separator + 1));
+  }
+
+  if (values.has('lifecycle-file') && values.get('lifecycle-file').trim().length === 0) {
+    throw new Error('--lifecycle-file must not be empty');
+  }
+  if (values.has('lifecycle-file') !== values.has('lifecycle-owner')) {
+    throw new Error('--lifecycle-file and --lifecycle-owner must be provided together');
+  }
+  if (values.has('lifecycle-owner')
+    && !/^[a-f0-9]{64}$/.test(values.get('lifecycle-owner'))) {
+    throw new Error('--lifecycle-owner must be a lowercase SHA-256 identity');
   }
 
   const candidate = values.has('candidate')
@@ -163,9 +180,47 @@ function parseArguments(argv) {
     gpu,
     outputDir: path.resolve(values.get('output-dir') ?? defaultOutput),
     chrome: values.get('chrome'),
+    lifecycleFile: values.has('lifecycle-file')
+      ? path.resolve(values.get('lifecycle-file')) : undefined,
+    lifecycleOwner: values.get('lifecycle-owner'),
     bundle: values.has('bundle'),
   });
 }
+
+const readProcessStartToken = async (pid) => {
+  if (process.platform !== 'linux') return null;
+  const source = await readFile(`/proc/${pid}/stat`, 'utf8');
+  const commandEnd = source.lastIndexOf(')');
+  const fields = commandEnd >= 0
+    ? source.slice(commandEnd + 1).trim().split(/\s+/) : [];
+  const token = fields[19];
+  if (!token || !/^\d+$/.test(token)) {
+    throw new Error(`Cannot identify Chrome process ${pid} from /proc`);
+  }
+  return token;
+};
+
+const publishLifecycleFile = async (file, pid, profile, owner) => {
+  if (!Number.isSafeInteger(pid) || pid <= 1) {
+    throw new Error(`Chrome returned an unsafe detached process group PID: ${String(pid)}`);
+  }
+  const temporary = `${file}.${process.pid}.${randomUUID()}.tmp`;
+  const record = {
+    schema: VISUAL_LAB_LIFECYCLE_SCHEMA,
+    pid,
+    profile,
+    createdAtMs: Date.now(),
+    startToken: await readProcessStartToken(pid),
+    owner,
+  };
+  try {
+    await writeFile(temporary, `${JSON.stringify(record)}\n`, { mode: 0o600, flag: 'wx' });
+    await rename(temporary, file);
+  } catch (error) {
+    await rm(temporary, { force: true }).catch(() => {});
+    throw error;
+  }
+};
 
 async function main() {
   const options = parseArguments(process.argv.slice(2));
@@ -177,19 +232,31 @@ async function main() {
   const url = buildVisualLabCaptureUrl(options.baseUrl, options);
   await ensureServer(url, options.bundle);
   await mkdir(options.outputDir, { recursive: true });
+  if (options.lifecycleFile) {
+    await mkdir(path.dirname(options.lifecycleFile), { recursive: true });
+  }
   const chromePath = await resolveChrome(options.chrome);
   let cdp;
   let chrome;
   let profile;
+  let lifecyclePublished = false;
+  let lifecyclePublicationPromise;
   let cleanupPromise;
   const cleanup = () => {
     cleanupPromise ??= (async () => {
+      if (lifecyclePublicationPromise) {
+        await lifecyclePublicationPromise.catch(() => {});
+      }
       await requestBrowserShutdown(cdp);
       const terminated = await terminateDetachedProcess(chrome);
       if (!terminated) {
         throw new Error(`Chrome process group ${chrome?.pid ?? 'unknown'} survived cleanup`);
       }
       if (profile) await rm(profile, { recursive: true, force: true });
+      if (lifecyclePublished) {
+        await rm(options.lifecycleFile, { force: true });
+        lifecyclePublished = false;
+      }
     })();
     return cleanupPromise;
   };
@@ -213,8 +280,19 @@ async function main() {
       '--force-device-scale-factor=1', '--disable-background-timer-throttling',
       '--disable-renderer-backgrounding', ...gpuFlags, url.href,
     ], { detached: true, stdio: ['ignore', 'ignore', 'pipe'] });
-
-    const target = await findChromeTarget(chrome, url);
+    // Install Chrome's error/exit/stderr observers before any filesystem
+    // publication can yield. An immediately failing executable must not race
+    // past the DevTools watcher and masquerade as a 15-second timeout.
+    const targetPromise = findChromeTarget(chrome, url);
+    if (options.lifecycleFile) {
+      lifecyclePublicationPromise = publishLifecycleFile(
+        options.lifecycleFile, chrome.pid, profile, options.lifecycleOwner,
+      ).then(() => { lifecyclePublished = true; });
+    }
+    const [target] = await Promise.all([
+      targetPromise,
+      lifecyclePublicationPromise ?? Promise.resolve(),
+    ]);
     cdp = await Cdp.connect(target.webSocketDebuggerUrl);
     const browserErrors = collectBrowserErrors(cdp);
     await Promise.all([
@@ -265,14 +343,25 @@ async function main() {
         reference.framebufferAlpha, captures[name].state.framebufferAlpha,
       )),
     };
+    const invariantEvidence = Object.fromEntries(VARIANTS.map(({ name }) => [name, {
+      semantic: captures[name].state.semantic,
+      fieldAlpha: captures[name].state.fieldAlpha,
+      framebufferAlpha: captures[name].state.framebufferAlpha,
+    }]));
     assert(invariants.semantic, 'visual variants changed the semantic material plane');
     assert(invariants.fieldAlpha, `${options.domain} visual variants changed field alpha/support`);
-    assert(invariants.framebufferAlpha, 'visual variants changed WebGL framebuffer alpha/support');
+    assert(invariants.framebufferAlpha,
+      `visual variants changed WebGL framebuffer alpha/support: ${JSON.stringify(invariantEvidence)}`);
     assert(browserErrors.length === 0, `browser errors: ${browserErrors.join(' | ')}`);
 
     const compactCaptures = Object.fromEntries(VARIANTS.map(({ name }) => [name, {
       png: captures[name].png,
       bytes: captures[name].bytes,
+      width: captures[name].width,
+      height: captures[name].height,
+      cssWidth: captures[name].cssWidth,
+      cssHeight: captures[name].cssHeight,
+      clipScale: captures[name].clipScale,
       sha256: captures[name].sha256,
       distinctFromOff: captures[name].sha256 !== captures.off.sha256,
       dataset: captures[name].state.dataset,
@@ -516,7 +605,16 @@ async function captureVariant(cdp, options, variant) {
       && Number(canvas.dataset.visualLabGain) === ${options.gain};
   })()`), VARIANT_SETTLE_TIMEOUT_MS, `${variant.name} lab dataset`);
 
-  const state = await snapshotState(cdp, options.domainAdapter.evidence.readerMethod);
+  let previousState;
+  const state = await waitFor(async () => {
+    const current = await snapshotState(cdp, options.domainAdapter.evidence.readerMethod);
+    const stable = previousState
+      && sameDigest(previousState.semantic, current.semantic)
+      && sameDigest(previousState.fieldAlpha, current.fieldAlpha)
+      && sameDigest(previousState.framebufferAlpha, current.framebufferAlpha);
+    previousState = current;
+    return stable ? current : false;
+  }, VARIANT_SETTLE_TIMEOUT_MS, `${variant.name} stable semantic/alpha presentation`);
   assertVariantState(state, options, variant);
   const clip = await evaluate(cdp, `(() => {
     const rect = document.querySelector('.semantic-field-canvas').getBoundingClientRect();
@@ -533,14 +631,37 @@ async function captureVariant(cdp, options, variant) {
     format: 'png', fromSurface: true, captureBeyondViewport: true, clip,
   }, CDP_COMMAND_TIMEOUT_MS);
   const bytes = Buffer.from(screenshot.data, 'base64');
+  const dimensions = capturePngDimensions(bytes, variant.name);
+  assert(Math.abs(dimensions.width - clip.width) <= 1
+    && Math.abs(dimensions.height - clip.height) <= 1,
+  `${variant.name} PNG dimensions do not match its scale-1 CSS canvas clip`);
   const png = path.join(options.outputDir, `${variant.name}.png`);
   await writeFile(png, bytes);
   return {
     state,
     png,
     bytes: bytes.byteLength,
+    ...dimensions,
+    cssWidth: clip.width,
+    cssHeight: clip.height,
+    clipScale: clip.scale,
     sha256: createHash('sha256').update(bytes).digest('hex'),
   };
+}
+
+function capturePngDimensions(bytes, variant) {
+  if (bytes.length < 24
+    || !bytes.subarray(0, PNG_SIGNATURE.length).equals(PNG_SIGNATURE)
+    || bytes.readUInt32BE(8) !== 13
+    || bytes.toString('ascii', 12, 16) !== 'IHDR') {
+    throw new Error(`${variant} capture is not a canonical PNG screenshot`);
+  }
+  const width = bytes.readUInt32BE(16);
+  const height = bytes.readUInt32BE(20);
+  if (width === 0 || height === 0) {
+    throw new Error(`${variant} capture has empty PNG dimensions`);
+  }
+  return { width, height };
 }
 
 function assertVariantState(state, options, variant) {

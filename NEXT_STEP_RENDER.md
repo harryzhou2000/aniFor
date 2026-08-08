@@ -1,35 +1,80 @@
 ## Current execution objective — framework leverage
 
 Prioritize an effective rendering-experiment framework over further isolated
-visual-detail work. The modular typed Visual Lab facade and its executable
-capability profiles are deployed: frozen renderer/capture descriptors share
-exact domain, target, Detail/fallback, evidence, URL, backend/pipeline, and
-resource-budget semantics, and the generic runner consumes them without domain
-branches. The immediate milestone is a named capture-recipe catalog plus
-content-addressed result records. A normal-scale A/B experiment should touch one
-domain module and one catalog entry—not presenter setup, app lifecycle,
-package-script duplication, or CDP branching. Follow that with a small batch
-index/contact-sheet layer that compares recorded candidates without changing
-renderer code.
+visual-detail work. The modular typed Visual Lab facade, executable capability
+profiles, named capture recipes, and content-addressed result records are
+deployed. Frozen renderer/capture descriptors share exact domain, target,
+Detail/fallback, evidence, URL, backend/pipeline, and resource-budget semantics,
+and the generic runner consumes them without domain branches. The immediate
+milestone is a deterministic batch runner and contact-sheet index. A normal-
+scale A/B experiment should touch one domain module and one catalog entry—not
+presenter setup, app lifecycle, package-script duplication, or CDP branching.
 
 The fixed `domain/variant/target/gain` state, promotion-safe same-page switching,
 declarative fixture startup, and production-bundle off/A/B route already form
 the base. E62 Oxygen, E69 Oil motion, and E65 Water motion have been folded into
 their accepted parent baselines and their one-off selector/telemetry/verifier
-plumbing removed. The executable capability-profile checkpoint is complete and
+plumbing removed. The recipe/result framework checkpoint is complete and
 deployed: `main_codex` and Pages serve revision
-`71304b3465b27a37805955f020c448ba3436afbd` after successful workflow run
-`31278167410` and independent 19-resource live asset-closure verification.
+`70d33d8383e75dfb3f071b8e405be2f910d735fa` after successful workflow run
+`31279274149` and independent 19-resource live asset-closure verification.
 
-The next stable deployment checkpoint is the recipe/result milestone, not a
-fourth effect. Named requests must be immutable, conflicting flag overrides
-must fail, ad-hoc captures must remain available, and every report must carry a
-deterministic SHA-256 identity over its normalized request and ordered off/A/B
-artifacts. Existing Oxygen, Oil-motion, and Water-motion commands must delegate
-to the catalog without repeating domain/target/fixture/scale flags. After
-deployment, add a small batch result index before resuming material experiments.
-Canvas remains the resilient semantic fallback and true 8× stays on its compact
-direct path unless a separately budgeted design proves otherwise.
+The next stable deployment checkpoint is the batch milestone, not a fourth
+effect. One production build must feed all selected frozen recipes, each in a
+fresh sequential browser session. The runner must validate child reports and
+recompute result identity from the actual local PNG bytes before publishing a
+versioned deterministic index and relative-path contact sheet. Partial failures
+retain diagnostics but do not publish a complete index. The sheet aids human
+comparison; it does not invent a visual-quality score. Canvas remains the
+resilient semantic fallback and true 8× stays on its compact direct path unless
+a separately budgeted design proves otherwise.
+
+### Batch framework acceptance
+
+`npm run audit:visual-lab:batch` performs exactly one production build, then
+runs every frozen recipe in catalog order. To reuse the current bundle, run:
+
+`npm run audit:visual-lab:batch:capture -- --candidates=gas-showcase,water-motion`
+
+Each candidate gets a fresh browser and an isolated
+`candidates/<name>/` directory containing off/A/B PNGs, `report.json`, and
+stdout/stderr logs. The default five-minute candidate deadline first requests
+the audit's bounded Chrome cleanup, then escalates if the child cannot exit. An
+atomic lifecycle handoff lets the parent terminate and verify the exact detached
+Chrome group even if the audit child must be killed; it is bound to canonical
+batch-root/candidate ownership plus the process start token and exact browser
+profile. Successful cleanup removes the profile and handoff, while an unverifiable
+live process retains both for manual recovery. One output-root lock serializes
+capture and index-only writers. Output ancestors, roots, candidate roots, and
+candidate directories must be real contained directories, diagnostics are
+published atomically without following a leaf symlink, and a rerun clears only
+named tool-owned files. Before aggregation, require consecutive stable semantic,
+field-alpha, and framebuffer-alpha snapshots; re-hash the three local PNGs;
+bind their decoded dimensions to the scale-1 CSS canvas clips; validate PNG
+signature, complete chunks, CRCs, bounded dimensions, zlib consumption,
+decompressed length, and row filters; then recompute the
+`anifor.visual-lab.result/v1` identity from the frozen recipe, and require all
+current WebGL/HDR/startup/dataset evidence, semantic/field/framebuffer support
+invariants, and zero browser errors. Never trust absolute artifact paths copied
+from a child report. A `failure.log` is a durable tombstone for index-only mode;
+only a fresh capture clears it, so cleanup failures cannot later become passes.
+
+The root `index.json` uses `anifor.visual-lab.batch/v1`, canonical catalog
+ordering, only relative artifact paths, and an explicit `complete` bit meaning
+that every selected candidate passed. Its
+portable `index.html` shows off/A/B cards and labels incomplete batches clearly;
+it remains useful for failure navigation but cannot be mistaken for a complete
+result. An interrupted rerun invalidates the old root index/sheet before it
+touches candidate artifacts, so stale success cannot survive. Publish the sheet
+first and the machine-readable index last, so `complete: true` can never precede
+its required comparison page. Reuse `dist` with
+`npm run audit:visual-lab:batch:capture -- --index-only=1`; this regenerates both
+files from existing candidate artifacts without launching Chrome or rebuilding.
+The sheet is local evidence,
+not a Pages asset or an automated aesthetic score. Once this checkpoint is
+deployed, extend the framework only where it shortens candidate authoring,
+comparison, or CI artifact review; then use one catalog entry to choose the next
+high-value material treatment.
 
 ## Visual north star
 
@@ -3456,11 +3501,12 @@ or tighter topology checks when the candidate can affect a protected contract.
 E62, E69, and E65 prove that the framework can absorb accepted leaf treatments
 while deleting selector/plumbing and cloned verifier code. The typed domain
 facade, executable capability profiles, exact 0/7/7 read budgets, declarative
-fixtures, protocol-owned URL/dataset requirements, and bounded Chrome lifecycle
-are complete and deployed at revision
-`71304b3465b27a37805955f020c448ba3436afbd`. The current milestone is operational
-leverage over that seam: named requests, strict option ownership, content-
-addressed reports, and then a batch result index. Defer E66 and Powder until
+fixtures, protocol-owned URL/dataset requirements, bounded Chrome lifecycle,
+named recipes, and content-addressed results are complete and deployed at
+revision `70d33d8383e75dfb3f071b8e405be2f910d735fa`. The current milestone is
+operational leverage over that seam: run selected recipes from one build,
+validate their local artifacts, and publish a deterministic batch index/contact
+sheet. Defer E66 and Powder until
 their extra samples or source-stage stability proof fit the existing budgeted
 facade without creating a second experiment framework.
 
@@ -3591,10 +3637,10 @@ motion cue. No sample, texture, field, target, pass, upload, allocation, clock,
 alpha, support, ownership, or compact-8× branch was added.
 
 The migration was checkpointed as
-`c85e3cfdd1deb16dd4994a51db29929c01df76a3`; the later executable capability
-checkpoint is deployed at `71304b3465b27a37805955f020c448ba3436afbd` by
-workflow run `31278167410`. Treat E65 and the capability facade as complete; the
-next deployment is the recipe/result checkpoint above.
+`c85e3cfdd1deb16dd4994a51db29929c01df76a3`; the later recipe/result framework
+checkpoint is deployed at `70d33d8383e75dfb3f071b8e405be2f910d735fa` by
+workflow run `31279274149`. Treat E65 and the framework facade as complete; the
+next deployment is the batch runner/index checkpoint above.
 
 The hook runs after bloom extraction. Emission experiments can reshape final
 radiance but cannot seed new bloom until a deliberately budgeted pre-extract
@@ -3608,14 +3654,14 @@ preparation. The serialized startup transaction observes
 the mounted scene and Canvas `webgl-starting` state before any mutation, then
 prepares and stages variant B synchronously; missing or throwing preparers return
 immediate structured failures rather than consuming the 60-second readiness
-budget. Twenty-eight focused Visual Lab tooling tests cover capability/fixture
+budget. The focused Visual Lab tooling suite covers capability/fixture
 catalogs, recipe validation, result identities, startup ordering, fail-fast CLI
 ownership, URL construction, and compatibility aliases; the detached-process
 lifecycle tests remain alongside them in `npm test`. The named Water candidate
 passes at canonical 2× with exact topology/alpha invariants, distinct off/A/B
 images, zero browser errors, and a deterministic content-addressed result.
-Immediate work is checkpoint/deployment of this recipe/result layer, followed by
-a batch result index. Defer E66 and Powder until the fixed HDR seam can receive
+Immediate work is checkpoint/deployment of the batch result index and contact
+sheet. Defer E66 and Powder until the fixed HDR seam can receive
 their stability/body proof without a second experiment framework.
 
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
