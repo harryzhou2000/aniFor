@@ -3289,6 +3289,64 @@ describe('Pixi presenter startup configuration', () => {
     expect(preserve).toContain("get('carbonDioxideBodyVfxAudit') === '1'");
   });
 
+  it('keeps E70 Steam condensate exact-style, E04-dependent, normal-WebGL-only, and RGB-only', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e70Start = normal.indexOf('      // E70:');
+    const e70End = normal.indexOf('      // E57:', e70Start);
+    const e70 = normal.slice(e70Start, e70End);
+    const parentStart = normal.lastIndexOf('    if (uGasBodyVfx > 0.5)', e70Start);
+    const preserveStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveEnd = source.indexOf('resolution: outputScale', preserveStart);
+    const preserve = source.slice(preserveStart, preserveEnd);
+
+    expect(eightStart).toBeGreaterThanOrEqual(0);
+    expect(normalStart).toBeGreaterThan(eightStart);
+    expect(normalEnd).toBeGreaterThan(normalStart);
+    expect(e70Start).toBeGreaterThanOrEqual(0);
+    expect(e70End).toBeGreaterThan(e70Start);
+    expect(parentStart).toBeGreaterThanOrEqual(0);
+    expect(parentStart).toBeLessThan(e70Start);
+    expect(normal).toContain('uniform float uSteamCondensateVfx;');
+    expect(normal.match(/uSteamCondensateVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uSteamCondensateVfx');
+    expect(eight).not.toContain('steamCondensatePhase');
+    expect(eight).not.toMatch(/steamCondensate/i);
+    expect(canvasSource).not.toContain('steamCondensateVfx');
+    for (const guard of [
+      'uSteamCondensateVfx > 0.5', 'uGasIdentityStyling > 0.5',
+      'wall < 0.5', '!materialEmissive',
+      'floor(gasStyleState.r * 255.0 + 0.5)',
+      'abs(steamCondensateStyle - 2.0)', 'steamCondensateOwner > 0.5',
+    ]) expect(e70).toContain(guard);
+    for (const establishedFieldScalar of [
+      'gasVfxBodySupport', 'cloudNeighbourMean', 'atmosphereState.a',
+      'gasVfxBillow', 'gasVfxWaveC', 'gasDirectionalRelief', 'gasCurvature',
+      'gasCrown', 'gasPocket', 'gasForwardScatter', 'opticalDepth',
+    ]) expect(e70).toContain(establishedFieldScalar);
+    expect(e70).not.toContain('texture(');
+    expect(e70).not.toContain('uTime');
+    expect(e70).not.toContain('sin(');
+    expect(e70).not.toContain('gl_FragCoord');
+    expect(e70).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source).toMatch(
+      /const steamCondensateVfxEnabled = outputScale < 8\s*&& resolveSteamCondensateVfxEnabled\(renderLook\);/,
+    );
+    expect(source.match(/this\.uniforms\.uniforms\.uSteamCondensateVfx = 0;/g))
+      .toHaveLength(2);
+    expect(source).toContain(
+      'uSteamCondensateVfx: { value: steamCondensateVfxEnabled ? 1 : 0',
+    );
+    expect(source).toContain('presenter.app.canvas.dataset.steamCondensateVfx');
+    expect(source).toContain("this.app.canvas.dataset.steamCondensateVfx = 'inactive';");
+    expect(preserve).toContain("get('steamCondensateVfxAudit') === '1'");
+  });
+
   it('keeps E57 FOG core diffusion exact-style, E04-dependent, normal-WebGL-only, and RGB-only', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');

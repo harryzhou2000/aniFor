@@ -346,6 +346,25 @@ export function resolveCarbonDioxideBodyVfxEnabled(
 }
 
 /**
+ * E70 recomposes only exact propagated Steam/WTRV into a pearly condensate
+ * volume after E04 has proved a connected atmosphere-owned body. The child
+ * cannot recreate the gas baseline, and generic input audits retain their
+ * frozen Steam reference until they request it explicitly.
+ */
+export function resolveSteamCondensateVfxEnabled(
+  look: RenderLook,
+  search = globalThis.location?.search ?? '',
+): boolean {
+  if (!resolveGasBodyVfxEnabled(look, search)) return false;
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('steamCondensateVfx');
+  if (requested === '0' || requested === 'off' || requested === 'false') return false;
+  if (requested === '1' || requested === 'on' || requested === 'true') return true;
+  if (parameters.get('inputAudit') === '1') return false;
+  return true;
+}
+
+/**
  * E57 controls the independently measurable exact-FOG connected-core response.
  * It remains a strict child of E04 and defaults off in generic input fixtures,
  * keeping every older gas audit's selector set and calibrated framebuffer

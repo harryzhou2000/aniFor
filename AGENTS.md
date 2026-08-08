@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E69. E12 is the
+The accepted visual experiment ladder now runs through E70. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -1512,6 +1512,35 @@ top `4.19/4.20/3.58`, left `4.94/5.19/4.56`, and right
 `2.08/2.27/2.30`, with the required signed polarity retained at every scale.
 All controls are exact, browser errors are zero, and the true-8× exclusion
 fence completed in `5.0048 s`.
+
+E70 is the normal-WebGL HDR-only exact-Steam condensate-volume checkpoint,
+independently measurable with `?steamCondensateVfx=0|1` and strictly
+subordinate to E04. Only exact propagated atmosphere style `2` inside an
+already-connected, non-wall, non-emissive gas body may respond. Reuse the
+existing E04 body support, atmosphere/cardinal density, static three-wave
+billow, directional relief, curvature, forward scatter, and optical depth to
+form a broad pearly warm crown and cool absorptive pocket. E70 is RGB-only and
+adds one selector uniform but no sample, sampler, texture, field, pass, target,
+upload, persistent allocation, clock/noise, alpha, support, silhouette,
+ownership, topology, or physics decision. Canvas and compact true 8× remain
+E70-inactive; never declare or branch on E70 in `FIELD_EIGHT_X_FRAGMENT`.
+
+`npm run audit:vfx:steam-condensate` owns a paused exact-WTRV fixture and runs
+off→on→off at 1×/2×/4×. It freezes a broad body, positive crown, negative
+pocket, authored void/channel, sparse carriers/midpoint/gap/thin/isolated
+controls, Steam/FOG seam, Water/Metal contacts, native wall, blank, and all 16
+non-Steam propagated atmosphere styles. Semantic/material/style/atmosphere,
+native-wall, alpha, and support state remain exact, and repeated-off
+framebuffers are byte-identical. Accepted target RGB RMS is broad
+`2.72/2.72/2.73`, core `9.28/9.27/9.26`, crown `11.36/11.34/11.33`, and pocket
+`2.62/2.65/2.66` at 1×/2×/4×. The crown is warm-positive, the pocket is
+red-absorptive/cool-negative, all sibling gas probes are exact, the open-channel
+HDR footprint is bounded to one byte, the thin strand to two, and the Steam/FOG
+seam to four/two.
+Requested-on true 8× must report E04/E70/HDR inactive for `scale-8`, omit the
+dense fixture and bloom resources, retain exact 4896×3072 WebGL, and finish a
+real GPU fence. The final frozen acceptance run completed that fence in `5.0554 s` with
+zero browser errors.
 
 Visual-audit lesson: `inputAudit=1` disables opt-in child selectors unless the
 composed route names them explicitly, so canonical evidence must request and

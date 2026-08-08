@@ -2350,7 +2350,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   coverage `.971`, macro range `50`, zero dark/clipped fraction, and exact
   semantics across the full composed matrix.
 
-**Next visual experiments:** E03–E69 provide accepted liquid body/surface,
+**Next visual experiments:** E03–E70 provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -2364,7 +2364,9 @@ depth-light recomposition, exact Noble Gas pearlescent billow depth, exact
 Wood/PLNT mesostructure, exact Smoke soft soot volume, and exact Smoke
 billow-depth, plus exact temperature- and velocity-driven Fire identity, an
 atmosphere-owned coherent CFLM cold-flame fold, and an exact-Oil
-velocity-oriented reflective slick with a cool absorptive wake. E27's final
+velocity-oriented reflective slick with a cool absorptive wake, plus an exact-
+Steam pearly condensate crown/cool pocket over the established connected gas
+body. E27's final
 canonical 2× Smoke result is luma deviation `2.22`, microcontrast `.39`, macro
 range `10`, luma range `14`, full support recall, and no clipping. E28 adds
 exact Wood/PLNT pigment/body depth without disturbing E20/E26 topology or
@@ -2945,6 +2947,37 @@ top `4.19/4.20/3.58`, left `4.94/5.19/4.56`, and right
 `2.08/2.27/2.30` RMS. All controls are exact, browser errors are zero, and the
 true-8× exclusion fence completed in `5.0048 s`.
 
+E70 is the accepted normal-WebGL HDR-only exact-Steam condensate-volume
+checkpoint, independently selectable with `?steamCondensateVfx=0|1`. A fresh
+gas-identity capture showed propagated WTRV style `2` as a smooth but flat pale
+slab. E70 remains a strict child of E04 and admits only exact style `2` inside
+an already-connected, non-wall, non-emissive atmosphere body. It recombines
+the existing body support, atmosphere/cardinal density, static billow carriers,
+directional relief, curvature, forward scatter, and optical depth into broad
+pearly warm crowns and red-absorptive cool pockets. The effect changes RGB
+only, adds one selector uniform, and adds no sample, sampler, texture, field,
+pass, target, upload, allocation, clock/noise, alpha, support, silhouette,
+ownership, topology, or physics decision. Canvas and compact true 8× retain
+their established style-2 presentation.
+
+`npm run audit:vfx:steam-condensate` runs a deterministic paused off→on→off
+matrix at 1×/2×/4×. Its exact fixture includes a broad WTRV body with strong
+positive/negative macro probes, authored void/channel, sparse
+carrier/midpoint/gap/thin/isolated controls, Steam/FOG seam, Water/Metal
+contacts, native wall, blank, and every one of the 16 non-Steam propagated gas
+identities. Semantic/material/style/atmosphere, native wall, alpha, support,
+and repeated-off framebuffer state remain exact. Accepted RGB RMS is
+`2.72/2.72/2.73` broad, `9.28/9.27/9.26` core,
+`11.36/11.34/11.33` crown, and `2.62/2.65/2.66` pocket at 1×/2×/4×; sibling
+identity probes are exact, the one-cell strand stays within two RGB bytes, and
+the open-channel HDR footprint stays within one while the eligible Steam/FOG
+edge stays within four/two. Requested-on true 8× keeps
+E04/E70/HDR inactive, omits the dense fixture and bloom resources, presents
+exact 4896×3072 WebGL, and completed its final frozen GPU fence in `5.0554 s` with zero
+browser errors. Select the next experiment from a fresh composed/material
+capture; do not immediately broaden E70 to generic CleanGas or another gas
+identity by visual resemblance.
+
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 
 **Goal:** everything downstream needs light and dynamic range; build the chassis first.
@@ -2961,6 +2994,7 @@ true-8× exclusion fence completed in `5.0048 s`.
 
 - **Screen-space fluid rendering** (Müller-style, the classic 2007 technique): liquid coverage → depth/thickness buffer → **curvature flow smoothing** for a real meniscus → reconstruct normals → **Fresnel reflection + refraction of the background/wall pattern behind** → specular glints. Your current per-species depth gradient is the seed of the thickness buffer.
 - **Foam, spray & meniscus:** E65 supplies a bounded exact-Water whitecap/refraction response from packed native velocity on already-connected E08 surfaces. E66 adds an independent optical curvature finish for resting convex crests and concave inlets; it does not smooth geometric alpha. E69 closes the first exact-Oil non-Water treatment with a velocity-oriented reflective slick and cool absorptive wake over the established E22/E38 body finish. Detached spray support, divergence-aware foam persistence, and Acid/Diesel/Nitro family treatments remain open and must retain exact topology controls.
+- **Steam condensate volume:** E70 adds broad static pearly lobes and a cool recessed pocket only to exact propagated WTRV style `2`, reusing E04's connected atmosphere evidence without changing support or adding a field/resource. All other gas identities, sparse topology, Canvas, and compact true 8× remain controls. Advected vapour detail and light shafts remain separate future experiments.
 - **Gases as participating media:** extend your density/colour field with a **noise-animated volume** — FBM curl noise advected by the velocity field, modulated by density, lit by the dynamic lights (light shafts through smoke are extremely high-impact). Approximate with 2–3 octave noise at half res, upsampled.
 - **Fire:** E67 now adds an exact-owner temperature-stratified body and velocity-shaped tongue on the normal HDR path. Its procedural flow remains subordinate to authentic temperature/velocity state, sparse Fire stays discrete, and compact true 8× keeps the established generic Energy presentation. Persistent advected flame volume, ember/spray support, and dynamic light transport remain separate future experiments.
 

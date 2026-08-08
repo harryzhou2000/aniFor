@@ -75,6 +75,9 @@ import {
   CARBON_DIOXIDE_BODY_VFX_AUDIT, prepareCarbonDioxideBodyVfxFixture,
 } from './carbon-dioxide-body-vfx-audit';
 import {
+  STEAM_CONDENSATE_VFX_AUDIT, prepareSteamCondensateVfxFixture,
+} from './steam-condensate-vfx-audit';
+import {
   FOG_CORE_DIFFUSE_VFX_AUDIT, prepareFogCoreDiffuseVfxFixture,
 } from './fog-core-diffuse-vfx-audit';
 import {
@@ -931,6 +934,12 @@ export class Game {
       carbonDioxideBodyVfxFixture: () => CARBON_DIOXIDE_BODY_VFX_AUDIT,
       prepareCarbonDioxideBodyVfxFixture: () => {
         prepareCarbonDioxideBodyVfxFixture(this.simulation);
+        this.renderer.synchronizeFixtureMaterialPlane();
+        this.renderer.invalidateDynamicPresentation();
+      },
+      steamCondensateVfxFixture: () => STEAM_CONDENSATE_VFX_AUDIT,
+      prepareSteamCondensateVfxFixture: () => {
+        prepareSteamCondensateVfxFixture(this.simulation);
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
       },

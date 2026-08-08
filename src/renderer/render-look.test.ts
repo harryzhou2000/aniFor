@@ -12,6 +12,7 @@ import {
   resolveWoodBarkReliefVfxEnabled,
   resolveWoodTanninVfxEnabled,
   resolveCarbonDioxideBodyVfxEnabled,
+  resolveSteamCondensateVfxEnabled,
   resolveFogCoreDiffuseVfxEnabled,
   resolveCeramicGlazeVfxEnabled,
   DEFAULT_RENDER_LOOK, resolveGasBodyVfxEnabled, resolveGasCoreDepthVfxEnabled,
@@ -1109,6 +1110,36 @@ describe('resolveRenderLook', () => {
     )).toBe(false);
     expect(resolveCarbonDioxideBodyVfxEnabled(
       'realistic', '?volumeVfx=0&gasBodyVfx=on&carbonDioxideBodyVfx=1',
+    )).toBe(true);
+  });
+
+  it('keeps exact Steam condensate volume subordinate to E04 and isolated from older input audits', () => {
+    expect(resolveSteamCondensateVfxEnabled(
+      'classic', '?steamCondensateVfx=on',
+    )).toBe(false);
+    expect(resolveSteamCondensateVfxEnabled('realistic', '')).toBe(true);
+    expect(resolveSteamCondensateVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolveSteamCondensateVfxEnabled('realistic', '?inputAudit=1')).toBe(false);
+    expect(resolveSteamCondensateVfxEnabled(
+      'realistic', '?inputAudit=1&steamCondensateVfx=true',
+    )).toBe(true);
+    expect(resolveSteamCondensateVfxEnabled(
+      'realistic', '?steamCondensateVfx=off',
+    )).toBe(false);
+    expect(resolveSteamCondensateVfxEnabled(
+      'realistic', '?steamCondensateVfx=0',
+    )).toBe(false);
+    expect(resolveSteamCondensateVfxEnabled(
+      'realistic', '?steamCondensateVfx=false',
+    )).toBe(false);
+    expect(resolveSteamCondensateVfxEnabled(
+      'realistic', '?steamCondensateVfx=on',
+    )).toBe(true);
+    expect(resolveSteamCondensateVfxEnabled(
+      'realistic', '?gasBodyVfx=0&steamCondensateVfx=on',
+    )).toBe(false);
+    expect(resolveSteamCondensateVfxEnabled(
+      'realistic', '?volumeVfx=0&gasBodyVfx=on&steamCondensateVfx=1',
     )).toBe(true);
   });
 

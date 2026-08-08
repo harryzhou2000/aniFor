@@ -54,6 +54,7 @@ import {
   resolveGasMotionVfxEnabled,
   resolveCflmColdFlameVfxEnabled,
   resolveCarbonDioxideBodyVfxEnabled,
+  resolveSteamCondensateVfxEnabled,
   resolveFogCoreDiffuseVfxEnabled,
   resolveHydrogenBodyVfxEnabled,
   resolveOxygenVolumeFoldVfxEnabled,
@@ -3301,6 +3302,7 @@ uniform float uGasCoreDepthVfx;
 uniform float uOxygenVolumeFoldVfx;
 uniform float uHydrogenBodyVfx;
 uniform float uCarbonDioxideBodyVfx;
+uniform float uSteamCondensateVfx;
 uniform float uFogCoreDiffuseVfx;
 uniform float uNobleGasBillowVfx;
 uniform float uNobleGasPrismVfx;
@@ -6652,6 +6654,50 @@ void main() {
           color *= vec3(1.0)
             - vec3(0.20, 0.14, 0.08) * carbonDioxideBodyPocket * 0.500
             - vec3(0.07, 0.06, 0.045) * carbonDioxideBodyCore * 0.080;
+        }
+      }
+
+      // E70: exact propagated Steam/WTRV otherwise converges on E04's generic
+      // CleanGas body and reads as a pale flat slab at fit view. Recombine the
+      // already-live long-wave billow, third carrier, cardinal relief,
+      // curvature, forward scatter, optical depth, and connected-density proof
+      // into a pearly condensate crown with a cool absorptive pocket. RGB only:
+      // no wave, sample, sampler, texture, field, pass, target, upload,
+      // allocation, clock, alpha, support, silhouette, ownership, topology,
+      // state, or physics decision. Canvas and compact true 8x retain style 2.
+      if (uSteamCondensateVfx > 0.5 && uGasIdentityStyling > 0.5
+        && wall < 0.5 && !materialEmissive) {
+        float steamCondensateStyle = floor(gasStyleState.r * 255.0 + 0.5);
+        float steamCondensateOwner = 1.0
+          - step(0.5, abs(steamCondensateStyle - 2.0));
+        if (steamCondensateOwner > 0.5) {
+          float steamCondensateSupport = steamCondensateOwner * gasVfxBodySupport
+            * smoothstep(0.16, 0.54, cloudNeighbourMean)
+            * smoothstep(0.10, 0.54, atmosphereState.a);
+          float steamCondensatePhase = clamp(
+            gasVfxBillow * 0.46 + gasVfxWaveC * 0.32
+              + gasDirectionalRelief * 0.14 + gasCurvature * 0.08,
+            -1.0, 1.0
+          );
+          float steamCondensateCrown = steamCondensateSupport
+            * (max(steamCondensatePhase, 0.0) + gasCrown * 0.14
+              + gasForwardScatter * 1.80)
+            * (1.0 - opticalDepth * 0.12);
+          float steamCondensatePocket = steamCondensateSupport
+            * (max(-steamCondensatePhase, 0.0) + gasPocket * 0.12)
+            * (0.62 + opticalDepth * 0.38);
+          float steamCondensateCore = steamCondensateSupport
+            * smoothstep(0.42, 0.90, opticalDepth)
+            * (1.0 - abs(steamCondensatePhase)) * 0.18;
+          vec3 steamCondensateKey = mix(
+            vec3(0.62, 0.86, 1.05), vec3(1.02, 0.98, 0.91),
+            clamp(0.58 + gasDirectionalRelief * 0.18 + gasCrown * 0.14, 0.0, 1.0)
+          );
+          color += (vec3(1.14) - clamp(color, 0.0, 1.14))
+            * steamCondensateKey * steamCondensateCrown * 0.680;
+          color *= vec3(1.0)
+            - vec3(0.30, 0.18, 0.10) * steamCondensatePocket * 0.480
+            - vec3(0.090, 0.055, 0.032) * steamCondensateCore;
         }
       }
 
@@ -11482,6 +11528,10 @@ export class PixiFieldPresenter {
     // compact true 8x retain their existing propagated style-6 presentation.
     const carbonDioxideBodyVfxEnabled = outputScale < 8
       && resolveCarbonDioxideBodyVfxEnabled(renderLook);
+    // E70 is an arithmetic-only exact-Steam child of E04. Canvas and compact
+    // true 8x keep the established propagated style-2 presentation.
+    const steamCondensateVfxEnabled = outputScale < 8
+      && resolveSteamCondensateVfxEnabled(renderLook);
     // E57 is an arithmetic-only exact-FOG child of E04. Canvas and compact
     // true 8x retain their existing propagated style-10 presentation.
     const fogCoreDiffuseVfxEnabled = outputScale < 8
@@ -11699,6 +11749,7 @@ export class PixiFieldPresenter {
       uCarbonDioxideBodyVfx: {
         value: carbonDioxideBodyVfxEnabled ? 1 : 0, type: 'f32',
       },
+      uSteamCondensateVfx: { value: steamCondensateVfxEnabled ? 1 : 0, type: 'f32' },
       uFogCoreDiffuseVfx: { value: fogCoreDiffuseVfxEnabled ? 1 : 0, type: 'f32' },
       uNobleGasBillowVfx: { value: nobleGasBillowVfxEnabled ? 1 : 0, type: 'f32' },
       uNobleGasPrismVfx: { value: nobleGasPrismVfxEnabled ? 1 : 0, type: 'f32' },
@@ -11982,6 +12033,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uOxygenVolumeFoldVfx = 0;
       this.uniforms.uniforms.uHydrogenBodyVfx = 0;
       this.uniforms.uniforms.uCarbonDioxideBodyVfx = 0;
+      this.uniforms.uniforms.uSteamCondensateVfx = 0;
       this.uniforms.uniforms.uFogCoreDiffuseVfx = 0;
       this.uniforms.uniforms.uNobleGasBillowVfx = 0;
       this.uniforms.uniforms.uNobleGasPrismVfx = 0;
@@ -12071,6 +12123,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('oxygenVolumeFoldVfxAudit') === '1'
             || new URLSearchParams(location.search).get('hydrogenBodyVfxAudit') === '1'
             || new URLSearchParams(location.search).get('carbonDioxideBodyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('steamCondensateVfxAudit') === '1'
             || new URLSearchParams(location.search).get('fogCoreDiffuseVfxAudit') === '1'
             || new URLSearchParams(location.search).get('nobleGasBillowVfxAudit') === '1'
             || new URLSearchParams(location.search).get('nobleGasPrismVfxAudit') === '1'
@@ -12173,6 +12226,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.carbonDioxideBodyVfx = Number(
       presenter.uniforms.uniforms.uCarbonDioxideBodyVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.steamCondensateVfx = Number(
+      presenter.uniforms.uniforms.uSteamCondensateVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.fogCoreDiffuseVfx = Number(
       presenter.uniforms.uniforms.uFogCoreDiffuseVfx
@@ -13788,6 +13844,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uOxygenVolumeFoldVfx = 0;
         this.uniforms.uniforms.uHydrogenBodyVfx = 0;
         this.uniforms.uniforms.uCarbonDioxideBodyVfx = 0;
+        this.uniforms.uniforms.uSteamCondensateVfx = 0;
         this.uniforms.uniforms.uFogCoreDiffuseVfx = 0;
         this.uniforms.uniforms.uNobleGasBillowVfx = 0;
         this.uniforms.uniforms.uNobleGasPrismVfx = 0;
@@ -13853,6 +13910,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.oxygenVolumeFoldVfx = 'inactive';
         this.app.canvas.dataset.hydrogenBodyVfx = 'inactive';
         this.app.canvas.dataset.carbonDioxideBodyVfx = 'inactive';
+        this.app.canvas.dataset.steamCondensateVfx = 'inactive';
         this.app.canvas.dataset.fogCoreDiffuseVfx = 'inactive';
         this.app.canvas.dataset.nobleGasBillowVfx = 'inactive';
         this.app.canvas.dataset.nobleGasPrismVfx = 'inactive';
