@@ -768,6 +768,9 @@ export class Game {
       setPlantCanopyHierarchyVfx: (enabled) => {
         this.renderer.setPlantCanopyHierarchyVfxEnabled(enabled);
       },
+      setPlantCanopyFoliageVfx: (enabled) => {
+        this.renderer.setPlantCanopyFoliageVfxEnabled(enabled);
+      },
       setRockWeatheredFacetVfx: (enabled) => {
         this.renderer.setRockWeatheredFacetVfxEnabled(enabled);
       },

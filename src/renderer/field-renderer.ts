@@ -1315,6 +1315,12 @@ export class MaterialRenderer {
   }
 
   /** Normal-WebGL audit-only in-place uniform toggle; Canvas keeps its path. */
+  setPlantCanopyFoliageVfxEnabled(enabled: boolean): void {
+    this.presenter?.setPlantCanopyFoliageVfxEnabled(enabled);
+    // Preserve the hydrated E58 fixture and submit only the causal uniform.
+  }
+
+  /** Normal-WebGL audit-only in-place uniform toggle; Canvas keeps its path. */
   setRockWeatheredFacetVfxEnabled(enabled: boolean): void {
     this.presenter?.setRockWeatheredFacetVfxEnabled(enabled);
     // Preserve the hydrated E29 fixture and submit only the causal uniform.

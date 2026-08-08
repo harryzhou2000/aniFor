@@ -59,6 +59,7 @@ interface PresenterHarness {
   setBotanicalLifecycleStylingEnabled: PixiFieldPresenter['setBotanicalLifecycleStylingEnabled'];
   setPlantCanopyInterlockVfxEnabled: PixiFieldPresenter['setPlantCanopyInterlockVfxEnabled'];
   setPlantCanopyHierarchyVfxEnabled: PixiFieldPresenter['setPlantCanopyHierarchyVfxEnabled'];
+  setPlantCanopyFoliageVfxEnabled: PixiFieldPresenter['setPlantCanopyFoliageVfxEnabled'];
   setRockWeatheredFacetVfxEnabled: PixiFieldPresenter['setRockWeatheredFacetVfxEnabled'];
   setIszsCrystalHierarchyVfxEnabled: PixiFieldPresenter['setIszsCrystalHierarchyVfxEnabled'];
   setSparkStateStylingEnabled: PixiFieldPresenter['setSparkStateStylingEnabled'];
@@ -1585,7 +1586,8 @@ describe('Pixi presenter startup configuration', () => {
     const normal = source.slice(normalStart, normalEnd);
     const e55Start = normal.indexOf('              // E55:');
     const e58Start = normal.indexOf('                // E58:', e55Start);
-    const e58End = normal.indexOf('        } else {', e58Start);
+    const e71Start = normal.indexOf('                // E71:', e58Start);
+    const e58End = e71Start;
     const e55Parent = normal.slice(e55Start, e58Start);
     const e58 = normal.slice(e58Start, e58End);
     const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
@@ -1598,6 +1600,7 @@ describe('Pixi presenter startup configuration', () => {
 
     expect(e55Start).toBeGreaterThanOrEqual(0);
     expect(e58Start).toBeGreaterThan(e55Start);
+    expect(e71Start).toBeGreaterThan(e58Start);
     expect(e58End).toBeGreaterThan(e58Start);
     expect(e55Parent).toContain('if (uPlantCanopyInterlockVfx > 0.5)');
     expect(normal).toContain('uniform float uPlantCanopyHierarchyVfx;');
@@ -1660,6 +1663,87 @@ describe('Pixi presenter startup configuration', () => {
     expect(auditSetter).toContain('this.presenter?.setPlantCanopyHierarchyVfxEnabled(enabled)');
     expect(auditSetter).not.toContain('fallbackFields');
     expect(auditSetter).not.toContain('contourChunks');
+  });
+
+  it('keeps E71 PLNT canopy foliage continuous, E58-dependent, and resource-neutral', () => {
+    const presenter = presenterHarness();
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    const canvasSource = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
+    const normalStart = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
+    const normalEnd = source.indexOf('`;\n\n/** Primary WebGL presentation', normalStart);
+    const eight = source.slice(eightStart, normalStart);
+    const normal = source.slice(normalStart, normalEnd);
+    const e58Start = normal.indexOf('                // E58:');
+    const e71Start = normal.indexOf('                // E71:', e58Start);
+    const e71End = normal.indexOf('        } else {', e71Start);
+    const e58Parent = normal.slice(e58Start, e71Start);
+    const e71 = normal.slice(e71Start, e71End);
+    const preserveDrawingBufferStart = source.indexOf('preserveDrawingBuffer:');
+    const preserveDrawingBufferEnd = source.indexOf(
+      'resolution: outputScale', preserveDrawingBufferStart,
+    );
+    const preserveDrawingBuffer = source.slice(
+      preserveDrawingBufferStart, preserveDrawingBufferEnd,
+    );
+
+    expect(e58Start).toBeGreaterThanOrEqual(0);
+    expect(e71Start).toBeGreaterThan(e58Start);
+    expect(e71End).toBeGreaterThan(e71Start);
+    expect(e58Parent).toContain('if (uPlantCanopyHierarchyVfx > 0.5)');
+    expect(normal).toContain('uniform float uPlantCanopyFoliageVfx;');
+    expect(normal.match(/uPlantCanopyFoliageVfx > 0\.5/g)).toHaveLength(1);
+    expect(eight).not.toContain('uPlantCanopyFoliageVfx');
+    expect(eight).not.toContain('plantCanopyFoliageVfx');
+    expect(canvasSource).not.toContain('plantCanopyFoliageVfx');
+    for (const establishedValue of [
+      'leafCanopyHierarchyFold', 'leafCanopyInterlockFold', 'leafCanopyRank',
+      'leafKey', 'solidEnvironment', 'plantCanopyMass',
+    ]) expect(e71).toContain(establishedValue);
+    // `plantCanopyMass` already carries the exact zero/presence PLNT ancestry;
+    // E71 must not decode state a second time or admit a different lifecycle.
+    expect(e71).not.toContain('wallState');
+    expect(e71).not.toContain('32768.0');
+    expect(e71).not.toContain('botanicalBodyNoise(');
+    expect(e71).not.toContain('sin(');
+    expect(e71).not.toContain('texture(');
+    expect(e71).not.toContain('uTime');
+    expect(e71).not.toContain('gl_FragCoord');
+    expect(e71).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(source.match(/this\.uniforms\.uniforms\.uPlantCanopyFoliageVfx = 0;/g))
+      .toHaveLength(3);
+    expect(source).toMatch(
+      /const plantCanopyFoliageVfxEnabled = outputScale < 8\s*&& resolvePlantCanopyFoliageVfxEnabled\(renderLook\);/,
+    );
+    expect(source).toContain(
+      'uPlantCanopyFoliageVfx: { value: plantCanopyFoliageVfxEnabled ? 1 : 0',
+    );
+    expect(preserveDrawingBuffer).toContain("get('plantCanopyFoliageVfxAudit') === '1'");
+    expect(source).toContain('presenter.app.canvas.dataset.plantCanopyFoliageVfx');
+    expect(source).toContain("this.app.canvas.dataset.plantCanopyFoliageVfx = 'inactive';");
+
+    presenter.uniforms.uniforms.uPlantCanopyHierarchyVfx = 1;
+    presenter.setPlantCanopyFoliageVfxEnabled(true);
+    expect(presenter.uniforms.uniforms.uPlantCanopyFoliageVfx).toBe(1);
+    expect(presenter.app.canvas.dataset.plantCanopyFoliageVfx).toBe('active');
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+    presenter.app.render.mockClear();
+    presenter.setPlantCanopyFoliageVfxEnabled(false);
+    expect(presenter.uniforms.uniforms.uPlantCanopyFoliageVfx).toBe(0);
+    expect(presenter.app.canvas.dataset.plantCanopyFoliageVfx).toBe('inactive');
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+    presenter.app.render.mockClear();
+    presenter.uniforms.uniforms.uPlantCanopyHierarchyVfx = 0;
+    presenter.setPlantCanopyFoliageVfxEnabled(true);
+    expect(presenter.uniforms.uniforms.uPlantCanopyFoliageVfx).toBe(0);
+    expect(presenter.app.canvas.dataset.plantCanopyFoliageVfx).toBe('inactive');
+    expect(presenter.app.render).not.toHaveBeenCalled();
+    presenter.uniforms.uniforms.uPlantCanopyHierarchyVfx = 1;
+    Object.assign(presenter, { outputScale: 8 });
+    presenter.setPlantCanopyFoliageVfxEnabled(true);
+    expect(presenter.uniforms.uniforms.uPlantCanopyFoliageVfx).toBe(0);
+    expect(presenter.app.canvas.dataset.plantCanopyFoliageVfx).toBe('inactive');
+    expect(presenter.app.render).not.toHaveBeenCalled();
   });
 
   it('keeps E30 Wood bark relief exact-owner, normal-WebGL-only, and resource-neutral', () => {

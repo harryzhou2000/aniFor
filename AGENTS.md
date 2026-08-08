@@ -13,7 +13,7 @@ powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL a
 mobile gestures, save/load, CI, and Pages deployment as protected regression
 contracts rather than the primary feature stream.
 
-The accepted visual experiment ladder now runs through E70. E12 is the
+The accepted visual experiment ladder now runs through E71. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -1541,6 +1541,47 @@ Requested-on true 8× must report E04/E70/HDR inactive for `scale-8`, omit the
 dense fixture and bloom resources, retain exact 4896×3072 WebGL, and finish a
 real GPU fence. The final frozen acceptance run completed that fence in `5.0554 s` with
 zero browser errors.
+
+E71 is the normal-WebGL exact-PLNT foliage-consolidation checkpoint,
+independently measurable with `?plantCanopyFoliageVfx=0|1` and strictly
+subordinate to the complete E20/E26/E28/E32/E34/E36/E53/E55/E58 ancestry.
+Only the existing zero-or-presence-state PLNT canopy proof may respond. Reuse
+E58's hierarchy fold, E55's interlock fold, canopy rank/overlap, E20 leaf
+albedo, and the already-live solid environment to consolidate abundant fine
+mottling into overlapping midscale leaf masses with a broader crown and
+absorptive pocket. Add no noise call, sample, sampler, texture, field, pass,
+target, upload, allocation, clock, alpha, support, silhouette, lifecycle,
+topology, ownership, state, or physics decision. Canvas and compact true 8×
+retain E58 unchanged.
+
+`npm run audit:vfx:plant-canopy-foliage` owns the established asymmetric
+Wood/PLNT fixture and runs one hydrated off→on→off sequence at 1×/2×/4×. It
+must preserve exact semantic, alpha/support, native-wall, lifecycle,
+solid-depth/contact auxiliary, target, and raw-control state plus byte-exact
+repeated-off framebuffers. Accepted left/right PLNT RGB RMS is
+`4.22/4.24/4.25` and `4.76/4.77/4.77`; spatial RMS is
+`3.786/3.808/3.817` and `4.410/4.422/4.425`. Meso share remains
+`.7733–.7870`, local-contrast retention `.9315–.9499`, and macro range grows
+by `4.41–5.18` bytes while every composed control stays within one byte and
+repeat peaks remain zero. Requested-on true 8× must report all botanical
+ancestors, E71, and HDR inactive for `scale-8`, omit bloom, retain exact
+4896×3072 WebGL, preserve semantics, and complete a real GPU fence. The final
+frozen full matrix completed that fence in `5.1245 s` with zero browser errors.
+
+The canonical composed survey must explicitly request E71 because
+`inputAudit=1` otherwise freezes it off. Its post-E71 2× capture reports the
+selector active with exact 1224×768 backing and zero browser errors. Do not use
+the current Organic quality score as an optimization target for E71: that
+heuristic rewards fine mesostructure and therefore drops from `79.044` to
+`71.608` when the independently accepted foliage consolidation removes excess
+grain. The fresh visual survey instead selects exact Oil body depth as the next
+experiment. Static Oil remains a near-uniform opaque brown body (`5.02` luma
+standard deviation, `.29` microcontrast, `20`-byte macro range) even though the
+generic cohesive-liquid score saturates. Prefer a resource-neutral E22/E38
+child that reuses existing Oil depth, crown/pocket, Fresnel, and reflected-
+environment scalars for shallow amber transmission and opposing deep
+absorption; add no noise, motion, sample, resource, alpha, silhouette, or
+physics decision.
 
 Visual-audit lesson: `inputAudit=1` disables opt-in child selectors unless the
 composed route names them explicitly, so canonical evidence must request and

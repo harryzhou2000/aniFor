@@ -2350,7 +2350,7 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   coverage `.971`, macro range `50`, zero dark/clipped fraction, and exact
   semantics across the full composed matrix.
 
-**Next visual experiments:** E03–E70 provide accepted liquid body/surface,
+**Next visual experiments:** E03–E71 provide accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -2366,7 +2366,8 @@ billow-depth, plus exact temperature- and velocity-driven Fire identity, an
 atmosphere-owned coherent CFLM cold-flame fold, and an exact-Oil
 velocity-oriented reflective slick with a cool absorptive wake, plus an exact-
 Steam pearly condensate crown/cool pocket over the established connected gas
-body. E27's final
+body, and exact-PLNT foliage consolidation that turns fine canopy mottling into
+broader overlapping leaf masses. E27's final
 canonical 2× Smoke result is luma deviation `2.22`, microcontrast `.39`, macro
 range `10`, luma range `14`, full support recall, and no clipping. E28 adds
 exact Wood/PLNT pigment/body depth without disturbing E20/E26 topology or
@@ -2978,6 +2979,52 @@ browser errors. Select the next experiment from a fresh composed/material
 capture; do not immediately broaden E70 to generic CleanGas or another gas
 identity by visual resemblance.
 
+E71 is the accepted normal-WebGL exact-PLNT foliage-consolidation checkpoint,
+independently selectable with `?plantCanopyFoliageVfx=0|1`. A fresh pre-E71
+production capture kept Organic as the weakest scored family (`79.044`) and showed that
+PLNT already had abundant fine mottling but still read as one rounded cushion.
+E71 is therefore a strict child of the complete
+E20/E26/E28/E32/E34/E36/E53/E55/E58 chain. It reuses E58 hierarchy, E55
+interlock, canopy rank/overlap, E20 leaf albedo, and the existing environment
+term to organize that grain into broader overlapping green crowns and
+olive/purple pockets. It changes RGB only and adds one selector uniform but no
+new noise call, sample, sampler, texture, field, pass, target, upload,
+allocation, clock, alpha, support, silhouette, lifecycle, topology, ownership,
+state, or physics decision. Canvas and compact true 8× retain E58 unchanged.
+
+`npm run audit:vfx:plant-canopy-foliage` runs a hydrated off→on→off matrix at
+1×/2×/4× over the existing asymmetric Wood/PLNT fixture. Semantic,
+alpha/support, lifecycle, native-wall, auxiliary, target, and raw-control
+state stay exact; repeated-off frames are byte-identical and all composed
+controls stay within one RGB byte. Accepted left/right target RGB RMS is
+`4.22/4.24/4.25` and `4.76/4.77/4.77`, with spatial RMS
+`3.786/3.808/3.817` and `4.410/4.422/4.425`. Meso share is
+`.7733–.7870`; fitted local contrast retains `.9315–.9499` while macro range
+grows by `4.41–5.18` bytes. Independent image review found clearer overlapping
+midscale lobes, retained fine grain, unchanged channel extrema, and no seam,
+halo, clip, or silhouette artifact. Requested-on true 8× keeps the full
+botanical ancestry, E71, HDR, and bloom inactive, retains exact 4896×3072
+WebGL and stable semantics, and completed its frozen full-matrix GPU fence in
+`5.1245 s` with zero browser errors. Select the next experiment from a fresh
+capture; do not add another PLNT octave by default—the remaining visual issue
+is branch-coupled shape/depth, not missing high-frequency texture.
+
+The corrected post-E71 canonical 2× survey explicitly requests the child under
+`inputAudit=1`, proves `plantCanopyFoliageVfx=active`, exact 1224×768 backing,
+and zero browser errors. Its Organic heuristic falls to `71.608` because the
+ranker rewards precisely the fine mesostructure E71 deliberately consolidates;
+that score is therefore diagnostic of a ranker blind spot, not a reason to
+restore noisy foliage. Screenshot review selects static exact Oil as the next
+material experiment instead. Its composed body remains a nearly uniform opaque
+brown plug with luma standard deviation `5.02`, microcontrast `.29`, macro
+range `20`, and total luma range `22`, despite a saturated generic-liquid
+quality score. Prototype a resource-neutral E22/E38 child that reuses
+`oilBodyWeight`, `liquidOpticalDepth`, `oilBodyCrown`, `oilBodyPocket`,
+`liquidFresnelContour`, and `reflectedEnvironment` for a shallow warm
+transmission lift and an opposing deep blue-weighted absorption pocket. Add no
+noise or motion and no sample, sampler, texture, field, pass, target, clock,
+alpha/support/silhouette, ownership, state, or physics change.
+
 ## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 
 **Goal:** everything downstream needs light and dynamic range; build the chassis first.
@@ -3001,6 +3048,8 @@ identity by visual resemblance.
 ## Phase 3 — Material delicacy
 
 **Goal:** each optical class gets a signature response instead of a shared treatment.
+
+- **Botanical foliage hierarchy:** E71 consolidates the existing PLNT hierarchy into broader overlapping leaf masses while retaining its established fine grain and exact lifecycle/topology contract. Future work should couple visible canopy depth to real branch/growth structure rather than add another procedural octave.
 
 - **Per-class PBR-ish parameters** in your palette LUT: roughness, metallic, translucency, IOR. You already have the 13-class alpha byte — promote it to index a proper material parameter texture.
 - **Subsurface approximation** for organic/ice/wax/translucent rigid: thickness map (you have solid depth scans!) → wrap lighting + transmitted color, so ice glows at thin edges.

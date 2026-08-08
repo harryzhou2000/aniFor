@@ -7,6 +7,7 @@ import {
   resolvePlantCanopyTissueVfxEnabled,
   resolvePlantCanopyInterlockVfxEnabled,
   resolvePlantCanopyHierarchyVfxEnabled,
+  resolvePlantCanopyFoliageVfxEnabled,
   resolvePlantLaminaVfxEnabled,
   resolvePlantLobeDepthVfxEnabled,
   resolveWoodBarkReliefVfxEnabled,
@@ -806,6 +807,41 @@ describe('resolveRenderLook', () => {
     expect(resolvePlantCanopyHierarchyVfxEnabled(
       'realistic',
       '?volumeVfx=0&botanicalBodyVfx=1&botanicalMesostructureVfx=1&botanicalPigmentVfx=1&plantLaminaVfx=1&plantLobeDepthVfx=1&plantCanopyMassVfx=1&plantCanopyTissueVfx=1&plantCanopyInterlockVfx=1&plantCanopyHierarchyVfx=on',
+    )).toBe(true);
+  });
+
+  it('keeps PLNT canopy foliage strictly subordinate to E58 and isolated in input audits', () => {
+    expect(resolvePlantCanopyFoliageVfxEnabled(
+      'classic', '?plantCanopyFoliageVfx=on',
+    )).toBe(false);
+    expect(resolvePlantCanopyFoliageVfxEnabled('realistic', '')).toBe(true);
+    expect(resolvePlantCanopyFoliageVfxEnabled('neon-lab', '')).toBe(true);
+    expect(resolvePlantCanopyFoliageVfxEnabled('realistic', '?inputAudit=1')).toBe(false);
+
+    for (const requested of ['1', 'on', 'true']) {
+      expect(resolvePlantCanopyFoliageVfxEnabled(
+        'realistic', `?inputAudit=1&plantCanopyInterlockVfx=1&plantCanopyHierarchyVfx=1&plantCanopyFoliageVfx=${requested}`,
+      )).toBe(true);
+    }
+    for (const requested of ['0', 'off', 'false']) {
+      expect(resolvePlantCanopyFoliageVfxEnabled(
+        'realistic', `?plantCanopyFoliageVfx=${requested}`,
+      )).toBe(false);
+    }
+
+    for (const parentOff of [
+      'volumeVfx=0', 'botanicalBodyVfx=0', 'botanicalMesostructureVfx=0',
+      'botanicalPigmentVfx=0', 'plantLaminaVfx=0', 'plantLobeDepthVfx=0',
+      'plantCanopyMassVfx=0', 'plantCanopyTissueVfx=0', 'plantCanopyInterlockVfx=0',
+      'plantCanopyHierarchyVfx=0',
+    ]) {
+      expect(resolvePlantCanopyFoliageVfxEnabled(
+        'realistic', `?${parentOff}&plantCanopyFoliageVfx=on`,
+      )).toBe(false);
+    }
+    expect(resolvePlantCanopyFoliageVfxEnabled(
+      'realistic',
+      '?volumeVfx=0&botanicalBodyVfx=1&botanicalMesostructureVfx=1&botanicalPigmentVfx=1&plantLaminaVfx=1&plantLobeDepthVfx=1&plantCanopyMassVfx=1&plantCanopyTissueVfx=1&plantCanopyInterlockVfx=1&plantCanopyHierarchyVfx=1&plantCanopyFoliageVfx=on',
     )).toBe(true);
   });
 

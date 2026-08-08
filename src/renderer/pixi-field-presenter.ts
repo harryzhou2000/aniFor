@@ -47,6 +47,7 @@ import {
   resolvePlantCanopyTissueVfxEnabled,
   resolvePlantCanopyInterlockVfxEnabled,
   resolvePlantCanopyHierarchyVfxEnabled,
+  resolvePlantCanopyFoliageVfxEnabled,
   resolveWoodBarkReliefVfxEnabled,
   resolveWoodTanninVfxEnabled,
   resolveGlassBodyVfxEnabled,
@@ -3329,6 +3330,7 @@ uniform float uPlantCanopyMassVfx;
 uniform float uPlantCanopyTissueVfx;
 uniform float uPlantCanopyInterlockVfx;
 uniform float uPlantCanopyHierarchyVfx;
+uniform float uPlantCanopyFoliageVfx;
 uniform float uWoodBarkReliefVfx;
 uniform float uWoodTanninVfx;
 uniform float uGlassBodyVfx;
@@ -9806,6 +9808,63 @@ void main() {
                   color += vec3(-0.028, 0.043, -0.036)
                     * leafCanopyHierarchyFold
                     * leafCanopyHierarchyWeight;
+                  // E71: the fitted production canopy already owns ample E32/
+                  // E53 fine mottling, but still reads as one textured cushion.
+                  // Consolidate that accepted detail into overlapping leaf
+                  // masses by blending toward E20's already-live leaf albedo,
+                  // then relight only with E55/E58's broad fold, rank, overlap,
+                  // and environment evidence. This strict E58 child adds no
+                  // noise call, sample, texture, field, pass, target, upload,
+                  // allocation, clock, alpha, support, silhouette, lifecycle,
+                  // topology, ownership, state, or physics decision. Canvas
+                  // and compact true 8x retain the accepted E58 presentation.
+                  if (uPlantCanopyFoliageVfx > 0.5) {
+                    float leafCanopyFoliageFold = clamp(
+                      leafCanopyHierarchyFold * 0.68
+                        + leafCanopyInterlockFold * 0.20
+                        + leafCanopyRank * 0.12,
+                      -1.0, 1.0
+                    );
+                    float leafCanopyFoliageCrown = smoothstep(
+                      0.035, 0.66, max(leafCanopyFoliageFold, 0.0)
+                    );
+                    float leafCanopyFoliagePocket = smoothstep(
+                      0.035, 0.66, max(-leafCanopyFoliageFold, 0.0)
+                    );
+                    float leafCanopyFoliageWeight = plantCanopyMass
+                      * (0.72 + leafCanopyOverlap * 0.28);
+                    float leafCanopyFoliageBlend = min(
+                      0.38,
+                      (0.19 + abs(leafCanopyFoliageFold) * 0.16
+                        + leafCanopyOverlap * 0.045)
+                        * leafCanopyFoliageWeight
+                    );
+                    vec3 leafCanopyFoliageAlbedo = clamp(
+                      leafKey * (
+                        0.91 + leafCanopyFoliageCrown * 0.18
+                          - leafCanopyFoliagePocket * 0.12
+                      )
+                        + solidEnvironment
+                          * (0.026 + leafCanopyFoliageCrown * 0.050)
+                        + vec3(-0.030, 0.044, -0.050)
+                          * leafCanopyFoliageFold,
+                      0.0, 1.0
+                    );
+                    color = mix(
+                      color, leafCanopyFoliageAlbedo,
+                      leafCanopyFoliageBlend
+                    );
+                    color *= vec3(1.0) - vec3(0.120, 0.055, 0.158)
+                      * leafCanopyFoliagePocket
+                      * leafCanopyFoliageWeight;
+                    color += (vec3(1.08) - clamp(color, 0.0, 1.08))
+                      * (
+                        vec3(0.27, 0.78, 0.26)
+                          * leafCanopyFoliageCrown * 0.138
+                        + solidEnvironment
+                          * leafCanopyFoliageCrown * 0.051
+                      ) * leafCanopyFoliageWeight;
+                  }
                 }
               }
             }
@@ -11655,6 +11714,10 @@ export class PixiFieldPresenter {
     // body. Canvas and compact true 8x retain the accepted E55 presentation.
     const plantCanopyHierarchyVfxEnabled = outputScale < 8
       && resolvePlantCanopyHierarchyVfxEnabled(renderLook);
+    // E71 consolidates only E58's proven hierarchy into broad exact-PLNT
+    // foliage masses. Canvas and compact true 8x keep E58 unchanged.
+    const plantCanopyFoliageVfxEnabled = outputScale < 8
+      && resolvePlantCanopyFoliageVfxEnabled(renderLook);
     // E21 replaces only normal-WebGL's deep exact-Glass body grade. The
     // compact true-8x shader retains its separately proven transmission path
     // and deliberately declares neither this selector nor its arithmetic.
@@ -11782,6 +11845,7 @@ export class PixiFieldPresenter {
       uPlantCanopyTissueVfx: { value: plantCanopyTissueVfxEnabled ? 1 : 0, type: 'f32' },
       uPlantCanopyInterlockVfx: { value: plantCanopyInterlockVfxEnabled ? 1 : 0, type: 'f32' },
       uPlantCanopyHierarchyVfx: { value: plantCanopyHierarchyVfxEnabled ? 1 : 0, type: 'f32' },
+      uPlantCanopyFoliageVfx: { value: plantCanopyFoliageVfxEnabled ? 1 : 0, type: 'f32' },
       uWoodBarkReliefVfx: { value: woodBarkReliefVfxEnabled ? 1 : 0, type: 'f32' },
       uWoodTanninVfx: { value: woodTanninVfxEnabled ? 1 : 0, type: 'f32' },
       uGlassBodyVfx: { value: glassBodyVfxEnabled ? 1 : 0, type: 'f32' },
@@ -12060,6 +12124,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uPlantCanopyTissueVfx = 0;
       this.uniforms.uniforms.uPlantCanopyInterlockVfx = 0;
       this.uniforms.uniforms.uPlantCanopyHierarchyVfx = 0;
+      this.uniforms.uniforms.uPlantCanopyFoliageVfx = 0;
       this.uniforms.uniforms.uWoodBarkReliefVfx = 0;
       this.uniforms.uniforms.uWoodTanninVfx = 0;
       this.uniforms.uniforms.uGlassBodyVfx = 0;
@@ -12150,6 +12215,7 @@ export class PixiFieldPresenter {
             || new URLSearchParams(location.search).get('plantCanopyTissueVfxAudit') === '1'
             || new URLSearchParams(location.search).get('plantCanopyInterlockVfxAudit') === '1'
             || new URLSearchParams(location.search).get('plantCanopyHierarchyVfxAudit') === '1'
+            || new URLSearchParams(location.search).get('plantCanopyFoliageVfxAudit') === '1'
             || new URLSearchParams(location.search).get('metalWaterContactVfxAudit') === '1'
             || new URLSearchParams(location.search).get('waterMetalTransmissionVfxAudit') === '1'
             || new URLSearchParams(location.search).get('woodBarkReliefVfxAudit') === '1'
@@ -12307,6 +12373,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.plantCanopyHierarchyVfx = Number(
       presenter.uniforms.uniforms.uPlantCanopyHierarchyVfx
+    ) > 0.5 ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.plantCanopyFoliageVfx = Number(
+      presenter.uniforms.uniforms.uPlantCanopyFoliageVfx
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.woodBarkReliefVfx = Number(
       presenter.uniforms.uniforms.uWoodBarkReliefVfx
@@ -13147,6 +13216,22 @@ export class PixiFieldPresenter {
   }
 
   /**
+   * Audit-only causal toggle for E71. It cannot revive E58 and is absent from
+   * the compact true-8x shader; normal product state comes from render-look.
+   */
+  setPlantCanopyFoliageVfxEnabled(enabled: boolean): void {
+    if (this.outputScale >= 8
+      || Number(this.uniforms.uniforms.uPlantCanopyHierarchyVfx) <= 0.5) {
+      this.uniforms.uniforms.uPlantCanopyFoliageVfx = 0;
+      this.app.canvas.dataset.plantCanopyFoliageVfx = 'inactive';
+      return;
+    }
+    this.uniforms.uniforms.uPlantCanopyFoliageVfx = enabled ? 1 : 0;
+    this.app.canvas.dataset.plantCanopyFoliageVfx = enabled ? 'active' : 'inactive';
+    this.renderApplication();
+  }
+
+  /**
    * Audit-only causal toggle for E59. It cannot revive E29 and is absent from
    * the compact true-8x shader; normal product state comes from render-look.
    */
@@ -13871,6 +13956,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uPlantCanopyTissueVfx = 0;
         this.uniforms.uniforms.uPlantCanopyInterlockVfx = 0;
         this.uniforms.uniforms.uPlantCanopyHierarchyVfx = 0;
+        this.uniforms.uniforms.uPlantCanopyFoliageVfx = 0;
         this.uniforms.uniforms.uWoodBarkReliefVfx = 0;
         this.uniforms.uniforms.uWoodTanninVfx = 0;
         this.uniforms.uniforms.uGlassBodyVfx = 0;
@@ -13937,6 +14023,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.plantCanopyTissueVfx = 'inactive';
         this.app.canvas.dataset.plantCanopyInterlockVfx = 'inactive';
         this.app.canvas.dataset.plantCanopyHierarchyVfx = 'inactive';
+        this.app.canvas.dataset.plantCanopyFoliageVfx = 'inactive';
         this.app.canvas.dataset.woodBarkReliefVfx = 'inactive';
         this.app.canvas.dataset.woodTanninVfx = 'inactive';
         this.app.canvas.dataset.glassBodyVfx = 'inactive';
