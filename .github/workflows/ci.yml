@@ -13,6 +13,16 @@ on:
         options:
           - build
           - build-and-deploy
+      visual_lab_review:
+        description: Capture and publish a deterministic Visual Lab review batch
+        required: true
+        default: false
+        type: boolean
+      visual_lab_candidates:
+        description: Optional comma-separated Visual Lab candidates; empty runs the frozen catalog
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
