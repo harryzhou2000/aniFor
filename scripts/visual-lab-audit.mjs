@@ -27,6 +27,9 @@ import {
   buildVisualLabStartupExpression, resolveVisualLabDomain, resolveVisualLabFixture,
   visualLabDomainNames, visualLabFixtureNames,
 } from './visual-lab-fixtures.mjs';
+import {
+  requestBrowserShutdown, terminateDetachedProcess,
+} from './detached-process.mjs';
 
 const CDP_CONNECT_TIMEOUT_MS = 10_000;
 const CDP_COMMAND_TIMEOUT_MS = 20_000;
@@ -177,8 +180,11 @@ async function main() {
   let cleanupPromise;
   const cleanup = () => {
     cleanupPromise ??= (async () => {
-      cdp?.close();
-      await terminate(chrome);
+      await requestBrowserShutdown(cdp);
+      const terminated = await terminateDetachedProcess(chrome);
+      if (!terminated) {
+        throw new Error(`Chrome process group ${chrome?.pid ?? 'unknown'} survived cleanup`);
+      }
       if (profile) await rm(profile, { recursive: true, force: true });
     })();
     return cleanupPromise;
@@ -637,24 +643,6 @@ function sleep(milliseconds) {
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
-}
-
-async function terminate(child) {
-  if (!child || child.exitCode !== null || !child.pid) return;
-  try { process.kill(-child.pid, 'SIGTERM'); }
-  catch {
-    try { child.kill('SIGTERM'); }
-    catch { return; }
-  }
-  await Promise.race([
-    new Promise((resolve) => child.once('exit', resolve)), sleep(2_000),
-  ]);
-  if (child.exitCode !== null) return;
-  try { process.kill(-child.pid, 'SIGKILL'); }
-  catch {
-    try { child.kill('SIGKILL'); }
-    catch { /* already gone */ }
-  }
 }
 
 class Cdp {

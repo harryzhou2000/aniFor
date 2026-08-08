@@ -4,6 +4,9 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import {
+  requestBrowserShutdown, terminateDetachedProcess as terminate,
+} from './detached-process.mjs';
+import {
   assertPairedSourceTargetGraphics,
   auditSourceTargetGraphics,
   compactSourceTargetGraphicsResults,
@@ -2058,7 +2061,10 @@ async function main() {
     if (serverLog.trim()) console.error(serverLog.trim());
     throw error;
   } finally {
-    await terminate(server);
+    const serverTerminated = await terminate(server);
+    if (!serverTerminated) {
+      throw new Error(`Vite process group ${server.pid ?? 'unknown'} survived cleanup`);
+    }
   }
 }
 
@@ -6341,8 +6347,11 @@ async function auditMode(mode) {
       browserErrors: errors.length,
     };
   } finally {
-    cdp?.close();
-    await terminate(chrome);
+    await requestBrowserShutdown(cdp);
+    const chromeTerminated = await terminate(chrome);
+    if (!chromeTerminated) {
+      throw new Error(`Chrome process group ${chrome.pid ?? 'unknown'} survived cleanup`);
+    }
     await rm(profile, { recursive: true, force: true });
   }
 }
@@ -57464,14 +57473,6 @@ function variantScreenshotPath(source, variant) {
   return extension
     ? `${source.slice(0, -extension.length)}-${variant}${extension}`
     : `${source}-${variant}`;
-}
-
-async function terminate(child) {
-  if (!child || child.exitCode !== null || !child.pid) return;
-  try { process.kill(-child.pid, 'SIGTERM'); } catch { try { child.kill('SIGTERM'); } catch { return; } }
-  await Promise.race([new Promise((resolve) => child.once('exit', resolve)), sleep(2_000)]);
-  if (child.exitCode !== null) return;
-  try { process.kill(-child.pid, 'SIGKILL'); } catch { try { child.kill('SIGKILL'); } catch { /* already gone */ } }
 }
 
 class Cdp {

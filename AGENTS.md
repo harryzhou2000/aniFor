@@ -2648,9 +2648,17 @@ The native wall lab uses the real TPT backend, remains paused, and places ten wa
 - Do not permanently choose Canvas2D from a short Pixi initialization deadline. Pages cold loads can have WebGL2 and a valid Pixi chunk yet take more than 1.2 seconds to initialize. Mount the compatibility canvas promptly, expose the reason in the HUD/data attributes, and promote it in place when WebGL becomes ready.
 - A context-existing check is insufficient for high render scales. Probe `MAX_RENDERBUFFER_SIZE`, both `MAX_VIEWPORT_DIMS` axes, and `MAX_TEXTURE_SIZE`, release the temporary context with `WEBGL_lose_context`, and select a supported true scale before Pixi allocates. Compare viewport axes independently; require the texture limit only for filter-based 1×–4×, not the direct-mesh 8× path. Keep requested and effective scale distinct in diagnostics.
 - True 8× recovery needs two independent browser proofs: force the production unsignalled-fence timeout branch, then cold-load another 8× presenter and exercise genuine context loss. Both must preserve semantic state, camera, CSS geometry, and input footprint while rebuilding only the bounded 2× Canvas.
-- Browser audits own a unique `/tmp/anifor-input-*` profile and must terminate
+- Browser audits own a unique `/tmp/anifor-input-*` or
+  `/tmp/anifor-visual-lab-chrome-*` profile and must terminate
   their Chrome tree and remove that profile in `finally`, on success, timeout,
-  and failure. If an outer harness interrupts the audit, inspect exact command
+  and failure. A detached leader's `ChildProcess.exitCode` does not prove its
+  descendants are gone: request `Browser.close`, then use the shared detached-
+  process helper to signal the POSIX process group (or Windows `taskkill /T`),
+  poll group liveness, and wait after the bounded SIGKILL escalation. An audit
+  must not report success while that group survives. The already-exited-leader
+  descendant proof is POSIX/Linux; Windows cleanup is best-effort after its
+  tracked leader has exited unless a future Job Object owns the tree. If an
+  outer harness interrupts the audit, inspect exact command
   lines first and terminate only PIDs verified to use that audit profile; then
   confirm the profile is gone. Never use a broad Chrome kill/pkill that could
   close a user browser. Clean up locally launched Vite processes by their exact
