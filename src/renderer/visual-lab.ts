@@ -12,7 +12,10 @@ export const VISUAL_LAB_DOMAIN_CODE = Object.freeze({
 
 export type VisualLabDomain = keyof typeof VISUAL_LAB_DOMAIN_CODE;
 export type VisualLabVariant = 0 | 1 | 2;
-export type VisualLabTargetKind = 'none' | 'semantic-material-id' | 'propagated-style';
+export type VisualLabTargetKind =
+  | 'none'
+  | 'semantic-material-id'
+  | 'propagated-atmosphere-style-byte';
 
 /**
  * One renderer-owned capability table for lab routing and diagnostics. Powder
@@ -20,15 +23,65 @@ export type VisualLabTargetKind = 'none' | 'semantic-material-id' | 'propagated-
  * until its conservative hook exists.
  */
 export const VISUAL_LAB_DOMAIN_CAPABILITY = Object.freeze({
-  off: { implemented: false, targetKind: 'none' },
-  powder: { implemented: false, targetKind: 'semantic-material-id' },
-  liquid: { implemented: true, targetKind: 'semantic-material-id' },
-  gas: { implemented: true, targetKind: 'propagated-style' },
-  emission: { implemented: true, targetKind: 'semantic-material-id' },
+  off: Object.freeze({ implemented: false, targetKind: 'none' }),
+  powder: Object.freeze({ implemented: false, targetKind: 'semantic-material-id' }),
+  liquid: Object.freeze({ implemented: true, targetKind: 'semantic-material-id' }),
+  gas: Object.freeze({
+    implemented: true,
+    targetKind: 'propagated-atmosphere-style-byte',
+  }),
+  emission: Object.freeze({ implemented: true, targetKind: 'semantic-material-id' }),
 } as const satisfies Record<VisualLabDomain, {
   readonly implemented: boolean;
   readonly targetKind: VisualLabTargetKind;
 }>);
+
+export type ImplementedVisualLabDomain = {
+  [Domain in VisualLabDomain]:
+    (typeof VISUAL_LAB_DOMAIN_CAPABILITY)[Domain]['implemented'] extends true
+      ? Domain
+      : never;
+}[VisualLabDomain];
+
+export type VisualLabHook = 'liquid-surface' | 'volume-field';
+
+/** Stable metadata/source ABI consumed by normal-HDR domain adapter modules. */
+export type VisualLabDomainShaderAdapter = {
+  [Domain in ImplementedVisualLabDomain]: Readonly<{
+    domain: Domain;
+    domainCode: (typeof VISUAL_LAB_DOMAIN_CODE)[Domain];
+    hook: VisualLabHook;
+    entryPoint: string;
+    source: string;
+  }>;
+}[ImplementedVisualLabDomain];
+
+type ImplementedVisualLabDomainDescriptorMap = {
+  readonly [Domain in ImplementedVisualLabDomain]: Readonly<{
+    domainCode: (typeof VISUAL_LAB_DOMAIN_CODE)[Domain];
+    targetKind: Exclude<VisualLabTargetKind, 'none'>;
+  }>;
+};
+
+/**
+ * Complete renderer-facing metadata for domains that can compile the expanded
+ * comparison compositor. Shader adapters consume this table rather than
+ * repeating domain codes or target semantics.
+ */
+export const VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS = Object.freeze({
+  liquid: Object.freeze({
+    domainCode: VISUAL_LAB_DOMAIN_CODE.liquid,
+    targetKind: VISUAL_LAB_DOMAIN_CAPABILITY.liquid.targetKind,
+  }),
+  gas: Object.freeze({
+    domainCode: VISUAL_LAB_DOMAIN_CODE.gas,
+    targetKind: VISUAL_LAB_DOMAIN_CAPABILITY.gas.targetKind,
+  }),
+  emission: Object.freeze({
+    domainCode: VISUAL_LAB_DOMAIN_CODE.emission,
+    targetKind: VISUAL_LAB_DOMAIN_CAPABILITY.emission.targetKind,
+  }),
+} as const satisfies ImplementedVisualLabDomainDescriptorMap);
 
 export function isVisualLabDomainImplemented(domain: VisualLabDomain): boolean {
   return VISUAL_LAB_DOMAIN_CAPABILITY[domain].implemented;

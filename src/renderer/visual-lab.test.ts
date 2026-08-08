@@ -6,6 +6,7 @@ import {
   resolveVisualLabState,
   VISUAL_LAB_DOMAIN_CAPABILITY,
   VISUAL_LAB_DOMAIN_CODE,
+  VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS,
 } from './visual-lab';
 
 describe('normal-WebGL visual lab state', () => {
@@ -35,7 +36,7 @@ describe('normal-WebGL visual lab state', () => {
 
   it('centralizes implemented domains while retaining reserved shader codes', () => {
     expect(VISUAL_LAB_DOMAIN_CAPABILITY.gas).toEqual({
-      implemented: true, targetKind: 'propagated-style',
+      implemented: true, targetKind: 'propagated-atmosphere-style-byte',
     });
     expect(VISUAL_LAB_DOMAIN_CAPABILITY.powder).toEqual({
       implemented: false, targetKind: 'semantic-material-id',
@@ -45,6 +46,21 @@ describe('normal-WebGL visual lab state', () => {
     expect(resolveVisualLabState(
       'realistic', 2, '?visualLab=powder&visualVariant=1&visualTarget=1',
     )).toBe(DISABLED_VISUAL_LAB_STATE);
+  });
+
+  it('exports a deeply frozen complete descriptor table for implemented domains', () => {
+    expect(VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS).toEqual({
+      liquid: { domainCode: 2, targetKind: 'semantic-material-id' },
+      gas: { domainCode: 3, targetKind: 'propagated-atmosphere-style-byte' },
+      emission: { domainCode: 4, targetKind: 'semantic-material-id' },
+    });
+    expect(Object.isFrozen(VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS)).toBe(true);
+    for (const descriptor of Object.values(VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS)) {
+      expect(Object.isFrozen(descriptor)).toBe(true);
+    }
+    for (const capability of Object.values(VISUAL_LAB_DOMAIN_CAPABILITY)) {
+      expect(Object.isFrozen(capability)).toBe(true);
+    }
   });
 
   it('collapses Classic, off, invalid/reserved domains, and true 8x to the disabled state', () => {

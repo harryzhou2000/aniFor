@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS } from '../src/renderer/visual-lab.ts';
 import {
   buildVisualLabStartupExpression,
   resolveVisualLabDomain,
@@ -33,6 +34,17 @@ describe('Visual Lab fixture adapters', () => {
     expect(resolveVisualLabDomain('emission').fieldAlphaMethod).toBe('emissionFieldAlpha');
     expect(() => resolveVisualLabDomain('powder'))
       .toThrow('--domain must be gas, liquid, or emission');
+  });
+
+  it('matches renderer capability domains and target semantics exactly', () => {
+    const renderer = Object.entries(VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS)
+      .map(([name, { targetKind }]) => ({ name, targetKind }))
+      .sort((left, right) => left.name.localeCompare(right.name));
+    const capture = VISUAL_LAB_DOMAIN_ADAPTERS
+      .map(({ name, targetKind }) => ({ name, targetKind }))
+      .sort((left, right) => left.name.localeCompare(right.name));
+
+    expect(capture).toEqual(renderer);
   });
 
   it('keeps the general showcase compatible with every implemented capture domain', () => {

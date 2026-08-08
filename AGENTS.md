@@ -5,28 +5,39 @@
 The E80 dense-body ambient floor, E81 native-PHOT spectral irradiance on exact
 deep Metal, and E82 authoritative-temperature Ceramic blackbody relief are
 accepted across normal WebGL and their compact true-8× exclusions. Pause the
-detail-first E-number ladder here. The primary objective is now an effective,
-reusable rendering-experiment framework. The typed Visual Lab state, fixed
-normal-HDR composition seam, and same-page off/A/B capture route are established
-for gas, emission, and connected Water/Oil/Acid surfaces. Keep extending this
-one route and migrate accepted treatments through it before adding more
-isolated selectors or cloned browser verifiers. Three leaf migrations are now
-complete. E62 Oxygen volume folding is an accepted E15 baseline and uses Visual
-Lab gas target `4` for alternatives. E69 Oil surface motion is an accepted E08
-baseline and uses an app-owned moving-Oil fixture with Visual Lab liquid target
-`8`. E65 Water surface motion is likewise an accepted E08 baseline and uses the
-retained app-owned moving-Water fixture with liquid target `2`. Their legacy
-resolvers, uniforms, queries, datasets, and bespoke verifier paths have been
-removed. The declarative fixture/domain adapter is complete:
-one frozen catalog owns domain target kinds, alpha readers, and URL flags, while
-another owns fixture scenes, exact domain/target constraints, and optional
-app-method/argument preparation. The CDP harness must not regain fixture/domain
-branches. The next framework milestone is a smaller candidate-authoring
-surface: keep domain-local comparison arithmetic behind stable shader adapter
-ABIs and drive fixture/capability selection from frozen descriptors, so a new
-A/B idea does not require presenter, lifecycle, or CDP edits. Migrate another
-accepted leaf only when doing so removes more special-case infrastructure;
-defer E66 because its tangent reads make it a resource-sensitive migration.
+detail-first E-number ladder here. The active goal is framework-first: complete
+a modular, typed Visual Lab adapter facade before starting another material
+treatment. Gas, liquid, and emission comparison arithmetic should live in
+domain-local modules assembled through one stable shader ABI. A frozen renderer
+capability table and the environment-specific capture catalog must share exact,
+tested domain and target semantics. Extend that descriptor vocabulary next with
+resource/sample budgets, supported Detail/fallback paths, fixture constraints,
+preparation, field evidence, and fixed URL requirements. Adding a normal A/B
+idea should touch one domain module plus descriptor metadata, not presenter
+setup, HDR lifecycle, app boot, or CDP branching.
+
+The typed Visual Lab state, fixed normal-HDR composition seam, promotion-safe
+same-page off/A/B selection, declarative fixtures, and production-bundle capture
+route are established. Three leaf migrations are complete. E62 Oxygen volume
+folding is an accepted E15 baseline and uses gas target `4`; E69 Oil surface
+motion is an accepted E08 baseline and uses the moving-Oil fixture with liquid
+target `8`; E65 Water surface motion is an accepted E08 baseline and uses the
+retained moving-Water fixture with liquid target `2`. Their legacy resolvers,
+uniforms, queries, datasets, and bespoke verifier paths are removed. E65 is also
+deployed: `main_codex` and Pages serve revision
+`c85e3cfdd1deb16dd4994a51db29929c01df76a3` after successful workflow run
+`31274976219`.
+
+The next stable deployment checkpoint is the typed domain-adapter/facade
+milestone, not a fourth leaf migration. It must enforce exact renderer/capture
+domain and target-kind parity, preserve the fixed `domain/variant/target/gain` shader
+assembly boundary, keep the generic CDP harness branch-free, and provide
+reusable fixture, evidence, cleanup, build, Pages-asset-closure, and live-
+revision gates. Checkpoint and deploy that infrastructure once the normal WebGL
+browser proof passes. Then use it for rapid, visually judged material
+experiments and promote only selected looks into ordinary baselines. Defer E66
+because its tangent reads make it resource-sensitive; migrate another accepted
+leaf only when doing so removes more special-case infrastructure than it adds.
 Same-page variant selection must remain owned across asynchronous WebGL promotion; a
 choice made during the temporary Canvas `webgl-starting` phase is seeded before
 the first WebGL frame. Lab
@@ -1963,18 +1974,24 @@ polish. The fixed `domain/variant/target/gain` Visual Lab state, normal-HDR
 gas/emission/liquid compositor hook, browser setter/dataset diagnostics, and
 off/A/B capture script are complete. E62, E69, and E65 prove that accepted leaf
 treatments can be folded into their parent baselines while deleting selector,
-uniform, query, telemetry, and bespoke-verifier plumbing. Keep variant zero
-pixel-preserving, keep the direct true-8× fragment untouched, and treat candidate
-variants as comparison evidence rather than release styling. The frozen
-`scripts/visual-lab-fixtures.mjs` catalogs now centralize named fixture/domain
-routing, startup scene observation, app-owned preparation, target constraints,
-field-alpha readers, report target kinds, and fixed URL flags. The startup
+uniform, query, telemetry, and bespoke-verifier plumbing. The completed E65
+checkpoint is deployed at revision `c85e3cfdd1deb16dd4994a51db29929c01df76a3`;
+do not reopen it merely to add more effect detail.
+
+The next checkpoint must turn the current seam into a typed adapter facade:
+domain-local shader modules behind a stable assembly ABI, exact-parity renderer
+and capture capability descriptors, and reusable
+fixture/evidence/deployment gates. Keep variant zero pixel-preserving, keep the
+direct true-8× fragment untouched, and treat candidate variants as comparison
+evidence rather than release styling. The frozen fixture catalog continues to
+own scene observation, app preparation, target constraints, field readers, and
+fixed URL flags; the generic CDP harness must remain branch-free. Its startup
 transaction must prove Canvas `webgl-starting` before mutating a fixture and
-staging variant B; missing or throwing preparers fail immediately with a
-structured diagnostic. Build the smaller domain-local candidate-module ABI and
-descriptor-owned capability map next; a new comparison should not need
-presenter, lifecycle, or CDP edits. Defer E66 and Powder until their additional
-samples or source-stage stability proof fit the resource contract without
+staging variant B, and all failure/cleanup paths remain bounded. The stable
+adapter/facade checkpoint requires a production build, real normal-WebGL shader
+proof, reusable off/A/B report, Pages asset-closure verification, and exact live
+revision before rapid material experiments resume. Defer E66 and Powder until
+their extra samples or source-stage stability proof fit this facade without
 creating a second experiment framework.
 
 The first seam now uses `domain/variant/target/gain` (target is deliberately

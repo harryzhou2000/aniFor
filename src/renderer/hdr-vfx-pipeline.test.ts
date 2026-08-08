@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   HDR_TONEMAP_FRAGMENT, HDR_VISUAL_LAB_TONEMAP_FRAGMENT, probeHDRPipelineSupport,
 } from './hdr-vfx-pipeline';
+import { HDR_VOLUME_LAB_LIQUID_DESCRIPTOR } from './hdr-volume-lab-liquid';
 
 function uniformSamplers(shader: string): string[] {
   return [...shader.matchAll(/uniform\s+sampler2D\s+(\w+)\s*;/g)]
@@ -202,10 +203,7 @@ describe('HDR composition contract', () => {
   });
 
   it('reuses completed E08 locals for the liquid lab without another texture read', () => {
-    const helper = HDR_VISUAL_LAB_TONEMAP_FRAGMENT.slice(
-      HDR_VISUAL_LAB_TONEMAP_FRAGMENT.indexOf('vec3 applyHdrLiquidLab('),
-      HDR_VISUAL_LAB_TONEMAP_FRAGMENT.indexOf('vec3 applyHdrVolumeLab('),
-    );
+    const helper = HDR_VOLUME_LAB_LIQUID_DESCRIPTOR.source;
     expect(helper).toContain('labDomain != 2.0');
     expect(helper).toContain('wallBacked > 0.5');
     expect(helper).toContain('max(transmitted, vec3(0.0))');
