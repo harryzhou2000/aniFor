@@ -12952,6 +12952,47 @@ export class PixiFieldPresenter {
     }
   }
 
+  /**
+   * Audit-only teardown that attempts every release step and reports every
+   * failure. Ordinary navigation keeps using destroy(), whose best-effort
+   * semantics tolerate a document or WebGL context already disappearing.
+   */
+  destroyForAudit(): void {
+    const failures: Error[] = [];
+    const attempt = (operation: () => void): void => {
+      try { operation(); }
+      catch (error) {
+        failures.push(error instanceof Error ? error : new Error(String(error)));
+      }
+    };
+
+    this.destroyed = true;
+    attempt(() => this.resolveFirstFrame(false));
+    this.contextLossHandler = undefined;
+    this.renderStallHandler = undefined;
+    attempt(() => this.removeContextLossListener());
+    attempt(() => this.releaseRenderFence());
+    attempt(() => this.releaseWebGLTimingQuery());
+    attempt(() => this.releaseWebGLTimingFence());
+    attempt(() => this.hdrVfxPipeline?.destroy());
+    this.hdrVfxPipeline = undefined;
+    attempt(() => {
+      const canvas = this.app.canvas;
+      const gl = canvas.getContext('webgl2') ?? canvas.getContext('webgl');
+      gl?.getExtension('WEBGL_lose_context')?.loseContext();
+    });
+    attempt(() => this.app.canvas.remove());
+    try { this.app.destroy(); }
+    catch (error) {
+      failures.push(error instanceof Error ? error : new Error(String(error)));
+      attempt(() => this.scene.destroy({ children: true }));
+    }
+    if (failures.length === 1) throw failures[0];
+    if (failures.length > 1) {
+      throw new AggregateError(failures, 'Strict Pixi presenter teardown failed');
+    }
+  }
+
   resize(width: number, height: number): PresenterViewport {
     this.app.canvas.dataset.viewportSize = width + 'x' + height;
     return { width, height };

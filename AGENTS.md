@@ -136,28 +136,50 @@ synthetic same-domain/multiple-driver proof, startup/report metadata exposure
 policy, `OFF/A/B` and `Smooth/Local/Grains` labels, frozen identities, and real
 Gas+Powder portable batch.
 
-The immutable execution-plan increment is the current local checkpoint. Compile
-the complete selected recipe set, request tuple, executable evidence/startup/
-selection state, canonical URL, expected datasets, labels, and artifact paths
-before any output mutation or Chrome launch. The normal batch must consume the
-same frozen entries exposed by `--plan-only=1`. The printed inspection is
-content-addressed and data-only: never serialize executable expressions,
-preparer/evidence dispatch authority, absolute paths, or timing into its
-portable identity. Bind those private expressions through an opaque executable
-digest. Capture base URLs are hermetic and may not inherit a query or fragment;
-all render-affecting parameters belong to the canonical plan query. Historical
-preparation report labels remain diagnostics, and machine paths stay in the
-unhashed runtime envelope. Plan
-mode must not create directories, lock, publish, resolve Chrome, or spawn.
+The immutable execution-plan increment is deployed at revision
+`87e041a22f019e529b29cd61a5e9fb4611bef289`: source workflow run
+`31308888264` produced the artifact and `deploy-verified` run `31309055166`
+reused it. Compile the complete selected recipe set, request tuple, executable
+evidence/startup/selection state, canonical URL, expected datasets, labels, and
+artifact paths before any output mutation or Chrome launch. The normal batch
+must consume the same frozen entries exposed by `--plan-only=1`. The printed
+inspection is content-addressed and data-only: never serialize executable
+expressions, preparer/evidence dispatch authority, absolute paths, or timing
+into its portable identity. Bind those private expressions through an opaque
+executable digest. Capture base URLs are hermetic and may not inherit a query
+or fragment; all render-affecting parameters belong to the canonical plan
+query. Historical preparation report labels remain diagnostics, and machine
+paths stay in the unhashed runtime envelope. Plan mode must not create
+directories, lock, publish, resolve Chrome, or spawn.
 
-The next direction is evidence-based safe batch-session reuse. Reuse only a
-killable Chrome host; give each candidate a fresh isolated browser context,
-direct-URL target, document, simulation, WebGL context, error collector, and
-explicit renderer disposal. On timeout, context loss, fallback, or disposal
-failure, recycle the entire host before continuing. Instrument phase timings
-before claiming a speedup, and keep true 8×/recovery gates fresh-browser-only.
-Adding a control must not require edits to audit, batch, baseline, review, CI,
-or sheet dispatch.
+The current framework increment is a page-scoped
+candidate capture transaction plus diagnostic monotonic timing. One transaction
+over a fresh page/target session owns CDP protocol setup and error collection,
+fixture startup, WebGL/field readiness, ordered off/A/B capture, invariant
+validation, in-memory report construction, and strict renderer disposal.
+Chrome/profile lifecycle and browser-context/target ownership stay host-side:
+explicitly close the browser target, then perform the separate host teardown,
+and publish `report.json` only after both complete cleanly. Preserve nested CLI
+errors rather than replacing their causes with a flat wrapper.
+
+Record exactly 14 non-overlapping bounded monotonic phases: `plan`, `preflight`,
+`hostLaunch`, `targetSetup`, `startup`, `readiness`, `off`, `a`, `b`, `finalize`,
+`rendererDispose`, `targetTeardown`, `hostTeardown`, and `total`. Reject
+impossible telemetry and any duration above 300 seconds. Timing is diagnostic
+only and must stay outside every frozen plan/result/batch/baseline/comparison/
+recipe-set identity. A real built Gas strict-disposal gate passed with roughly
+`hostLaunch=0.234s`, `startup=1.285s`, `readiness=16.749s`, and
+`total=29.978s`, leaving no Chrome process behind.
+
+The next active objective is measured shared-host worker reuse for compatible
+normal-scale candidates. Reuse only a killable Chrome host, sequentially, while
+giving every candidate a fresh incognito browser context, direct-URL target,
+document, simulation, WebGL context, and error collector. Optimize the measured
+readiness and variant costs rather than process launch. Recycle the entire host
+after any timeout, context loss, backend fallback, browser error, renderer-
+disposal failure, or context/target teardown failure. Keep true 8× and recovery
+gates fresh-browser-only. Adding a control must not require edits to audit,
+batch, baseline, review, CI, or sheet dispatch.
 Preserve `anifor.visual-lab.static-contract/v1`, every result/batch/baseline/
 comparison/recipe-set identity, and the generic WebGL capture path throughout.
 

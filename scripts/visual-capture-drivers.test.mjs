@@ -159,6 +159,95 @@ describe('typed visual capture drivers', () => {
     }
   });
 
+  it('exposes an import-safe page-scoped capture transaction', async () => {
+    const audit = await import('./visual-lab-audit.mjs');
+    expect(typeof audit.captureVisualLabCandidatePage).toBe('function');
+    expect(typeof audit.disposeVisualLabCandidatePage).toBe('function');
+    const source = readFileSync(new URL('./visual-lab-audit.mjs', import.meta.url), 'utf8');
+    expect(source).toContain('entry: options.executionPlan');
+    expect(source).toContain("pageCdp.send('Page.enable')");
+    expect(source).toContain('browserErrors = collectBrowserErrors(pageCdp)');
+    expect(source).toContain('realpathSync(process.argv[1]) === realpathSync(MODULE_PATH)');
+    expect(source).not.toMatch(/export async function captureVisualLabCandidatePage\(cdp, options/);
+  });
+
+  it('requires explicit renderer disposal before a successful capture can publish', async () => {
+    const { disposeVisualLabCandidatePage } = await import('./visual-lab-audit.mjs');
+    const calls = [];
+    const pageCdp = {
+      send: async (method, params, timeoutMs) => {
+        calls.push({ method, params, timeoutMs });
+        return { result: { value: true } };
+      },
+    };
+
+    await expect(disposeVisualLabCandidatePage({ pageCdp, browserErrors: [] }))
+      .resolves.toBe(true);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].method).toBe('Runtime.evaluate');
+    expect(calls[0].params.awaitPromise).toBe(true);
+    expect(calls[0].params.expression).toContain('disposeRendererForNavigation');
+    expect(calls[0].timeoutMs).toBe(5_000);
+
+    const unavailableCdp = {
+      send: async () => ({ result: { value: false } }),
+    };
+    await expect(disposeVisualLabCandidatePage({ pageCdp: unavailableCdp }))
+      .rejects.toThrow(/did not acknowledge renderer disposal/);
+    await expect(disposeVisualLabCandidatePage({
+      pageCdp: unavailableCdp,
+      required: false,
+    })).resolves.toBe(false);
+    await expect(disposeVisualLabCandidatePage({
+      pageCdp,
+      browserErrors: ['late WebGL failure'],
+    })).rejects.toThrow(/through renderer teardown.*late WebGL failure/);
+  });
+
+  it('keeps nested capture and teardown diagnostics in bounded CLI errors', async () => {
+    const { formatVisualLabCliError } = await import('./visual-lab-audit.mjs');
+    const error = new AggregateError([
+      new Error('capture sentinel'),
+      new AggregateError([
+        new Error('renderer sentinel'),
+        new Error('host sentinel'),
+      ], 'cleanup sentinel'),
+    ], 'candidate sentinel');
+    const message = formatVisualLabCliError(error);
+    expect(message).toContain('candidate sentinel');
+    expect(message).toContain('capture sentinel');
+    expect(message).toContain('cleanup sentinel');
+    expect(message).toContain('renderer sentinel');
+    expect(message).toContain('host sentinel');
+    expect(message.length).toBeLessThanOrEqual(8_000);
+  });
+
+  it('retains the lifecycle handoff when Chrome profile cleanup needs supervisor retry', async () => {
+    const { removeVisualLabHostArtifacts } = await import('./visual-lab-audit.mjs');
+    const profile = '/tmp/anifor-visual-lab-chrome-test';
+    const lifecycleFile = '/tmp/anifor-visual-lab-lifecycle-test.json';
+    const failedCalls = [];
+    await expect(removeVisualLabHostArtifacts({
+      profile,
+      lifecycleFile,
+      lifecyclePublished: true,
+      remove: async (target) => {
+        failedCalls.push(target);
+        if (target === profile) throw new Error('profile retry sentinel');
+      },
+    })).rejects.toThrow(/profile retry sentinel/);
+    expect(failedCalls).toEqual([profile]);
+
+    const successfulCalls = [];
+    await expect(removeVisualLabHostArtifacts({
+      profile,
+      lifecycleFile,
+      lifecyclePublished: true,
+      remove: async (target) => { successfulCalls.push(target); },
+    })).resolves.toEqual({ profileRemoved: true, lifecycleRemoved: true });
+    expect(successfulCalls).toEqual([profile, lifecycleFile]);
+  });
+
   it('rejects unknown drivers, variants, and dynamic audit identifiers', () => {
     expect(() => resolveVisualCaptureDriver('arbitrary')).toThrow('Unknown visual capture driver');
     expect(() => resolveVisualCaptureVariant('normal-hdr', 8)).toThrow('Unknown normal-hdr');

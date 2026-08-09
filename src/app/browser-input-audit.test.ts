@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { DeterministicBackend } from '../simulation/deterministic-backend';
 import { Material } from '../shared/materials';
@@ -8,6 +9,14 @@ import {
 } from './browser-input-audit';
 
 describe('browser input audit gate', () => {
+  it('uses strict teardown only behind the audit bridge', () => {
+    const source = readFileSync(new URL('./game.ts', import.meta.url), 'utf8');
+    expect(source).toContain(
+      'disposeRendererForNavigation: () => this.renderer.disposeForAudit()',
+    );
+    expect(source).toContain('prepare: () => this.renderer.disposeForNavigation()');
+  });
+
   it('requires the explicit diagnostic query', () => {
     expect(browserInputAuditRequested('?scene=render-lab&inputAudit=1')).toBe(true);
     expect(browserInputAuditRequested('?scene=showcase&inputAudit=1')).toBe(true);

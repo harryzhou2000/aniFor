@@ -33,6 +33,10 @@ import {
 } from './visual-lab-execution-plan.mjs';
 import { createVisualLabResultRecord } from './visual-lab-result.mjs';
 import {
+  normalizeVisualLabTimings,
+  summarizeVisualLabTimings,
+} from './visual-lab-timing.mjs';
+import {
   isDetachedProcessGroupAlive,
   terminateDetachedProcessGroup,
 } from './detached-process.mjs';
@@ -706,6 +710,7 @@ const readCandidateReport = async (candidateDirectory, recipe, {
   }
 
   let expected;
+  let timings = null;
   try {
     if (report?.tool !== 'visual-lab-audit-v1') throw new Error('unexpected report tool');
     const hashes = Object.fromEntries(VARIANTS.map((variant) => [
@@ -728,6 +733,9 @@ const readCandidateReport = async (candidateDirectory, recipe, {
     }
     if (report.browserErrors !== 0) {
       throw new Error('browserErrors must be exactly zero');
+    }
+    if (report.timings !== undefined) {
+      timings = normalizeVisualLabTimings(report.timings);
     }
     if (typeof report.url !== 'string') throw new Error('capture URL must be a string');
     let reportBaseUrl;
@@ -796,8 +804,16 @@ const readCandidateReport = async (candidateDirectory, recipe, {
     status: 'passed',
     result: expected,
     warnings: [...report.warnings],
+    ...(timings === null ? {} : { timings }),
   };
 };
+
+const summarizeEntryTimings = (entries) => summarizeVisualLabTimings(
+  entries.flatMap((entry) => entry.timings === undefined ? [] : [{
+    candidate: entry.candidate,
+    timings: entry.timings,
+  }]),
+);
 
 const readPortableFailureEntry = async (candidateDirectory, recipe) => {
   const source = await readStableRegularFile(
@@ -908,6 +924,7 @@ export async function verifyVisualLabBatchPackage(options = {}) {
     batchRoot,
     index: canonical,
     recipeSet: recipeSet ?? null,
+    timings: summarizeEntryTimings(entries),
   });
 }
 
@@ -1366,6 +1383,7 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
     );
   }
   const index = createVisualLabBatchIndex(entries);
+  const timingSummary = summarizeEntryTimings(entries);
   // Publish the human sheet first and the machine-readable completion marker
   // last. A crash or sheet error therefore cannot leave complete:true without
   // its corresponding contact sheet.
@@ -1380,6 +1398,7 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
     recipeSet,
     recipeSetPath,
     plan: executionPlan.inspection,
+    timings: timingSummary,
   });
   };
   return executeLockedBatch().finally(releaseBatchLock);
@@ -1505,6 +1524,7 @@ const main = async () => {
       },
       index: result.indexPath,
       contactSheet: result.contactSheetPath,
+      timings: result.timings,
     };
     process.stdout.write(`${JSON.stringify(output)}\n`);
     process.exitCode = interruptedExitCode ?? result.exitCode;

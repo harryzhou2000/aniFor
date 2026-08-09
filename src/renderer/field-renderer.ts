@@ -471,7 +471,24 @@ export class MaterialRenderer {
    */
   disposeForNavigation(): Promise<void> {
     this.dispose();
-    return new Promise((resolve) => window.setTimeout(resolve, 100));
+    return new Promise((resolve) => globalThis.setTimeout(resolve, 100));
+  }
+
+  /** Audit-only counterpart whose acknowledgement proves presenter release. */
+  async disposeForAudit(): Promise<void> {
+    if (this.disposed) throw new Error('Renderer was already disposed before strict audit teardown');
+    this.disposed = true;
+    const presenter = this.presenter;
+    this.presenter = undefined;
+    let failure: Error | undefined;
+    try {
+      if (!presenter) throw new Error('Strict audit teardown requires an active WebGL presenter');
+      presenter.destroyForAudit();
+    } catch (error) {
+      failure = error instanceof Error ? error : new Error(String(error));
+    }
+    await new Promise((resolve) => globalThis.setTimeout(resolve, 100));
+    if (failure) throw failure;
   }
 
   /** Keeps the camera transform current even if host ResizeObserver delivery lags. */

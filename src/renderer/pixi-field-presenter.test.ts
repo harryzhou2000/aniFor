@@ -9033,4 +9033,58 @@ describe('Pixi presenter startup configuration', () => {
     expect(gl.clientWaitSync).toHaveBeenNthCalledWith(2, fence, gl.SYNC_FLUSH_COMMANDS_BIT, 0);
     expect(gl.deleteSync).toHaveBeenCalledWith(fence);
   });
+
+  it('attempts every strict teardown step and surfaces all release failures', () => {
+    const hdrFailure = new Error('HDR targets survived');
+    const appFailure = new Error('Pixi application survived');
+    const remove = vi.fn();
+    const sceneDestroy = vi.fn();
+    const presenter = Object.create(PixiFieldPresenter.prototype) as unknown as {
+      destroyed: boolean;
+      contextLossHandler?: () => void;
+      renderStallHandler?: () => void;
+      resolveFirstFrame(ready: boolean): void;
+      removeContextLossListener(): void;
+      releaseRenderFence(): void;
+      releaseWebGLTimingQuery(): void;
+      releaseWebGLTimingFence(): void;
+      hdrVfxPipeline?: { destroy(): void };
+      app: {
+        canvas: {
+          getContext(kind: string): null;
+          remove(): void;
+        };
+        destroy(): void;
+      };
+      scene: { destroy(options: { children: boolean }): void };
+      destroyForAudit(): void;
+    };
+    Object.assign(presenter, {
+      destroyed: false,
+      contextLossHandler: vi.fn(),
+      renderStallHandler: vi.fn(),
+      resolveFirstFrame: vi.fn(),
+      removeContextLossListener: vi.fn(),
+      releaseRenderFence: vi.fn(),
+      releaseWebGLTimingQuery: vi.fn(),
+      releaseWebGLTimingFence: vi.fn(),
+      hdrVfxPipeline: { destroy: () => { throw hdrFailure; } },
+      app: {
+        canvas: { getContext: () => null, remove },
+        destroy: () => { throw appFailure; },
+      },
+      scene: { destroy: sceneDestroy },
+    });
+
+    let thrown: unknown;
+    try { presenter.destroyForAudit(); }
+    catch (error) { thrown = error; }
+    expect(thrown).toBeInstanceOf(AggregateError);
+    expect([...(thrown as AggregateError).errors]).toEqual([hdrFailure, appFailure]);
+    expect(remove).toHaveBeenCalledOnce();
+    expect(sceneDestroy).toHaveBeenCalledWith({ children: true });
+    expect(presenter.destroyed).toBe(true);
+    expect(presenter.contextLossHandler).toBeUndefined();
+    expect(presenter.renderStallHandler).toBeUndefined();
+  });
 });

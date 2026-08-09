@@ -19,11 +19,13 @@
 
 import { createHash, randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
+import { realpathSync } from 'node:fs';
 import {
   access, mkdir, mkdtemp, readFile, rename, rm, stat, writeFile,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { performance } from 'node:perf_hooks';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   VISUAL_LAB_CAPTURE_PROTOCOL,
@@ -34,11 +36,13 @@ import {
   resolveVisualLabCaptureRecipe, visualLabCaptureRecipeNames,
 } from './visual-lab-recipes.mjs';
 import { createVisualLabResultRecord } from './visual-lab-result.mjs';
+import { createVisualLabTimingRecorder } from './visual-lab-timing.mjs';
 import {
   requestBrowserShutdown, terminateDetachedProcess,
 } from './detached-process.mjs';
 import { VISUAL_LAB_CAPTURE_VARIANTS as VARIANTS } from './visual-lab-capture-abi.mjs';
 
+const MODULE_PATH = fileURLToPath(import.meta.url);
 const CDP_CONNECT_TIMEOUT_MS = 10_000;
 const CDP_COMMAND_TIMEOUT_MS = 20_000;
 const PAGE_STARTUP_TIMEOUT_MS = 60_000;
@@ -48,6 +52,7 @@ const VARIANT_SETTLE_TIMEOUT_MS = 10_000;
 // ordinary settle window, so retain the exact two-consecutive-snapshot proof
 // while giving the software path enough time to begin its second readback.
 const SWIFTSHADER_VARIANT_SETTLE_TIMEOUT_MS = 30_000;
+const RENDERER_DISPOSAL_TIMEOUT_MS = 5_000;
 const VISUAL_LAB_LIFECYCLE_SCHEMA = 'anifor.visual-lab.lifecycle/v1';
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
@@ -245,101 +250,50 @@ const publishLifecycleFile = async (file, pid, profile, owner) => {
   }
 };
 
-async function main() {
-  const options = parseArguments(process.argv.slice(2));
-  if (options.help) {
-    process.stdout.write(`${HELP}\n`);
-    return;
-  }
-
-  const url = new URL(options.executionPlan.compiled.url);
-  await ensureServer(url, options.bundle);
-  await mkdir(options.executionPlan.runtime.artifactRoot, { recursive: true });
-  if (options.lifecycleFile) {
-    await mkdir(path.dirname(options.lifecycleFile), { recursive: true });
-  }
-  const chromePath = await resolveChrome(options.chrome);
-  let cdp;
-  let chrome;
-  let profile;
-  let lifecyclePublished = false;
-  let lifecyclePublicationPromise;
-  let cleanupPromise;
-  const cleanup = () => {
-    cleanupPromise ??= (async () => {
-      if (lifecyclePublicationPromise) {
-        await lifecyclePublicationPromise.catch(() => {});
-      }
-      await requestBrowserShutdown(cdp);
-      const terminated = await terminateDetachedProcess(chrome);
-      if (!terminated) {
-        throw new Error(`Chrome process group ${chrome?.pid ?? 'unknown'} survived cleanup`);
-      }
-      if (profile) await rm(profile, { recursive: true, force: true });
-      if (lifecyclePublished) {
-        await rm(options.lifecycleFile, { force: true });
-        lifecyclePublished = false;
-      }
-    })();
-    return cleanupPromise;
-  };
-  const onSignal = (signal) => {
-    void cleanup().finally(() => process.exit(signal === 'SIGINT' ? 130 : 143));
-  };
-  const onSigint = () => onSignal('SIGINT');
-  const onSigterm = () => onSignal('SIGTERM');
-  process.once('SIGINT', onSigint);
-  process.once('SIGTERM', onSigterm);
-  try {
-    profile = await mkdtemp(path.join(tmpdir(), 'anifor-visual-lab-chrome-'));
-    const gpuFlags = options.gpu === 'swiftshader'
-      ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader']
-      : ['--enable-webgl', '--ignore-gpu-blocklist'];
-    chrome = spawn(chromePath, [
-      '--headless=new', '--no-sandbox', '--disable-dev-shm-usage',
-      '--no-proxy-server', '--remote-debugging-port=0',
-      ...(url.protocol === 'file:' ? ['--allow-file-access-from-files'] : []),
-      `--user-data-dir=${profile}`, '--window-size=1280,720',
-      '--force-device-scale-factor=1', '--disable-background-timer-throttling',
-      '--disable-renderer-backgrounding', ...gpuFlags, url.href,
-    ], { detached: true, stdio: ['ignore', 'ignore', 'pipe'] });
-    // Install Chrome's error/exit/stderr observers before any filesystem
-    // publication can yield. An immediately failing executable must not race
-    // past the DevTools watcher and masquerade as a 15-second timeout.
-    const targetPromise = findChromeTarget(chrome, url);
-    if (options.lifecycleFile) {
-      lifecyclePublicationPromise = publishLifecycleFile(
-        options.lifecycleFile, chrome.pid, profile, options.lifecycleOwner,
-      ).then(() => { lifecyclePublished = true; });
-    }
-    const [target] = await Promise.all([
-      targetPromise,
-      lifecyclePublicationPromise ?? Promise.resolve(),
-    ]);
-    cdp = await Cdp.connect(target.webSocketDebuggerUrl);
-    const browserErrors = collectBrowserErrors(cdp);
-    await Promise.all([
-      cdp.send('Page.enable'), cdp.send('Runtime.enable'), cdp.send('Log.enable'),
-    ]);
+async function captureVisualLabCandidateEvidence({
+  entry,
+  pageCdp,
+  gpuMode,
+  browserErrors,
+  measure = async (_phase, operation) => operation(),
+}) {
+  const options = Object.freeze({
+    executionPlan: entry,
+    candidate: entry.candidate,
+    domain: entry.request.domain,
+    domainAdapter: entry.domainAdapter,
+    captureDriver: entry.captureDriver,
+    target: entry.request.target,
+    fixture: entry.request.fixture,
+    fixtureAdapter: entry.fixtureAdapter,
+    gain: entry.request.gain,
+    renderScale: entry.request.renderScale,
+    gpu: gpuMode,
+  });
+  const cdp = pageCdp;
+  const startupSelection = await measure('startup', async () => {
     // Launch directly at the fixture URL. Navigating an already attached blank
     // target over CDP can withhold its acknowledgement while SwiftShader is
     // compiling, making a healthy load indistinguishable from a protocol hang.
-    const startupSelection = await stageVariantDuringStartup(cdp, options);
+    const selection = await stageVariantDuringStartup(cdp, options);
     const startupDriverFields = options.executionPlan.compiled.startupFields;
-    assert(startupSelection.backendBeforeSelection === 'canvas2d'
-      && startupSelection.backendReasonBeforeSelection === 'webgl-starting'
-      && startupSelection.stagedBeforeWebGL === true
-      && startupSelection.fixture === options.fixture
-      && startupSelection.fixturePrepared === true
-      && startupSelection.scene === options.fixtureAdapter.scene
-      && startupSelection.preparation
+    assert(selection.backendBeforeSelection === 'canvas2d'
+      && selection.backendReasonBeforeSelection === 'webgl-starting'
+      && selection.stagedBeforeWebGL === true
+      && selection.fixture === options.fixture
+      && selection.fixturePrepared === true
+      && selection.scene === options.fixtureAdapter.scene
+      && selection.preparation
         === options.executionPlan.inspection.fixture.preparation.reportLabel
       && Object.entries(startupDriverFields).every(([name, value]) => (
-        startupSelection[name] === value
+        selection[name] === value
       )),
-    `Visual capture selector was not staged during bounded Canvas startup: ${JSON.stringify(startupSelection)}`);
-    await waitForPage(cdp, options, 2);
+    `Visual capture selector was not staged during bounded Canvas startup: ${JSON.stringify(selection)}`);
+    return selection;
+  });
 
+  await measure('readiness', async () => {
+    await waitForPage(cdp, options, 2);
     await evaluate(cdp, `(() => {
       const audit = window.__ANIFOR_INPUT_AUDIT__;
       audit.refreshPresentationFields();
@@ -352,12 +306,16 @@ async function main() {
         && snapshot.fieldAlpha.nonzero > 0
         && snapshot.framebufferAlpha.nonzero > 0;
     }, PAGE_STARTUP_TIMEOUT_MS, `populated ${options.fixture} presentation fields`);
+  });
 
-    const captures = {};
-    for (const variant of VARIANTS) {
-      captures[variant.name] = await captureVariant(cdp, options, variant);
-    }
+  const captures = {};
+  for (const variant of VARIANTS) {
+    captures[variant.name] = await measure(
+      variant.name, () => captureVariant(cdp, options, variant),
+    );
+  }
 
+  return measure('finalize', async () => {
     const reference = captures.off.state;
     const exactFramebufferAlpha = VARIANTS.every(({ name }) => sameDigest(
       reference.framebufferAlpha, captures[name].state.framebufferAlpha,
@@ -421,16 +379,16 @@ async function main() {
     }
     const result = createVisualLabResultRecord(
       options.candidate, options.executionPlan.request, {
-      off: compactCaptures.off.sha256,
-      a: compactCaptures.a.sha256,
-      b: compactCaptures.b.sha256,
+        off: compactCaptures.off.sha256,
+        a: compactCaptures.a.sha256,
+        b: compactCaptures.b.sha256,
       },
     );
-    const report = {
+    return {
       tool: 'visual-lab-audit-v1',
       ...options.executionPlan.compiled.reportFields,
       result,
-      url: url.href,
+      url: options.executionPlan.compiled.url,
       domain: options.domain,
       target: options.target,
       fixture: options.fixture,
@@ -459,16 +417,345 @@ async function main() {
       browserErrors: browserErrors.length,
       warnings,
     };
-    const encodedReport = `${JSON.stringify(report)}\n`;
-    const reportPath = options.executionPlan.runtime.artifacts.report;
-    await writeFile(reportPath, encodedReport);
-    process.stdout.write(JSON.stringify({ ...report, report: reportPath }));
-    process.stdout.write('\n');
+  });
+}
+
+/**
+ * Runs one candidate transaction through a caller-owned fresh target. The
+ * transaction owns its CDP connection, protocol domains, browser-error
+ * collector, fixture startup, readiness, ordered captures, strict renderer
+ * disposal, and in-memory report. Chrome/profile and target/context teardown
+ * remain host-owned.
+ */
+export async function captureVisualLabCandidatePage({
+  entry,
+  connectPage,
+  gpuMode,
+  measure = async (_phase, operation) => operation(),
+}) {
+  if (typeof connectPage !== 'function') {
+    throw new TypeError('Visual Lab candidate transaction requires a page connector');
+  }
+  let pageCdp;
+  let browserErrors = [];
+  let report;
+  let captureError;
+  try {
+    await measure('targetSetup', async () => {
+      pageCdp = await connectPage();
+      if (!pageCdp || typeof pageCdp.send !== 'function') {
+        throw new TypeError('Visual Lab page connector returned an invalid CDP session');
+      }
+      browserErrors = collectBrowserErrors(pageCdp);
+      await Promise.all([
+        pageCdp.send('Page.enable'),
+        pageCdp.send('Runtime.enable'),
+        pageCdp.send('Log.enable'),
+      ]);
+    });
+    report = await captureVisualLabCandidateEvidence({
+      entry,
+      pageCdp,
+      gpuMode,
+      browserErrors,
+      measure,
+    });
+  } catch (error) {
+    captureError = error instanceof Error ? error : new Error(String(error));
+  }
+  let disposalError;
+  try {
+    await measure('rendererDispose', () => disposeVisualLabCandidatePage({
+      pageCdp,
+      browserErrors,
+      required: true,
+    }));
+  } catch (error) {
+    disposalError = error instanceof Error ? error : new Error(String(error));
+  }
+  throwCollectedErrors(
+    [captureError, disposalError].filter(Boolean),
+    'Visual Lab capture and renderer disposal both failed',
+  );
+  return report;
+}
+
+/**
+ * Releases page-owned renderer resources before its browser context or host is
+ * closed. A successful capture requires the audit bridge to acknowledge the
+ * disposal; a failed startup may use best-effort mode so host cleanup can still
+ * complete without replacing the original error.
+ */
+export async function disposeVisualLabCandidatePage({
+  pageCdp,
+  browserErrors = [],
+  required = true,
+}) {
+  if (!pageCdp) {
+    if (required) throw new Error('Visual Lab candidate has no page CDP for renderer disposal');
+    return false;
+  }
+  const disposed = await evaluate(pageCdp, `(async () => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    const dispose = audit?.disposeRendererForNavigation;
+    if (typeof dispose !== 'function') return false;
+    await dispose.call(audit);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    return true;
+  })()`, RENDERER_DISPOSAL_TIMEOUT_MS);
+  if (required && disposed !== true) {
+    throw new Error('Visual Lab audit bridge did not acknowledge renderer disposal');
+  }
+  if (required && browserErrors.length > 0) {
+    throw new Error(`browser errors through renderer teardown: ${browserErrors.join(' | ')}`);
+  }
+  return disposed === true;
+}
+
+const throwCollectedErrors = (errors, label) => {
+  if (errors.length === 0) return;
+  if (errors.length === 1) throw errors[0];
+  throw new AggregateError(errors, label);
+};
+
+const CLI_ERROR_MAX_DEPTH = 4;
+const CLI_ERROR_MAX_CHILDREN = 8;
+const CLI_ERROR_MAX_CHARACTERS = 8_000;
+
+const renderVisualLabError = (error, ancestors, depth) => {
+  if (!(error instanceof Error)) return String(error);
+  const message = error.message || error.name;
+  if (!(error instanceof AggregateError)
+    || ancestors.has(error) || depth >= CLI_ERROR_MAX_DEPTH) return message;
+  const nestedAncestors = new Set(ancestors).add(error);
+  const children = [...error.errors].slice(0, CLI_ERROR_MAX_CHILDREN).map(
+    (child, index) => `[${index + 1}] ${renderVisualLabError(
+      child, nestedAncestors, depth + 1,
+    )}`,
+  );
+  if (error.errors.length > CLI_ERROR_MAX_CHILDREN) {
+    children.push(`[+] ${error.errors.length - CLI_ERROR_MAX_CHILDREN} more errors omitted`);
+  }
+  return children.length === 0 ? message : `${message}\nNested errors:\n${children.join('\n')}`;
+};
+
+export const formatVisualLabCliError = (error) => (
+  renderVisualLabError(error, new Set(), 0).slice(0, CLI_ERROR_MAX_CHARACTERS)
+);
+
+/** Retains the lifecycle handoff until its referenced profile is gone. */
+export async function removeVisualLabHostArtifacts({
+  profile,
+  lifecycleFile,
+  lifecyclePublished,
+  remove = rm,
+}) {
+  const cleanupErrors = [];
+  let profileRemoved = profile === undefined;
+  if (profile) {
+    try {
+      await remove(profile, { recursive: true, force: true });
+      profileRemoved = true;
+    } catch (error) {
+      cleanupErrors.push(error instanceof Error ? error : new Error(String(error)));
+    }
+  }
+  let lifecycleRemoved = !lifecyclePublished;
+  if (lifecyclePublished && profileRemoved) {
+    try {
+      await remove(lifecycleFile, { force: true });
+      lifecycleRemoved = true;
+    } catch (error) {
+      cleanupErrors.push(error instanceof Error ? error : new Error(String(error)));
+    }
+  }
+  throwCollectedErrors(cleanupErrors, 'Visual Lab host-artifact cleanup failed');
+  return Object.freeze({ profileRemoved, lifecycleRemoved });
+}
+
+async function main() {
+  const totalStarted = performance.now();
+  const timings = createVisualLabTimingRecorder();
+  const planStarted = performance.now();
+  const options = parseArguments(process.argv.slice(2));
+  if (options.help) {
+    process.stdout.write(`${HELP}\n`);
+    return;
+  }
+  timings.record('plan', performance.now() - planStarted);
+
+  const url = new URL(options.executionPlan.compiled.url);
+  let chromePath;
+  await timings.measure('preflight', async () => {
+    await ensureServer(url, options.bundle);
+    await mkdir(options.executionPlan.runtime.artifactRoot, { recursive: true });
+    if (options.lifecycleFile) {
+      await mkdir(path.dirname(options.lifecycleFile), { recursive: true });
+    }
+    chromePath = await resolveChrome(options.chrome);
+  });
+  let pageCdp;
+  let browserCdp;
+  let chromeTarget;
+  let chrome;
+  let profile;
+  let lifecyclePublished = false;
+  let lifecyclePublicationPromise;
+  let targetCleanupPromise;
+  let hostCleanupPromise;
+  let report;
+  const closeTarget = () => {
+    targetCleanupPromise ??= (async () => {
+      const targetErrors = [];
+      if (browserCdp && chromeTarget?.id) {
+        try {
+          const closed = await browserCdp.send(
+            'Target.closeTarget', { targetId: chromeTarget.id }, 5_000,
+          );
+          if (closed.success !== true) {
+            throw new Error(`Chrome refused to close target ${chromeTarget.id}`);
+          }
+        } catch (error) {
+          targetErrors.push(error instanceof Error ? error : new Error(String(error)));
+        }
+      }
+      try { pageCdp?.close(); }
+      catch (error) {
+        targetErrors.push(error instanceof Error ? error : new Error(String(error)));
+      }
+      throwCollectedErrors(targetErrors, 'Visual Lab target teardown failed');
+    })();
+    return targetCleanupPromise;
+  };
+  const cleanupHost = () => {
+    hostCleanupPromise ??= (async () => {
+      const cleanupErrors = [];
+      if (lifecyclePublicationPromise) {
+        await lifecyclePublicationPromise.catch(() => {});
+      }
+      await requestBrowserShutdown(browserCdp ?? pageCdp);
+      let terminated = false;
+      try {
+        terminated = await terminateDetachedProcess(chrome);
+      } catch (error) {
+        cleanupErrors.push(error instanceof Error ? error : new Error(String(error)));
+      }
+      if (!terminated) {
+        cleanupErrors.push(
+          new Error(`Chrome process group ${chrome?.pid ?? 'unknown'} survived cleanup`),
+        );
+      }
+      if (terminated) {
+        try {
+          const removed = await removeVisualLabHostArtifacts({
+            profile,
+            lifecycleFile: options.lifecycleFile,
+            lifecyclePublished,
+          });
+          if (removed.lifecycleRemoved) lifecyclePublished = false;
+        } catch (error) {
+          cleanupErrors.push(error instanceof Error ? error : new Error(String(error)));
+        }
+      }
+      throwCollectedErrors(cleanupErrors, 'Visual Lab Chrome-host teardown failed');
+    })();
+    return hostCleanupPromise;
+  };
+  const cleanupAll = async () => {
+    const cleanupErrors = [];
+    try { await closeTarget(); }
+    catch (error) {
+      cleanupErrors.push(error instanceof Error ? error : new Error(String(error)));
+    }
+    try { await cleanupHost(); }
+    catch (error) {
+      cleanupErrors.push(error instanceof Error ? error : new Error(String(error)));
+    }
+    throwCollectedErrors(cleanupErrors, 'Visual Lab target and host teardown both failed');
+  };
+  const onSignal = (signal) => {
+    void cleanupAll().finally(() => process.exit(signal === 'SIGINT' ? 130 : 143));
+  };
+  const onSigint = () => onSignal('SIGINT');
+  const onSigterm = () => onSignal('SIGTERM');
+  process.once('SIGINT', onSigint);
+  process.once('SIGTERM', onSigterm);
+  let captureError;
+  try {
+    chromeTarget = await timings.measure('hostLaunch', async () => {
+      profile = await mkdtemp(path.join(tmpdir(), 'anifor-visual-lab-chrome-'));
+      const gpuFlags = options.gpu === 'swiftshader'
+        ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader']
+        : ['--enable-webgl', '--ignore-gpu-blocklist'];
+      chrome = spawn(chromePath, [
+        '--headless=new', '--no-sandbox', '--disable-dev-shm-usage',
+        '--no-proxy-server', '--remote-debugging-port=0',
+        ...(url.protocol === 'file:' ? ['--allow-file-access-from-files'] : []),
+        `--user-data-dir=${profile}`, '--window-size=1280,720',
+        '--force-device-scale-factor=1', '--disable-background-timer-throttling',
+        '--disable-renderer-backgrounding', ...gpuFlags, url.href,
+      ], { detached: true, stdio: ['ignore', 'ignore', 'pipe'] });
+      // Install Chrome's error/exit/stderr observers before any filesystem
+      // publication can yield. An immediately failing executable must not race
+      // past the DevTools watcher and masquerade as a 15-second timeout.
+      const targetPromise = findChromeTarget(chrome, url);
+      if (options.lifecycleFile) {
+        lifecyclePublicationPromise = publishLifecycleFile(
+          options.lifecycleFile, chrome.pid, profile, options.lifecycleOwner,
+        ).then(() => { lifecyclePublished = true; });
+      }
+      const [resolvedHostTarget] = await Promise.all([
+        targetPromise,
+        lifecyclePublicationPromise ?? Promise.resolve(),
+      ]);
+      browserCdp = await Cdp.connect(resolvedHostTarget.browserWebSocketDebuggerUrl);
+      return resolvedHostTarget.page;
+    });
+    report = await captureVisualLabCandidatePage({
+      entry: options.executionPlan,
+      connectPage: async () => {
+        pageCdp = await Cdp.connect(chromeTarget.webSocketDebuggerUrl);
+        return pageCdp;
+      },
+      gpuMode: options.gpu,
+      measure: timings.measure,
+    });
+  } catch (error) {
+    captureError = error instanceof Error ? error : new Error(String(error));
+  }
+  let targetError;
+  try {
+    await timings.measure('targetTeardown', closeTarget);
+  } catch (error) {
+    targetError = error instanceof Error ? error : new Error(String(error));
+  }
+  let hostError;
+  try {
+    await timings.measure('hostTeardown', cleanupHost);
+  } catch (error) {
+    hostError = error instanceof Error ? error : new Error(String(error));
   } finally {
-    await cleanup();
     process.removeListener('SIGINT', onSigint);
     process.removeListener('SIGTERM', onSigterm);
   }
+  throwCollectedErrors(
+    [captureError, targetError, hostError].filter(Boolean),
+    'Visual Lab capture, target teardown, or host teardown failed',
+  );
+  timings.record('total', performance.now() - totalStarted);
+  report = {
+    ...report,
+    timings: timings.finish({
+      browserHosts: 1,
+      browserContexts: 1,
+      targets: 1,
+      hostRestarts: 0,
+      captures: VARIANTS.length,
+    }),
+  };
+  const reportPath = options.executionPlan.runtime.artifacts.report;
+  await writeFile(reportPath, `${JSON.stringify(report)}\n`);
+  process.stdout.write(`${JSON.stringify({ ...report, report: reportPath })}\n`);
 }
 
 async function ensureServer(url, requireBundleFile = false) {
@@ -544,7 +831,7 @@ async function findChromeTarget(chrome, expectedUrl) {
     chrome.once('error', onError);
   });
   const port = new URL(browserSocket).port;
-  return waitFor(async () => {
+  const page = await waitFor(async () => {
     const response = await fetch(`http://127.0.0.1:${port}/json/list`, {
       signal: AbortSignal.timeout(2_000),
     });
@@ -552,6 +839,7 @@ async function findChromeTarget(chrome, expectedUrl) {
     return targets.find((candidate) => candidate.type === 'page'
       && candidate.url === expectedUrl.href && candidate.webSocketDebuggerUrl);
   }, 10_000, 'Chrome page target');
+  return Object.freeze({ page, browserWebSocketDebuggerUrl: browserSocket });
 }
 
 function collectBrowserErrors(cdp) {
@@ -987,10 +1275,18 @@ class Cdp {
   }
 }
 
-main().catch((error) => {
-  process.stderr.write(`${JSON.stringify({
-    tool: 'visual-lab-audit-v1', ok: false,
-    error: error instanceof Error ? error.message : String(error),
-  })}\n`);
-  process.exitCode = 1;
-});
+const isDirectExecution = () => {
+  if (!process.argv[1]) return false;
+  try { return realpathSync(process.argv[1]) === realpathSync(MODULE_PATH); }
+  catch { return path.resolve(process.argv[1]) === MODULE_PATH; }
+};
+
+if (isDirectExecution()) {
+  void main().catch((error) => {
+    process.stderr.write(`${JSON.stringify({
+      tool: 'visual-lab-audit-v1', ok: false,
+      error: formatVisualLabCliError(error),
+    })}\n`);
+    process.exitCode = 1;
+  });
+}

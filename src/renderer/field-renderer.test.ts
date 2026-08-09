@@ -193,4 +193,56 @@ describe('field renderer layout scheduling', () => {
 
     expect(() => renderer.render(1000)).not.toThrow();
   });
+
+  it('surfaces strict audit teardown failures after detaching the WebGL presenter', async () => {
+    const failure = new Error('forced presenter teardown failure');
+    const destroyForAudit = vi.fn(() => { throw failure; });
+    const renderer = Object.create(MaterialRenderer.prototype) as {
+      disposed: boolean;
+      presenter?: { destroyForAudit(): void };
+      disposeForAudit(): Promise<void>;
+    };
+    Object.assign(renderer, { disposed: false, presenter: { destroyForAudit } });
+
+    await expect(renderer.disposeForAudit()).rejects.toBe(failure);
+    expect(destroyForAudit).toHaveBeenCalledOnce();
+    expect(renderer.disposed).toBe(true);
+    expect(renderer.presenter).toBeUndefined();
+  });
+
+  it('rejects strict Canvas/race teardown while ordinary disposal remains best effort', async () => {
+    const missingPresenter = Object.create(MaterialRenderer.prototype) as {
+      disposed: boolean;
+      presenter?: undefined;
+      disposeForAudit(): Promise<void>;
+    };
+    Object.assign(missingPresenter, { disposed: false, presenter: undefined });
+    await expect(missingPresenter.disposeForAudit()).rejects.toThrow(/active WebGL presenter/);
+
+    const destroy = vi.fn(() => { throw new Error('ordinary navigation race'); });
+    const ordinary = Object.create(MaterialRenderer.prototype) as {
+      disposed: boolean;
+      presenter?: { destroy(): void };
+      dispose(): void;
+    };
+    Object.assign(ordinary, { disposed: false, presenter: { destroy } });
+    expect(() => ordinary.dispose()).not.toThrow();
+    expect(destroy).toHaveBeenCalledOnce();
+    expect(ordinary.presenter).toBeUndefined();
+  });
+
+  it('destroys a strict presenter once even if ordinary pagehide follows', async () => {
+    const destroyForAudit = vi.fn();
+    const renderer = Object.create(MaterialRenderer.prototype) as {
+      disposed: boolean;
+      presenter?: { destroyForAudit(): void };
+      disposeForAudit(): Promise<void>;
+      dispose(): void;
+    };
+    Object.assign(renderer, { disposed: false, presenter: { destroyForAudit } });
+
+    await expect(renderer.disposeForAudit()).resolves.toBeUndefined();
+    renderer.dispose();
+    expect(destroyForAudit).toHaveBeenCalledOnce();
+  });
 });

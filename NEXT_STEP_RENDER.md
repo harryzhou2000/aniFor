@@ -140,8 +140,10 @@ and release recipe-set identity remain unchanged. The 1,445-source/193-tooling
 test gates, production build, and a real portable Gas+Powder WebGL/HDR batch all
 pass; its sheet renders `OFF/A/B` and `Smooth/Local/Grains` from the registry.
 
-The immutable execution-plan and pre-Chrome inspection increment is complete
-locally. `scripts/visual-lab-execution-plan.mjs` resolves the selected recipe
+The immutable execution-plan and pre-Chrome inspection increment is deployed at
+revision `87e041a22f019e529b29cd61a5e9fb4611bef289`. Source workflow run
+`31308888264` produced the artifact and `deploy-verified` run `31309055166`
+reused it. `scripts/visual-lab-execution-plan.mjs` resolves the selected recipe
 set, fixture-owned driver, evidence reader, startup transaction, URL, all three
 selectors and expected datasets, review labels, and artifact paths before any
 output mutation or browser launch. The real batch iterates those same frozen
@@ -150,22 +152,40 @@ inspection plus an unhashed runtime envelope; it neither creates the output
 tree nor serializes browser expressions or executable preparer/evidence-reader
 dispatch authority. An opaque executable digest binds that private authority,
 and hermetic base URLs reject inherited query/fragment render state so the
-canonical plan query is complete. Historical preparation report labels remain diagnostics.
-Gas plus Powder passed a real built-bundle WebGL batch with unchanged
-result IDs and portable verification.
+canonical plan query is complete. Historical preparation report labels remain
+diagnostics. Gas plus Powder passed a real built-bundle WebGL batch with
+unchanged result IDs and portable verification.
 
-The next objective remains execution throughput, not visual-detail volume.
-Instrument per-phase launch, target, WebGL-ready, variant, teardown, and total
-timings, then reuse only a killable Chrome host for compatible normal-scale
-candidates. Every candidate must still receive a fresh isolated browser context,
-fresh direct-URL target, fresh simulation/document/WebGL state, and explicit
-renderer disposal. Any timeout, context loss, backend fallback, or disposal
-failure must recycle the whole host before continuing; true 8× and recovery
-gates remain fresh-browser-only. Preserve bounded lifecycle cleanup, content
-identities, and portable verification. A new same-domain control should require
-a static declaration plus one executable adapter and optional typed fixture
-preparer—not edits to audit, batch, baseline, review, CI, or contact-sheet
-dispatch.
+The current increment keeps the objective on execution
+throughput rather than visual-detail volume. One page-scoped candidate
+transaction now owns CDP protocol setup and error collection, fixture startup,
+WebGL/field readiness, ordered off/A/B capture, invariant validation, in-memory
+report construction, and strict renderer disposal. The host still owns Chrome/
+profile lifecycle plus browser-context/target ownership. It explicitly closes
+the browser target, performs a separate host teardown, and only then publishes
+`report.json`. CLI entry points preserve nested error causes.
+
+The diagnostic clock records exactly 14 non-overlapping bounded phases: `plan`,
+`preflight`, `hostLaunch`, `targetSetup`, `startup`, `readiness`, `off`, `a`,
+`b`, `finalize`, `rendererDispose`, `targetTeardown`, `hostTeardown`, and
+`total`. Impossible telemetry and any duration above 300 seconds are rejected.
+These timings remain outside every frozen plan, result, batch, baseline,
+comparison, and recipe-set identity. A real built Gas strict-disposal gate
+passed at roughly `hostLaunch=0.234s`, `startup=1.285s`,
+`readiness=16.749s`, and `total=29.978s`, with no Chrome process left behind.
+
+The next active objective is measured shared-host worker reuse for compatible
+normal-scale candidates, optimizing readiness and variant cost rather than
+process launch. Reuse only a killable Chrome host, sequentially; every candidate
+still receives a fresh incognito browser context, direct-URL target, document,
+simulation, WebGL state, and error collector. Any timeout, context loss,
+backend fallback, browser error, renderer-disposal failure, or context/target
+teardown failure must recycle the whole host before continuing. True 8× and
+recovery gates remain fresh-browser-only. Preserve bounded lifecycle cleanup,
+content identities, and portable verification. A new same-domain control should
+require a static declaration plus one executable adapter and optional typed
+fixture preparer—not edits to audit, batch, baseline, review, CI, or
+contact-sheet dispatch.
 
 ### Cross-runtime static-contract acceptance
 

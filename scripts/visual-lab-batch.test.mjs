@@ -32,6 +32,7 @@ import {
 import { resolveVisualLabCaptureRecipe } from './visual-lab-recipes.mjs';
 import { createVisualLabRecipeSet } from './visual-lab-recipe-set.mjs';
 import { createVisualLabResultRecord } from './visual-lab-result.mjs';
+import { VISUAL_LAB_TIMING_SCHEMA } from './visual-lab-timing.mjs';
 import { isDetachedProcessGroupAlive } from './detached-process.mjs';
 
 const temporaryDirectories = [];
@@ -131,6 +132,25 @@ const stableResult = (candidate, salt = candidate) => createVisualLabResultRecor
   requestFor(candidate),
   stableHashes(salt),
 );
+
+const timingRecord = (multiplier = 1) => ({
+  schema: VISUAL_LAB_TIMING_SCHEMA,
+  phases: (() => {
+    const values = Object.fromEntries([
+      'plan', 'preflight', 'hostLaunch', 'targetSetup', 'startup', 'readiness',
+      'off', 'a', 'b', 'finalize', 'rendererDispose', 'targetTeardown',
+      'hostTeardown',
+    ].map((name, index) => [name, (index + 1) * multiplier]));
+    return { ...values, total: Object.values(values).reduce((sum, value) => sum + value, 0) };
+  })(),
+  counters: {
+    browserHosts: 1,
+    browserContexts: 1,
+    targets: 1,
+    hostRestarts: 0,
+    captures: 3,
+  },
+});
 
 const crc32 = (bytes) => {
   let value = 0xFFFFFFFF;
@@ -297,6 +317,7 @@ const writeValidCapture = async (directory, candidate, options = {}) => {
       framebufferAlpha: true,
     },
     browserErrors: 0,
+    ...(options.timings === undefined ? {} : { timings: options.timings }),
   };
   if (options.mutateReport) options.mutateReport(report);
   await writeFile(path.join(directory, 'report.json'), `${JSON.stringify(report)}\n`);
@@ -662,6 +683,59 @@ describe('Visual Lab batch runner', () => {
       indexOnly: true,
     })).rejects.toThrow('source must be outside');
     expect(await readFile(result.indexPath, 'utf8')).toBe(sentinel);
+  });
+
+  it('aggregates optional phase telemetry outside frozen batch identity', async () => {
+    const root = await makeTemporaryDirectory();
+    const outputDirectory = path.join(root, 'batch');
+    const candidateRoot = path.join(outputDirectory, 'candidates');
+    await writeValidCapture(path.join(candidateRoot, 'gas-showcase'), 'gas-showcase', {
+      timings: timingRecord(2),
+    });
+    await writeValidCapture(
+      path.join(candidateRoot, 'oxygen-showcase'), 'oxygen-showcase',
+    );
+
+    const generated = await runVisualLabBatch({
+      candidates: ['oxygen-showcase', 'gas-showcase'],
+      outputDir: outputDirectory,
+      indexOnly: true,
+    });
+    expect(generated.ok).toBe(true);
+    expect(generated.timings.sampledCandidates).toEqual(['gas-showcase']);
+    expect(generated.timings.phases.hostLaunch).toEqual({
+      totalMs: 6,
+      meanMs: 6,
+      maxMs: 6,
+    });
+    expect(generated.timings.counters).toEqual({
+      browserHosts: 1,
+      browserContexts: 1,
+      targets: 1,
+      hostRestarts: 0,
+      captures: 3,
+    });
+    expect(JSON.stringify(generated.index)).not.toMatch(/timings|browserHosts|totalMs/);
+    expect(await readFile(generated.indexPath, 'utf8')).not.toMatch(/timings|browserHosts/);
+
+    const verified = await verifyVisualLabBatchPackage({
+      batchRoot: outputDirectory,
+      requireComplete: true,
+    });
+    expect(verified.timings).toEqual(generated.timings);
+
+    await writeValidCapture(path.join(candidateRoot, 'gas-showcase'), 'gas-showcase', {
+      timings: { ...timingRecord(), machinePath: '/tmp/not-portable' },
+    });
+    const rejected = await runVisualLabBatch({
+      candidates: ['gas-showcase'], outputDir: outputDirectory, indexOnly: true,
+    });
+    expect(rejected.index.candidates[0]).toMatchObject({
+      candidate: 'gas-showcase', status: 'failed', failure: 'report-invalid',
+    });
+    expect(await readFile(
+      path.join(candidateRoot, 'gas-showcase', 'failure.log'), 'utf8',
+    )).toContain('Visual Lab timings must contain exactly');
   });
 
   it('revalidates a complete portable package without changing any evidence', async () => {

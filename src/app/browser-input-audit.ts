@@ -467,7 +467,7 @@ export interface BrowserInputAuditApi {
   requestWebGLPresentationTimingSample(): boolean;
   webGLPresentationTiming(): WebGLPresentationTiming | undefined;
   forceEightXRenderStall(): boolean;
-  /** Audit-only outgoing-renderer teardown before an intentional Detail/page navigation. */
+  /** Audit-only strict outgoing-renderer teardown before target disposal. */
   disposeRendererForNavigation(): Promise<void>;
 }
 

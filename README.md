@@ -64,6 +64,20 @@ entries and binds each child to an opaque digest of its executable browser
 authority, while the expressions themselves remain private and are never
 printed in the plan.
 
+This immutable-plan boundary is deployed at revision
+`87e041a22f019e529b29cd61a5e9fb4611bef289` from source run `31308888264` and
+deploy run `31309055166`. The current increment puts CDP
+setup through strict renderer disposal in one page-scoped transaction, then
+explicitly closes its target and tears down the host before publishing
+`report.json`; nested CLI error causes are preserved. Its 14 bounded,
+non-overlapping monotonic phases—from plan/preflight through target and host
+teardown—are diagnostic only, excluded from frozen identities, and reject
+impossible or over-300-second values. A real built Gas gate completed in about
+29.978 seconds with no Chrome left behind. Next, measured shared-host workers
+will give each normal-scale candidate a fresh incognito context and direct-URL
+target, optimizing readiness and variant cost while recycling the host after
+any capture or teardown fault. True 8× and recovery remain fresh-browser-only.
+
 Each recipe keeps the stable six fields `name/domain/target/fixture/gain/renderScale`.
 The resolved fixture—not the material domain—selects its capture driver, so one
 domain can host multiple independent controls. Add declarative driver, fixture,

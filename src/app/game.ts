@@ -614,7 +614,7 @@ export class Game {
         return occupied;
       },
       setGasFieldLighting: (enabled) => { this.renderer.setGasFieldLightingEnabled(enabled); },
-      disposeRendererForNavigation: () => this.renderer.disposeForNavigation(),
+      disposeRendererForNavigation: () => this.renderer.disposeForAudit(),
       setGasVolumeChroma: (enabled) => { this.renderer.setGasVolumeChromaEnabled(enabled); },
       setGasIdentityStyling: (enabled) => {
         this.renderer.setGasIdentityStylingEnabled(enabled);
