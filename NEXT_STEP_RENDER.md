@@ -66,13 +66,24 @@ experiment should reduce to one static catalog record, one leaf shader module,
 one renderer-registry entry, and—only for authored simulation state—one typed
 app preparer.
 
-The active bounded follow-up centralizes the evidence-only capture ABI in
-`scripts/visual-lab-capture-abi.mjs`. One frozen tuple owns the exact ordered
+The evidence-only capture ABI is deployed at revision
+`2fcf93f75057569134cfa252f1b8470ccd6f7965` by release-set workflow run
+`31297587591`. In `scripts/visual-lab-capture-abi.mjs`, one frozen tuple owns the exact ordered
 `off=0`, `a=1`, and `b=2` mapping; audit capture consumes descriptors while
 result, batch, baseline, review, and metrics consumers derive the ordered names.
 Keep it dependency-free and Node-side, preserve every historical v1 byte and
 ID, and do not widen the browser static contract or typed fixture boundary for
 this evidence concern.
+
+The active bounded follow-up adds deterministic `review-board.html` as a local
+filtering surface over decision candidates. It derives from comparison/v1 and
+verified metrics, preserves catalog order, exposes exact status/domain/fixture
+and bounded literal-name filters through canonical query state, and keeps every
+card visible without JavaScript. Add no score, ranking, recommendation,
+decision write, promotion action, external dependency, or interpolated script
+data. Bound it to 1 MiB, use only portable relative capture links, exact-rerender
+it in the shared verifier when present, keep it outside all frozen identities,
+and accept legacy packages that omit it.
 
 ### Cross-runtime static-contract acceptance
 
@@ -87,8 +98,8 @@ export. The bounded read-only evidence reader label remains metadata; do not
 place executable fixture-preparation method names, argument arrays, builders,
 or preparers in the serialized contract.
 
-The compatibility gate is the shared-contract, bounded PNG decoder, and
-comparison-metrics tooling proof plus existing renderer-state,
+The compatibility gate is the shared-contract, bounded PNG decoder,
+comparison-metrics, capture-ABI, and review-board tooling proof plus existing renderer-state,
 fixture-preparation, and Node-adapter tests; TypeScript and the production Vite
 build; and a real built-bundle batch spanning at least one volume-field fixture
 and one prepared liquid-surface fixture. The batch must be complete under

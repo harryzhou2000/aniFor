@@ -52,10 +52,13 @@ with their off/A/B pairs and pinned identities, and lists encoded-identical
 candidates as no-action. New packages also include `metrics.json` with the
 additive `anifor.visual-lab.comparison-metrics/v1` record: deterministic integer
 RGB and alpha deltas for non-identical paired captures only. The metrics are
-measurements, not scoring, acceptance, failure, or promotion input. Both files
-change no comparison field or identity and are checked by the same portable
-verifier when present; it recomputes metrics from the pinned PNG bytes. Legacy
-comparison packages may omit either additive file.
+measurements, not scoring, acceptance, failure, or promotion input.
+`review-board.html` adds a bounded local status/domain/fixture/name filter over
+the decision candidates without changing their catalog order or recording a
+decision. All three additive files change no comparison field or identity and
+are checked by the same portable verifier when present; it recomputes metrics
+from the pinned PNG bytes and exact-rerenders the board. Legacy comparison
+packages may omit the board, metrics, and/or brief.
 
 Verify a downloaded review package and its comparison without rewriting either:
 
@@ -73,7 +76,7 @@ batches may omit `recipe-set.json` when `--require-recipe-set=0`; incomplete
 diagnostic packages require `--require-complete=0` and are never deployable
 evidence. Verification uses stable non-following reads, reconstructs identities,
 bounded PNG structure/decoding and hashes, deterministic HTML, optional
-brief/metrics evidence, and cross-package descriptors, and does not change
+brief/board/metrics evidence, and cross-package descriptors, and does not change
 artifact bytes or metadata. Release CI performs this check on a fresh download
 of the exact uploaded artifact in runner-temporary storage before Pages deploy,
 without another build or browser capture.

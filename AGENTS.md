@@ -78,14 +78,28 @@ one typed renderer-registry entry, and where needed one app preparer—not
 presenter setup, HDR lifecycle, app boot, package/workflow duplication,
 reflective preparation data, or harness branching.
 
-The evidence-only capture ABI lives in
-`scripts/visual-lab-capture-abi.mjs`. Its frozen ordered descriptors own exactly
+The evidence-only capture ABI is deployed at revision
+`2fcf93f75057569134cfa252f1b8470ccd6f7965` by release-set workflow run
+`31297587591`. It lives in `scripts/visual-lab-capture-abi.mjs`; its frozen
+ordered descriptors own exactly
 `off=0`, `a=1`, and `b=2`; audit capture uses the descriptors and result, batch,
 baseline, review, and metrics tooling derive their ordered names. Keep this leaf
 dependency-free and Node-side. Do not duplicate that tuple in another consumer,
 move it into the browser static contract, or change its order without an
 explicit frozen-schema migration. Identity tests must continue to assert the
 historical result and comparison bytes independently of the shared tuple.
+
+The active framework increment is an additive deterministic
+`review-board.html` generated from comparison/v1 plus its verified metrics. It
+contains only decision candidates in catalog order and may filter locally by
+exact status, domain, fixture, and a bounded literal candidate substring. Query
+state is shareable but never ranks, scores, accepts, promotes, persists, or
+reorders evidence. Keep all content available without JavaScript, all capture
+links relative, all inserted metadata escaped, and the fixed inline runtime free
+of interpolated comparison data. The board is bounded to 1 MiB, written before
+the final `comparison.json` marker, stable-read and exact-rerender verified when
+present, and excluded from every frozen identity. Legacy packages may omit it;
+if it is present, verified metrics and the matching brief must also be present.
 
 The typed Visual Lab state, fixed normal-HDR composition seam, promotion-safe
 same-page off/A/B selection, declarative fixtures, and production-bundle capture
@@ -95,11 +109,12 @@ motion is an accepted E08 baseline and uses the moving-Oil fixture with liquid
 target `8`; E65 Water surface motion is an accepted E08 baseline and uses the
 retained moving-Water fixture with liquid target `2`. Their legacy resolvers,
 uniforms, queries, datasets, and bespoke verifier paths are removed. E65 is also
-deployed. `main_codex` and Pages currently serve shared-contract revision
-`b05b2b2a35d1ec1ae806cc712df28bf34321b9df` after release-set gated workflow run
-`31295960140`: the build passed with 269/270 ccache hits, all four named recipes
-were encoded-identical, the freshly downloaded package verified the review
-brief, and live closure passed all 19 resources on its first attempt.
+deployed. The latest fully verified release base for the active increment is
+revision `2fcf93f75057569134cfa252f1b8470ccd6f7965`, deployed by release-set
+workflow run `31297587591`: the build passed with 269/270 ccache hits, all four
+named recipes were encoded-identical, the freshly downloaded package verified
+the brief and metrics, and live closure passed all 19 resources on its first
+attempt.
 
 `anifor.visual-lab.accepted-baseline/v1` contains only
 catalog-ordered candidate names and their existing content-addressed result
@@ -113,14 +128,15 @@ blocking. Seed provenance belongs in this guidance and CI logs: accepted-v1 is
 from revision `34c8a3d`, workflow `31284862276`, and manifest
 `sha256:b95e09ecb1df93c2b9ae718d205159b17dc56379723f2d1ad904458e16c5653c`.
 A newly generated comparison contains deterministic `review-brief.html` as an
-additive human decision queue and `metrics.json` as additive measurement-only
-evidence. The metrics sidecar is bound to comparison/v1, decodes only changed
+additive human decision queue, `review-board.html` as its bounded filterable
+view, and `metrics.json` as additive measurement-only evidence. The metrics
+sidecar is bound to comparison/v1, decodes only changed
 paired PNGs under the capture budget, and records deterministic integer RGB and
 alpha deltas. It never scores, passes, fails, accepts, or promotes aesthetics.
-Both additive files remain outside comparison identity; the shared verifier
-recomputes metrics from the pinned copied captures when present, while legacy
-packages may omit metrics and/or the brief. The exhaustive `index.html` remains
-authoritative.
+All additive files remain outside comparison identity; the shared verifier
+recomputes metrics from the pinned copied captures and exact-rerenders present
+views, while legacy packages may omit the board, metrics, and/or brief. The
+exhaustive `index.html` remains authoritative.
 Promotion must require the exact complete comparison package plus an explicit
 nonempty candidate list, write only to a new disjoint empty directory, copy
 unselected bytes from the old baseline and selected bytes from the current
@@ -145,8 +161,9 @@ Portable verification is strictly read-only. Reconstruct the batch from stable,
 non-following reads of its index, reports, result records, PNGs, failure
 tombstones, deterministic sheet, and optional recipe-set sidecar; then reuse the
 promotion-grade comparison validation for accepted/current image copies, JSON,
-HTML, optional review brief, and optional metrics sidecar. Recompute present
-metrics with the shared bounded PNG decoder. Recheck file identity and
+HTML, optional review brief, optional bounded review board, and optional metrics
+sidecar. Recompute present metrics with the shared bounded PNG decoder and
+exact-rerender a present board. Recheck file identity and
 ancestors across each read so a replacement race cannot turn a validated path
 into another file. The CI review job must
 upload first, download that exact named artifact into runner-temporary storage,

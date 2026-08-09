@@ -32,6 +32,7 @@ const MODULE_PATH = fileURLToPath(import.meta.url);
 const CANDIDATE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const SHA256_ID = /^sha256:[0-9a-f]{64}$/;
 const MAX_COMPARISON_METRICS_BYTES = 1024 * 1024;
+const MAX_COMPARISON_REVIEW_BOARD_BYTES = 1024 * 1024;
 
 const HELP = `Usage:
   node scripts/visual-lab-baseline.mjs accept \\
@@ -684,6 +685,258 @@ ${metrics === undefined ? '' : '    <p><a href="./metrics.json">Open raw integer
 `;
 }
 
+/** Normalizes only the four local review-board filters; unknown state is inert. */
+export function normalizeVisualLabReviewBoardQuery(search, choices = {}) {
+  const params = new URLSearchParams(typeof search === 'string' ? search : '');
+  const result = {};
+  for (const key of ['status', 'domain', 'fixture']) {
+    const values = params.getAll(key);
+    const allowed = Array.isArray(choices[key]) ? choices[key] : [];
+    result[key] = values.length === 1 && allowed.includes(values[0]) ? values[0] : '';
+  }
+  const queries = params.getAll('q');
+  result.q = queries.length === 1
+    ? queries[0].trim().slice(0, 64).toLowerCase()
+    : '';
+  return Object.freeze(result);
+}
+
+/** Serializes filter state in one canonical, shareable key order. */
+export function serializeVisualLabReviewBoardQuery(filters = {}) {
+  const params = new URLSearchParams();
+  for (const key of ['status', 'domain', 'fixture', 'q']) {
+    const value = String(filters[key] ?? '').trim().slice(0, 64);
+    if (value !== '') params.set(key, value);
+  }
+  return params.toString();
+}
+
+/** Pure conjunctive match used by the board runtime without ranking or reordering. */
+export function visualLabReviewBoardCandidateMatches(candidate = {}, filters = {}) {
+  for (const key of ['status', 'domain', 'fixture']) {
+    const expected = String(filters[key] ?? '');
+    if (expected !== '' && String(candidate[key] ?? '') !== expected) return false;
+  }
+  const query = String(filters.q ?? '').trim().slice(0, 64).toLowerCase();
+  return query === '' || String(candidate.candidate ?? '').toLowerCase().includes(query);
+}
+
+const renderReviewBoardVariant = (entry, variant, variantMetrics) => {
+  const state = entry.variants[variant];
+  const acceptedPath = entry.artifacts.baseline?.[variant];
+  const currentPath = entry.artifacts.current?.[variant];
+  const accepted = entry.baselineResult
+    ? `<figure><a href="./${escapeHtml(acceptedPath)}"
+        aria-label="Open accepted ${escapeHtml(variant.toUpperCase())} capture for ${
+  escapeHtml(entry.candidate)} at full size"><img src="./${escapeHtml(acceptedPath)}"
+        alt="${escapeHtml(entry.candidate)} ${variant} accepted capture"></a>
+       <figcaption>accepted · ${escapeHtml(shortHash(state.baselineSha256))}</figcaption></figure>`
+    : '<div class="empty">no accepted capture</div>';
+  const current = entry.currentResult
+    ? `<figure><a href="./${escapeHtml(currentPath)}"
+        aria-label="Open current ${escapeHtml(variant.toUpperCase())} capture for ${
+  escapeHtml(entry.candidate)} at full size"><img src="./${escapeHtml(currentPath)}"
+        alt="${escapeHtml(entry.candidate)} ${variant} current capture"></a>
+       <figcaption>current · ${escapeHtml(shortHash(state.currentSha256))}</figcaption></figure>`
+    : '<div class="empty">not sampled in this run</div>';
+  return `<section class="variant"><h3>${variant.toUpperCase()} · ${escapeHtml(state.status)}</h3>${
+    renderVariantMetric(variantMetrics)}
+    <div class="pair">${accepted}${current}</div></section>`;
+};
+
+const renderReviewBoardCandidate = (entry, candidateMetrics) => {
+  const request = entry.currentResult?.request ?? entry.baselineResult?.request;
+  if (!request) throw new TypeError(`review board candidate ${entry.candidate} has no request`);
+  const resultLine = [
+    entry.baselineResult ? `accepted ${shortHash(entry.baselineResult.id)}` : 'no accepted result',
+    entry.currentResult ? `current ${shortHash(entry.currentResult.id)}` : 'not sampled',
+  ].join(' · ');
+  return `<article class="candidate status-${escapeHtml(entry.status)}"
+      data-status="${escapeHtml(entry.status)}"
+      data-domain="${escapeHtml(request.domain)}"
+      data-fixture="${escapeHtml(request.fixture)}"
+      data-candidate="${escapeHtml(entry.candidate)}">
+      <header><div><h2>${escapeHtml(entry.candidate)}</h2>
+        <p class="request">${escapeHtml(request.domain)} · target ${escapeHtml(request.target)} · fixture ${
+  escapeHtml(request.fixture)} · gain ${escapeHtml(request.gain)} · Detail ${
+  escapeHtml(request.renderScale)}×</p>
+        <p class="hashes">${escapeHtml(resultLine)}</p></div>
+        <span class="status">${escapeHtml(entry.status)}</span></header>
+      <div class="variants">${VARIANTS.map((variant) => (
+    renderReviewBoardVariant(entry, variant, candidateMetrics?.variants?.[variant])
+  )).join('')}</div>
+    </article>`;
+};
+
+const reviewBoardOptions = (entries, field) => {
+  const seen = new Set();
+  const values = [];
+  for (const entry of entries) {
+    const request = entry.currentResult?.request ?? entry.baselineResult?.request;
+    if (!request) throw new TypeError(`review board candidate ${entry.candidate} has no request`);
+    const value = request[field];
+    if (!seen.has(value)) {
+      seen.add(value);
+      values.push(value);
+    }
+  }
+  return values.map((value) => (
+    `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`
+  )).join('');
+};
+
+const renderReviewBoardRuntime = () => `<script>
+'use strict';
+const normalizeFilters = ${normalizeVisualLabReviewBoardQuery.toString()};
+const serializeFilters = ${serializeVisualLabReviewBoardQuery.toString()};
+const matchesCandidate = ${visualLabReviewBoardCandidateMatches.toString()};
+(() => {
+  const form = document.getElementById('review-filters');
+  const list = document.getElementById('review-candidates');
+  const count = document.getElementById('visible-count');
+  const clear = document.getElementById('clear-filters');
+  if (!form || !list || !count || !clear) return;
+  const controls = Object.freeze({
+    status: form.querySelector('[name="status"]'),
+    domain: form.querySelector('[name="domain"]'),
+    fixture: form.querySelector('[name="fixture"]'),
+    q: form.querySelector('[name="q"]'),
+  });
+  if (Object.values(controls).some((control) => !control)) return;
+  const cards = Array.from(list.querySelectorAll('.candidate'));
+  const optionValues = (control) => Array.from(control.options)
+    .map(({ value }) => value).filter((value) => value !== '');
+  const choices = Object.freeze({
+    status: optionValues(controls.status),
+    domain: optionValues(controls.domain),
+    fixture: optionValues(controls.fixture),
+  });
+  const initial = normalizeFilters(location.search, choices);
+  for (const key of ['status', 'domain', 'fixture', 'q']) controls[key].value = initial[key];
+
+  const apply = (updateUrl) => {
+    const query = new URLSearchParams();
+    for (const key of ['status', 'domain', 'fixture', 'q']) {
+      if (controls[key].value !== '') query.set(key, controls[key].value);
+    }
+    const filters = normalizeFilters(query.toString(), choices);
+    let visible = 0;
+    for (const card of cards) {
+      const matched = matchesCandidate(card.dataset, filters);
+      card.hidden = !matched;
+      if (matched) visible++;
+    }
+    count.textContent = String(visible) + ' of ' + String(cards.length) + ' decisions shown';
+    if (updateUrl) {
+      const serialized = serializeFilters(filters);
+      history.replaceState(
+        null, '', location.pathname + (serialized ? '?' + serialized : '') + location.hash,
+      );
+    }
+  };
+
+  controls.q.addEventListener('input', () => apply(true));
+  for (const key of ['status', 'domain', 'fixture']) {
+    controls[key].addEventListener('change', () => apply(true));
+  }
+  clear.addEventListener('click', () => {
+    form.reset();
+    apply(true);
+  });
+  apply(true);
+})();
+</script>`;
+
+/**
+ * Additive local triage surface. It filters existing decision evidence only;
+ * candidate order and every frozen comparison/promotion decision stay external.
+ */
+export function renderVisualLabReviewBoard(comparison, metrics) {
+  if (comparison?.schema !== VISUAL_LAB_COMPARISON_SCHEMA
+    || comparison.complete !== true || !Array.isArray(comparison.candidates)) {
+    throw new TypeError(`review board requires ${VISUAL_LAB_COMPARISON_SCHEMA}`);
+  }
+  const metricsByCandidate = reviewMetricsByCandidate(comparison, metrics);
+  if (metricsByCandidate === undefined) {
+    throw new TypeError('review board requires verified comparison metrics');
+  }
+  const decisions = comparison.candidates.filter(
+    ({ status }) => status !== 'encoded-identical',
+  );
+  const cards = decisions.length > 0
+    ? decisions.map((entry) => renderReviewBoardCandidate(
+      entry, metricsByCandidate.get(entry.candidate),
+    )).join('')
+    : '<p class="empty-queue">No visual decisions are required for this comparison.</p>';
+  const domains = reviewBoardOptions(decisions, 'domain');
+  const fixtures = reviewBoardOptions(decisions, 'fixture');
+  const summary = comparison.summary;
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AniforTPT visual review board</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #0e1319; color: #edf3fa; }
+    body { margin: 0 auto; max-width: 2100px; padding: 24px; overflow-wrap: anywhere; }
+    h1, h2, h3, p { margin: 0; }
+    body > header { display: grid; gap: 7px; margin-bottom: 18px; }
+    a { color: #9fd0ff; }
+    .filters { display: grid; grid-template-columns: repeat(4, minmax(10rem, 1fr)) auto; gap: 10px; align-items: end; margin-bottom: 18px; padding: 14px; background: #18212b; border: 1px solid #35485c; border-radius: 12px; }
+    .filters label { display: grid; gap: 5px; color: #c7d4e2; font-size: .86rem; }
+    .filters select, .filters input, .filters button { min-height: 44px; box-sizing: border-box; border: 1px solid #50657b; border-radius: 7px; padding: 8px 10px; background: #101820; color: inherit; font: inherit; }
+    .filters button { cursor: pointer; }
+    .filters output { grid-column: 1 / -1; color: #b9c7d6; }
+    main { display: grid; gap: 18px; }
+    .candidate { background: #1b222c; border: 1px solid #3d4b5d; border-radius: 12px; padding: 16px; }
+    .candidate[hidden] { display: none !important; }
+    .candidate > header { display: flex; justify-content: space-between; gap: 14px; margin-bottom: 12px; }
+    .request, .hashes { margin-top: 5px; color: #b9c7d6; overflow-wrap: anywhere; }
+    .status { align-self: start; border-radius: 999px; padding: 3px 9px; background: #66501e; color: #ffe4a1; white-space: nowrap; }
+    .status-not-sampled .status { background: #4a3c5e; color: #e2ccff; }
+    .variants { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .variant { min-width: 0; }
+    .variant h3 { margin-bottom: 6px; font-size: .9rem; color: #b8c5d2; }
+    .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+    figure { margin: 0; min-width: 0; }
+    figure > a { display: block; }
+    img { display: block; width: 100%; height: auto; border-radius: 7px; background: #080b0f; }
+    figcaption, .empty { margin-top: 4px; color: #b8c5d2; overflow-wrap: anywhere; }
+    .empty { min-height: 72px; display: grid; place-items: center; border: 1px dashed #405065; border-radius: 7px; }
+    .metric { margin: 7px 0; color: #d3dfec; font-size: .82rem; line-height: 1.35; }
+    .empty-queue, noscript p { background: #192720; border: 1px solid #315541; border-radius: 10px; padding: 14px; }
+    noscript p { margin-bottom: 18px; }
+    @media (max-width: 1100px) { .filters { grid-template-columns: repeat(2, minmax(10rem, 1fr)); } .variants { grid-template-columns: 1fr; } }
+    @media (max-width: 620px) { body { padding: 12px; } .filters { grid-template-columns: 1fr; } .pair { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Visual review board</h1>
+    <p>Comparison ${escapeHtml(comparison.id)}</p>
+    <p>${escapeHtml(summary.review)} review · ${escapeHtml(summary.added)} added · ${
+  escapeHtml(summary.notSampled)} not sampled · ${escapeHtml(summary.identical)} encoded-identical</p>
+    <p><a href="./review-brief.html">Open the compact brief</a> · <a href="./index.html">open the exhaustive sheet</a> · <a href="./metrics.json">open raw measurements</a></p>
+    <p>Filters only hide existing evidence; they do not rank, score, accept, or record decisions.</p>
+  </header>
+  <form class="filters" id="review-filters" role="search" aria-label="Filter review candidates">
+    <label>Status<select name="status"><option value="">All decisions</option><option value="review">Review</option><option value="added">Added</option><option value="not-sampled">Not sampled</option></select></label>
+    <label>Domain<select name="domain"><option value="">All domains</option>${domains}</select></label>
+    <label>Fixture<select name="fixture"><option value="">All fixtures</option>${fixtures}</select></label>
+    <label>Candidate<input name="q" type="search" maxlength="64" autocomplete="off" spellcheck="false"></label>
+    <button type="button" id="clear-filters">Clear filters</button>
+    <output id="visible-count" aria-live="polite">${escapeHtml(decisions.length)} of ${escapeHtml(decisions.length)} decisions shown</output>
+  </form>
+  <noscript><p>All decision candidates are shown in catalog order; enable JavaScript to filter locally.</p></noscript>
+  <main id="review-candidates">${cards}
+  </main>
+${renderReviewBoardRuntime()}
+</body>
+</html>
+`;
+}
+
 export function parseVisualLabBaselineArguments(argv) {
   if (!Array.isArray(argv)) throw new TypeError('arguments must be an array');
   if (argv.includes('--help') || argv.includes('-h')) return { help: true };
@@ -967,10 +1220,14 @@ const validateComparisonPackage = async (root, expected) => {
   if (html !== renderVisualLabComparison(expected)) {
     throw new TypeError('comparison sheet does not match its complete comparison index');
   }
-  const [brief, metricsSource] = await Promise.all([
+  const [brief, metricsSource, board] = await Promise.all([
     readOptionalComparisonFile(root, 'review-brief.html', 'comparison review brief'),
     readOptionalComparisonFile(
       root, 'metrics.json', 'comparison metrics', MAX_COMPARISON_METRICS_BYTES,
+    ),
+    readOptionalComparisonFile(
+      root, 'review-board.html', 'comparison review board',
+      MAX_COMPARISON_REVIEW_BOARD_BYTES,
     ),
   ]);
   await Promise.all([
@@ -1001,6 +1258,14 @@ const validateComparisonPackage = async (root, expected) => {
   }
   if (brief !== undefined && brief !== renderVisualLabReviewBrief(expected, metrics)) {
     throw new TypeError('comparison review brief does not match its complete comparison evidence');
+  }
+  if (board !== undefined) {
+    if (metrics === undefined) {
+      throw new TypeError('comparison review board requires verified comparison metrics');
+    }
+    if (board !== renderVisualLabReviewBoard(expected, metrics)) {
+      throw new TypeError('comparison review board does not match its complete comparison evidence');
+    }
   }
   return comparison;
 };
@@ -1143,14 +1408,20 @@ export async function runVisualLabBaseline(options, dependencies = {}) {
     const metrics = await createComparisonPackageMetrics(outputDirectory, comparison);
     const html = path.join(outputDirectory, 'index.html');
     const brief = path.join(outputDirectory, 'review-brief.html');
+    const board = path.join(outputDirectory, 'review-board.html');
     const metricsPath = path.join(outputDirectory, 'metrics.json');
     const json = path.join(outputDirectory, 'comparison.json');
+    const boardSource = renderVisualLabReviewBoard(comparison, metrics);
+    if (Buffer.byteLength(boardSource, 'utf8') > MAX_COMPARISON_REVIEW_BOARD_BYTES) {
+      throw new Error('comparison review board exceeds its bounded file budget');
+    }
     await writeAtomic(html, renderVisualLabComparison(comparison));
     await writeAtomic(metricsPath, `${JSON.stringify(metrics, null, 2)}\n`);
     await writeAtomic(brief, renderVisualLabReviewBrief(comparison, metrics));
+    await writeAtomic(board, boardSource);
     await writeAtomic(json, `${JSON.stringify(comparison, null, 2)}\n`);
     return {
-      mode: 'compare', comparison, metrics, html, brief, metricsPath, json,
+      mode: 'compare', comparison, metrics, html, brief, board, metricsPath, json,
     };
   }
   if (options.mode === 'promote') {
@@ -1248,6 +1519,7 @@ async function main() {
       summary: result.comparison.summary,
       html: result.html,
       brief: result.brief,
+      board: result.board,
       metrics: result.metricsPath,
       json: result.json,
     };

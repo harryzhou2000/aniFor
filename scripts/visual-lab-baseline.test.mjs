@@ -14,11 +14,16 @@ import {
   normalizeVisualLabBaseline,
   parseVisualLabBaselineArguments,
   promoteVisualLabBaseline,
+  normalizeVisualLabReviewBoardQuery,
   renderVisualLabReviewBrief,
+  renderVisualLabReviewBoard,
   runVisualLabBaseline,
+  serializeVisualLabReviewBoardQuery,
   verifyVisualLabComparisonPackage,
+  visualLabReviewBoardCandidateMatches,
 } from './visual-lab-baseline.mjs';
 import { resolveVisualLabCaptureRecipe } from './visual-lab-recipes.mjs';
+import { VISUAL_LAB_COMPARISON_METRICS_SCHEMA } from './visual-lab-comparison-metrics.mjs';
 import { createVisualLabResultRecord } from './visual-lab-result.mjs';
 
 const VARIANTS = Object.freeze(['off', 'a', 'b']);
@@ -382,18 +387,156 @@ describe('Visual Lab accepted baseline packages', () => {
     });
     const storedComparison = JSON.parse(await readFile(output.json, 'utf8'));
     const storedBrief = await readFile(output.brief, 'utf8');
+    const storedBoard = await readFile(output.board, 'utf8');
     expect(storedComparison).toEqual(output.comparison);
     expect(storedComparison.id).toBe(compareVisualLabBaseline(
       createVisualLabBaseline(batchFor('gas-showcase', 'accepted')),
       batchFor('gas-showcase', 'accepted'),
     ).id);
     expect(storedBrief).toBe(renderVisualLabReviewBrief(output.comparison, output.metrics));
+    expect(storedBoard).toBe(renderVisualLabReviewBoard(output.comparison, output.metrics));
     expect(JSON.parse(await readFile(output.metricsPath, 'utf8'))).toEqual(output.metrics);
     expect(storedBrief).toContain('measurements do not pass or fail aesthetics');
     await assertPortableRefs(comparisonRoot, storedBrief);
+    await assertPortableRefs(comparisonRoot, storedBoard);
   });
 
-  it('verifies metrics and briefs while accepting legacy packages without either', async () => {
+  it('renders a deterministic escaped decision-only review board with local filter data', () => {
+    const accepted = createVisualLabBaseline(batchForCandidates([
+      { candidate: 'gas-showcase', salt: 'accepted' },
+      { candidate: 'oil-motion', salt: 'accepted' },
+      { candidate: 'water-motion', salt: 'accepted' },
+    ]));
+    const current = batchForCandidates([
+      { candidate: 'gas-showcase', salt: 'accepted' },
+      { candidate: 'oxygen-showcase', salt: 'added' },
+      { candidate: 'oil-motion', salt: 'changed' },
+    ]);
+    const comparison = compareVisualLabBaseline(accepted, current);
+    const metrics = {
+      schema: VISUAL_LAB_COMPARISON_METRICS_SCHEMA,
+      comparison: { schema: comparison.schema, id: comparison.id },
+      candidates: comparison.candidates.map(({ candidate, status }) => ({
+        candidate, status, variants: {},
+      })),
+    };
+    const first = renderVisualLabReviewBoard(comparison, metrics);
+    const second = renderVisualLabReviewBoard(JSON.parse(JSON.stringify(comparison)), metrics);
+
+    expect(first).toBe(second);
+    expect(first).toContain('Visual review board');
+    expect(first).toContain('name="status"');
+    expect(first).toContain('name="domain"');
+    expect(first).toContain('name="fixture"');
+    expect(first).toContain('name="q"');
+    expect(first).toContain('apply(true);');
+    expect(first).not.toContain('apply(false);');
+    expect(first).toContain('>Clear filters</button>');
+    const decisions = comparison.candidates.filter(({ status }) => status !== 'encoded-identical');
+    expect(decisions.map(({ candidate }) => candidate)).toEqual([
+      'oil-motion', 'water-motion', 'oxygen-showcase',
+    ]);
+    for (const entry of decisions) {
+      const request = entry.currentResult?.request ?? entry.baselineResult?.request;
+      expect(first).toContain(`data-status="${entry.status}"`);
+      expect(first).toContain(`data-domain="${request.domain}"`);
+      expect(first).toContain(`data-fixture="${request.fixture}"`);
+      expect(first).toContain(`data-candidate="${entry.candidate}"`);
+      for (const variant of VARIANTS) {
+        if (entry.artifacts.current?.[variant]) {
+          expect(first).toContain(`src="./${entry.artifacts.current[variant]}"`);
+          expect(first).toContain(`href="./${entry.artifacts.current[variant]}"`);
+        }
+        if (entry.artifacts.baseline?.[variant]) {
+          expect(first).toContain(`src="./${entry.artifacts.baseline[variant]}"`);
+          expect(first).toContain(`href="./${entry.artifacts.baseline[variant]}"`);
+        }
+      }
+    }
+    expect(first).not.toContain('data-candidate="gas-showcase"');
+    expect(first).not.toContain('data-score');
+    expect(first).not.toContain('data-rank');
+    expect(first).not.toMatch(/<form[^>]+action=|data-write|data-promote/i);
+
+    const hostile = JSON.parse(JSON.stringify(comparison));
+    const hostileEntry = hostile.candidates.find(({ candidate }) => candidate === 'oil-motion');
+    hostileEntry.status = 'review\"><script>unsafe()</script>';
+    hostileEntry.currentResult.request.domain = 'liquid\" onmouseover="unsafe()';
+    hostileEntry.currentResult.request.fixture = '<img src=x onerror=unsafe()>';
+    hostileEntry.candidate = 'oil\"><a href="javascript:unsafe()">';
+    const escaped = renderVisualLabReviewBoard(hostile, {
+      ...metrics,
+      comparison: { schema: hostile.schema, id: hostile.id },
+      candidates: hostile.candidates.map(({ candidate, status }) => ({
+        candidate, status, variants: {},
+      })),
+    });
+    expect(escaped).not.toContain('<script>unsafe()</script>');
+    expect(escaped).not.toContain('href="javascript:unsafe()"');
+    expect(escaped).toContain('&lt;script&gt;unsafe()&lt;/script&gt;');
+  });
+
+  it('normalizes, serializes, and conjunctively matches stable review-board filters', () => {
+    const accepted = createVisualLabBaseline(batchForCandidates([
+      { candidate: 'gas-showcase', salt: 'accepted' },
+      { candidate: 'oil-motion', salt: 'accepted' },
+      { candidate: 'water-motion', salt: 'accepted' },
+    ]));
+    const current = batchForCandidates([
+      { candidate: 'gas-showcase', salt: 'accepted' },
+      { candidate: 'oxygen-showcase', salt: 'added' },
+      { candidate: 'oil-motion', salt: 'changed' },
+    ]);
+    const comparison = compareVisualLabBaseline(accepted, current);
+    const oil = comparison.candidates.find(({ candidate }) => candidate === 'oil-motion');
+    const oilRequest = oil.currentResult.request;
+    const query = new URLSearchParams({
+      status: 'review', domain: oilRequest.domain, fixture: oilRequest.fixture, q: 'OIL',
+    }).toString();
+    const choices = {
+      status: ['review', 'added', 'not-sampled'],
+      domain: comparison.candidates.map(({ currentResult, baselineResult }) => (
+        (currentResult ?? baselineResult).request.domain
+      )),
+      fixture: comparison.candidates.map(({ currentResult, baselineResult }) => (
+        (currentResult ?? baselineResult).request.fixture
+      )),
+    };
+    const normalized = normalizeVisualLabReviewBoardQuery(query, choices);
+    expect(normalized).toEqual({
+      status: 'review', domain: oilRequest.domain, fixture: oilRequest.fixture, q: 'oil',
+    });
+    expect(serializeVisualLabReviewBoardQuery(normalized)).toBe(
+      `status=review&domain=${encodeURIComponent(oilRequest.domain)}&fixture=${encodeURIComponent(oilRequest.fixture)}&q=oil`,
+    );
+    expect(normalizeVisualLabReviewBoardQuery(
+      `status=review&status=added&domain=unknown&fixture=missing&q=${'X'.repeat(65)}`,
+      choices,
+    )).toEqual({
+      status: '', domain: '', fixture: '', q: 'x'.repeat(64),
+    });
+
+    const decisions = comparison.candidates.filter(({ status }) => status !== 'encoded-identical');
+    const boardCandidate = (entry) => {
+      const request = entry.currentResult?.request ?? entry.baselineResult?.request;
+      return {
+        candidate: entry.candidate,
+        status: entry.status,
+        domain: request.domain,
+        fixture: request.fixture,
+      };
+    };
+    expect(decisions.filter((entry) => visualLabReviewBoardCandidateMatches(boardCandidate(entry), normalized))
+      .map(({ candidate }) => candidate)).toEqual(['oil-motion']);
+    const reviewOnly = normalizeVisualLabReviewBoardQuery('status=review', choices);
+    expect(decisions.filter((entry) => visualLabReviewBoardCandidateMatches(boardCandidate(entry), reviewOnly))
+      .map(({ candidate }) => candidate)).toEqual(['oil-motion']);
+    expect(decisions.map(({ candidate }) => candidate)).toEqual([
+      'oil-motion', 'water-motion', 'oxygen-showcase',
+    ]);
+  });
+
+  it('verifies additive review evidence while accepting legacy package omissions', async () => {
     const root = await temporaryDirectory();
     const batchRoot = path.join(root, 'batch');
     const baselineRoot = path.join(root, 'baseline');
@@ -407,6 +550,29 @@ describe('Visual Lab accepted baseline packages', () => {
     });
     const originalBrief = await readFile(output.brief);
     const originalMetrics = await readFile(output.metricsPath);
+    const originalBoard = await readFile(output.board);
+
+    await writeFile(output.board, `${originalBoard.toString('utf8')}\n<!-- tampered -->\n`);
+    await expect(verifyVisualLabComparisonPackage({
+      baselineRoot, resultRoot: currentRoot, comparisonRoot,
+    })).rejects.toThrow('comparison review board');
+    await writeFile(output.board, originalBoard);
+
+    await writeFile(output.board, Buffer.alloc(1024 * 1024 + 1, 0x20));
+    await expect(verifyVisualLabComparisonPackage({
+      baselineRoot, resultRoot: currentRoot, comparisonRoot,
+    })).rejects.toThrow('bounded file budget');
+    await writeFile(output.board, originalBoard);
+
+    const externalBoard = path.join(root, 'external-review-board.html');
+    await writeFile(externalBoard, originalBoard);
+    await unlink(output.board);
+    await symlink(externalBoard, output.board);
+    await expect(verifyVisualLabComparisonPackage({
+      baselineRoot, resultRoot: currentRoot, comparisonRoot,
+    })).rejects.toThrow('must use only real contained files');
+    await unlink(output.board);
+    await writeFile(output.board, originalBoard);
 
     await writeFile(output.brief, `${originalBrief.toString('utf8')}\n<!-- tampered -->\n`);
     await expect(verifyVisualLabComparisonPackage({
@@ -456,6 +622,11 @@ describe('Visual Lab accepted baseline packages', () => {
     })).rejects.toThrow('comparison review brief');
 
     await writeFile(output.brief, renderVisualLabReviewBrief(output.comparison));
+    await expect(verifyVisualLabComparisonPackage({
+      baselineRoot, resultRoot: currentRoot, comparisonRoot,
+    })).rejects.toThrow('comparison review board requires verified comparison metrics');
+
+    await unlink(output.board);
     await expect(verifyVisualLabComparisonPackage({
       baselineRoot, resultRoot: currentRoot, comparisonRoot,
     })).resolves.toMatchObject({ comparison: output.comparison });
