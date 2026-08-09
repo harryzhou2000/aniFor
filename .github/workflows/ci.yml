@@ -6,20 +6,39 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: Choose whether to verify the build or also deploy it to GitHub Pages
+        description: Build, build and deploy, or deploy a verified exact-SHA artifact
         required: true
         default: build
         type: choice
         options:
           - build
           - build-and-deploy
+          - deploy-verified
+      verified_build_run_id:
+        description: Successful exact-SHA build run to reuse for deploy-verified
+        required: false
+        default: ''
+        type: string
       visual_lab_review:
         description: Capture and publish a deterministic Visual Lab review batch
         required: true
         default: false
         type: boolean
+      visual_lab_capture_proof:
+        description: Evidence proof used by an optional Visual Lab review
+        required: true
+        default: stable-snapshots
+        type: choice
+        options:
+          - stable-snapshots
+          - completed-frame-receipt
       visual_lab_candidates:
         description: Optional comma-separated Visual Lab candidates; empty runs the frozen catalog
+        required: false
+        default: ''
+        type: string
+      visual_lab_recipe_set:
+        description: Optional checked-in recipe-set JSON; exclusive with Visual Lab candidates
         required: false
         default: ''
         type: string
