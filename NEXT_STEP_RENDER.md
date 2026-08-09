@@ -44,16 +44,20 @@ descriptors. The default compositor still contains no lab source, only explicit
 volume domains pay the existing shared wall sample, and the deployed four-recipe
 comparison stayed encoded-identical before first-attempt live closure.
 
-The active framework-first increment is one universal static Visual Lab
-contract usable without adapters by both browser and Node runtimes. A pure,
+The universal static Visual Lab contract is deployed at revision
+`b05b2b2a35d1ec1ae806cc712df28bf34321b9df` by release-set workflow run
+`31295960140`; its freshly downloaded artifact and live 19-resource closure
+passed. A pure,
 recursively frozen, JSON-safe `.js` module plus exact `.d.ts` literal types owns
 domain codes, implemented/target capability, normal-HDR Detail and fallback
 semantics, capture evidence/fixed URL metadata, independent capture ordering,
-fixture constraints, and historical diagnostic labels. Renderer capability
-maps, Node domain/fixture adapters, and app prepared-fixture ID types derive
-from it while executable builders and arguments remain in the closed app-owned
-registry. Preserve all current public adapter shapes and orders, stable shader
-codes, generic startup behavior, recipe/result/batch/baseline/comparison v1
+fixture constraints, historical diagnostic labels, and the validated
+declarative capture-recipe records. Renderer capability maps, Node
+domain/fixture adapters, the public capture-recipe catalog, and app
+prepared-fixture ID types derive from it while executable builders and arguments
+remain in the closed app-owned registry. Preserve all current public adapter
+shapes and orders, stable shader codes, generic startup behavior,
+recipe/result/batch/baseline/comparison v1
 identities, and browser/CDP/workflow interfaces. A separate typed renderer
 registry is the sole explicit join point for leaf shader descriptors; the
 protected assembler consumes it without importing each leaf. Keep module paths
@@ -75,14 +79,15 @@ export. The bounded read-only evidence reader label remains metadata; do not
 place executable fixture-preparation method names, argument arrays, builders,
 or preparers in the serialized contract.
 
-The compatibility gate is the shared-contract unit proof plus existing
-renderer-state, fixture-preparation, and Node-adapter tests; TypeScript and the
-production Vite build; and a real built-bundle batch spanning at least one
-volume-field fixture and one prepared liquid-surface fixture. The batch must be
-complete under WebGL/HDR with semantic, authoritative-field alpha, and
-framebuffer-alpha/support invariants preserved. Existing CLI help, URL
-construction, diagnostic report labels, catalog order, and content identities
-must remain byte-compatible.
+The compatibility gate is the shared-contract, bounded PNG decoder, and
+comparison-metrics tooling proof plus existing renderer-state,
+fixture-preparation, and Node-adapter tests; TypeScript and the production Vite
+build; and a real built-bundle batch spanning at least one volume-field fixture
+and one prepared liquid-surface fixture. The batch must be complete under
+WebGL/HDR with semantic, authoritative-field alpha, and framebuffer-alpha/support
+invariants preserved. Existing CLI help, URL construction, diagnostic report
+labels, catalog order, and content identities must remain byte-compatible. CI
+must verify the freshly downloaded exact uploaded artifact before deployment.
 
 `src/renderer/hdr-volume-lab-adapters.ts` retains the canonical
 Liquid/Gas/Emission descriptor order and is recursively immutable through its
@@ -3803,10 +3808,12 @@ eight-sampler compositor that has no Powder implementation.
 
 ### Deployed checkpoint — named recipes, results, and batch index
 
-This checkpoint is infrastructure, not a new look. The frozen recipe catalog
-owns `domain/target/fixture/gain/renderScale`; `--candidate=<name>` rejects every
-explicit recipe-owned flag, while base URL, bundle, output directory, Chrome,
-and GPU remain composable environment options. The initial catalog is
+This checkpoint is infrastructure, not a new look. The static contract owns the
+frozen `domain/target/fixture/gain/renderScale` recipe records;
+`scripts/visual-lab-recipes.mjs` validates and derives the public catalog.
+`--candidate=<name>` rejects every explicit recipe-owned flag, while base URL,
+bundle, output directory, Chrome, and GPU remain composable environment options.
+The initial catalog is
 `gas-showcase`, `oxygen-showcase`, `oil-motion`, and `water-motion`.
 
 Build and capture a named request with:
@@ -3896,8 +3903,9 @@ CI deployment gating as complete.
 The hook runs after bloom extraction. Emission experiments can reshape final
 radiance but cannot seed new bloom until a deliberately budgeted pre-extract
 hook exists. `scripts/visual-lab-fixtures.mjs` supplies declarative domain and
-named-fixture catalogs; `scripts/visual-lab-recipes.mjs` adds validated named
-requests without duplicating capability metadata; and
+named-fixture projections of `src/shared/visual-lab-static-contract.js`;
+`scripts/visual-lab-recipes.mjs` derives validated named requests from that same
+contract without duplicating capability metadata; and
 `scripts/visual-lab-result.mjs` gives every capture a canonical content identity.
 The catalogs derive CLI validation/help, fixed URL flags, report target kinds,
 field-alpha readers, bootstrap scenes, and whether a typed app-owned fixture
@@ -3935,11 +3943,13 @@ failed-job retry reused the passing build and closed all 19 live resources.
 Declarative normal-HDR shader assembly is deployed at
 `6abece4f43710a4547650bd93af4ca8834f77224` by run `31294986555`; all four
 release candidates stayed encoded-identical and the live 19-resource closure
-passed on its first attempt. The active extension is the shared static
-cross-runtime contract that removes domain/fixture/profile duplication without
-changing any frozen v1 evidence format.
-Defer a bounded PNG decoder and RGB metrics to v2, and extend the shared
-verifier rather than cloning it or the workflow. Defer E66 and
+passed on its first attempt. The shared static contract and bounded PNG decoder
+are established. New comparisons add deterministic `metrics.json` as
+measurement-only integer RGB/alpha evidence derived from pinned changed PNGs;
+the shared verifier recomputes it when present. It stays outside all frozen v1
+identities, never gates or promotes aesthetics, and remains optional for legacy
+packages. Extend this shared path rather than cloning the verifier or workflow.
+Defer E66 and
 Powder until the fixed HDR
 seam can receive their stability/body proof without a second experiment
 framework.

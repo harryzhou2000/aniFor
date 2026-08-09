@@ -49,9 +49,13 @@ same validated `comparison/v1` record. `index.html` remains the exhaustive
 accepted/current contact sheet. `review-brief.html` is the compact human
 decision queue: it shows `review`, `added`, and `not-sampled` candidates first,
 with their off/A/B pairs and pinned identities, and lists encoded-identical
-candidates as no-action. The brief changes no comparison field or identity,
-adds no image scoring, and is checked by the same portable verifier when
-present. Older comparison packages without the additive brief remain valid.
+candidates as no-action. New packages also include `metrics.json` with the
+additive `anifor.visual-lab.comparison-metrics/v1` record: deterministic integer
+RGB and alpha deltas for non-identical paired captures only. The metrics are
+measurements, not scoring, acceptance, failure, or promotion input. Both files
+change no comparison field or identity and are checked by the same portable
+verifier when present; it recomputes metrics from the pinned PNG bytes. Legacy
+comparison packages may omit either additive file.
 
 Verify a downloaded review package and its comparison without rewriting either:
 
@@ -68,8 +72,11 @@ The comparison defaults to `<batch-root>/comparison`. Omit
 batches may omit `recipe-set.json` when `--require-recipe-set=0`; incomplete
 diagnostic packages require `--require-complete=0` and are never deployable
 evidence. Verification uses stable non-following reads, reconstructs identities,
-PNG structure and hashes, deterministic HTML, and cross-package descriptors, and
-does not change artifact bytes or metadata.
+bounded PNG structure/decoding and hashes, deterministic HTML, optional
+brief/metrics evidence, and cross-package descriptors, and does not change
+artifact bytes or metadata. Release CI performs this check on a fresh download
+of the exact uploaded artifact in runner-temporary storage before Pages deploy,
+without another build or browser capture.
 
 Use `accept` only to seed a new baseline scope from one complete batch. It writes
 to a new empty directory and does not merge an existing accepted package:

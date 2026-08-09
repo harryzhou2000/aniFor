@@ -280,6 +280,19 @@ describe('Visual Lab accepted baseline packages', () => {
     });
     expect(compared.comparison.complete).toBe(true);
     expect(compared.comparison.summary).toMatchObject({ compared: 1, review: 1 });
+    expect(compared.metrics).toMatchObject({
+      schema: 'anifor.visual-lab.comparison-metrics/v1',
+      comparison: {
+        schema: compared.comparison.schema,
+        id: compared.comparison.id,
+      },
+      candidates: [{ candidate: 'gas-showcase', status: 'review' }],
+    });
+    expect(compared.metrics.candidates[0].variants.a.metric).toMatchObject({
+      kind: 'rgba-delta',
+      comparedPixels: 1,
+    });
+    expect(Object.isFrozen(compared.metrics)).toBe(true);
     await assertPortableRefs(comparisonRoot, await readFile(compared.html, 'utf8'));
 
     const beforeTrees = await Promise.all([
@@ -374,11 +387,13 @@ describe('Visual Lab accepted baseline packages', () => {
       createVisualLabBaseline(batchFor('gas-showcase', 'accepted')),
       batchFor('gas-showcase', 'accepted'),
     ).id);
-    expect(storedBrief).toBe(renderVisualLabReviewBrief(output.comparison));
+    expect(storedBrief).toBe(renderVisualLabReviewBrief(output.comparison, output.metrics));
+    expect(JSON.parse(await readFile(output.metricsPath, 'utf8'))).toEqual(output.metrics);
+    expect(storedBrief).toContain('measurements do not pass or fail aesthetics');
     await assertPortableRefs(comparisonRoot, storedBrief);
   });
 
-  it('rejects tampered or symlinked review briefs while accepting legacy packages without one', async () => {
+  it('verifies metrics and briefs while accepting legacy packages without either', async () => {
     const root = await temporaryDirectory();
     const batchRoot = path.join(root, 'batch');
     const baselineRoot = path.join(root, 'baseline');
@@ -391,6 +406,7 @@ describe('Visual Lab accepted baseline packages', () => {
       mode: 'compare', baselineRoot, resultRoot: currentRoot, outputDir: comparisonRoot,
     });
     const originalBrief = await readFile(output.brief);
+    const originalMetrics = await readFile(output.metricsPath);
 
     await writeFile(output.brief, `${originalBrief.toString('utf8')}\n<!-- tampered -->\n`);
     await expect(verifyVisualLabComparisonPackage({
@@ -405,6 +421,45 @@ describe('Visual Lab accepted baseline packages', () => {
     await expect(verifyVisualLabComparisonPackage({
       baselineRoot, resultRoot: currentRoot, comparisonRoot,
     })).rejects.toThrow('must use only real contained files');
+    await unlink(output.brief);
+
+    await expect(verifyVisualLabComparisonPackage({
+      baselineRoot, resultRoot: currentRoot, comparisonRoot,
+    })).rejects.toThrow('metrics require a matching review brief');
+
+    await writeFile(output.brief, originalBrief);
+    const tamperedMetrics = JSON.parse(originalMetrics.toString('utf8'));
+    tamperedMetrics.comparison.id = `sha256:${'f'.repeat(64)}`;
+    await writeFile(output.metricsPath, `${JSON.stringify(tamperedMetrics, null, 2)}\n`);
+    await expect(verifyVisualLabComparisonPackage({
+      baselineRoot, resultRoot: currentRoot, comparisonRoot,
+    })).rejects.toThrow('comparison metrics');
+    await writeFile(output.metricsPath, originalMetrics);
+
+    await writeFile(output.metricsPath, Buffer.alloc(1024 * 1024 + 1, 0x20));
+    await expect(verifyVisualLabComparisonPackage({
+      baselineRoot, resultRoot: currentRoot, comparisonRoot,
+    })).rejects.toThrow('bounded file budget');
+    await writeFile(output.metricsPath, originalMetrics);
+
+    const externalMetrics = path.join(root, 'external-metrics.json');
+    await writeFile(externalMetrics, originalMetrics);
+    await unlink(output.metricsPath);
+    await symlink(externalMetrics, output.metricsPath);
+    await expect(verifyVisualLabComparisonPackage({
+      baselineRoot, resultRoot: currentRoot, comparisonRoot,
+    })).rejects.toThrow('must use only real contained files');
+    await unlink(output.metricsPath);
+
+    await expect(verifyVisualLabComparisonPackage({
+      baselineRoot, resultRoot: currentRoot, comparisonRoot,
+    })).rejects.toThrow('comparison review brief');
+
+    await writeFile(output.brief, renderVisualLabReviewBrief(output.comparison));
+    await expect(verifyVisualLabComparisonPackage({
+      baselineRoot, resultRoot: currentRoot, comparisonRoot,
+    })).resolves.toMatchObject({ comparison: output.comparison });
+
     await unlink(output.brief);
 
     await expect(verifyVisualLabComparisonPackage({

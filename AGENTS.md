@@ -55,16 +55,20 @@ The release set stayed four-for-four encoded-identical and live closure passed
 all 19 resources. Every future shader assembly edit still requires a real WebGL
 compile/capture for the affected hook families.
 
-The active checkpoint is a universal static Visual Lab contract shared by Vite,
-TypeScript, and Node tooling. Keep pure, recursively frozen, JSON-safe metadata
-in `src/shared/visual-lab-static-contract.js`, paired with exact readonly literal
-types in its `.d.ts`; it must import no renderer, app, or script module. That one
-contract owns stable domain codes, implementation/target capability, the common
-normal-HDR execution/fallback profile, evidence and fixed URL metadata,
-independent capture order, fixture constraints, and historical diagnostic
-labels. Renderer maps, Node capture adapters, and prepared-fixture ID types must
-be derived projections. Executable preparers stay in the app-owned exhaustive
-registry and remain guarded before mutation. Preserve the existing public
+The universal static Visual Lab contract is deployed at revision
+`b05b2b2a35d1ec1ae806cc712df28bf34321b9df` by release-set workflow run
+`31295960140`; the freshly downloaded four-candidate package and live
+19-resource closure both passed. Keep pure, recursively frozen, JSON-safe
+metadata in `src/shared/visual-lab-static-contract.js`, paired with exact
+readonly literal types in its `.d.ts`; it must import no renderer, app, or script
+module. That one contract owns stable domain codes, implementation/target
+capability, the common normal-HDR execution/fallback profile, evidence and fixed
+URL metadata, independent capture order, fixture constraints, and historical
+diagnostic labels. It also owns the validated declarative capture-recipe
+records. Renderer maps, Node domain/fixture adapters, the public capture-recipe
+catalog, and prepared-fixture ID types must be derived projections. Executable
+preparers stay in the app-owned exhaustive registry and remain guarded before
+mutation. Preserve the existing public
 adapter shapes/orders and all frozen result, batch, baseline, and comparison v1
 identities. `hdr-volume-lab-adapters.ts` is the sole explicit renderer join
 point for leaf descriptors; the protected assembler imports that registry, not
@@ -82,9 +86,9 @@ motion is an accepted E08 baseline and uses the moving-Oil fixture with liquid
 target `8`; E65 Water surface motion is an accepted E08 baseline and uses the
 retained moving-Water fixture with liquid target `2`. Their legacy resolvers,
 uniforms, queries, datasets, and bespoke verifier paths are removed. E65 is also
-deployed. `main_codex` and Pages currently serve declarative-assembly revision
-`6abece4f43710a4547650bd93af4ca8834f77224` after release-set gated workflow run
-`31294986555`: the build passed with 269/270 ccache hits, all four named recipes
+deployed. `main_codex` and Pages currently serve shared-contract revision
+`b05b2b2a35d1ec1ae806cc712df28bf34321b9df` after release-set gated workflow run
+`31295960140`: the build passed with 269/270 ccache hits, all four named recipes
 were encoded-identical, the freshly downloaded package verified the review
 brief, and live closure passed all 19 resources on its first attempt.
 
@@ -99,10 +103,15 @@ Only incomplete, missing, tampered, unsafe, or request-incompatible evidence is
 blocking. Seed provenance belongs in this guidance and CI logs: accepted-v1 is
 from revision `34c8a3d`, workflow `31284862276`, and manifest
 `sha256:b95e09ecb1df93c2b9ae718d205159b17dc56379723f2d1ad904458e16c5653c`.
-A newly generated comparison also contains deterministic `review-brief.html` as
-an additive human decision queue. Its bytes are derived from comparison/v1 and
-verified when present, but the file is excluded from comparison identity and
-legacy packages may omit it. The exhaustive `index.html` remains authoritative.
+A newly generated comparison contains deterministic `review-brief.html` as an
+additive human decision queue and `metrics.json` as additive measurement-only
+evidence. The metrics sidecar is bound to comparison/v1, decodes only changed
+paired PNGs under the capture budget, and records deterministic integer RGB and
+alpha deltas. It never scores, passes, fails, accepts, or promotes aesthetics.
+Both additive files remain outside comparison identity; the shared verifier
+recomputes metrics from the pinned copied captures when present, while legacy
+packages may omit metrics and/or the brief. The exhaustive `index.html` remains
+authoritative.
 Promotion must require the exact complete comparison package plus an explicit
 nonempty candidate list, write only to a new disjoint empty directory, copy
 unselected bytes from the old baseline and selected bytes from the current
@@ -127,16 +136,18 @@ Portable verification is strictly read-only. Reconstruct the batch from stable,
 non-following reads of its index, reports, result records, PNGs, failure
 tombstones, deterministic sheet, and optional recipe-set sidecar; then reuse the
 promotion-grade comparison validation for accepted/current image copies, JSON,
-and HTML. Recheck file identity and ancestors across each read so a replacement
-race cannot turn a validated path into another file. The CI review job must
+HTML, optional review brief, and optional metrics sidecar. Recompute present
+metrics with the shared bounded PNG decoder. Recheck file identity and
+ancestors across each read so a replacement race cannot turn a validated path
+into another file. The CI review job must
 upload first, download that exact named artifact into runner-temporary storage,
 and invoke the shared verifier there without another browser or build. Legacy
 complete batches may omit the sidecar unless explicitly required. Incomplete
 diagnostic batches may be inspected only when completeness is relaxed and must
 never gate deployment as successful evidence. Do not regenerate evidence while
 claiming to verify it, and do not fork this contract into inline workflow code.
-Defer RGB decoding and aesthetic thresholds until the comparison workflow has
-proved useful; thumbnails and exact variant hashes are the v1 review contract.
+Metrics remain diagnostic and legacy-optional: never turn RGB/alpha deltas into
+an aesthetic threshold or insert them into a frozen v1 identity.
 Defer E66
 because its tangent reads make it resource-sensitive; migrate another accepted
 leaf only when doing so removes more special-case infrastructure than it adds.

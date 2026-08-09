@@ -8,7 +8,6 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
-import { inflateSync } from 'node:zlib';
 
 import {
   resolveVisualLabCaptureRecipe,
@@ -30,6 +29,9 @@ import {
   isDetachedProcessGroupAlive,
   terminateDetachedProcessGroup,
 } from './detached-process.mjs';
+import { inspectVisualLabPng } from './visual-lab-png.mjs';
+
+export { inspectVisualLabPng } from './visual-lab-png.mjs';
 
 export const VISUAL_LAB_BATCH_SCHEMA = 'anifor.visual-lab.batch/v1';
 export const VISUAL_LAB_DEFAULT_CANDIDATE_TIMEOUT_MS = 300_000;
@@ -44,15 +46,12 @@ const MAX_CANDIDATE_TIMEOUT_MS = 2_147_483_647;
 const WORLD_WIDTH = 612;
 const WORLD_HEIGHT = 384;
 const VARIANTS = Object.freeze(['off', 'a', 'b']);
-const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const LIFECYCLE_FILE_NAME = 'chrome-lifecycle.json';
 const LIFECYCLE_SCHEMA = 'anifor.visual-lab.lifecycle/v1';
 const BATCH_LOCK_FILE_NAME = '.visual-lab-batch.lock';
 const BATCH_LOCK_SCHEMA = 'anifor.visual-lab.batch-lock/v1';
 const LIFECYCLE_CLOCK_SKEW_MS = 60_000;
 const MIN_LIFECYCLE_RECOVERY_WINDOW_MS = 30 * 60_000;
-const MAX_CAPTURE_AXIS = 8_192;
-const MAX_CAPTURE_PIXELS = 16_777_216;
 const CANDIDATE_GENERATED_FILES = Object.freeze([
   'off.png', 'a.png', 'b.png', 'report.json', 'stdout.log', 'stderr.log',
 ]);
@@ -593,108 +592,6 @@ const assertCurrentCaptureContract = (report, recipe, hashes) => {
       throw new Error(`${variant} capture dataset does not match the requested WebGL/HDR state`);
     }
   }
-};
-
-export const inspectVisualLabPng = (bytes, label) => {
-  if (bytes.length < 57 || !bytes.subarray(0, PNG_SIGNATURE.length).equals(PNG_SIGNATURE)) {
-    throw new Error(`${label} does not have a PNG signature`);
-  }
-  let offset = PNG_SIGNATURE.length;
-  let chunkIndex = 0;
-  let width;
-  let height;
-  let idatBytes = 0;
-  const idatChunks = [];
-  let ended = false;
-  let channels;
-  let bitDepth;
-  while (offset < bytes.length) {
-    if (offset + 12 > bytes.length) throw new Error(`${label} has a truncated PNG chunk`);
-    const length = bytes.readUInt32BE(offset);
-    const type = bytes.toString('ascii', offset + 4, offset + 8);
-    const dataStart = offset + 8;
-    const dataEnd = dataStart + length;
-    const chunkEnd = dataEnd + 4;
-    if (!Number.isSafeInteger(chunkEnd) || chunkEnd > bytes.length) {
-      throw new Error(`${label} has a truncated ${type || 'unknown'} PNG chunk`);
-    }
-    if (chunkIndex === 0 && (type !== 'IHDR' || length !== 13)) {
-      throw new Error(`${label} does not begin with a canonical IHDR chunk`);
-    }
-    if (type === 'IHDR') {
-      if (chunkIndex !== 0 || width !== undefined || length !== 13) {
-        throw new Error(`${label} has an invalid duplicate IHDR chunk`);
-      }
-      width = bytes.readUInt32BE(offset + 8);
-      height = bytes.readUInt32BE(offset + 12);
-      if (width === 0 || height === 0) throw new Error(`${label} has zero PNG dimensions`);
-      if (width > MAX_CAPTURE_AXIS || height > MAX_CAPTURE_AXIS
-        || width * height > MAX_CAPTURE_PIXELS) {
-        throw new Error(`${label} exceeds the bounded PNG capture budget`);
-      }
-      bitDepth = bytes[dataStart + 8];
-      const colorType = bytes[dataStart + 9];
-      channels = ({ 2: 3, 6: 4 })[colorType];
-      if (bitDepth !== 8 || channels === undefined
-        || bytes[dataStart + 10] !== 0 || bytes[dataStart + 11] !== 0
-        || bytes[dataStart + 12] !== 0) {
-        throw new Error(`${label} is not a supported non-interlaced 8-bit RGB/RGBA PNG`);
-      }
-    } else if (type === 'IDAT') {
-      idatBytes += length;
-      idatChunks.push(bytes.subarray(dataStart, dataEnd));
-    } else if (type === 'IEND') {
-      if (length !== 0 || chunkEnd !== bytes.length) {
-        throw new Error(`${label} has an invalid IEND tail`);
-      }
-      ended = true;
-    }
-    let crc = 0xFFFFFFFF;
-    for (let index = offset + 4; index < dataEnd; index++) {
-      crc ^= bytes[index];
-      for (let bit = 0; bit < 8; bit++) {
-        crc = (crc >>> 1) ^ (crc & 1 ? 0xEDB88320 : 0);
-      }
-    }
-    const expectedCrc = (crc ^ 0xFFFFFFFF) >>> 0;
-    if (bytes.readUInt32BE(dataEnd) !== expectedCrc) {
-      throw new Error(`${label} has an invalid ${type || 'unknown'} PNG CRC`);
-    }
-    offset = chunkEnd;
-    chunkIndex++;
-    if (ended) break;
-  }
-  if (width === undefined || height === undefined || idatBytes === 0 || !ended) {
-    throw new Error(`${label} does not contain a complete IHDR/IDAT/IEND PNG stream`);
-  }
-  const inflatedLength = (width * channels + 1) * height;
-  let imageBytes;
-  try {
-    const compressed = Buffer.concat(idatChunks, idatBytes);
-    const inflated = inflateSync(compressed, {
-      maxOutputLength: inflatedLength,
-      info: true,
-    });
-    if (inflated.engine.bytesWritten !== compressed.byteLength) {
-      throw new Error('compressed stream has trailing bytes');
-    }
-    imageBytes = inflated.buffer;
-  } catch (error) {
-    throw new Error(
-      `${label} has an invalid compressed PNG image stream: ${error.message}`,
-      { cause: error },
-    );
-  }
-  if (imageBytes.byteLength !== inflatedLength) {
-    throw new Error(`${label} has an incomplete decompressed PNG image stream`);
-  }
-  const rowStride = width * channels + 1;
-  for (let row = 0; row < height; row++) {
-    if (imageBytes[row * rowStride] > 4) {
-      throw new Error(`${label} has an invalid PNG row filter`);
-    }
-  }
-  return { width, height };
 };
 
 const readFailureTombstone = async (candidateDirectory, recipe, {

@@ -12,6 +12,10 @@ import {
   VISUAL_LAB_BATCH_SCHEMA,
 } from './visual-lab-batch.mjs';
 import {
+  createVisualLabComparisonMetrics,
+  VISUAL_LAB_COMPARISON_METRICS_SCHEMA,
+} from './visual-lab-comparison-metrics.mjs';
+import {
   resolveVisualLabCaptureRecipe,
   visualLabCaptureRecipeNames,
 } from './visual-lab-recipes.mjs';
@@ -25,6 +29,7 @@ const MODULE_PATH = fileURLToPath(import.meta.url);
 const VARIANTS = Object.freeze(['off', 'a', 'b']);
 const CANDIDATE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const SHA256_ID = /^sha256:[0-9a-f]{64}$/;
+const MAX_COMPARISON_METRICS_BYTES = 1024 * 1024;
 
 const HELP = `Usage:
   node scripts/visual-lab-baseline.mjs accept \\
@@ -453,7 +458,39 @@ const escapeHtml = (value) => String(value)
 
 const shortHash = (value) => value ? value.slice(0, 12) : '—';
 
-const renderVariant = (entry, variant) => {
+const formatMetricRatio = (count, total) => (
+  total > 0 ? `${((count * 100) / total).toFixed(2)}%` : '0.00%'
+);
+
+const formatMetricMean = (sum, samples) => (
+  samples > 0 ? (sum / samples).toFixed(2) : '0.00'
+);
+
+const formatMetricRms = (squaredSum, samples) => (
+  samples > 0 ? Math.sqrt(squaredSum / samples).toFixed(2) : '0.00'
+);
+
+const renderVariantMetric = (variantMetrics) => {
+  const metric = variantMetrics?.metric;
+  if (variantMetrics?.status !== 'review' || metric === null || metric === undefined) return '';
+  if (metric.kind === 'dimension-mismatch') {
+    return `<p class="metric">measurement only · dimensions accepted ${
+      escapeHtml(metric.baseline.width)}×${escapeHtml(metric.baseline.height)} · current ${
+      escapeHtml(metric.current.width)}×${escapeHtml(metric.current.height)}</p>`;
+  }
+  const rgbSamples = metric.comparedPixels * 3;
+  return `<p class="metric">measurement only · RGBA-changed ${
+    escapeHtml(formatMetricRatio(metric.rgbaDifferentPixels, metric.comparedPixels))} · RGB ${
+    escapeHtml(formatMetricRatio(metric.rgb.differentPixels, metric.comparedPixels))} px, mean |Δ| ${
+    escapeHtml(formatMetricMean(metric.rgb.absoluteDeltaSum, rgbSamples))}, RMS ${
+    escapeHtml(formatMetricRms(metric.rgb.squaredDeltaSum, rgbSamples))}, peak ${
+    escapeHtml(metric.rgb.channelPeak)} · alpha ${
+    escapeHtml(formatMetricRatio(metric.alpha.differentPixels, metric.comparedPixels))} px, mean |Δ| ${
+    escapeHtml(formatMetricMean(metric.alpha.absoluteDeltaSum, metric.comparedPixels))}, peak ${
+    escapeHtml(metric.alpha.channelPeak)}</p>`;
+};
+
+const renderVariant = (entry, variant, variantMetrics) => {
   const state = entry.variants[variant];
   const accepted = entry.baselineResult
     ? `<figure><img src="./${escapeHtml(entry.artifacts.baseline[variant])}"
@@ -465,7 +502,8 @@ const renderVariant = (entry, variant) => {
         alt="${escapeHtml(entry.candidate)} ${variant} current capture">
        <figcaption>current · ${escapeHtml(shortHash(state.currentSha256))}</figcaption></figure>`
     : '<div class="empty">not sampled in this run</div>';
-  return `<section class="variant"><h3>${variant.toUpperCase()} · ${escapeHtml(state.status)}</h3>
+  return `<section class="variant"><h3>${variant.toUpperCase()} · ${escapeHtml(state.status)}</h3>${
+    renderVariantMetric(variantMetrics)}
     <div class="pair">${accepted}${current}</div></section>`;
 };
 
@@ -526,7 +564,7 @@ export function renderVisualLabComparison(comparison) {
 `;
 }
 
-const renderReviewCandidate = (entry) => {
+const renderReviewCandidate = (entry, candidateMetrics) => {
   const request = entry.currentResult?.request ?? entry.baselineResult?.request;
   if (!request) throw new TypeError(`review candidate ${entry.candidate} has no request`);
   const resultLine = [
@@ -540,19 +578,44 @@ const renderReviewCandidate = (entry) => {
   escapeHtml(request.renderScale)}×</p>
         <p class="hashes">${escapeHtml(resultLine)}</p></div>
         <span class="status">${escapeHtml(entry.status)}</span></header>
-      <div class="variants">${VARIANTS.map((variant) => renderVariant(entry, variant)).join('')}</div>
+      <div class="variants">${VARIANTS.map((variant) => (
+    renderVariant(entry, variant, candidateMetrics?.variants?.[variant])
+  )).join('')}</div>
     </article>`;
 };
 
+const reviewMetricsByCandidate = (comparison, metrics) => {
+  if (metrics === undefined) return undefined;
+  if (metrics?.schema !== VISUAL_LAB_COMPARISON_METRICS_SCHEMA
+    || metrics.comparison?.schema !== comparison.schema
+    || metrics.comparison?.id !== comparison.id
+    || !Array.isArray(metrics.candidates)
+    || metrics.candidates.length !== comparison.candidates.length) {
+    throw new TypeError(`review brief metrics require ${VISUAL_LAB_COMPARISON_METRICS_SCHEMA}`);
+  }
+  const byCandidate = new Map();
+  metrics.candidates.forEach((entry, index) => {
+    const expected = comparison.candidates[index];
+    if (entry?.candidate !== expected.candidate || entry.status !== expected.status
+      || byCandidate.has(entry.candidate)) {
+      throw new TypeError('review brief metrics do not match comparison candidate order');
+    }
+    byCandidate.set(entry.candidate, entry);
+  });
+  return byCandidate;
+};
+
 /**
- * Additive human decision queue derived only from comparison/v1. It is kept
- * outside the comparison identity; the exhaustive index remains authoritative.
+ * Additive human decision queue derived from comparison/v1 and its optional
+ * recomputable integer metrics. Both stay outside comparison identity; the
+ * exhaustive index remains authoritative.
  */
-export function renderVisualLabReviewBrief(comparison) {
+export function renderVisualLabReviewBrief(comparison, metrics) {
   if (comparison?.schema !== VISUAL_LAB_COMPARISON_SCHEMA
     || comparison.complete !== true || !Array.isArray(comparison.candidates)) {
     throw new TypeError(`review brief requires ${VISUAL_LAB_COMPARISON_SCHEMA}`);
   }
+  const metricsByCandidate = reviewMetricsByCandidate(comparison, metrics);
   const decisions = comparison.candidates.filter(
     ({ status }) => status !== 'encoded-identical',
   );
@@ -560,7 +623,9 @@ export function renderVisualLabReviewBrief(comparison) {
     ({ status }) => status === 'encoded-identical',
   );
   const queue = decisions.length > 0
-    ? decisions.map(renderReviewCandidate).join('')
+    ? decisions.map((entry) => renderReviewCandidate(
+      entry, metricsByCandidate?.get(entry.candidate),
+    )).join('')
     : '<p class="empty-queue">No visual decisions are required for this comparison.</p>';
   const unchangedList = unchanged.length > 0
     ? `<ul>${unchanged.map(({ candidate }) => `<li>${escapeHtml(candidate)}</li>`).join('')}</ul>`
@@ -592,7 +657,7 @@ export function renderVisualLabReviewBrief(comparison) {
     img { display: block; width: 100%; height: auto; border-radius: 7px; background: #080b0f; }
     figcaption, .empty { margin-top: 4px; color: #b8c5d2; overflow-wrap: anywhere; }
     .empty { min-height: 72px; display: grid; place-items: center; border: 1px dashed #405065; border-radius: 7px; }
-    .empty-queue, aside { background: #192720; border: 1px solid #315541; border-radius: 10px; padding: 14px; }
+${metrics === undefined ? '' : '    .metric { margin: 7px 0; color: #d3dfec; font-size: .82rem; line-height: 1.35; }\n'}    .empty-queue, aside { background: #192720; border: 1px solid #315541; border-radius: 10px; padding: 14px; }
     aside { margin-top: 20px; }
     aside h2 { font-size: 1rem; margin-bottom: 6px; }
     aside ul { margin: 0; columns: 2; }
@@ -608,7 +673,7 @@ export function renderVisualLabReviewBrief(comparison) {
     <p>${escapeHtml(summary.review)} review · ${escapeHtml(summary.added)} added · ${
   escapeHtml(summary.notSampled)} not sampled · ${escapeHtml(summary.identical)} encoded-identical</p>
     <p><a href="./index.html">Open the exhaustive comparison sheet</a></p>
-  </header>
+${metrics === undefined ? '' : '    <p><a href="./metrics.json">Open raw integer RGB/alpha measurements</a> · measurements do not pass or fail aesthetics</p>\n'}  </header>
   <main>${queue}
   </main>
   <aside><h2>Encoded-identical · no action</h2>${unchangedList}</aside>
@@ -696,11 +761,14 @@ const assertRealFileAncestors = async (file, label) => {
 };
 
 /** Reads one real regular file without following a leaf/ancestor symlink or replacement. */
-const readStableRegularFile = async (file, label, encoding) => {
+const readStableRegularFile = async (file, label, encoding, maxBytes) => {
   await assertRealFileAncestors(file, label);
   const before = await lstat(file, { bigint: true });
   if (before.isSymbolicLink() || !before.isFile()) {
     throw new Error(`${label} must be a real regular file`);
+  }
+  if (maxBytes !== undefined && before.size > BigInt(maxBytes)) {
+    throw new Error(`${label} exceeds its bounded file budget`);
   }
   const flags = typeof fsConstants.O_NOFOLLOW === 'number'
     ? fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW
@@ -862,14 +930,24 @@ const comparisonCandidatesFor = (comparison, side) => comparison.candidates
   .filter((entry) => entry[`${side}Result`] !== null)
   .map((entry) => ({ candidate: entry.candidate, result: entry[`${side}Result`] }));
 
-const readOptionalComparisonFile = async (root, relative, label) => {
+const createComparisonPackageMetrics = (root, comparison) => (
+  createVisualLabComparisonMetrics(comparison, async (side, candidate, variant) => {
+    const label = `comparison ${side} ${candidate} ${variant}.png`;
+    const file = await ensureContainedFile(
+      root, `${side}/candidates/${candidate}/${variant}.png`, label,
+    );
+    return readStableRegularFile(file, label);
+  })
+);
+
+const readOptionalComparisonFile = async (root, relative, label, maxBytes) => {
   let file;
   try { file = await ensureContainedFile(root, relative, label); }
   catch (error) {
     if (error?.code === 'ENOENT') return undefined;
     throw error;
   }
-  return readStableRegularFile(file, label, 'utf8');
+  return readStableRegularFile(file, label, 'utf8', maxBytes);
 };
 
 const validateComparisonPackage = async (root, expected) => {
@@ -887,12 +965,12 @@ const validateComparisonPackage = async (root, expected) => {
   if (html !== renderVisualLabComparison(expected)) {
     throw new TypeError('comparison sheet does not match its complete comparison index');
   }
-  const brief = await readOptionalComparisonFile(
-    root, 'review-brief.html', 'comparison review brief',
-  );
-  if (brief !== undefined && brief !== renderVisualLabReviewBrief(expected)) {
-    throw new TypeError('comparison review brief does not match its complete comparison index');
-  }
+  const [brief, metricsSource] = await Promise.all([
+    readOptionalComparisonFile(root, 'review-brief.html', 'comparison review brief'),
+    readOptionalComparisonFile(
+      root, 'metrics.json', 'comparison metrics', MAX_COMPARISON_METRICS_BYTES,
+    ),
+  ]);
   await Promise.all([
     validateCapturePackage(
       path.join(root, 'baseline'), comparisonCandidatesFor(expected, 'baseline'),
@@ -903,6 +981,25 @@ const validateComparisonPackage = async (root, expected) => {
       'comparison current',
     ),
   ]);
+  let metrics;
+  if (metricsSource !== undefined) {
+    try { metrics = JSON.parse(metricsSource); }
+    catch (error) {
+      throw new TypeError(`comparison metrics is not valid JSON: ${error.message}`, {
+        cause: error,
+      });
+    }
+    const expectedMetrics = await createComparisonPackageMetrics(root, expected);
+    if (!isDeepStrictEqual(metrics, expectedMetrics)) {
+      throw new TypeError('comparison metrics do not match the pinned comparison captures');
+    }
+    if (brief === undefined) {
+      throw new TypeError('comparison metrics require a matching review brief');
+    }
+  }
+  if (brief !== undefined && brief !== renderVisualLabReviewBrief(expected, metrics)) {
+    throw new TypeError('comparison review brief does not match its complete comparison evidence');
+  }
   return comparison;
 };
 
@@ -1041,13 +1138,18 @@ export async function runVisualLabBaseline(options, dependencies = {}) {
         'comparison current output',
       ),
     ]);
+    const metrics = await createComparisonPackageMetrics(outputDirectory, comparison);
     const html = path.join(outputDirectory, 'index.html');
     const brief = path.join(outputDirectory, 'review-brief.html');
+    const metricsPath = path.join(outputDirectory, 'metrics.json');
     const json = path.join(outputDirectory, 'comparison.json');
     await writeAtomic(html, renderVisualLabComparison(comparison));
-    await writeAtomic(brief, renderVisualLabReviewBrief(comparison));
+    await writeAtomic(metricsPath, `${JSON.stringify(metrics, null, 2)}\n`);
+    await writeAtomic(brief, renderVisualLabReviewBrief(comparison, metrics));
     await writeAtomic(json, `${JSON.stringify(comparison, null, 2)}\n`);
-    return { mode: 'compare', comparison, html, brief, json };
+    return {
+      mode: 'compare', comparison, metrics, html, brief, metricsPath, json,
+    };
   }
   if (options.mode === 'promote') {
     const baselineRoot = path.resolve(options.baselineRoot);
@@ -1144,6 +1246,7 @@ async function main() {
       summary: result.comparison.summary,
       html: result.html,
       brief: result.brief,
+      metrics: result.metricsPath,
       json: result.json,
     };
   } else {
