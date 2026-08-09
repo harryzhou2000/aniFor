@@ -15,8 +15,14 @@ import {
   visualCaptureVariantLabel,
 } from './visual-capture-drivers.mjs';
 
-const runSelection = (driver, variant, audit) => Function(
-  'audit', `return ${buildVisualCaptureSelectionExpression(driver, variant)};`,
+const runSelection = (
+  driver, variant, audit,
+  fixtureId = (typeof driver === 'string' ? driver : driver.name) === 'powder-render-style'
+    ? 'powder-style-atlas' : 'showcase',
+) => Function(
+  'audit', `return ${buildVisualCaptureSelectionExpression(
+    driver, variant, { fixtureId },
+  )};`,
 )(audit);
 
 describe('typed visual capture drivers', () => {
@@ -65,6 +71,36 @@ describe('typed visual capture drivers', () => {
       visualLab: 'active', visualLabDomain: 'gas', visualLabVariant: '1',
       visualLabTarget: '4', visualLabGain: '1.25',
     });
+  });
+
+  it('binds selection generation to exact known showcase, Oil, Water, and Powder fixtures', () => {
+    const normalCalls = [];
+    const normalAudit = {
+      setVisualLabVariant: (variant) => normalCalls.push(variant),
+    };
+    const expressions = ['showcase', 'oil-motion', 'water-motion'].map((fixtureId) => (
+      buildVisualCaptureSelectionExpression('normal-hdr', 2, { fixtureId })
+    ));
+    expect(new Set(expressions).size).toBe(1);
+    for (const fixtureId of ['showcase', 'oil-motion', 'water-motion']) {
+      expect(runSelection('normal-hdr', 2, normalAudit, fixtureId))
+        .toEqual({ ok: true, selection: 2 });
+    }
+    expect(normalCalls).toEqual([2, 2, 2]);
+
+    const powderCalls = [];
+    expect(runSelection('powder-render-style', 1, {
+      setPreparedVisualCaptureVariant: (fixtureId, variant) => {
+        powderCalls.push(['set', fixtureId, variant]);
+      },
+      preparedVisualCaptureVariant: (fixtureId) => {
+        powderCalls.push(['read', fixtureId]);
+        return 1;
+      },
+    }, 'powder-style-atlas')).toEqual({ ok: true, selection: 'local' });
+    expect(powderCalls).toEqual([
+      ['set', 'powder-style-atlas', 1], ['read', 'powder-style-atlas'],
+    ]);
   });
 
   it('keeps Powder outside HDR state and publishes self-describing review labels', () => {
@@ -339,12 +375,47 @@ describe('typed visual capture drivers', () => {
   it('rejects unknown drivers, variants, and dynamic audit identifiers', () => {
     expect(() => resolveVisualCaptureDriver('arbitrary')).toThrow('Unknown visual capture driver');
     expect(() => resolveVisualCaptureVariant('normal-hdr', 8)).toThrow('Unknown normal-hdr');
-    expect(() => buildVisualCaptureSelectionExpression('normal-hdr', 0, 'audit.call()'))
+    expect(() => buildVisualCaptureSelectionExpression('normal-hdr', 0, {
+      fixtureId: 'showcase', auditIdentifier: 'audit.call()',
+    }))
       .toThrow('Unsafe visual capture audit identifier');
     expect(() => buildVisualCaptureDatasetProjectionExpression(
       'normal-hdr', 'audit.call()',
     )).toThrow('Unsafe visual capture audit identifier');
     expect(runSelection('powder-render-style', 0, {}))
       .toEqual({ ok: false, failure: 'missing-selector' });
+  });
+
+  it('rejects missing, unknown, mismatched, open, or unsafe fixture contexts', () => {
+    for (const options of [undefined, null, 'showcase', [], {}]) {
+      expect(() => buildVisualCaptureSelectionExpression('normal-hdr', 0, options))
+        .toThrow(/closed fixture context|must contain fixtureId/);
+    }
+    expect(() => buildVisualCaptureSelectionExpression('normal-hdr', 0, {
+      fixtureId: 'unknown-fixture',
+    })).toThrow('Unknown visual capture fixture');
+    expect(() => buildVisualCaptureSelectionExpression('normal-hdr', 0, {
+      fixtureId: 'powder-style-atlas',
+    })).toThrow('does not use driver normal-hdr');
+    expect(() => buildVisualCaptureSelectionExpression('powder-render-style', 0, {
+      fixtureId: 'showcase',
+    })).toThrow('does not use driver powder-render-style');
+    expect(() => buildVisualCaptureSelectionExpression('normal-hdr', 0, {
+      fixtureId: 'showcase', executable: 'audit.setVisualLabVariant(2)',
+    })).toThrow('optional auditIdentifier only');
+    expect(buildVisualCaptureSelectionExpression('normal-hdr', 0, {
+      fixtureId: 'showcase', auditIdentifier: '$safeAudit',
+    })).toContain('$safeAudit.setVisualLabVariant(0)');
+    expect(() => buildVisualCaptureSelectionExpression('normal-hdr', 0, {
+      fixtureId: 'showcase', auditIdentifier: 'audit.call()',
+    })).toThrow('Unsafe visual capture audit identifier');
+
+    const getterContext = {};
+    Object.defineProperty(getterContext, 'fixtureId', {
+      enumerable: true,
+      get: () => 'showcase',
+    });
+    expect(() => buildVisualCaptureSelectionExpression('normal-hdr', 0, getterContext))
+      .toThrow('optional auditIdentifier only');
   });
 });

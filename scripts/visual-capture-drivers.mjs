@@ -6,9 +6,11 @@
 
 import { isDeepStrictEqual } from 'node:util';
 import { VISUAL_CAPTURE_STATIC_CONTRACT } from '../src/shared/visual-capture-static-contract.js';
+import { VISUAL_LAB_STATIC_CONTRACT } from '../src/shared/visual-lab-static-contract.js';
 import { VISUAL_LAB_CAPTURE_VARIANTS } from './visual-lab-capture-abi.mjs';
 
 const JS_IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+const SELECTION_CONTEXT_FIELDS = Object.freeze(['fixtureId', 'auditIdentifier']);
 const EXECUTABLE_ADAPTER_FIELDS = Object.freeze([
   'urlValues',
   'datasetExpectation',
@@ -79,8 +81,8 @@ const EXECUTABLE_DRIVER_ADAPTERS = Object.freeze({
       visualLabGain: '1',
       powderRenderStyle: variant.selection,
     }),
-    selectionExpression: (variant, auditIdentifier) => {
-      const fixture = JSON.stringify(POWDER_STYLE_FIXTURE);
+    selectionExpression: (variant, auditIdentifier, fixtureId) => {
+      const fixture = JSON.stringify(fixtureId);
       const value = JSON.stringify(powderStyleCaptureVariantValue(variant));
       const style = JSON.stringify(variant.selection);
       const styles = JSON.stringify(POWDER_STYLE_BY_CAPTURE_VARIANT);
@@ -121,6 +123,44 @@ const EXECUTABLE_DRIVER_ADAPTERS = Object.freeze({
 });
 
 const displayName = (value) => JSON.stringify(value) ?? String(value);
+
+const VISUAL_CAPTURE_FIXTURE_DRIVER_BY_ID = new Map([
+  ...VISUAL_LAB_STATIC_CONTRACT.fixtures.map(({ name }) => [name, 'normal-hdr']),
+  ...VISUAL_CAPTURE_STATIC_CONTRACT.fixtures.map(({ name, driver }) => [name, driver]),
+]);
+
+const resolveVisualCaptureSelectionContext = (driver, options) => {
+  if (options === null || typeof options !== 'object' || Array.isArray(options)
+    || (Object.getPrototypeOf(options) !== Object.prototype
+      && Object.getPrototypeOf(options) !== null)) {
+    throw new TypeError('Visual capture selection requires a closed fixture context');
+  }
+  const fields = Reflect.ownKeys(options);
+  const descriptors = Object.getOwnPropertyDescriptors(options);
+  if (!fields.includes('fixtureId')
+    || fields.some((field) => typeof field !== 'string'
+      || !SELECTION_CONTEXT_FIELDS.includes(field)
+      || !descriptors[field].enumerable
+      || !Object.hasOwn(descriptors[field], 'value'))) {
+    throw new TypeError(
+      'Visual capture selection context must contain fixtureId and optional auditIdentifier only',
+    );
+  }
+  const fixtureId = descriptors.fixtureId.value;
+  const fixtureDriver = typeof fixtureId === 'string'
+    ? VISUAL_CAPTURE_FIXTURE_DRIVER_BY_ID.get(fixtureId) : undefined;
+  if (fixtureDriver === undefined) {
+    throw new Error(`Unknown visual capture fixture ${displayName(fixtureId)}`);
+  }
+  if (fixtureDriver !== driver.name) {
+    throw new Error(
+      `Visual capture fixture ${displayName(fixtureId)} does not use driver ${driver.name}`,
+    );
+  }
+  const auditIdentifier = descriptors.auditIdentifier?.value ?? 'audit';
+  assertAuditIdentifier(auditIdentifier);
+  return Object.freeze({ fixtureId, auditIdentifier });
+};
 
 /**
  * Creates the fail-closed executable registry. Driver/domain overlap is valid:
@@ -245,20 +285,21 @@ export function visualCaptureDriverDatasetExpectation(
 }
 
 const assertAuditIdentifier = (auditIdentifier) => {
-  if (!JS_IDENTIFIER.test(auditIdentifier)) {
+  if (typeof auditIdentifier !== 'string' || !JS_IDENTIFIER.test(auditIdentifier)) {
     throw new Error(`Unsafe visual capture audit identifier ${displayName(auditIdentifier)}`);
   }
 };
 
-/** Browser expression that references only one caller-supplied, validated audit identifier. */
+/** Browser expression bound to one known fixture and one validated audit identifier. */
 export function buildVisualCaptureSelectionExpression(
-  driverOrName, valueOrName, auditIdentifier = 'audit',
+  driverOrName, valueOrName, options,
 ) {
-  assertAuditIdentifier(auditIdentifier);
   const driver = typeof driverOrName === 'string'
     ? resolveVisualCaptureDriver(driverOrName) : resolveVisualCaptureDriver(driverOrName?.name);
   const variant = resolveVisualCaptureVariant(driver, valueOrName);
-  return DRIVER_REGISTRY.executable(driver).selectionExpression(variant, auditIdentifier);
+  const { fixtureId, auditIdentifier } = resolveVisualCaptureSelectionContext(driver, options);
+  return DRIVER_REGISTRY.executable(driver)
+    .selectionExpression(variant, auditIdentifier, fixtureId);
 }
 
 /** Executable-only browser projection of driver-specific observed dataset state. */

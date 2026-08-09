@@ -425,7 +425,9 @@ export function buildVisualLabStartupExpression(
 ) {
   const driver = typeof captureDriver === 'string'
     ? resolveVisualCaptureDriver(captureDriver) : resolveVisualCaptureDriver(captureDriver?.name);
-  const selectionExpression = buildVisualCaptureSelectionExpression(driver, variant);
+  const selectionExpression = buildVisualCaptureSelectionExpression(driver, variant, {
+    fixtureId: adapter.name,
+  });
   const includeDriverFields = visualCaptureDriverPublishesReportDescriptor(driver);
   const descriptor = JSON.stringify({
     name: adapter.name,

@@ -176,7 +176,7 @@ const compileEntry = (
       value: abiVariant.value,
       driverVariant,
       selectionExpression: buildVisualCaptureSelectionExpression(
-        captureDriver, abiVariant.value,
+        captureDriver, abiVariant.value, { fixtureId: fixtureAdapter.name },
       ),
       expectedDataset: visualCaptureDriverDatasetExpectation(
         captureDriver, request, abiVariant.value,
