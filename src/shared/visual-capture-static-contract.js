@@ -14,6 +14,12 @@ const deepFreeze = (value) => {
 
 const contract = {
   schema: 'anifor.visual-capture.static-contract/v1',
+  evidencePlanes: [
+    'atmosphere-alpha',
+    'liquid-alpha',
+    'emission-alpha',
+    'powder-surface-alpha',
+  ],
   drivers: [
     {
       name: 'normal-hdr',
@@ -42,7 +48,7 @@ const contract = {
       targetKind: 'none',
       driver: 'powder-render-style',
       executionProfile: VISUAL_LAB_STATIC_CONTRACT.normalHdrExecutionProfile,
-      evidence: { readerMethod: 'powderSurfaceAlpha', plane: 'powder-surface-alpha' },
+      evidence: { plane: 'powder-surface-alpha' },
       fixedUrlParameters: {},
     },
   ],
@@ -73,6 +79,21 @@ const POWDER_STYLES = ['smooth', 'local', 'grains'];
 const FRAMEBUFFER_ALPHA_POLICIES = new Set(['exact', 'style-owned-nonempty']);
 
 const validateContract = (candidate) => {
+  const evidencePlanes = new Set();
+  for (const plane of candidate.evidencePlanes) {
+    if (!SAFE_NAME.test(plane) || evidencePlanes.has(plane)) {
+      throw new TypeError(`invalid or duplicate visual capture evidence plane ${JSON.stringify(plane)}`);
+    }
+    evidencePlanes.add(plane);
+  }
+  for (const domainName of VISUAL_LAB_STATIC_CONTRACT.captureDomainOrder) {
+    const plane = VISUAL_LAB_STATIC_CONTRACT.domains.find(({ name }) => name === domainName)
+      ?.evidence?.plane;
+    if (!evidencePlanes.has(plane)) {
+      throw new TypeError(`legacy Visual Lab evidence plane ${JSON.stringify(plane)} is missing`);
+    }
+  }
+
   const driverNames = new Set();
   const driverDomains = new Set();
   const driverByDomain = new Map();
@@ -107,10 +128,22 @@ const validateContract = (candidate) => {
       || !driverNames.has(domain.driver) || !driverDomains.has(domain.name)
       || driverByDomain.get(domain.name) !== domain.driver
       || domain.executionProfile !== VISUAL_LAB_STATIC_CONTRACT.normalHdrExecutionProfile
-      || domain.evidence === null) {
+      || domain.evidence === null
+      || Reflect.ownKeys(domain.evidence).length !== 1
+      || !evidencePlanes.has(domain.evidence.plane)) {
       throw new TypeError(`invalid visual capture extension domain ${JSON.stringify(domain.name)}`);
     }
     extensionDomains.add(domain.name);
+  }
+  const referencedEvidencePlanes = [
+    ...VISUAL_LAB_STATIC_CONTRACT.captureDomainOrder.map((domainName) => (
+      VISUAL_LAB_STATIC_CONTRACT.domains.find(({ name }) => name === domainName).evidence.plane
+    )),
+    ...candidate.extensionDomains.map(({ evidence }) => evidence.plane),
+  ];
+  if (candidate.evidencePlanes.length !== referencedEvidencePlanes.length
+    || candidate.evidencePlanes.some((plane, index) => plane !== referencedEvidencePlanes[index])) {
+    throw new TypeError('visual capture evidence planes must exactly match referenced domain order');
   }
 
   const fixtureNames = new Set();

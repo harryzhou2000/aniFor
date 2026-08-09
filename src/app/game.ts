@@ -566,6 +566,9 @@ export class Game {
       suspensionAt: (x, y) => this.renderer.suspensionAt(x, y),
       sourceTarget: (x, y) => this.simulation.configuredSourceTargetAt?.(x, y) ?? Material.Empty,
       presentationAuxiliary: (x, y) => this.renderer.presentationAuxiliaryAt(x, y),
+      visualCaptureEvidenceAlpha: (plane, x, y) => (
+        this.renderer.visualCaptureEvidenceAlphaAt(plane, x, y)
+      ),
       powderSurfaceAlpha: (x, y) => this.renderer.powderSurfaceAlphaAt(x, y),
       liquidFieldAlpha: (x, y) => this.renderer.liquidFieldAlphaAt(x, y),
       atmosphereFieldAlpha: (x, y) => this.renderer.atmosphereFieldAlphaAt(x, y),

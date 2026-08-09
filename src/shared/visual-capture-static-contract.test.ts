@@ -10,6 +10,9 @@ const visit = (value: unknown, visitor: (nested: object) => void): void => {
 
 describe('visual capture driver static contract', () => {
   it('keeps the normal HDR registry closed while adding a source-stage Powder driver', () => {
+    expect(VISUAL_CAPTURE_STATIC_CONTRACT.evidencePlanes).toEqual([
+      'atmosphere-alpha', 'liquid-alpha', 'emission-alpha', 'powder-surface-alpha',
+    ]);
     expect(VISUAL_LAB_STATIC_CONTRACT.captureDomainOrder).toEqual([
       'gas', 'liquid', 'emission',
     ]);
@@ -42,7 +45,7 @@ describe('visual capture driver static contract', () => {
   it('declares one typed Powder fixture and stable six-field recipe', () => {
     expect(VISUAL_CAPTURE_STATIC_CONTRACT.extensionDomains[0]).toMatchObject({
       name: 'powder', targetKind: 'none', driver: 'powder-render-style',
-      evidence: { readerMethod: 'powderSurfaceAlpha', plane: 'powder-surface-alpha' },
+      evidence: { plane: 'powder-surface-alpha' },
     });
     expect(VISUAL_CAPTURE_STATIC_CONTRACT.fixtures[0]).toEqual({
       name: 'powder-style-atlas',
@@ -63,6 +66,7 @@ describe('visual capture driver static contract', () => {
       .toStrictEqual(VISUAL_CAPTURE_STATIC_CONTRACT);
     visit(VISUAL_CAPTURE_STATIC_CONTRACT, (nested) => expect(Object.isFrozen(nested)).toBe(true));
     const serialized = JSON.stringify(VISUAL_CAPTURE_STATIC_CONTRACT);
+    expect(serialized).not.toContain('readerMethod');
     for (const forbidden of ['method', 'args', 'expression', 'script', 'function']) {
       expect(serialized).not.toContain(`"${forbidden}"`);
     }

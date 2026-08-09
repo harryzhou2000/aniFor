@@ -10,6 +10,7 @@ import {
   buildVisualCaptureSelectionExpression,
   visualCaptureDriverUrlValues,
 } from './visual-capture-drivers.mjs';
+import { normalizeVisualCaptureEvidence } from './visual-capture-evidence.mjs';
 
 const anyTarget = null;
 
@@ -110,7 +111,7 @@ export const VISUAL_LAB_DOMAIN_ADAPTERS = createVisualLabDomainCatalog(
     return {
       name: domain.name,
       targetKind: domain.targetKind,
-      evidence: domain.evidence,
+      evidence: normalizeVisualCaptureEvidence(domain.evidence),
       fixedUrlParameters: domain.fixedUrlParameters,
     };
   }),
@@ -123,7 +124,7 @@ const VISUAL_CAPTURE_EXTENSION_DOMAIN_ADAPTERS = Object.freeze(
       name: domain.name,
       targetKind: domain.targetKind,
       executionProfile: domain.executionProfile,
-      evidence: Object.freeze({ ...domain.evidence }),
+      evidence: normalizeVisualCaptureEvidence(domain.evidence),
       fixedUrlParameters: Object.freeze({ ...domain.fixedUrlParameters }),
       driver: domain.driver,
     });

@@ -1,9 +1,11 @@
 import { ALL_MATERIALS, Material } from '../shared/materials';
+import type { VisualCaptureEvidencePlane } from '../shared/visual-capture-static-contract.js';
 import type { SimulationBackend } from '../simulation';
 import { clientToViewport, ViewTransform, type Point, type ViewState } from './view-transform';
 import { clientToVisualViewport, contentBoxFromBounds, viewportToClient } from './client-coordinate-map';
 import type { PixiFieldPresenter, WebGLPresentationTiming } from './pixi-field-presenter';
 import type { VisualLabVariant } from './visual-lab';
+import { readVisualCaptureEvidenceAlpha } from './visual-capture-evidence';
 import {
   backingSize, CANVAS_FALLBACK_DIMENSION_BUDGET, CANVAS_FALLBACK_PIXEL_BUDGET,
   resolveFieldOutputScale, safeDeviceWebGLOutputScale, safeWebGLOutputScale,
@@ -627,6 +629,11 @@ export class MaterialRenderer {
     if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
     return this.presenter?.presentationAuxiliaryAt(x, y)
       ?? this.boundaryStability[y * this.simulation.width + x];
+  }
+
+  /** One fixed typed bridge for capture-framework field evidence. */
+  visualCaptureEvidenceAlphaAt(plane: VisualCaptureEvidencePlane, x: number, y: number): number {
+    return readVisualCaptureEvidenceAlpha(this, plane, x, y);
   }
 
   /** Audit-only read of the existing full-resolution Powder support alpha. */

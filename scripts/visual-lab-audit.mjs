@@ -37,6 +37,7 @@ import {
   visualCaptureDriverDatasetExpectation,
   visualCaptureDriverReportDescriptor,
 } from './visual-capture-drivers.mjs';
+import { buildVisualCaptureEvidenceReaderExpression } from './visual-capture-evidence.mjs';
 import {
   resolveVisualLabCaptureRecipe, visualLabCaptureRecipeNames,
 } from './visual-lab-recipes.mjs';
@@ -334,7 +335,7 @@ async function main() {
     })()`);
     await waitFor(async () => {
       const snapshot = await snapshotState(
-        cdp, options.domainAdapter.evidence.readerMethod, options.captureDriver.name,
+        cdp, options.domainAdapter.evidence.plane, options.captureDriver.name,
       );
       return snapshot.semantic.occupied > 0
         && snapshot.fieldAlpha.nonzero > 0
@@ -675,7 +676,7 @@ async function captureVariant(cdp, options, variant) {
   let previousState;
   const state = await waitFor(async () => {
     const current = await snapshotState(
-      cdp, options.domainAdapter.evidence.readerMethod, options.captureDriver.name,
+      cdp, options.domainAdapter.evidence.plane, options.captureDriver.name,
     );
     const stable = previousState
       && sameDigest(previousState.semantic, current.semantic)
@@ -763,7 +764,8 @@ function assertVariantState(state, options, variant) {
   assert(state.framebufferAlpha.nonzero > 0, `${variant.name} WebGL framebuffer alpha is empty`);
 }
 
-async function snapshotState(cdp, fieldAlphaMethod, captureDriver = 'normal-hdr') {
+async function snapshotState(cdp, evidencePlane, captureDriver = 'normal-hdr') {
+  const evidenceReaderExpression = buildVisualCaptureEvidenceReaderExpression(evidencePlane);
   return evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     const canvas = document.querySelector('.semantic-field-canvas');
@@ -793,11 +795,7 @@ async function snapshotState(cdp, fieldAlphaMethod, captureDriver = 'normal-hdr'
         (countHash ^ material.materialCounts[index] ^ index) >>> 0, 16777619,
       ) >>> 0;
     }
-    const fieldAlphaMethod = ${JSON.stringify(fieldAlphaMethod)};
-    if (typeof audit[fieldAlphaMethod] !== 'function') {
-      throw new Error('visual-lab field alpha reader is unavailable: ' + fieldAlphaMethod);
-    }
-    const readField = (x, y) => audit[fieldAlphaMethod](x, y);
+    const readField = ${evidenceReaderExpression};
     const fieldAlpha = digestBytes(readField, audit.width, audit.height);
     const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
     if (!gl) throw new Error('semantic-field canvas has no readable WebGL context');

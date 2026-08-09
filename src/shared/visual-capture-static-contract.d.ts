@@ -4,6 +4,9 @@ type NormalHdrExecutionProfile = typeof VISUAL_LAB_STATIC_CONTRACT.normalHdrExec
 
 export declare const VISUAL_CAPTURE_STATIC_CONTRACT: Readonly<{
   schema: 'anifor.visual-capture.static-contract/v1';
+  evidencePlanes: readonly [
+    'atmosphere-alpha', 'liquid-alpha', 'emission-alpha', 'powder-surface-alpha',
+  ];
   drivers: readonly [
     Readonly<{
       name: 'normal-hdr';
@@ -32,7 +35,7 @@ export declare const VISUAL_CAPTURE_STATIC_CONTRACT: Readonly<{
     driver: 'powder-render-style';
     executionProfile: NormalHdrExecutionProfile;
     evidence: Readonly<{
-      readerMethod: 'powderSurfaceAlpha'; plane: 'powder-surface-alpha';
+      plane: 'powder-surface-alpha';
     }>;
     fixedUrlParameters: Readonly<Record<string, never>>;
   }>];
@@ -48,3 +51,7 @@ export declare const VISUAL_CAPTURE_STATIC_CONTRACT: Readonly<{
     fixture: 'powder-style-atlas'; gain: 1; renderScale: 2;
   }>];
 }>;
+
+export type VisualCaptureEvidencePlane = (
+  typeof VISUAL_CAPTURE_STATIC_CONTRACT.evidencePlanes[number]
+);

@@ -84,6 +84,8 @@ describe('Visual Lab fixture adapters', () => {
     expect(resolveVisualLabDomain('emission').evidence).toEqual({
       readerMethod: 'emissionFieldAlpha', plane: 'emission-alpha',
     });
+    expect(JSON.stringify(resolveVisualLabDomain('gas').evidence))
+      .toBe('{"readerMethod":"atmosphereFieldAlpha","plane":"atmosphere-alpha"}');
     expect(() => resolveVisualLabDomain('powder'))
       .toThrow('--domain must be gas, liquid, or emission');
   });
@@ -115,6 +117,8 @@ describe('Visual Lab fixture adapters', () => {
       driver: 'powder-render-style',
       evidence: { readerMethod: 'powderSurfaceAlpha', plane: 'powder-surface-alpha' },
     });
+    expect(JSON.stringify(resolveVisualCaptureDomain('powder').evidence))
+      .toBe('{"readerMethod":"powderSurfaceAlpha","plane":"powder-surface-alpha"}');
     expect(resolveVisualCaptureFixture('powder-style-atlas', 'powder', 0))
       .toMatchObject({
         scene: 'showcase',

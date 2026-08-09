@@ -5,6 +5,7 @@ import type {
 import type { WebGLPresentationTiming } from '../renderer/pixi-field-presenter';
 import type { PowderRenderStyle } from '../renderer/powder-render-style';
 import { Material } from '../shared/materials';
+import type { VisualCaptureEvidencePlane } from '../shared/visual-capture-static-contract.js';
 import type { SimulationBackend } from '../simulation';
 import type { Point, ViewState } from '../renderer/view-transform';
 import type { MaterialAtlasEntry } from './material-atlas-audit';
@@ -137,6 +138,8 @@ export interface BrowserInputAuditApi {
   suspensionAt(x: number, y: number): readonly [number, number, number, number];
   sourceTarget(x: number, y: number): number;
   presentationAuxiliary(x: number, y: number): number;
+  /** Closed data-plane evidence bridge used by generic presentation captures. */
+  visualCaptureEvidenceAlpha(plane: VisualCaptureEvidencePlane, x: number, y: number): number;
   /** Existing full-resolution Powder surface support at one world cell. */
   powderSurfaceAlpha(x: number, y: number): number;
   liquidFieldAlpha(x: number, y: number): number;

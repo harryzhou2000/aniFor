@@ -108,20 +108,22 @@ It composes the existing capture, comparison, and portable verification stages
 under one explicit new root and has no promotion, Git, UI-opening, scoring, or
 deployment authority.
 
-The active framework increment is an additive typed visual-capture driver
-boundary. Preserve `anifor.visual-lab.static-contract/v1` as the closed
-normal-HDR renderer contract; non-HDR presentation controls belong in the
-sibling static driver contract and one closed scripts-side executable registry.
-Driver metadata may name only safe driver IDs, domains, fixed variant labels,
-fixtures, and unchanged six-field recipes—never browser methods, expressions,
-argument arrays, module paths, or functions. The first extension maps evidence
-`off/a/b` to the real Powder `Smooth/Local/Grains` control, keeps Powder
-HDR-unimplemented, uses the generic typed fixture preparer, and reads the
-already allocated Powder surface support without adding a renderer resource.
-Existing HDR report bytes/datasets and every frozen result, batch, baseline,
-comparison, and recipe-set identity remain authoritative. Portable verification
-must dispatch by the same closed driver as live capture; do not relax the
-normal-HDR contract to admit a source-stage report.
+The typed visual-capture driver boundary is deployed at revision
+`3a6f51172e7ec7ca54fdb3407d903587fa411eb8` by workflow run `31302407020`.
+Its first extension maps `off/a/b` to the real Powder
+`Smooth/Local/Grains` control without adding a renderer resource, while legacy
+normal-HDR reports retain their exact shape. The active direction is now
+framework execution leverage. Serialized capture metadata may name only closed
+data-plane IDs; one fixed typed browser bridge dispatches those IDs to existing
+renderer reads, and historical `readerMethod` labels are scripts-owned report
+projections with no execution authority. Next, prefer an exact-SHA,
+artifact-reusing `deploy-verified` CI operation over rebuilding an already
+successful static site, but validate run provenance, artifact uniqueness,
+embedded revision, and asset closure and retain `build-and-deploy` for a fresh
+build. Then make driver selection fixture/request-owned so a domain can host
+multiple presentation controls without runner branches or frozen-ABI changes.
+Preserve `anifor.visual-lab.static-contract/v1`, every result/batch/baseline/
+comparison/recipe-set identity, and the generic WebGL capture path throughout.
 
 The typed Visual Lab state, fixed normal-HDR composition seam, promotion-safe
 same-page off/A/B selection, declarative fixtures, and production-bundle capture

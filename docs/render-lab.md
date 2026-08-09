@@ -913,8 +913,14 @@ Presentation controls that sit before HDR use the generic visual-capture driver
 boundary rather than pretending to be shader domains. The established Visual
 Lab v1 contract remains the closed Liquid/Gas/Emission normal-HDR registry. A
 separate recursively frozen static contract names safe driver IDs, stable
-variant labels, extension fixtures, and unchanged six-field recipes; one closed
-scripts-side registry owns the actual browser calls.
+variant labels, extension fixtures, unchanged six-field recipes, and bounded
+evidence-plane IDs; one closed scripts-side registry owns the actual browser
+calls and historical report labels. Static metadata never names an evidence
+reader method. Capture samples every declared plane through the one fixed typed
+`visualCaptureEvidenceAlpha(plane, x, y)` browser bridge, whose renderer-side
+switch is exhaustive. The legacy named readers remain compatibility aliases,
+and reports retain their historical `{readerMethod, plane}` order, but those
+labels no longer have execution authority.
 
 The first extension is `powder-style-atlas`. It directly fills a paused 612×384
 world with overlapping Sand/Clay piles, a one-cell Clay stem and ledge, a

@@ -90,19 +90,28 @@ The trusted local review-cycle command is complete and deployed at revision
 one explicit new review root without widening any frozen identity or gaining
 promotion/deployment authority.
 
-The active framework increment is a typed visual-capture driver boundary for
-presentation controls that do not belong in the normal-HDR shader ABI. Keep
-`anifor.visual-lab.static-contract/v1`, its implemented domain order, and its
-accepted report/result identities closed. A sibling recursively frozen static
-contract may declare driver IDs, user-facing variant labels, extension domains,
-fixtures, and unchanged six-field recipes; executable selection remains in one
-closed scripts-side registry and one app-owned typed fixture registry. The first
-driver maps the stable evidence names `off/a/b` to the real source-renderer
-Powder controls `Smooth/Local/Grains`, keeps Powder HDR-unimplemented, adds no
-sampler/texture/field/pass/target, and reads only the already allocated Powder
-surface alpha for invariance. Existing normal-HDR reports retain their
-historical shape and exact dataset contract. New source-stage reports are
-self-describing and portable-verifier checked without weakening that path.
+The typed visual-capture driver boundary is complete and deployed at revision
+`3a6f51172e7ec7ca54fdb3407d903587fa411eb8` by workflow run `31302407020`.
+Its Powder source-stage driver maps stable evidence names `off/a/b` to the real
+`Smooth/Local/Grains` control, keeps Powder HDR-unimplemented, adds no renderer
+resource, and preserves the historical normal-HDR report shape. The same run
+proved the corrected build/deploy dependency: `verify-deployment` executed
+after a successful Pages deployment, the build restored 269/270 ccache entries,
+and live closure passed all 19 runtime resources.
+
+The active objective is framework execution leverage, not another isolated
+visual-detail pass. Close the capture evidence boundary first: serialized static
+metadata may name only a bounded data-plane ID, one fixed typed browser bridge
+must dispatch that ID exhaustively to existing renderer reads, and historical
+`{readerMethod, plane}` report bytes remain a scripts-owned compatibility
+projection with no execution authority. Then eliminate duplicated deploy builds
+with a fail-closed `deploy-verified` operation that reuses one successful,
+unexpired exact-SHA static-site artifact only after repository/workflow/run,
+artifact uniqueness, embedded revision, and resource-closure validation. Keep a
+fresh `build-and-deploy` escape path. After that, move driver binding from a
+one-driver-per-domain restriction to a single fixture/request resolver so one
+material family can host multiple independent presentation controls without
+adding runner branches or changing the frozen six-field recipe ABI.
 
 ### Cross-runtime static-contract acceptance
 
@@ -113,9 +122,10 @@ without a renderer/app dependency cycle. Validate safe unique domain/fixture
 names, stable unique codes, exact implemented/capture-set equality, shared
 execution-profile identity, evidence for every captured domain, implemented
 fixture constraints, and byte-range targets before recursively freezing the
-export. The bounded read-only evidence reader label remains metadata; do not
-place executable fixture-preparation method names, argument arrays, builders,
-or preparers in the serialized contract.
+export. Evidence metadata is a bounded data-plane ID only. Historical reader
+labels are report-compatibility output owned by the closed scripts registry; do
+not place reader methods, executable fixture-preparation method names, argument
+arrays, builders, or preparers in the serialized contract.
 
 The compatibility gate is the shared-contract, bounded PNG decoder,
 comparison-metrics, capture-ABI, review-board, and review-cycle tooling proof plus existing renderer-state,
