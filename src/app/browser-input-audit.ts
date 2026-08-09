@@ -137,6 +137,8 @@ export interface BrowserInputAuditApi {
   suspensionAt(x: number, y: number): readonly [number, number, number, number];
   sourceTarget(x: number, y: number): number;
   presentationAuxiliary(x: number, y: number): number;
+  /** Existing full-resolution Powder surface support at one world cell. */
+  powderSurfaceAlpha(x: number, y: number): number;
   liquidFieldAlpha(x: number, y: number): number;
   /** Bilinear atmosphere density at a world-cell centre, in byte space. */
   atmosphereFieldAlpha(x: number, y: number): number;
@@ -251,6 +253,7 @@ export interface BrowserInputAuditApi {
   setFrayForceStyling(enabled: boolean): void;
   setGbmbForceStyling(enabled: boolean): void;
   setPowderRenderStyle(style: PowderRenderStyle): void;
+  powderRenderStyle(): PowderRenderStyle;
   clear(): void;
   setRadius(radius: number): void;
   setMaterial(material: Material): void;

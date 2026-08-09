@@ -1,7 +1,8 @@
 import {
-  resolveVisualLabDomain,
-  resolveVisualLabFixture,
+  resolveVisualCaptureDomain,
+  resolveVisualCaptureFixture,
 } from './visual-lab-fixtures.mjs';
+import { VISUAL_CAPTURE_STATIC_CONTRACT } from '../src/shared/visual-capture-static-contract.js';
 import { VISUAL_LAB_STATIC_CONTRACT } from '../src/shared/visual-lab-static-contract.js';
 
 const RECIPE_FIELDS = Object.freeze([
@@ -62,13 +63,13 @@ const validateRecipe = (entry, index, names) => {
 
   let domainAdapter;
   try {
-    domainAdapter = resolveVisualLabDomain(entry.domain);
+    domainAdapter = resolveVisualCaptureDomain(entry.domain);
   } catch (error) {
     throw new Error(`${context} has an unknown domain: ${error.message}`, { cause: error });
   }
 
   try {
-    resolveVisualLabFixture(entry.fixture, domainAdapter.name, entry.target);
+    resolveVisualCaptureFixture(entry.fixture, domainAdapter.name, entry.target);
   } catch (error) {
     throw new Error(`${context} has an incompatible fixture: ${error.message}`, { cause: error });
   }
@@ -108,7 +109,10 @@ export function createVisualLabCaptureRecipeCatalog(entries) {
 }
 
 export const VISUAL_LAB_CAPTURE_RECIPES = createVisualLabCaptureRecipeCatalog(
-  VISUAL_LAB_STATIC_CONTRACT.captureRecipes,
+  [
+    ...VISUAL_LAB_STATIC_CONTRACT.captureRecipes,
+    ...VISUAL_CAPTURE_STATIC_CONTRACT.captureRecipes,
+  ],
 );
 
 const RECIPE_BY_NAME = new Map(

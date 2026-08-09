@@ -476,6 +476,27 @@ describe('Visual Lab accepted baseline packages', () => {
     expect(escaped).toContain('&lt;script&gt;unsafe()&lt;/script&gt;');
   });
 
+  it('labels source-stage Powder captures as Smooth, Local, and Grains', () => {
+    const accepted = createVisualLabBaseline(batchFor('gas-showcase', 'accepted'));
+    const current = batchForCandidates([
+      { candidate: 'gas-showcase', salt: 'accepted' },
+      { candidate: 'powder-style-atlas', salt: 'powder' },
+    ]);
+    const comparison = compareVisualLabBaseline(accepted, current);
+    const metrics = {
+      schema: VISUAL_LAB_COMPARISON_METRICS_SCHEMA,
+      comparison: { schema: comparison.schema, id: comparison.id },
+      candidates: comparison.candidates.map(({ candidate, status }) => ({
+        candidate, status, variants: {},
+      })),
+    };
+    const board = renderVisualLabReviewBoard(comparison, metrics);
+    expect(board).toContain('data-candidate="powder-style-atlas"');
+    expect(board).toContain('<h3>Smooth · added</h3>');
+    expect(board).toContain('<h3>Local · added</h3>');
+    expect(board).toContain('<h3>Grains · added</h3>');
+  });
+
   it('normalizes, serializes, and conjunctively matches stable review-board filters', () => {
     const accepted = createVisualLabBaseline(batchForCandidates([
       { candidate: 'gas-showcase', salt: 'accepted' },

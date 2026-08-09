@@ -1,10 +1,13 @@
 import type { SimulationBackend } from '../simulation';
+import { VISUAL_CAPTURE_STATIC_CONTRACT } from '../shared/visual-capture-static-contract.js';
 import { VISUAL_LAB_STATIC_CONTRACT } from '../shared/visual-lab-static-contract.js';
 import { prepareLiquidMotionVfxFixture } from './liquid-motion-vfx-audit';
 import { prepareOilMotionVfxFixture } from './oil-motion-vfx-audit';
+import { preparePowderStyleAtlasFixture } from './powder-style-atlas-fixture';
 
 type VisualLabFixturePreparer = (simulation: SimulationBackend) => void;
-type StaticVisualLabFixture = (typeof VISUAL_LAB_STATIC_CONTRACT.fixtures)[number];
+type StaticVisualLabFixture = (typeof VISUAL_LAB_STATIC_CONTRACT.fixtures)[number]
+  | (typeof VISUAL_CAPTURE_STATIC_CONTRACT.fixtures)[number];
 type PreparedStaticVisualLabFixture = Extract<
   StaticVisualLabFixture,
   { readonly preparationReportLabel: string }
@@ -12,7 +15,12 @@ type PreparedStaticVisualLabFixture = Extract<
 
 export type VisualLabPreparedFixtureId = PreparedStaticVisualLabFixture['name'];
 
-const PREPARED_STATIC_VISUAL_LAB_FIXTURES = VISUAL_LAB_STATIC_CONTRACT.fixtures.filter(
+const STATIC_VISUAL_CAPTURE_FIXTURES: readonly StaticVisualLabFixture[] = [
+  ...VISUAL_LAB_STATIC_CONTRACT.fixtures,
+  ...VISUAL_CAPTURE_STATIC_CONTRACT.fixtures,
+];
+
+const PREPARED_STATIC_VISUAL_LAB_FIXTURES = STATIC_VISUAL_CAPTURE_FIXTURES.filter(
   (fixture): fixture is PreparedStaticVisualLabFixture => (
     fixture.preparationReportLabel !== null
   ),
@@ -30,6 +38,7 @@ export const VISUAL_LAB_PREPARED_FIXTURE_IDS = Object.freeze(
 const VISUAL_LAB_FIXTURE_PREPARERS = Object.freeze({
   'oil-motion': (simulation) => prepareOilMotionVfxFixture(simulation, 'moving'),
   'water-motion': (simulation) => prepareLiquidMotionVfxFixture(simulation, 'moving'),
+  'powder-style-atlas': preparePowderStyleAtlasFixture,
 } satisfies Record<VisualLabPreparedFixtureId, VisualLabFixturePreparer>);
 
 const REGISTERED_PREPARER_IDS = Object.keys(VISUAL_LAB_FIXTURE_PREPARERS);

@@ -22,6 +22,11 @@ import {
   resolveVisualLabCaptureRecipe,
   visualLabCaptureRecipeNames,
 } from './visual-lab-recipes.mjs';
+import { resolveVisualCaptureDomain } from './visual-lab-fixtures.mjs';
+import {
+  resolveVisualCaptureDriver,
+  resolveVisualCaptureVariant,
+} from './visual-capture-drivers.mjs';
 import { createVisualLabResultRecord } from './visual-lab-result.mjs';
 
 export const VISUAL_LAB_BASELINE_SCHEMA = 'anifor.visual-lab.accepted-baseline/v1';
@@ -473,6 +478,17 @@ const formatMetricRms = (squaredSum, samples) => (
   samples > 0 ? Math.sqrt(squaredSum / samples).toFixed(2) : '0.00'
 );
 
+const visualCaptureVariantLabel = (entry, variant) => {
+  const request = entry.currentResult?.request ?? entry.baselineResult?.request;
+  try {
+    const domain = resolveVisualCaptureDomain(request?.domain);
+    const driver = resolveVisualCaptureDriver(domain.driver);
+    return resolveVisualCaptureVariant(driver, variant).label;
+  } catch {
+    return variant.toUpperCase();
+  }
+};
+
 const renderVariantMetric = (variantMetrics) => {
   const metric = variantMetrics?.metric;
   if (variantMetrics?.status !== 'review' || metric === null || metric === undefined) return '';
@@ -495,6 +511,7 @@ const renderVariantMetric = (variantMetrics) => {
 
 const renderVariant = (entry, variant, variantMetrics) => {
   const state = entry.variants[variant];
+  const label = visualCaptureVariantLabel(entry, variant);
   const accepted = entry.baselineResult
     ? `<figure><img src="./${escapeHtml(entry.artifacts.baseline[variant])}"
         alt="${escapeHtml(entry.candidate)} ${variant} accepted capture">
@@ -505,7 +522,7 @@ const renderVariant = (entry, variant, variantMetrics) => {
         alt="${escapeHtml(entry.candidate)} ${variant} current capture">
        <figcaption>current · ${escapeHtml(shortHash(state.currentSha256))}</figcaption></figure>`
     : '<div class="empty">not sampled in this run</div>';
-  return `<section class="variant"><h3>${variant.toUpperCase()} · ${escapeHtml(state.status)}</h3>${
+  return `<section class="variant"><h3>${escapeHtml(label)} · ${escapeHtml(state.status)}</h3>${
     renderVariantMetric(variantMetrics)}
     <div class="pair">${accepted}${current}</div></section>`;
 };
@@ -723,23 +740,24 @@ export function visualLabReviewBoardCandidateMatches(candidate = {}, filters = {
 
 const renderReviewBoardVariant = (entry, variant, variantMetrics) => {
   const state = entry.variants[variant];
+  const label = visualCaptureVariantLabel(entry, variant);
   const acceptedPath = entry.artifacts.baseline?.[variant];
   const currentPath = entry.artifacts.current?.[variant];
   const accepted = entry.baselineResult
     ? `<figure><a href="./${escapeHtml(acceptedPath)}"
-        aria-label="Open accepted ${escapeHtml(variant.toUpperCase())} capture for ${
+        aria-label="Open accepted ${escapeHtml(label)} capture for ${
   escapeHtml(entry.candidate)} at full size"><img src="./${escapeHtml(acceptedPath)}"
         alt="${escapeHtml(entry.candidate)} ${variant} accepted capture"></a>
        <figcaption>accepted · ${escapeHtml(shortHash(state.baselineSha256))}</figcaption></figure>`
     : '<div class="empty">no accepted capture</div>';
   const current = entry.currentResult
     ? `<figure><a href="./${escapeHtml(currentPath)}"
-        aria-label="Open current ${escapeHtml(variant.toUpperCase())} capture for ${
+        aria-label="Open current ${escapeHtml(label)} capture for ${
   escapeHtml(entry.candidate)} at full size"><img src="./${escapeHtml(currentPath)}"
         alt="${escapeHtml(entry.candidate)} ${variant} current capture"></a>
        <figcaption>current · ${escapeHtml(shortHash(state.currentSha256))}</figcaption></figure>`
     : '<div class="empty">not sampled in this run</div>';
-  return `<section class="variant"><h3>${variant.toUpperCase()} · ${escapeHtml(state.status)}</h3>${
+  return `<section class="variant"><h3>${escapeHtml(label)} · ${escapeHtml(state.status)}</h3>${
     renderVariantMetric(variantMetrics)}
     <div class="pair">${accepted}${current}</div></section>`;
 };

@@ -102,16 +102,26 @@ the final `comparison.json` marker, stable-read and exact-rerender verified when
 present, and excluded from every frozen identity. Legacy packages may omit it;
 if it is present, verified metrics and the matching brief must also be present.
 
-The active framework increment is a thin local review-cycle orchestrator. It
-must compose the existing batch capture, baseline comparison, and portable
-package verifier in that exact order, require an explicit output root, write the
-comparison only beneath `<review-root>/comparison`, and stop before later stages
-when capture is incomplete or interrupted. Reuse the existing batch parser,
-recipe-set reader, component APIs, production bundle, and Chrome lifecycle; do
-not duplicate candidate metadata, validation, capture logic, artifact schemas,
-or CI path policy. It may print verified handoff paths and identities only. It
-must never open UI automatically, score or choose a variant, promote a baseline,
-mutate Git, or deploy.
+The local review-cycle orchestrator is complete and deployed at revision
+`15026404f9cbb96b02367e3154aa8136c37c3538` by workflow run `31299417698`.
+It composes the existing capture, comparison, and portable verification stages
+under one explicit new root and has no promotion, Git, UI-opening, scoring, or
+deployment authority.
+
+The active framework increment is an additive typed visual-capture driver
+boundary. Preserve `anifor.visual-lab.static-contract/v1` as the closed
+normal-HDR renderer contract; non-HDR presentation controls belong in the
+sibling static driver contract and one closed scripts-side executable registry.
+Driver metadata may name only safe driver IDs, domains, fixed variant labels,
+fixtures, and unchanged six-field recipes—never browser methods, expressions,
+argument arrays, module paths, or functions. The first extension maps evidence
+`off/a/b` to the real Powder `Smooth/Local/Grains` control, keeps Powder
+HDR-unimplemented, uses the generic typed fixture preparer, and reads the
+already allocated Powder surface support without adding a renderer resource.
+Existing HDR report bytes/datasets and every frozen result, batch, baseline,
+comparison, and recipe-set identity remain authoritative. Portable verification
+must dispatch by the same closed driver as live capture; do not relax the
+normal-HDR contract to admit a source-stage report.
 
 The typed Visual Lab state, fixed normal-HDR composition seam, promotion-safe
 same-page off/A/B selection, declarative fixtures, and production-bundle capture

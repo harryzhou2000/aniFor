@@ -19,11 +19,16 @@ import {
   VISUAL_LAB_BATCH_SCHEMA,
 } from './visual-lab-batch.mjs';
 import {
-  resolveVisualLabDomain,
-  resolveVisualLabFixture,
+  resolveVisualCaptureDomain,
+  resolveVisualCaptureFixture,
   VISUAL_LAB_CAPTURE_PROTOCOL,
   visualLabFixturePreparationLabel,
 } from './visual-lab-fixtures.mjs';
+import {
+  resolveVisualCaptureDriver,
+  visualCaptureDriverDatasetExpectation,
+  visualCaptureDriverReportDescriptor,
+} from './visual-capture-drivers.mjs';
 import { resolveVisualLabCaptureRecipe } from './visual-lab-recipes.mjs';
 import { createVisualLabRecipeSet } from './visual-lab-recipe-set.mjs';
 import { createVisualLabResultRecord } from './visual-lab-result.mjs';
@@ -206,8 +211,9 @@ const compressedTailPng = (width, height) => {
 const writeValidCapture = async (directory, candidate, options = {}) => {
   await mkdir(directory, { recursive: true });
   const recipe = resolveVisualLabCaptureRecipe(candidate);
-  const domain = resolveVisualLabDomain(recipe.domain);
-  const fixture = resolveVisualLabFixture(recipe.fixture, recipe.domain, recipe.target);
+  const domain = resolveVisualCaptureDomain(recipe.domain);
+  const driver = resolveVisualCaptureDriver(domain.driver);
+  const fixture = resolveVisualCaptureFixture(recipe.fixture, recipe.domain, recipe.target);
   const seed = createHash('sha256')
     .update(`${candidate}:${options.salt ?? 'default'}`).digest()[0];
   const buffers = Object.fromEntries(['off', 'a', 'b'].map((variant, index) => {
@@ -229,6 +235,9 @@ const writeValidCapture = async (directory, candidate, options = {}) => {
   const fixturePreparation = visualLabFixturePreparationLabel(fixture);
   const report = {
     tool: 'visual-lab-audit-v1',
+    ...(driver.name === 'normal-hdr' ? {} : {
+      captureDriver: visualCaptureDriverReportDescriptor(driver),
+    }),
     result,
     domain: recipe.domain,
     target: recipe.target,
@@ -254,6 +263,10 @@ const writeValidCapture = async (directory, candidate, options = {}) => {
       backendBeforeSelection: 'canvas2d',
       backendReasonBeforeSelection: 'webgl-starting',
       stagedBeforeWebGL: true,
+      ...(driver.name === 'normal-hdr' ? {} : {
+        captureDriver: driver.name,
+        selection: driver.variants[2].selection,
+      }),
     },
     backend: domain.executionProfile.backend,
     hdrPipeline: VISUAL_LAB_CAPTURE_PROTOCOL.datasetRequirements.hdrPipeline,
@@ -274,11 +287,7 @@ const writeValidCapture = async (directory, candidate, options = {}) => {
         renderLook: VISUAL_LAB_CAPTURE_PROTOCOL.fixedUrlParameters.renderLook,
         outputScale: String(recipe.renderScale),
         backingSize,
-        visualLab: index === 0 ? 'inactive' : 'active',
-        visualLabDomain: recipe.domain,
-        visualLabVariant: String(index),
-        visualLabTarget: String(recipe.target),
-        visualLabGain: String(recipe.gain),
+        ...visualCaptureDriverDatasetExpectation(driver, requestFor(candidate), index),
       },
     }])),
     warnings: options.warnings ?? [],
@@ -887,6 +896,45 @@ describe('Visual Lab batch runner', () => {
     )).toContain('top-level target does not match');
   });
 
+  it('validates the typed Powder source-stage driver without weakening HDR reports', async () => {
+    const root = await makeTemporaryDirectory();
+    const outputDirectory = path.join(root, 'batch');
+    const candidateDirectory = path.join(
+      outputDirectory, 'candidates', 'powder-style-atlas',
+    );
+    const { report } = await writeValidCapture(
+      candidateDirectory, 'powder-style-atlas',
+    );
+    expect(report.captureDriver).toEqual({
+      name: 'powder-render-style',
+      framebufferAlphaPolicy: 'style-owned-nonempty',
+      variants: {
+        off: { selection: 'smooth', label: 'Smooth' },
+        a: { selection: 'local', label: 'Local' },
+        b: { selection: 'grains', label: 'Grains' },
+      },
+    });
+
+    const accepted = await runVisualLabBatch({
+      candidates: ['powder-style-atlas'], outputDir: outputDirectory, indexOnly: true,
+    });
+    expect(accepted.index.complete).toBe(true);
+
+    await writeValidCapture(candidateDirectory, 'powder-style-atlas', {
+      mutateReport: (candidateReport) => {
+        candidateReport.captures.a.dataset.powderRenderStyle = 'smooth';
+      },
+    });
+    const rejected = await runVisualLabBatch({
+      candidates: ['powder-style-atlas'], outputDir: outputDirectory, indexOnly: true,
+    });
+    expect(rejected.index.candidates[0]).toMatchObject({
+      candidate: 'powder-style-atlas', status: 'failed', failure: 'report-invalid',
+    });
+    expect(await readFile(path.join(candidateDirectory, 'failure.log'), 'utf8'))
+      .toContain('capture dataset does not match the requested driver state');
+  });
+
   it('validates PNG signatures, canonical IHDR, nonzero size, and consistent dimensions', async () => {
     const root = await makeTemporaryDirectory();
     const outputDirectory = path.join(root, 'batch');
@@ -911,6 +959,7 @@ describe('Visual Lab batch runner', () => {
     });
 
     const result = await runVisualLabBatch({
+      candidates: ['gas-showcase', 'oxygen-showcase', 'oil-motion', 'water-motion'],
       outputDir: outputDirectory,
       indexOnly: true,
     });
@@ -949,7 +998,11 @@ describe('Visual Lab batch runner', () => {
       imageBytes: { b: trailing },
     });
 
-    const result = await runVisualLabBatch({ outputDir: outputDirectory, indexOnly: true });
+    const result = await runVisualLabBatch({
+      candidates: ['gas-showcase', 'oxygen-showcase', 'oil-motion', 'water-motion'],
+      outputDir: outputDirectory,
+      indexOnly: true,
+    });
 
     expect(result.index.candidates.every(({ failure }) => failure === 'artifact-invalid')).toBe(true);
     expect(await readFile(

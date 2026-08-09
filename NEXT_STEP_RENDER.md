@@ -84,15 +84,25 @@ Preserve its catalog order, exact filters, no-JavaScript evidence, bounded
 relative links, 1 MiB budget, exact rerender, and exclusion from frozen
 identities.
 
-The active bounded follow-up is one trusted local review-cycle command over the
-existing framework. It must require a new or real empty explicit review root,
-then run the generic batch capture, accepted-baseline comparison, and shared
-read-only verifier in that exact order. It reuses the existing production
-bundle, recipe-set reader, batch parser, component APIs, Chrome lifecycle, and
-artifact schemas; incomplete or interrupted capture stops before comparison.
-The verified handoff may print its review-board/brief/metrics/comparison paths
-and identities, but it must never open UI automatically, score or select a
-variant, promote, mutate Git, deploy, or make CI-only path policy local.
+The trusted local review-cycle command is complete and deployed at revision
+`15026404f9cbb96b02367e3154aa8136c37c3538` by release-set workflow run
+`31299417698`. It composes capture, comparison, and portable verification under
+one explicit new review root without widening any frozen identity or gaining
+promotion/deployment authority.
+
+The active framework increment is a typed visual-capture driver boundary for
+presentation controls that do not belong in the normal-HDR shader ABI. Keep
+`anifor.visual-lab.static-contract/v1`, its implemented domain order, and its
+accepted report/result identities closed. A sibling recursively frozen static
+contract may declare driver IDs, user-facing variant labels, extension domains,
+fixtures, and unchanged six-field recipes; executable selection remains in one
+closed scripts-side registry and one app-owned typed fixture registry. The first
+driver maps the stable evidence names `off/a/b` to the real source-renderer
+Powder controls `Smooth/Local/Grains`, keeps Powder HDR-unimplemented, adds no
+sampler/texture/field/pass/target, and reads only the already allocated Powder
+surface alpha for invariance. Existing normal-HDR reports retain their
+historical shape and exact dataset contract. New source-stage reports are
+self-describing and portable-verifier checked without weakening that path.
 
 ### Cross-runtime static-contract acceptance
 
@@ -116,6 +126,17 @@ WebGL/HDR with semantic, authoritative-field alpha, and framebuffer-alpha/suppor
 invariants preserved. Existing CLI help, URL construction, diagnostic report
 labels, catalog order, and content identities must remain byte-compatible. CI
 must verify the freshly downloaded exact uploaded artifact before deployment.
+
+The sibling visual-capture contract has a separate v1 schema and must never be
+folded into the renderer's implemented-domain set. Its driver metadata contains
+no method names, expressions, arguments, or module paths. The generic runner
+resolves one closed driver from the existing domain/fixture request, stages it
+during bounded Canvas startup, observes the selected app state after WebGL
+promotion, and reuses the same content-addressed five-field request and
+off/A/B hashes. Normal HDR requires exact framebuffer-alpha invariance; a
+source-stage style may own its framebuffer silhouette only under an explicit
+nonempty fixed-geometry policy while semantic and authoritative-field support
+remain exact.
 
 `src/renderer/hdr-volume-lab-adapters.ts` retains the canonical
 Liquid/Gas/Emission descriptor order and is recursively immutable through its
@@ -3781,12 +3802,13 @@ strings remain diagnostic compatibility labels only. The additive review brief
 is deployed at `3400a5db92d587d9b68e0abcd0052839702dc678` by run `31294286484`.
 Declarative shader assembly is deployed at
 `6abece4f43710a4547650bd93af4ca8834f77224` by run `31294986555`. The shared
-static contract, capture ABI, metrics, and filterable review board are deployed;
-the current milestone is the local review-cycle orchestration described above.
-It may not widen frozen v1 records, alter public adapters, add compositor
-inputs, or fork validation. Defer E66 and Powder until
-their extra samples or source-stage stability proof fit the existing budgeted
-facade without creating a second experiment framework.
+static contract, capture ABI, metrics, filterable review board, and local review
+cycle are deployed. The current milestone is the additive typed capture-driver
+boundary described above. It may not widen frozen result/batch/baseline/
+comparison v1 records, add compositor inputs, or reinterpret Powder as an HDR
+leaf. E66 remains deferred until its extra samples fit the established shader
+budget; Powder style comparison now belongs to the source-stage driver rather
+than a second experiment framework.
 
 ### Visual Lab framework checkpoint
 

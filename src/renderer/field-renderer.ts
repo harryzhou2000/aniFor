@@ -629,6 +629,15 @@ export class MaterialRenderer {
       ?? this.boundaryStability[y * this.simulation.width + x];
   }
 
+  /** Audit-only read of the existing full-resolution Powder support alpha. */
+  powderSurfaceAlphaAt(x: number, y: number): number {
+    if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
+    const presented = this.presenter?.powderSurfaceAlphaAt(x, y);
+    if (presented !== undefined) return presented;
+    const bytes = this.fallbackFields?.powderSurface.bytes;
+    return bytes ? bytes[(y * this.simulation.width + x) * 4 + 3] : -1;
+  }
+
   /** Audit-only read of the shared full-resolution liquid-field density byte. */
   liquidFieldAlphaAt(x: number, y: number): number {
     if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
@@ -1379,6 +1388,10 @@ export class MaterialRenderer {
     this.presenter?.setPowderRenderStyle(style);
     this.contourChunks.markAll();
     this.changed = true;
+  }
+
+  getPowderRenderStyle(): PowderRenderStyle {
+    return this.powderRenderStyle;
   }
 
   getCanvasPresentationTiming(): CanvasPresentationTiming | undefined {

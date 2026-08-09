@@ -566,6 +566,7 @@ export class Game {
       suspensionAt: (x, y) => this.renderer.suspensionAt(x, y),
       sourceTarget: (x, y) => this.simulation.configuredSourceTargetAt?.(x, y) ?? Material.Empty,
       presentationAuxiliary: (x, y) => this.renderer.presentationAuxiliaryAt(x, y),
+      powderSurfaceAlpha: (x, y) => this.renderer.powderSurfaceAlphaAt(x, y),
       liquidFieldAlpha: (x, y) => this.renderer.liquidFieldAlphaAt(x, y),
       atmosphereFieldAlpha: (x, y) => this.renderer.atmosphereFieldAlphaAt(x, y),
       emissionFieldAlpha: (x, y) => this.renderer.emissionFieldAlphaAt(x, y),
@@ -817,6 +818,7 @@ export class Game {
       setPowderRenderStyle: (style) => {
         this.renderer.setPowderRenderStyle(style);
       },
+      powderRenderStyle: () => this.renderer.getPowderRenderStyle(),
       clear: () => {
         this.simulation.clear();
         this.renderer.invalidateDynamicPresentation();

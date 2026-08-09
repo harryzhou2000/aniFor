@@ -15,18 +15,26 @@ import {
   buildVisualLabCaptureUrl,
   buildVisualLabStartupExpression,
   createVisualLabDomainCatalog,
+  resolveVisualCaptureDomain,
+  resolveVisualCaptureFixture,
   resolveVisualLabDomain,
   resolveVisualLabFixture,
+  VISUAL_CAPTURE_DOMAIN_ADAPTERS,
+  VISUAL_CAPTURE_FIXTURE_ADAPTERS,
   VISUAL_LAB_CAPTURE_PROTOCOL,
   VISUAL_LAB_DOMAIN_ADAPTERS,
   VISUAL_LAB_FIXTURE_ADAPTERS,
   visualLabDomainNames,
+  visualCaptureDomainNames,
+  visualCaptureFixtureNames,
   visualLabFixtureNames,
   visualLabFixturePreparationLabel,
 } from './visual-lab-fixtures.mjs';
 
-const runStartupExpression = (adapter, audit, scene = 'showcase') => Function(
-  'window', 'document', `return ${buildVisualLabStartupExpression(adapter)};`,
+const runStartupExpression = (
+  adapter, audit, scene = 'showcase', driver = 'normal-hdr',
+) => Function(
+  'window', 'document', `return ${buildVisualLabStartupExpression(adapter, 2, driver)};`,
 )({ __ANIFOR_INPUT_AUDIT__: audit }, {
   querySelector: () => ({ dataset: { scene } }),
 });
@@ -93,6 +101,27 @@ describe('Visual Lab fixture adapters', () => {
       .sort((left, right) => left.domain.localeCompare(right.domain));
 
     expect(capture).toEqual(renderer);
+  });
+
+  it('adds Powder only to the generic capture-facing catalogs', () => {
+    expect(visualLabDomainNames()).toEqual(['gas', 'liquid', 'emission']);
+    expect(visualCaptureDomainNames()).toEqual(['gas', 'liquid', 'emission', 'powder']);
+    expect(visualCaptureFixtureNames()).toEqual([
+      'showcase', 'oil-motion', 'water-motion', 'powder-style-atlas',
+    ]);
+    expect(VISUAL_CAPTURE_DOMAIN_ADAPTERS).toHaveLength(4);
+    expect(resolveVisualCaptureDomain('powder')).toMatchObject({
+      targetKind: 'none',
+      driver: 'powder-render-style',
+      evidence: { readerMethod: 'powderSurfaceAlpha', plane: 'powder-surface-alpha' },
+    });
+    expect(resolveVisualCaptureFixture('powder-style-atlas', 'powder', 0))
+      .toMatchObject({
+        scene: 'showcase',
+        preparation: { reportLabel: 'preparePowderStyleAtlasFixture' },
+      });
+    expect(() => resolveVisualLabDomain('powder'))
+      .toThrow('--domain must be gas, liquid, or emission');
   });
 
   it('rejects domain fixed parameters that collide with common or dynamic protocol keys', () => {
@@ -188,10 +217,40 @@ describe('Visual Lab fixture adapters', () => {
 
   it('keeps every prepared adapter in the closed app-owned fixture registry', () => {
     expect(Object.isFrozen(VISUAL_LAB_PREPARED_FIXTURE_IDS)).toBe(true);
-    expect(VISUAL_LAB_FIXTURE_ADAPTERS
+    expect(VISUAL_CAPTURE_FIXTURE_ADAPTERS
       .filter(({ preparation }) => preparation !== null)
       .map(({ name }) => name))
       .toEqual(VISUAL_LAB_PREPARED_FIXTURE_IDS);
+  });
+
+  it('drives Powder Smooth/Local/Grains without activating the HDR lab domain', () => {
+    const adapter = resolveVisualCaptureFixture('powder-style-atlas', 'powder', 0);
+    const baseUrl = new URL(
+      'https://example.test/app?visualLab=gas&visualVariant=2&visualTarget=4&visualGain=2',
+    );
+    const url = buildVisualLabCaptureUrl(baseUrl, {
+      fixtureAdapter: adapter,
+      domainAdapter: resolveVisualCaptureDomain('powder'),
+      domain: 'powder', target: 0, gain: 1, renderScale: 2,
+    });
+    expect(Object.fromEntries(['visualLab', 'visualVariant', 'visualTarget', 'visualGain']
+      .map((name) => [name, url.searchParams.get(name)]))).toEqual({
+      visualLab: null, visualVariant: null, visualTarget: null, visualGain: null,
+    });
+
+    const calls = [];
+    let style = 'smooth';
+    const result = runStartupExpression(adapter, {
+      backend: () => ({ backend: 'canvas2d', reason: 'webgl-starting' }),
+      prepareVisualLabFixture: (fixture) => calls.push(`prepare:${fixture}`),
+      setPowderRenderStyle: (next) => { style = next; calls.push(`style:${next}`); },
+      powderRenderStyle: () => style,
+    }, 'showcase', 'powder-render-style');
+    expect(calls).toEqual(['prepare:powder-style-atlas', 'style:grains']);
+    expect(result).toMatchObject({
+      captureDriver: 'powder-render-style', selection: 'grains',
+      fixturePrepared: true, stagedBeforeWebGL: true,
+    });
   });
 
   it('rejects unknown fixtures and incompatible domain/target pairs early', () => {
@@ -322,7 +381,7 @@ describe('Visual Lab fixture adapters', () => {
   it('keeps CLI validation fail-fast and compatibility audit aliases intact', () => {
     const auditScript = new URL('./visual-lab-audit.mjs', import.meta.url);
     for (const [argument, message] of [
-      ['--domain=powder', '--domain must be gas, liquid, or emission'],
+      ['--domain=unknown', '--domain must be gas, liquid, emission, or powder'],
       ['--target=256', '--target must be an integer from 0 through 255'],
       ['--domain=gas --render-scale=8',
         '--render-scale for gas must be 1, 2, 4; unsupported paths preserve the baseline'],

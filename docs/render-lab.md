@@ -906,3 +906,41 @@ tests in the semantic trait loop; the trait checksum remains unchanged and the
 change adds no allocation, field, sampling, clock, or presentation-state work.
 
 Canvas applies semantic role accents to its existing three-float RGB scratch before the final clamp/composite instead of rereading and rewriting a typed pixel afterward. Five reusable full-range animation clocks add 20 persistent bytes and preserve the established role-pattern cadence. Ordinary non-emissive fluids keep their direct pixel fast path; scenes only pay trait arithmetic for cells whose packed role byte is nonzero. Unit tests enforce the allocation ceilings and scheduling rate; the browser render lab remains the visual and runtime-GLSL gate.
+
+## Typed presentation capture drivers
+
+Presentation controls that sit before HDR use the generic visual-capture driver
+boundary rather than pretending to be shader domains. The established Visual
+Lab v1 contract remains the closed Liquid/Gas/Emission normal-HDR registry. A
+separate recursively frozen static contract names safe driver IDs, stable
+variant labels, extension fixtures, and unchanged six-field recipes; one closed
+scripts-side registry owns the actual browser calls.
+
+The first extension is `powder-style-atlas`. It directly fills a paused 612×384
+world with overlapping Sand/Clay piles, a one-cell Clay stem and ledge, a
+Concrete ridge with an authored 7×7 hole, isolated grains, Water contact,
+native-wall coexistence, and blank controls. Its stable evidence names map to
+`off=Smooth`, `a=Local`, and `b=Grains`. Powder remains HDR-unimplemented and
+the driver adds no sampler, texture, field, pass, or target. It reads the
+already allocated Powder-surface alpha plane, keeping semantics and field
+support exact. Framebuffer alpha is explicitly style-owned but must remain
+nonempty at fixed geometry, because Smooth and Grains deliberately make
+different presentation-only silhouette decisions.
+
+Capture the canonical 2× recipe from a production bundle with:
+
+```sh
+npm run audit:visual-lab:powder-style
+```
+
+Or create the complete portable decision package with:
+
+```sh
+npm run build
+npm run audit:visual-lab:review:capture -- \
+  --candidates=powder-style-atlas \
+  --output-dir=/tmp/anifor-powder-review
+```
+
+The report and review board identify the three real style selections while the
+content-addressed result keeps the existing request and off/A/B hash fields.

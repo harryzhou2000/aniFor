@@ -12969,6 +12969,12 @@ export class PixiFieldPresenter {
     return this.boundaryStabilityBytes[y * this.width + x];
   }
 
+  /** Audit-only CPU-side support byte shared with the uploaded Powder texture. */
+  powderSurfaceAlphaAt(x: number, y: number): number {
+    if (x < 0 || y < 0 || x >= this.width || y >= this.height) return -1;
+    return this.fieldSet.powderSurface.bytes[(y * this.width + x) * 4 + 3];
+  }
+
   /** Audit-only CPU-side density byte shared with the uploaded liquid texture. */
   liquidFieldAlphaAt(x: number, y: number): number {
     if (x < 0 || y < 0 || x >= this.width || y >= this.height) return -1;

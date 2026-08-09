@@ -19,11 +19,16 @@ import {
   readVisualLabRecipeSet,
 } from './visual-lab-recipe-set.mjs';
 import {
-  resolveVisualLabDomain,
-  resolveVisualLabFixture,
+  resolveVisualCaptureDomain,
+  resolveVisualCaptureFixture,
   VISUAL_LAB_CAPTURE_PROTOCOL,
   visualLabFixturePreparationLabel,
 } from './visual-lab-fixtures.mjs';
+import {
+  resolveVisualCaptureDriver,
+  visualCaptureDriverDatasetExpectation,
+  visualCaptureDriverReportDescriptor,
+} from './visual-capture-drivers.mjs';
 import { createVisualLabResultRecord } from './visual-lab-result.mjs';
 import {
   isDetachedProcessGroupAlive,
@@ -516,8 +521,9 @@ export function renderVisualLabContactSheet(index) {
 
 const assertCurrentCaptureContract = (report, recipe, hashes) => {
   const request = requestForRecipe(recipe);
-  const domain = resolveVisualLabDomain(recipe.domain);
-  const fixture = resolveVisualLabFixture(recipe.fixture, recipe.domain, recipe.target);
+  const domain = resolveVisualCaptureDomain(recipe.domain);
+  const driver = resolveVisualCaptureDriver(domain.driver);
+  const fixture = resolveVisualCaptureFixture(recipe.fixture, recipe.domain, recipe.target);
   const expectedPreparation = visualLabFixturePreparationLabel(fixture);
   const expectedBacking = `${WORLD_WIDTH * recipe.renderScale}x${WORLD_HEIGHT * recipe.renderScale}`;
   const expectedCapability = {
@@ -541,6 +547,15 @@ const assertCurrentCaptureContract = (report, recipe, hashes) => {
   if (!isDeepStrictEqual(report.captureProtocol, VISUAL_LAB_CAPTURE_PROTOCOL)) {
     throw new Error('capture protocol does not match the current protocol');
   }
+  if (driver.name === 'normal-hdr') {
+    if (report.captureDriver !== undefined) {
+      throw new Error('normal-HDR reports must not add a capture-driver descriptor');
+    }
+  } else if (!isDeepStrictEqual(
+    report.captureDriver, visualCaptureDriverReportDescriptor(driver),
+  )) {
+    throw new Error('capture-driver descriptor does not match the current typed driver');
+  }
   if (report.backend !== domain.executionProfile.backend
     || report.hdrPipeline !== VISUAL_LAB_CAPTURE_PROTOCOL.datasetRequirements.hdrPipeline) {
     throw new Error('report did not complete on canonical WebGL with active HDR');
@@ -557,7 +572,10 @@ const assertCurrentCaptureContract = (report, recipe, hashes) => {
     || startup.fixturePrepared !== true
     || startup.backendBeforeSelection !== 'canvas2d'
     || startup.backendReasonBeforeSelection !== 'webgl-starting'
-    || startup.stagedBeforeWebGL !== true) {
+    || startup.stagedBeforeWebGL !== true
+    || (driver.name !== 'normal-hdr'
+      && (startup.captureDriver !== driver.name
+        || startup.selection !== driver.variants[2].selection))) {
     throw new Error('startup selection was not staged through bounded Canvas promotion');
   }
 
@@ -565,6 +583,9 @@ const assertCurrentCaptureContract = (report, recipe, hashes) => {
     const variant = VARIANTS[index];
     const capture = report.captures?.[variant];
     const dataset = capture?.dataset;
+    const expectedDriverState = visualCaptureDriverDatasetExpectation(
+      driver, request, index,
+    );
     if (!Number.isSafeInteger(capture?.bytes) || capture.bytes <= 0) {
       throw new Error(`${variant} capture byte count must be positive`);
     }
@@ -586,12 +607,10 @@ const assertCurrentCaptureContract = (report, recipe, hashes) => {
       || dataset.renderLook !== VISUAL_LAB_CAPTURE_PROTOCOL.fixedUrlParameters.renderLook
       || dataset.outputScale !== String(recipe.renderScale)
       || dataset.backingSize !== expectedBacking
-      || dataset.visualLabDomain !== recipe.domain
-      || dataset.visualLabVariant !== String(index)
-      || dataset.visualLabTarget !== String(recipe.target)
-      || dataset.visualLabGain !== String(recipe.gain)
-      || dataset.visualLab !== (index === 0 ? 'inactive' : 'active')) {
-      throw new Error(`${variant} capture dataset does not match the requested WebGL/HDR state`);
+      || Object.entries(expectedDriverState).some(([name, value]) => (
+        dataset?.[name] !== value
+      ))) {
+      throw new Error(`${variant} capture dataset does not match the requested driver state`);
     }
   }
 };
