@@ -19,6 +19,14 @@ by workflow run `31292298196`; the fresh downloaded release package verified
 all four candidates, 36 PNG copies, comparison, recipe set, and 19-resource
 closure before Pages deployment.
 
+The first remote-origin portable-capture checkpoint is live at revision
+`a0fd2912643557904764c0e1425852dc37f29244`. Workflow run `31328873048`
+built and deployed the exact 19-resource closure, then exposed a useful
+post-deploy load regression: the hosted SwiftShader Water receipt could exceed
+the normal 10-second promotion interval even though the renderer and deployed
+assets were healthy. Keep the resulting framework distinction explicit:
+promotion readiness and completed-frame audit retirement are different clocks.
+
 The typed fixture-preparation boundary is also complete and deployed at revision
 `83894aa6fe98fc5a537cd4c23c9b2400dc37081f` by release-set workflow run
 `31293472696`. A prepared
@@ -313,8 +321,13 @@ teardown, timeout, fence creation/flush failure, or `WAIT_FAILED` makes the
 attached ticket `failed`. At normal scale, keep one non-blocking WebGL sync only
 after the complete HDR/default-framebuffer presentation and flush it. At 8×,
 attach the ticket to the one existing render-fence owner; never create a sibling
-receipt fence. Timing samples and receipts are mutually exclusive while either
-owns a request. Never substitute timer-query readiness, two RAFs, dataset state,
+receipt fence. Normal 1×–4× WebGL promotion remains bounded at 10 seconds, but
+an accepted receipt gets its own 30-second renderer watchdog so a loaded
+software GPU is not failed by the unrelated promotion clock. Audit callers must
+leave enough bounded polling headroom to observe that terminal state. A
+terminal `failed` receipt is never retried; only pre-snapshot supersession may
+request a successor. Timing samples and receipts are mutually exclusive while
+either owns a request. Never substitute timer-query readiness, two RAFs, dataset state,
 CPU submission time, or `gl.finish()` for this receipt. The real built
 `audit:webgl-completed-frame-receipt` and `:8x` SwiftShader gates must pass and
 leave no Chrome residue. The separate `execution-tuning-plan/v2` may reduce
@@ -325,6 +338,10 @@ RAFs plus screenshot-after-proof; GPU completion alone is not compositor or
 screenshot completion. V2 receipt records are diagnostic report evidence and
 must never enter result, batch, recipe-set, baseline, or comparison identities.
 True 8× Visual Lab capture remains outside this normal-WebGL proof reduction.
+Post-deploy CI may publish only a bounded failure tombstone/command tail from a
+dedicated diagnostics directory. Never upload the raw smoke package or expose
+independent child stdout/stderr fields; preserve pipeline status with
+`pipefail`.
 
 The typed Visual Lab state, fixed normal-HDR composition seam, promotion-safe
 same-page off/A/B selection, declarative fixtures, and production-bundle capture

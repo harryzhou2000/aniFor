@@ -111,7 +111,24 @@ Active priority order:
    plus all three established PNG hashes, completed three GPU receipts, and
    finished in 30.8 seconds with zero browser errors or process residue. The
    post-deploy release gate now uses this one-candidate remote batch plus the
-   portable verifier; deploy it as the next framework checkpoint.
+   portable verifier. Revision `a0fd2912643557904764c0e1425852dc37f29244`
+   was built and deployed by workflow run `31328873048`; the build and exact
+   19-resource live closure passed, while both post-deploy attempts exposed a
+   load-sensitive receipt timeout rather than an asset or visual mismatch.
+8. Finish the loaded-runner hardening before adding another visual experiment.
+   Chrome-for-Testing 150 reproduced the hosted Water result and all three PNG
+   hashes normally, then reproduced the CI failure when constrained to one CPU:
+   the old normal-scale 10-second promotion interval retired an otherwise valid
+   audit fence, followed by teardown calls contending with the still-busy GPU.
+   The current increment gives completed-frame receipts an independent
+   30-second renderer watchdog while preserving 10-second normal WebGL promotion,
+   keeps terminal failure fail-closed, aligns the standalone receipt harness,
+   and emits/uploads only bounded diagnostic tombstones and 64 KiB command tails.
+   The exact one-CPU Chrome 150 + SwiftShader remote Water reproduction now
+   passes all three receipts, strict renderer/target/host teardown, the portable
+   verifier, the unchanged result ID
+   `sha256:b107a9841f693139043fd2705eb658c6c3ff8a50f403032a3d79217cd92ea9fd`,
+   and leaves no Chrome residue. Deploy this as the next framework checkpoint.
 
 Continue improving the registration and evidence loop before spending the
 milestone on isolated shader detail. Visual preference may later accept a

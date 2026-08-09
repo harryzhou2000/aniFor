@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   createVisualLabBatchIndex,
+  formatVisualLabBatchCliError,
   normalizeVisualLabBatchBaseUrl,
   parseVisualLabBatchArguments,
   renderVisualLabContactSheet,
@@ -562,7 +563,16 @@ describe('Visual Lab batch runner', () => {
       await Promise.resolve();
       await writeValidCapture(call.candidateDirectory, call.recipe.name);
       active--;
-      if (call.recipe.name === 'oxygen-showcase') return { code: 9, signal: null };
+      if (call.recipe.name === 'oxygen-showcase') {
+        await writeFile(call.stderrPath, [
+          'private raw child stderr',
+          JSON.stringify({
+            tool: 'visual-lab-audit-v1', ok: false,
+            error: 'bounded structured child failure evidence',
+          }),
+        ].join('\n'));
+        return { code: 9, signal: null };
+      }
       if (call.recipe.name === 'oil-motion') {
         return { code: 0, signal: 'SIGTERM', timedOut: true };
       }
@@ -610,7 +620,13 @@ describe('Visual Lab batch runner', () => {
     expect(result.index.candidates[2].failure).toBe('capture-failed');
     expect(await readFile(
       path.join(outputDirectory, 'candidates', 'oxygen-showcase', 'failure.log'), 'utf8',
-    )).toContain('Audit child exited with code 9');
+    )).toContain(
+      'Audit child exited with code 9\nAudit diagnostic:\n'
+      + 'bounded structured child failure evidence',
+    );
+    expect(await readFile(
+      path.join(outputDirectory, 'candidates', 'oxygen-showcase', 'failure.log'), 'utf8',
+    )).not.toContain('private raw child stderr');
     expect(await readFile(
       path.join(outputDirectory, 'candidates', 'oil-motion', 'failure.log'), 'utf8',
     )).toContain('Audit child timed out after 123456 ms');
@@ -2328,6 +2344,56 @@ describe('Visual Lab batch CLI', () => {
       error: '--plan-only must be 0 or 1',
     });
     expect(malformed.stderr).not.toContain(process.cwd());
+  });
+
+  it('emits bounded structured candidate diagnostics when a CLI batch is incomplete', async () => {
+    const root = await makeTemporaryDirectory();
+    const outputDirectory = path.join(root, 'incomplete-cli-batch');
+    const candidateDirectory = path.join(outputDirectory, 'candidates', 'gas-showcase');
+    await mkdir(candidateDirectory, { recursive: true });
+    await writeFile(path.join(candidateDirectory, 'stderr.log'), 'private child stderr');
+    await writeFile(path.join(candidateDirectory, 'stdout.log'), 'private child stdout');
+    const script = new URL('./visual-lab-batch.mjs', import.meta.url);
+    const captured = spawnSync(process.execPath, [
+      script.pathname,
+      '--index-only=1',
+      '--candidates=gas-showcase',
+      `--output-dir=${outputDirectory}`,
+    ], { encoding: 'utf8', timeout: 5_000 });
+
+    expect(captured.status).toBe(1);
+    expect(JSON.parse(captured.stdout)).toMatchObject({
+      tool: 'visual-lab-batch-v1', ok: false,
+      summary: { selected: 1, passed: 0, failed: 1 },
+    });
+    const diagnostic = JSON.parse(captured.stderr);
+    expect(diagnostic).toMatchObject({
+      tool: 'visual-lab-batch-diagnostic-v1',
+      candidate: 'gas-showcase',
+      failure: 'report-missing',
+      diagnostic: expect.stringContaining('Cannot read gas-showcase report.json'),
+    });
+    expect(diagnostic).not.toHaveProperty('childStderr');
+    expect(diagnostic).not.toHaveProperty('childStdout');
+    expect(captured.stderr).not.toContain('private child stderr');
+    expect(captured.stderr).not.toContain('private child stdout');
+    expect(captured.stderr.length).toBeLessThan(10_000);
+  });
+
+  it('bounds and cycle-guards top-level aggregate diagnostics', () => {
+    const cyclic = new AggregateError([], 'cyclic root');
+    cyclic.errors.push(cyclic, ...Array.from(
+      { length: 12 }, (_, index) => new Error(`nested ${index}`),
+    ));
+    const formatted = formatVisualLabBatchCliError(new AggregateError([
+      cyclic,
+      new Error('x'.repeat(12_000)),
+    ], 'outer'));
+
+    expect(formatted).toContain('<nested errors omitted: cycle>');
+    expect(formatted).toContain('<omitted: 5 nested errors>');
+    expect(formatted.length).toBeLessThanOrEqual(8_000);
+    expect(formatted).toContain('<omitted: CLI diagnostic exceeds character budget>');
   });
 
   it('parses selected recipes and environment options without recipe-owned flags', () => {

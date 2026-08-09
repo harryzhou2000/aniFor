@@ -101,6 +101,10 @@ const BATCH_LOCK_SCHEMA = 'anifor.visual-lab.batch-lock/v1';
 const BROWSER_HOST_PLAN_FILE_NAME = 'browser-host-plan.json';
 const EXECUTION_TUNING_PLAN_FILE_NAME = 'execution-tuning-plan.json';
 const ORIGIN_ATTESTATION_FILE_NAME = 'origin-attestation.json';
+const CLI_DIAGNOSTIC_MAX_FILE_BYTES = 1_048_576;
+const CLI_DIAGNOSTIC_MAX_CHARACTERS = 8_000;
+const CLI_DIAGNOSTIC_MAX_AGGREGATE_DEPTH = 4;
+const CLI_DIAGNOSTIC_MAX_AGGREGATE_CHILDREN = 8;
 const SHARED_CHROME_LIFECYCLE_FILE_NAME = '.shared-chrome-lifecycle.json';
 const DEFERRED_REPORT_FILE_NAME = 'report.pending.json';
 const LIFECYCLE_CLOCK_SKEW_MS = 60_000;
@@ -218,15 +222,37 @@ const displayError = (error, ancestors = new Set()) => {
   return `${primary}\nNested errors:\n${nested.join('\n')}`;
 };
 
-const displayCliError = (error, ancestors = new Set()) => {
-  if (!(error instanceof Error)) return String(error);
-  if (!(error instanceof AggregateError) || ancestors.has(error)) return error.message;
+const displayCliErrorWithinBudget = (error, ancestors, depth) => {
+  const primary = error instanceof Error ? error.message : String(error);
+  if (!(error instanceof AggregateError)) return primary;
+  if (ancestors.has(error)) return `${primary}\n<nested errors omitted: cycle>`;
+  if (depth >= CLI_DIAGNOSTIC_MAX_AGGREGATE_DEPTH) {
+    return `${primary}\n<nested errors omitted: maximum depth>`;
+  }
   const nestedAncestors = new Set(ancestors).add(error);
-  const nested = [...error.errors].map((entry, index) => (
-    `[${index + 1}] ${displayCliError(entry, nestedAncestors)}`
-  ));
-  return `${error.message}\nNested errors:\n${nested.join('\n')}`;
+  const children = [...error.errors];
+  const nested = children.slice(0, CLI_DIAGNOSTIC_MAX_AGGREGATE_CHILDREN)
+    .map((entry, index) => (
+      `[${index + 1}] ${displayCliErrorWithinBudget(entry, nestedAncestors, depth + 1)}`
+    ));
+  if (children.length > CLI_DIAGNOSTIC_MAX_AGGREGATE_CHILDREN) {
+    nested.push(
+      `[${CLI_DIAGNOSTIC_MAX_AGGREGATE_CHILDREN + 1}+] `
+      + `<omitted: ${children.length - CLI_DIAGNOSTIC_MAX_AGGREGATE_CHILDREN} nested errors>`,
+    );
+  }
+  return `${primary}\nNested errors:\n${nested.join('\n')}`;
 };
+
+/** Bounded, stack-free error text suitable for public CI diagnostics. */
+export function formatVisualLabBatchCliError(error) {
+  const displayed = displayCliErrorWithinBudget(error, new Set(), 0);
+  if (displayed.length <= CLI_DIAGNOSTIC_MAX_CHARACTERS) return displayed;
+  const marker = '\n<omitted: CLI diagnostic exceeds character budget>';
+  return `${displayed.slice(0, CLI_DIAGNOSTIC_MAX_CHARACTERS - marker.length)}${marker}`;
+}
+
+const displayCliError = formatVisualLabBatchCliError;
 
 const lifecycleOwnerFor = (outputDirectory, candidate) => createHash('sha256')
   .update(`${outputDirectory}\0${candidate}`, 'utf8').digest('hex');
@@ -2161,12 +2187,17 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
       if (options.signal?.aborted) throw abortError(options.signal);
       if (outcome?.killUnsettled === true
         || outcome?.timedOut === true || outcome?.code !== 0) {
-        const detail = new Error(outcome?.killUnsettled === true
+        const outcomeMessage = outcome?.killUnsettled === true
           ? `Audit child did not settle within ${CANDIDATE_KILL_SETTLEMENT_MS} ms after SIGKILL`
           : outcome?.timedOut === true
             ? `Audit child timed out after ${candidateTimeoutMs} ms`
             : `Audit child exited with code ${String(outcome?.code)}`
-              + (outcome?.signal ? ` after ${outcome.signal}` : ''));
+              + (outcome?.signal ? ` after ${outcome.signal}` : '');
+        const childDiagnostic = await readStructuredChildFailureDiagnostic(
+          stderrPath, `${recipe.name} child stderr`,
+        );
+        const detail = new Error(outcomeMessage + (childDiagnostic === undefined
+          ? '' : `\nAudit diagnostic:\n${childDiagnostic}`));
         await rm(path.join(candidateDirectory, DEFERRED_REPORT_FILE_NAME), { force: true });
         if (browserHostEntry.effectiveMode === 'shared') {
           await finalizeSharedGeneration('candidate-process-fault');
@@ -2414,6 +2445,61 @@ export function parseVisualLabBatchArguments(argv) {
   });
 }
 
+const readCliCandidateDiagnostic = async (file, label) => {
+  const details = await pathDetails(file);
+  if (details === undefined) return undefined;
+  if (details.size > CLI_DIAGNOSTIC_MAX_FILE_BYTES) {
+    return `<omitted: ${label} exceeds ${CLI_DIAGNOSTIC_MAX_FILE_BYTES} bytes>`;
+  }
+  try {
+    const source = await readStableRegularFile(file, label, 'utf8');
+    const trimmed = source.trim();
+    return trimmed.length === 0 ? undefined : trimmed.slice(-CLI_DIAGNOSTIC_MAX_CHARACTERS);
+  } catch (error) {
+    return `<unavailable: ${displayCliError(error)}>`;
+  }
+};
+
+/** Extracts only the child audit's explicit public error record, never raw logs. */
+const readStructuredChildFailureDiagnostic = async (file, label) => {
+  const details = await pathDetails(file);
+  if (details === undefined || details.size > CLI_DIAGNOSTIC_MAX_FILE_BYTES) return undefined;
+  try {
+    const source = await readStableRegularFile(file, label, 'utf8');
+    const lines = source.split(/\r?\n/u).map((line) => line.trim()).filter(Boolean);
+    for (let index = lines.length - 1; index >= 0; index--) {
+      let record;
+      try { record = JSON.parse(lines[index]); }
+      catch { continue; }
+      if (record !== null && typeof record === 'object' && !Array.isArray(record)
+        && record.tool === 'visual-lab-audit-v1' && record.ok === false
+        && typeof record.error === 'string') {
+        return formatVisualLabBatchCliError(record.error);
+      }
+    }
+    return undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+const emitCliFailureDiagnostics = async (result) => {
+  const batchRoot = path.dirname(result.indexPath);
+  for (const entry of result.index.candidates) {
+    if (entry.status !== 'failed') continue;
+    const candidateRoot = path.join(batchRoot, 'candidates', entry.candidate);
+    const diagnostic = await readCliCandidateDiagnostic(
+      path.join(candidateRoot, 'failure.log'), `${entry.candidate} failure tombstone`,
+    );
+    process.stderr.write(`${JSON.stringify({
+      tool: 'visual-lab-batch-diagnostic-v1',
+      candidate: entry.candidate,
+      failure: entry.failure,
+      ...(diagnostic === undefined ? {} : { diagnostic }),
+    })}\n`);
+  }
+};
+
 const main = async () => {
   const argv = process.argv.slice(2);
   const requestedPlanTool = argv.some((argument) => argument.startsWith('--plan-only='));
@@ -2484,6 +2570,7 @@ const main = async () => {
       captureSubphases: result.captureSubphases,
     };
     process.stdout.write(`${JSON.stringify(output)}\n`);
+    if (!result.planOnly && !result.ok) await emitCliFailureDiagnostics(result);
     process.exitCode = interruptedExitCode ?? result.exitCode;
   } catch (error) {
     process.stderr.write(`${JSON.stringify({

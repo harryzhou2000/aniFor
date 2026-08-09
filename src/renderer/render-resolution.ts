@@ -9,6 +9,11 @@ export const CANVAS_FALLBACK_PIXEL_BUDGET = 8_388_608;
 export const CANVAS_FALLBACK_DIMENSION_BUDGET = 4_096;
 export const WEBGL_PROMOTION_TIMEOUT_MS = 10_000;
 export const WEBGL_EIGHT_X_PROMOTION_TIMEOUT_MS = 30_000;
+// Audit receipts prove one exact submitted framebuffer rather than deciding
+// whether WebGL may replace the bounded startup Canvas. Software GPU runners
+// can promote within 10 seconds yet need longer to retire a later evidence
+// frame under load, so keep this bounded independently from promotion.
+export const WEBGL_COMPLETED_FRAME_RECEIPT_TIMEOUT_MS = 30_000;
 // A later 8x frame that remains unsignalled for this long is no longer merely
 // slow: without an explicit recovery path the latest-wins fence loop would
 // leave a permanently frozen WebGL canvas even when no context-loss event fires.

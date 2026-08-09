@@ -13,6 +13,7 @@ import {
 } from 'pixi.js';
 import { DirtyChunkGrid } from './dirty-chunk-grid';
 import {
+  WEBGL_COMPLETED_FRAME_RECEIPT_TIMEOUT_MS,
   WEBGL_EIGHT_X_FRAME_STALL_MS, webGLPromotionTimeout, type FieldOutputScale,
 } from './render-resolution';
 import { POWDER_SURFACE_REFRESH_INTERVAL } from './powder-surface-field';
@@ -14306,7 +14307,7 @@ export class PixiFieldPresenter {
         && current.state === 'pending') {
         this.failCompletedFrameReceipt(submission);
       }
-    }, webGLPromotionTimeout(this.outputScale));
+    }, WEBGL_COMPLETED_FRAME_RECEIPT_TIMEOUT_MS);
   }
 
   private scheduleCompletedFrameFencePoll(ticket: number, fence: WebGLSync): void {
@@ -14328,7 +14329,8 @@ export class PixiFieldPresenter {
     const receipt = this.completedFrameReceipt;
     const fence = receipt?.fence;
     if (!receipt || receipt.state !== 'pending' || !fence) return;
-    if (performance.now() - receipt.fenceStartedAt >= webGLPromotionTimeout(this.outputScale)) {
+    if (performance.now() - receipt.fenceStartedAt
+      >= WEBGL_COMPLETED_FRAME_RECEIPT_TIMEOUT_MS) {
       this.failCompletedFrameReceipt(receipt.submission);
       return;
     }

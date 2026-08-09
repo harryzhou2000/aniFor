@@ -179,7 +179,12 @@ export async function auditWebGLCompletedFrameReceipt(options) {
         ? { sequence: refresh } : null;
     }, options.renderScale === 8 ? 40_000 : 15_000, 'paused presentation hydration');
 
-    const receiptTimeout = options.renderScale === 8 ? 35_000 : 10_000;
+    // Renderer receipt retirement is deliberately independent from the normal
+    // 10-second WebGL promotion deadline. Leave polling headroom beyond the
+    // renderer's 30-second terminal watchdog so a loaded software GPU can
+    // report either honest completion or honest failure instead of a harness
+    // timeout first.
+    const receiptTimeout = 35_000;
     const requestTicket = async (label, timeoutMs = receiptTimeout) => waitFor(() => evaluate(page, `(() => {
       const ticket = window.__ANIFOR_INPUT_AUDIT__
         ?.requestWebGLCompletedFrameReceipt?.();
@@ -190,7 +195,7 @@ export async function auditWebGLCompletedFrameReceipt(options) {
         ?.webGLCompletedFrameReceipt?.(${ticket});
       return receipt && receipt.state !== 'pending' ? receipt : null;
     })()`, Math.min(receiptTimeout, timeoutMs)), timeoutMs, label);
-    const completionDeadline = Date.now() + (options.renderScale === 8 ? 75_000 : 25_000);
+    const completionDeadline = Date.now() + (options.renderScale === 8 ? 75_000 : 40_000);
     const remainingCompletionMs = (label) => {
       const remaining = completionDeadline - Date.now();
       if (remaining <= 0) throw new Error(`${label} exceeded the shared receipt deadline`);

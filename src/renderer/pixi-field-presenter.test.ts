@@ -3,7 +3,8 @@ import { readFileSync } from 'node:fs';
 import { PixiFieldPresenter } from './pixi-field-presenter';
 import { powderRenderStyleValue } from './powder-render-style';
 import {
-  WEBGL_EIGHT_X_FRAME_STALL_MS, WEBGL_PROMOTION_TIMEOUT_MS, type FieldOutputScale,
+  WEBGL_COMPLETED_FRAME_RECEIPT_TIMEOUT_MS,
+  WEBGL_EIGHT_X_FRAME_STALL_MS, type FieldOutputScale,
 } from './render-resolution';
 
 interface PresenterHarness {
@@ -4781,7 +4782,9 @@ describe('Pixi presenter startup configuration', () => {
     Object.assign(presenter.app, { renderer: { gl } });
 
     const ticket = presenter.requestWebGLCompletedFrameReceipt();
-    vi.advanceTimersByTime(WEBGL_PROMOTION_TIMEOUT_MS);
+    vi.advanceTimersByTime(WEBGL_COMPLETED_FRAME_RECEIPT_TIMEOUT_MS - 1);
+    expect(presenter.getWebGLCompletedFrameReceipt(ticket!)).toMatchObject({ state: 'pending' });
+    vi.advanceTimersByTime(1);
 
     expect(presenter.getWebGLCompletedFrameReceipt(ticket!)).toMatchObject({ state: 'failed' });
     expect(gl.deleteSync).toHaveBeenCalledWith(fence);

@@ -382,7 +382,10 @@ jobs:
         env:
           PAGE_URL: ${{ needs.deploy.outputs.page_url }}
           SMOKE_DIR: ${{ runner.temp }}/anifortpt-live-visual-lab-smoke
+          DIAGNOSTIC_DIR: ${{ runner.temp }}/anifortpt-live-visual-lab-diagnostics
         run: |
+          mkdir -p "${DIAGNOSTIC_DIR}"
+          set -o pipefail
           google-chrome --version
           timeout --foreground --kill-after=15s 240s \
             node scripts/visual-lab-batch.mjs \
@@ -392,11 +395,22 @@ jobs:
             --gpu=swiftshader \
             --capture-proof=completed-frame-receipt \
             --candidate-timeout-ms=180000 \
-            --output-dir="${SMOKE_DIR}"
+            --output-dir="${SMOKE_DIR}" \
+            2>&1 | tail -c 65536 | tee "${DIAGNOSTIC_DIR}/batch.log"
           node scripts/visual-lab-verify.mjs \
             --batch-root="${SMOKE_DIR}" \
             --require-complete=1 \
             --require-recipe-set=1 \
             --require-browser-host-plan=1 \
             --require-execution-tuning-plan=1 \
-            --require-origin-attestation=1
+            --require-origin-attestation=1 \
+            2>&1 | tail -c 65536 | tee "${DIAGNOSTIC_DIR}/verify.log"
+
+      - name: Upload deployed Visual Lab failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: anifortpt-live-visual-lab-diagnostics-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/anifortpt-live-visual-lab-diagnostics
+          if-no-files-found: warn
+          retention-days: 7

@@ -59,6 +59,13 @@ and timeout, context loss, teardown, or fence failure fails it. This capability
 does not replace Visual Lab's two stable semantic/field/framebuffer snapshots or
 prove compositor screenshot handoff.
 
+Normal 1×–4× WebGL promotion still has its independent 10-second startup
+deadline. Once a receipt is accepted, its non-blocking fence instead has a
+30-second renderer watchdog; callers leave bounded headroom beyond that deadline
+so a loaded software GPU reports an honest `completed` or `failed` state. A
+terminal failure is never retried. This separation changes audit health only,
+not pixels, capture identities, or promotion policy.
+
 Run the production-bundle proof with:
 
 ```sh
@@ -168,6 +175,12 @@ Together they prove deployed module/Wasm boot, WebGL 2× promotion, authored
 fixture activation, normal-HDR `0|1|2` set/readback, semantic/field/framebuffer
 evidence, completed GPU presentation, screenshots, browser-error checks, and
 strict renderer/target/Chrome teardown.
+
+If the hosted batch fails, its CLI emits one bounded, stack-free aggregate plus
+one bounded candidate failure tombstone. CI retains only 64 KiB command tails in
+a dedicated failure-only diagnostic artifact; it never uploads the raw capture
+package, child stdout/stderr logs, or PNG tree. Shell `pipefail` keeps the batch
+or verifier exit status authoritative through the bounded-log pipeline.
 
 The real-browser audit first captures and signature-checks this deterministic
 atlas, then clears it and exercises painting, wheel/pan, resizing, and mobile

@@ -180,6 +180,21 @@ describe('deploy-verified CI workflow contract', () => {
     expect(live).toContain('node scripts/visual-lab-verify.mjs');
     expect(live).toContain('--require-origin-attestation=1');
     expect(live).toContain('timeout --foreground --kill-after=15s 240s');
+    expect(live).toContain('DIAGNOSTIC_DIR: ${{ runner.temp }}/anifortpt-live-visual-lab-diagnostics');
+    expect(live).toContain('set -o pipefail');
+    expect(live.match(/tail -c 65536/g)).toHaveLength(2);
+    expect(live).toContain('tee "${DIAGNOSTIC_DIR}/batch.log"');
+    expect(live).toContain('tee "${DIAGNOSTIC_DIR}/verify.log"');
+    const failureUpload = live.indexOf('Upload deployed Visual Lab failure diagnostics');
+    expect(failureUpload).toBeGreaterThan(functionalSmoke);
+    expect(live.slice(failureUpload)).toContain('if: failure()');
+    expect(live.slice(failureUpload)).toContain('actions/upload-artifact@v7');
+    expect(live.slice(failureUpload)).toContain(
+      'path: ${{ runner.temp }}/anifortpt-live-visual-lab-diagnostics',
+    );
+    expect(live.slice(failureUpload)).not.toContain(
+      'path: ${{ runner.temp }}/anifortpt-live-visual-lab-smoke',
+    );
     expect(workflow.indexOf('  verify-deployment:')).toBeGreaterThan(
       workflow.indexOf('  deploy:'),
     );
