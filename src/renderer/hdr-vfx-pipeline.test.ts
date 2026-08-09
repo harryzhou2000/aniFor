@@ -177,6 +177,7 @@ describe('HDR composition contract', () => {
     }
     expect(occurrences(HDR_TONEMAP_FRAGMENT, 'uWorldTexel')).toBeGreaterThan(1);
     expect(HDR_TONEMAP_FRAGMENT).not.toContain('uVisualLab');
+    expect(HDR_TONEMAP_FRAGMENT).not.toContain('applyHdrLiquidSurfaceLab');
     expect(HDR_TONEMAP_FRAGMENT).not.toContain('applyHdrVolumeLab');
   });
 
@@ -192,7 +193,11 @@ describe('HDR composition contract', () => {
       'uWallTexture',
     ]);
     expect(HDR_VISUAL_LAB_TONEMAP_FRAGMENT).toMatch(/uniform\s+vec4\s+uVisualLab\s*;/);
+    expect(HDR_VISUAL_LAB_TONEMAP_FRAGMENT).toContain('vec3 applyHdrLiquidSurfaceLab(');
     expect(HDR_VISUAL_LAB_TONEMAP_FRAGMENT).toContain('vec3 applyHdrVolumeLab(');
+    expect(HDR_VISUAL_LAB_TONEMAP_FRAGMENT).toContain(
+      'result = applyHdrLiquidSurfaceLab(',
+    );
     expect(HDR_VISUAL_LAB_TONEMAP_FRAGMENT).toContain(
       'radiance = applyHdrVolumeLab(radiance, vUv);',
     );

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  assembleHdrVisualLabShader,
+  HDR_VOLUME_LAB_ADAPTERS,
   HDR_VOLUME_LAB_DOMAIN_ADAPTERS,
   HDR_VOLUME_LAB_GLSL,
 } from './hdr-volume-lab';
@@ -21,7 +23,13 @@ const KNOWN_VISUAL_LAB_SAMPLERS = new Set<VisualLabSampler>([
 ]);
 
 describe('HDR Visual Lab domain adapters', () => {
-  it('assembles one frozen, complete adapter map in stable domain order', () => {
+  it('assembles one frozen canonical tuple and complete adapter map in stable domain order', () => {
+    expect(HDR_VOLUME_LAB_ADAPTERS).toEqual([
+      HDR_VOLUME_LAB_LIQUID_DESCRIPTOR,
+      HDR_VOLUME_LAB_GAS_DESCRIPTOR,
+      HDR_VOLUME_LAB_EMISSION_DESCRIPTOR,
+    ]);
+    expect(Object.isFrozen(HDR_VOLUME_LAB_ADAPTERS)).toBe(true);
     expect(Object.keys(HDR_VOLUME_LAB_DOMAIN_ADAPTERS)).toEqual([
       'liquid', 'gas', 'emission',
     ]);
@@ -42,6 +50,73 @@ describe('HDR Visual Lab domain adapters', () => {
       );
       expect(occurrences(HDR_VOLUME_LAB_GLSL, adapter.source)).toBe(1);
     }
+    expect(Object.values(HDR_VOLUME_LAB_DOMAIN_ADAPTERS)).toEqual(HDR_VOLUME_LAB_ADAPTERS);
+  });
+
+  it('generates one explicit hook wrapper per leaf without numeric domain-range assumptions', () => {
+    const assembled = assembleHdrVisualLabShader(HDR_VOLUME_LAB_ADAPTERS);
+    expect(assembled.adapters).toStrictEqual(HDR_VOLUME_LAB_ADAPTERS);
+    expect(assembled.domainAdapters).toStrictEqual(HDR_VOLUME_LAB_DOMAIN_ADAPTERS);
+    expect(assembled.source).toBe(HDR_VOLUME_LAB_GLSL);
+
+    const liquidWrapperStart = assembled.source.indexOf('vec3 applyHdrLiquidSurfaceLab(');
+    const volumeWrapperStart = assembled.source.indexOf('vec3 applyHdrVolumeLab(');
+    expect(liquidWrapperStart).toBeGreaterThan(-1);
+    expect(volumeWrapperStart).toBeGreaterThan(liquidWrapperStart);
+    const liquidWrapper = assembled.source.slice(liquidWrapperStart, volumeWrapperStart);
+    const volumeWrapper = assembled.source.slice(volumeWrapperStart);
+
+    for (const adapter of HDR_VOLUME_LAB_ADAPTERS) {
+      expect(occurrences(assembled.source, adapter.source)).toBe(1);
+      expect(occurrences(assembled.source, `vec3 ${adapter.entryPoint}(`)).toBe(1);
+    }
+    expect(occurrences(liquidWrapper, HDR_VOLUME_LAB_LIQUID_DESCRIPTOR.entryPoint)).toBe(1);
+    expect(volumeWrapper).not.toContain(HDR_VOLUME_LAB_LIQUID_DESCRIPTOR.entryPoint);
+
+    for (const adapter of [HDR_VOLUME_LAB_GAS_DESCRIPTOR, HDR_VOLUME_LAB_EMISSION_DESCRIPTOR]) {
+      expect(occurrences(volumeWrapper, adapter.entryPoint)).toBe(1);
+      expect(volumeWrapper).toContain(`labDomain == ${adapter.domainCode}.0`);
+    }
+    expect(volumeWrapper).not.toMatch(/labDomain\s*<\s*2\.5/);
+  });
+
+  it('fails closed for malformed, incomplete, or noncanonical adapter registries', () => {
+    type Registry = Parameters<typeof assembleHdrVisualLabShader>[0];
+    const registry = (adapters: readonly unknown[]): Registry => adapters as unknown as Registry;
+    const [liquid, gas, emission] = HDR_VOLUME_LAB_ADAPTERS;
+
+    expect(() => assembleHdrVisualLabShader(registry([gas, liquid, emission]))).toThrow();
+    expect(() => assembleHdrVisualLabShader(registry([liquid, gas]))).toThrow();
+    expect(() => assembleHdrVisualLabShader(registry([
+      liquid,
+      { ...gas, domain: 'liquid' },
+      emission,
+    ]))).toThrow();
+    expect(() => assembleHdrVisualLabShader(registry([
+      liquid,
+      { ...gas, domainCode: liquid.domainCode },
+      emission,
+    ]))).toThrow();
+    expect(() => assembleHdrVisualLabShader(registry([
+      liquid,
+      gas,
+      { ...emission, entryPoint: gas.entryPoint },
+    ]))).toThrow();
+    expect(() => assembleHdrVisualLabShader(registry([
+      liquid,
+      { ...gas, hook: 'unsupported-hook' },
+      emission,
+    ]))).toThrow();
+    expect(() => assembleHdrVisualLabShader(registry([
+      liquid,
+      { ...gas, entryPoint: 'applyHdrGasLab; unsafe' },
+      emission,
+    ]))).toThrow();
+    expect(() => assembleHdrVisualLabShader(registry([
+      liquid,
+      { ...gas, entryPoint: 'applyHdrMissingLab' },
+      emission,
+    ]))).toThrow();
   });
 
   it('keeps domain hooks explicit and preserves their established entry-point ABIs', () => {
@@ -125,7 +200,10 @@ describe('HDR Visual Lab domain adapters', () => {
     expect(HDR_VOLUME_LAB_GLSL).toContain(
       'if (labVariant < 0.5 || labGain < 0.0001) return radiance;',
     );
-    expect(HDR_VOLUME_LAB_GLSL).toContain('if (labDomain < 2.5) return radiance;');
+    expect(HDR_VOLUME_LAB_GLSL).toContain(
+      'if (labDomain != 3.0 && labDomain != 4.0) return radiance;',
+    );
+    expect(HDR_VOLUME_LAB_GLSL).not.toMatch(/labDomain\s*<\s*2\.5/);
     expect(HDR_VOLUME_LAB_GLSL).toContain('if (wall > 0.5) return radiance;');
   });
 });
