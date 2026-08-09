@@ -7,11 +7,13 @@ import path from 'node:path';
 import { deflateSync } from 'node:zlib';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { VISUAL_LAB_BATCH_SCHEMA } from './visual-lab-batch.mjs';
+import { createVisualLabBatchIndex, VISUAL_LAB_BATCH_SCHEMA } from './visual-lab-batch.mjs';
 import {
   compareVisualLabBaseline,
   createVisualLabBaseline,
   normalizeVisualLabBaseline,
+  parseVisualLabBaselineArguments,
+  promoteVisualLabBaseline,
   runVisualLabBaseline,
 } from './visual-lab-baseline.mjs';
 import { resolveVisualLabCaptureRecipe } from './visual-lab-recipes.mjs';
@@ -119,6 +121,13 @@ const batchFor = (candidate, salt = 'stable') => {
   };
 };
 
+const batchForCandidates = (entries) => createVisualLabBatchIndex(entries.map(({ candidate, salt }) => ({
+  candidate,
+  status: 'passed',
+  result: resultFor(candidate, salt).result,
+  warnings: [],
+})));
+
 const baselineWithCandidates = (schema, candidates) => {
   const identity = { schema, candidates };
   return {
@@ -136,6 +145,21 @@ const writeBatchPackage = async (root, candidate, salt = 'stable') => {
   await writeFile(path.join(root, 'index.json'), `${JSON.stringify(batch)}\n`);
   for (const variant of VARIANTS) {
     await writeFile(path.join(candidateRoot, `${variant}.png`), captures[variant]);
+  }
+  return batch;
+};
+
+const writeBatchPackageForCandidates = async (root, entries) => {
+  const batch = batchForCandidates(entries);
+  await mkdir(root, { recursive: true });
+  await writeFile(path.join(root, 'index.json'), `${JSON.stringify(batch)}\n`);
+  for (const { candidate, salt } of entries) {
+    const candidateRoot = path.join(root, 'candidates', candidate);
+    await mkdir(candidateRoot, { recursive: true });
+    const { captures } = resultFor(candidate, salt);
+    await Promise.all(VARIANTS.map((variant) => (
+      writeFile(path.join(candidateRoot, `${variant}.png`), captures[variant])
+    )));
   }
   return batch;
 };
@@ -255,5 +279,295 @@ describe('Visual Lab accepted baseline packages', () => {
     await expect(runVisualLabBaseline({
       mode: 'accept', batchRoot: symlinkRoot, outputDir: path.join(root, 'symlink-output'),
     })).rejects.toThrow('must use only real contained files');
+  });
+
+  it('promotes only selected review records in canonical order and permits no-op promotion', () => {
+    const acceptedBatch = batchForCandidates([
+      { candidate: 'gas-showcase', salt: 'accepted' },
+      { candidate: 'oil-motion', salt: 'accepted' },
+      { candidate: 'water-motion', salt: 'accepted' },
+    ]);
+    const accepted = createVisualLabBaseline(acceptedBatch);
+    const current = batchForCandidates([
+      { candidate: 'gas-showcase', salt: 'accepted' },
+      { candidate: 'oil-motion', salt: 'revised-oil' },
+      { candidate: 'water-motion', salt: 'revised-water' },
+    ]);
+    const comparison = compareVisualLabBaseline(accepted, current);
+    const promoted = promoteVisualLabBaseline(
+      accepted, current, comparison, ['water-motion', 'oil-motion'],
+    );
+
+    expect(promoted.baseline.candidates.map(({ candidate }) => candidate)).toEqual([
+      'gas-showcase', 'oil-motion', 'water-motion',
+    ]);
+    expect(promoted.baseline.candidates[0].result).toEqual(accepted.candidates[0].result);
+    expect(promoted.baseline.candidates[1].result).toEqual(current.candidates[1].result);
+    expect(promoted.baseline.candidates[2].result).toEqual(current.candidates[2].result);
+    expect(promoted.promotion).toMatchObject({
+      schema: 'anifor.visual-lab.baseline-promotion/v1',
+      baseline: { schema: accepted.schema, id: accepted.id },
+      comparison: { schema: comparison.schema, id: comparison.id },
+      result: { schema: accepted.schema, id: promoted.baseline.id },
+      promoted: [
+        {
+          candidate: 'oil-motion',
+          comparisonStatus: 'review',
+          previousResultId: accepted.candidates[1].result.id,
+          currentResultId: current.candidates[1].result.id,
+        },
+        {
+          candidate: 'water-motion',
+          comparisonStatus: 'review',
+          previousResultId: accepted.candidates[2].result.id,
+          currentResultId: current.candidates[2].result.id,
+        },
+      ],
+    });
+    expect(Object.isFrozen(promoted.baseline)).toBe(true);
+    expect(Object.isFrozen(promoted.promotion)).toBe(true);
+    const { id: promotionId, ...promotionIdentity } = promoted.promotion;
+    expect(promotionId).toBe(`sha256:${digest(Buffer.from(JSON.stringify(promotionIdentity)))}`);
+
+    const partialAccepted = createVisualLabBaseline(batchForCandidates([
+      { candidate: 'water-motion', salt: 'accepted' },
+    ]));
+    const addedCurrent = batchForCandidates([
+      { candidate: 'gas-showcase', salt: 'added-gas' },
+      { candidate: 'water-motion', salt: 'accepted' },
+    ]);
+    const addedComparison = compareVisualLabBaseline(partialAccepted, addedCurrent);
+    const added = promoteVisualLabBaseline(
+      partialAccepted,
+      addedCurrent,
+      addedComparison,
+      ['gas-showcase'],
+    );
+    expect(added.baseline.candidates.map(({ candidate }) => candidate)).toEqual([
+      'gas-showcase', 'water-motion',
+    ]);
+    expect(added.promotion.promoted).toEqual([{
+      candidate: 'gas-showcase',
+      comparisonStatus: 'added',
+      previousResultId: null,
+      currentResultId: addedCurrent.candidates[0].result.id,
+    }]);
+
+    const unchanged = promoteVisualLabBaseline(
+      accepted,
+      acceptedBatch,
+      compareVisualLabBaseline(accepted, acceptedBatch),
+      ['gas-showcase'],
+    );
+    expect(unchanged.baseline.id).toBe(accepted.id);
+    expect(unchanged.promotion.promoted).toEqual([{
+      candidate: 'gas-showcase',
+      comparisonStatus: 'encoded-identical',
+      previousResultId: accepted.candidates[0].result.id,
+      currentResultId: accepted.candidates[0].result.id,
+    }]);
+  });
+
+  it('rejects stale, incompatible, unknown, duplicate, and unsampled promotion selections', () => {
+    const accepted = createVisualLabBaseline(batchForCandidates([
+      { candidate: 'gas-showcase', salt: 'accepted' },
+      { candidate: 'water-motion', salt: 'accepted' },
+    ]));
+    const current = batchForCandidates([
+      { candidate: 'gas-showcase', salt: 'accepted' },
+      { candidate: 'water-motion', salt: 'changed' },
+    ]);
+    const comparison = compareVisualLabBaseline(accepted, current);
+
+    expect(() => promoteVisualLabBaseline(accepted, current, comparison, ['unknown']))
+      .toThrow();
+    expect(() => promoteVisualLabBaseline(accepted, current, comparison, [
+      'water-motion', 'water-motion',
+    ])).toThrow();
+    expect(() => promoteVisualLabBaseline(accepted, current, { ...comparison, id: `sha256:${'0'.repeat(64)}` }, [
+      'water-motion',
+    ])).toThrow();
+    const laterCurrent = batchForCandidates([
+      { candidate: 'gas-showcase', salt: 'accepted' },
+      { candidate: 'water-motion', salt: 'later-change' },
+    ]);
+    expect(() => promoteVisualLabBaseline(accepted, laterCurrent, comparison, ['water-motion']))
+      .toThrow();
+    const incompleteSelection = batchForCandidates([{ candidate: 'gas-showcase', salt: 'accepted' }]);
+    expect(() => promoteVisualLabBaseline(
+      accepted,
+      incompleteSelection,
+      compareVisualLabBaseline(accepted, incompleteSelection),
+      ['water-motion'],
+    )).toThrow();
+    const incompatible = JSON.parse(JSON.stringify(current));
+    incompatible.candidates[1].result = createVisualLabResultRecord(
+      'water-motion', { ...requestFor('water-motion'), target: 8 },
+      incompatible.candidates[1].result.captureSha256,
+    );
+    expect(() => promoteVisualLabBaseline(accepted, incompatible, comparison, ['water-motion']))
+      .toThrow();
+
+    expect(parseVisualLabBaselineArguments([
+      'promote',
+      '--baseline-root=accepted',
+      '--result-root=current',
+      '--comparison-root=comparison',
+      '--candidates=water-motion,gas-showcase',
+      '--output-dir=next',
+    ])).toMatchObject({
+      mode: 'promote',
+      baselineRoot: 'accepted',
+      resultRoot: 'current',
+      comparisonRoot: 'comparison',
+      candidates: ['water-motion', 'gas-showcase'],
+      outputDir: 'next',
+    });
+  });
+
+  it('promotes verified comparison packages without overlapping inputs or following symlinks', async () => {
+    const root = await temporaryDirectory();
+    const batchRoot = path.join(root, 'accepted-batch');
+    const baselineRoot = path.join(root, 'accepted');
+    const currentRoot = path.join(root, 'current');
+    const comparisonRoot = path.join(currentRoot, 'comparison');
+    const promotionRoot = path.join(root, 'promotion');
+    const acceptedEntries = [
+      { candidate: 'gas-showcase', salt: 'accepted' },
+      { candidate: 'water-motion', salt: 'accepted' },
+    ];
+    const currentEntries = [
+      { candidate: 'gas-showcase', salt: 'accepted' },
+      { candidate: 'water-motion', salt: 'changed' },
+    ];
+    await writeBatchPackageForCandidates(batchRoot, acceptedEntries);
+    await writeBatchPackageForCandidates(currentRoot, currentEntries);
+    await runVisualLabBaseline({ mode: 'accept', batchRoot, outputDir: baselineRoot });
+    const compared = await runVisualLabBaseline({
+      mode: 'compare', baselineRoot, resultRoot: currentRoot, outputDir: comparisonRoot,
+    });
+
+    const promoted = await runVisualLabBaseline({
+      mode: 'promote',
+      baselineRoot,
+      resultRoot: currentRoot,
+      comparisonRoot,
+      candidates: ['water-motion'],
+      outputDir: promotionRoot,
+    });
+    expect(promoted.baseline.id).toBe(promoted.promotion.result.id);
+    await expect(readFile(path.join(promotionRoot, 'candidates', 'gas-showcase', 'off.png')))
+      .resolves.toEqual(captureBytes('gas-showcase', 'accepted').off);
+    await expect(readFile(path.join(promotionRoot, 'candidates', 'water-motion', 'off.png')))
+      .resolves.toEqual(captureBytes('water-motion', 'changed').off);
+    expect(JSON.parse(await readFile(path.join(promotionRoot, 'promotion.json'), 'utf8')))
+      .toEqual(promoted.promotion);
+    expect(JSON.parse(await readFile(path.join(promotionRoot, 'index.json'), 'utf8')))
+      .toEqual(promoted.baseline);
+
+    const concurrentRoot = path.join(root, 'concurrent-promotion');
+    const concurrentOptions = {
+      mode: 'promote', baselineRoot, resultRoot: currentRoot, comparisonRoot,
+      candidates: ['water-motion'], outputDir: concurrentRoot,
+    };
+    const concurrent = await Promise.allSettled([
+      runVisualLabBaseline(concurrentOptions),
+      runVisualLabBaseline(concurrentOptions),
+    ]);
+    const fulfilled = concurrent.filter(({ status }) => status === 'fulfilled');
+    const rejected = concurrent.filter(({ status }) => status === 'rejected');
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    const winner = fulfilled[0].value;
+    expect(JSON.parse(await readFile(path.join(concurrentRoot, 'index.json'), 'utf8')))
+      .toEqual(winner.baseline);
+    expect(JSON.parse(await readFile(path.join(concurrentRoot, 'promotion.json'), 'utf8')))
+      .toEqual(winner.promotion);
+    for (const { candidate, result } of winner.baseline.candidates) {
+      expect(digest(await readFile(path.join(concurrentRoot, 'candidates', candidate, 'off.png'))))
+        .toBe(result.captureSha256.off);
+    }
+    await expect(access(path.join(concurrentRoot, '.visual-lab-promotion.lock'))).rejects.toThrow();
+
+    const oneCandidateRoot = path.join(root, 'one-current-candidate');
+    const oneCandidateComparisonRoot = path.join(oneCandidateRoot, 'comparison');
+    const oneCandidatePromotionRoot = path.join(root, 'one-current-promotion');
+    await writeBatchPackageForCandidates(oneCandidateRoot, [acceptedEntries[0]]);
+    await runVisualLabBaseline({
+      mode: 'compare', baselineRoot, resultRoot: oneCandidateRoot,
+      outputDir: oneCandidateComparisonRoot,
+    });
+    await runVisualLabBaseline({
+      mode: 'promote', baselineRoot, resultRoot: oneCandidateRoot,
+      comparisonRoot: oneCandidateComparisonRoot,
+      candidates: ['gas-showcase'], outputDir: oneCandidatePromotionRoot,
+    });
+    await expect(readFile(
+      path.join(oneCandidatePromotionRoot, 'candidates', 'water-motion', 'off.png'),
+    )).resolves.toEqual(captureBytes('water-motion', 'accepted').off);
+
+    const originalHtml = await readFile(compared.html, 'utf8');
+    await writeFile(compared.html, `${originalHtml}\n<!-- tampered -->\n`);
+    await expect(runVisualLabBaseline({
+      mode: 'promote', baselineRoot, resultRoot: currentRoot, comparisonRoot,
+      candidates: ['water-motion'], outputDir: path.join(root, 'html-tampered-promotion'),
+    })).rejects.toThrow();
+    await writeFile(compared.html, originalHtml);
+    const comparisonPng = path.join(
+      comparisonRoot, 'current', 'candidates', 'water-motion', 'off.png',
+    );
+    await writeFile(comparisonPng, captureBytes('water-motion', 'tampered').off);
+    await expect(runVisualLabBaseline({
+      mode: 'promote', baselineRoot, resultRoot: currentRoot, comparisonRoot,
+      candidates: ['water-motion'], outputDir: path.join(root, 'png-tampered-promotion'),
+    })).rejects.toThrow();
+    await writeFile(comparisonPng, captureBytes('water-motion', 'changed').off);
+
+    const originalComparisonJson = await readFile(compared.json, 'utf8');
+    const tamperedComparison = JSON.parse(originalComparisonJson);
+    tamperedComparison.id = `sha256:${'0'.repeat(64)}`;
+    await writeFile(compared.json, `${JSON.stringify(tamperedComparison)}\n`);
+    await expect(runVisualLabBaseline({
+      mode: 'promote', baselineRoot, resultRoot: currentRoot, comparisonRoot,
+      candidates: ['water-motion'], outputDir: path.join(root, 'tampered-promotion'),
+    })).rejects.toThrow();
+    await writeFile(compared.json, originalComparisonJson);
+    await expect(runVisualLabBaseline({
+      mode: 'promote', baselineRoot, resultRoot: currentRoot, comparisonRoot,
+      candidates: ['water-motion'], outputDir: path.join(baselineRoot, 'overlap'),
+    })).rejects.toThrow('disjoint');
+
+    const externalOutput = path.join(root, 'external-output');
+    const symlinkOutput = path.join(root, 'promotion-link');
+    await mkdir(externalOutput);
+    await symlink(externalOutput, symlinkOutput);
+    await expect(runVisualLabBaseline({
+      mode: 'promote', baselineRoot, resultRoot: currentRoot, comparisonRoot,
+      candidates: ['water-motion'], outputDir: symlinkOutput,
+    })).rejects.toThrow(/real directories|symbolic/i);
+
+    const nestedExternalOutput = path.join(root, 'nested-external-output');
+    const nestedSymlinkParent = path.join(root, 'nested-output-parent');
+    const nestedSymlinkOutput = path.join(nestedSymlinkParent, 'promotion');
+    await mkdir(nestedExternalOutput);
+    await symlink(nestedExternalOutput, nestedSymlinkParent);
+    await expect(runVisualLabBaseline({
+      mode: 'promote', baselineRoot, resultRoot: currentRoot, comparisonRoot,
+      candidates: ['water-motion'], outputDir: nestedSymlinkOutput,
+    })).rejects.toThrow(/real directories|symbolic/i);
+    await expect(access(path.join(nestedExternalOutput, 'promotion'))).rejects.toThrow();
+
+    const failedRoot = path.join(root, 'failed-promotion');
+    await expect(runVisualLabBaseline({
+      mode: 'promote', baselineRoot, resultRoot: currentRoot, comparisonRoot,
+      candidates: ['water-motion'], outputDir: failedRoot,
+    }, {
+      publishFile: async (file, contents) => {
+        if (path.basename(file) === 'index.json') throw new Error('injected index publish failure');
+        await writeFile(file, contents);
+      },
+    })).rejects.toThrow('injected index publish failure');
+    await expect(access(path.join(failedRoot, 'promotion.json'))).resolves.toBeUndefined();
+    await expect(access(path.join(failedRoot, 'index.json'))).rejects.toThrow();
   });
 });

@@ -18,14 +18,37 @@ npm run audit:visual-lab:baseline:compare -- \
   --output-dir=/path/to/new-empty-comparison
 ```
 
-To prepare a deliberate replacement, write it to a new empty directory and
-review its off/A/B images before replacing the checked package:
+Use `accept` only to seed a new baseline scope from one complete batch. It writes
+to a new empty directory and does not merge an existing accepted package:
 
 ```sh
 npm run audit:visual-lab:baseline:accept -- \
   --batch-root=/path/to/complete-batch \
   --output-dir=/path/to/new-empty-baseline
 ```
+
+After reviewing a selected or full comparison, promote only the explicitly
+accepted current candidates into a complete proposal. The comparison directory
+must be the exact portable output produced above; stale JSON, altered image
+copies, or a changed sheet is rejected. Candidate input order is normalized to
+the frozen catalog, while every unselected accepted record and PNG is preserved:
+
+```sh
+npm run audit:visual-lab:baseline:promote -- \
+  --baseline-root=visual-baselines/accepted-v1 \
+  --result-root=/path/to/complete-selected-batch \
+  --comparison-root=/path/to/complete-comparison \
+  --candidates=water-motion \
+  --output-dir=/path/to/new-empty-baseline-proposal
+```
+
+The proposal contains the ordinary content-only `index.json` plus a separately
+content-addressed `promotion.json`, excluded from baseline identity, which binds
+the previous baseline, exact comparison, selected old/current result IDs, and
+proposed baseline ID. The
+command never edits the checked package, commits, pushes, deploys, or infers a
+visual preference. Inspect the proposal and replace `accepted-v1/` deliberately
+through normal version control only after the human decision is final.
 
 Changed hashes mean human review is needed; they are not an automatic aesthetic
 failure and never auto-promote a baseline. Missing, tampered, unsafe, incomplete,

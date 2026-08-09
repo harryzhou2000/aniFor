@@ -17,6 +17,7 @@
     "audit:visual-lab:batch": "npm run build && npm run audit:visual-lab:batch:capture --",
     "audit:visual-lab:baseline:accept": "node scripts/visual-lab-baseline.mjs accept",
     "audit:visual-lab:baseline:compare": "node scripts/visual-lab-baseline.mjs compare",
+    "audit:visual-lab:baseline:promote": "node scripts/visual-lab-baseline.mjs promote",
     "audit:visual-lab:oxygen": "npm run build && npx vitest run src/renderer/pixi-field-presenter.test.ts -t 'keeps accepted E62' && npm run audit:visual-lab:capture -- --candidate=oxygen-showcase",
     "audit:viewport:desktop": "node scripts/verify-browser-input.mjs --desktop-input-only --webgl-only",
     "audit:viewport:mobile": "node scripts/verify-browser-input.mjs --mobile-only --webgl-only",

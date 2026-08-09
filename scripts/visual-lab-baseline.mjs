@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import {
-  copyFile, lstat, mkdir, readFile, readdir, rename, rm, writeFile,
+  copyFile, lstat, mkdir, open, readFile, readdir, rename, rm, writeFile,
 } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,6 +18,7 @@ import { createVisualLabResultRecord } from './visual-lab-result.mjs';
 
 export const VISUAL_LAB_BASELINE_SCHEMA = 'anifor.visual-lab.accepted-baseline/v1';
 export const VISUAL_LAB_COMPARISON_SCHEMA = 'anifor.visual-lab.comparison/v1';
+export const VISUAL_LAB_PROMOTION_SCHEMA = 'anifor.visual-lab.baseline-promotion/v1';
 
 const MODULE_PATH = fileURLToPath(import.meta.url);
 const VARIANTS = Object.freeze(['off', 'a', 'b']);
@@ -32,9 +33,16 @@ const HELP = `Usage:
     --baseline-root=<accepted-baseline> --result-root=<complete-batch> \\
     --output-dir=<new-comparison-directory>
 
+  node scripts/visual-lab-baseline.mjs promote \\
+    --baseline-root=<accepted-baseline> --result-root=<complete-batch> \\
+    --comparison-root=<complete-comparison> --candidates=<name[,name...]> \\
+    --output-dir=<new-baseline-directory>
+
 The accepted package and comparison package are portable directories. A changed
 capture is review information and exits successfully; malformed, incomplete,
-missing, tampered, or request-incompatible evidence fails.
+missing, tampered, or request-incompatible evidence fails. Promotion is an
+explicit proposal into a new directory; it never mutates the accepted input,
+Git, CI, or deployment state.
 `;
 
 const deepFreeze = (value) => {
@@ -283,6 +291,9 @@ export function compareVisualLabBaseline(baselineInput, batchInput) {
   const currentByName = new Map(
     currentCandidates.map(({ candidate, result }) => [candidate, result]),
   );
+  // Comparison/v1 preserves its deployed ordering contract: accepted entries
+  // first, then newly observed current entries. Promotion independently emits
+  // its merged accepted package in frozen catalog order.
   const order = [
     ...baseline.candidates.map(({ candidate }) => candidate),
     ...currentCandidates.map(({ candidate }) => candidate)
@@ -326,6 +337,110 @@ export function compareVisualLabBaseline(baselineInput, batchInput) {
     summary,
     candidates,
   });
+}
+
+const normalizePromotionSelection = (candidateNames, currentCandidates) => {
+  if (!Array.isArray(candidateNames) || candidateNames.length === 0) {
+    throw new TypeError('promotion candidates must be a non-empty array');
+  }
+  const available = new Set(currentCandidates.map(({ candidate }) => candidate));
+  const selected = new Set();
+  for (const [index, value] of candidateNames.entries()) {
+    const candidate = assertCandidate(value, `promotion candidate ${index}`);
+    resolveVisualLabCaptureRecipe(candidate);
+    if (selected.has(candidate)) throw new TypeError(`duplicate promotion candidate ${candidate}`);
+    if (!available.has(candidate)) {
+      throw new TypeError(`promotion candidate ${candidate} is not present in the current batch`);
+    }
+    selected.add(candidate);
+  }
+  return visualLabCaptureRecipeNames().filter((candidate) => selected.has(candidate));
+};
+
+const createPromotionRecord = (
+  baseline, comparison, promotedNames, previousByName, currentByName, result,
+) => {
+  const comparisonByName = new Map(
+    comparison.candidates.map((entry) => [entry.candidate, entry]),
+  );
+  const promoted = promotedNames.map((candidate) => {
+    const current = currentByName.get(candidate);
+    const comparisonEntry = comparisonByName.get(candidate);
+    if (!current || !comparisonEntry || comparisonEntry.currentResult === null
+      || comparisonEntry.status === 'not-sampled') {
+      throw new TypeError(`comparison has no promotable current evidence for ${candidate}`);
+    }
+    return {
+      candidate,
+      comparisonStatus: comparisonEntry.status,
+      previousResultId: previousByName.get(candidate)?.id ?? null,
+      currentResultId: current.id,
+    };
+  });
+  const identity = {
+    schema: VISUAL_LAB_PROMOTION_SCHEMA,
+    baseline: { schema: VISUAL_LAB_BASELINE_SCHEMA, id: baseline.id },
+    comparison: { schema: VISUAL_LAB_COMPARISON_SCHEMA, id: comparison.id },
+    promoted,
+    result: { schema: VISUAL_LAB_BASELINE_SCHEMA, id: result.id },
+  };
+  const digest = createHash('sha256').update(JSON.stringify(identity), 'utf8').digest('hex');
+  return deepFreeze({
+    schema: identity.schema,
+    id: `sha256:${digest}`,
+    baseline: identity.baseline,
+    comparison: identity.comparison,
+    promoted: identity.promoted,
+    result: identity.result,
+  });
+};
+
+/**
+ * Produces a full accepted-baseline proposal from explicitly selected current
+ * evidence. Unselected accepted records remain byte-identical; selected names
+ * are overlaid in frozen catalog order. The exact portable comparison is part
+ * of the decision identity, so stale or substituted review evidence cannot be
+ * promoted accidentally.
+ */
+export function promoteVisualLabBaseline(
+  baselineInput, batchInput, comparisonInput, candidateNames,
+) {
+  const baseline = normalizeVisualLabBaseline(baselineInput);
+  const currentCandidates = normalizeCompleteBatch(batchInput);
+  const comparison = compareVisualLabBaseline(baseline, batchInput);
+  if (!isDeepStrictEqual(comparisonInput, comparison)) {
+    throw new TypeError('comparison does not match the accepted baseline and current batch');
+  }
+  const promotedNames = normalizePromotionSelection(candidateNames, currentCandidates);
+  const previousByName = new Map(
+    baseline.candidates.map(({ candidate, result }) => [candidate, result]),
+  );
+  const currentByName = new Map(
+    currentCandidates.map(({ candidate, result }) => [candidate, result]),
+  );
+  const promotedSet = new Set(promotedNames);
+  const mergedByName = new Map(previousByName);
+  for (const candidate of promotedNames) {
+    mergedByName.set(candidate, currentByName.get(candidate));
+  }
+  const merged = visualLabCaptureRecipeNames()
+    .filter((candidate) => mergedByName.has(candidate))
+    .map((candidate) => ({ candidate, result: mergedByName.get(candidate) }));
+  if (merged.length !== mergedByName.size) {
+    throw new TypeError('promoted baseline contains a candidate outside the frozen catalog');
+  }
+  assertCatalogCompatibility(merged, 'promoted baseline');
+  const result = createBaselineFromCandidates(merged);
+  const promotion = createPromotionRecord(
+    baseline, comparison, promotedNames, previousByName, currentByName, result,
+  );
+  // Prove every unselected accepted record remains the exact normalized object.
+  for (const { candidate, result: previous } of baseline.candidates) {
+    if (!promotedSet.has(candidate) && mergedByName.get(candidate) !== previous) {
+      throw new TypeError(`promotion changed unselected candidate ${candidate}`);
+    }
+  }
+  return deepFreeze({ baseline: result, promotion });
 }
 
 const escapeHtml = (value) => String(value)
@@ -413,8 +528,8 @@ export function parseVisualLabBaselineArguments(argv) {
   if (!Array.isArray(argv)) throw new TypeError('arguments must be an array');
   if (argv.includes('--help') || argv.includes('-h')) return { help: true };
   const [mode, ...flags] = argv;
-  if (mode !== 'accept' && mode !== 'compare') {
-    throw new TypeError('first argument must be accept or compare');
+  if (mode !== 'accept' && mode !== 'compare' && mode !== 'promote') {
+    throw new TypeError('first argument must be accept, compare, or promote');
   }
   const values = new Map();
   for (const flag of flags) {
@@ -425,21 +540,42 @@ export function parseVisualLabBaselineArguments(argv) {
   }
   const allowed = mode === 'accept'
     ? new Set(['batch-root', 'output-dir'])
-    : new Set(['baseline-root', 'result-root', 'output-dir']);
+    : mode === 'compare'
+      ? new Set(['baseline-root', 'result-root', 'output-dir'])
+      : new Set([
+        'baseline-root', 'result-root', 'comparison-root', 'candidates', 'output-dir',
+      ]);
   for (const key of values.keys()) {
     if (!allowed.has(key)) throw new TypeError(`unsupported --${key} for ${mode}`);
   }
   for (const key of allowed) {
     if (!values.has(key)) throw new TypeError(`missing --${key}`);
   }
-  return mode === 'accept' ? {
-    mode,
-    batchRoot: values.get('batch-root'),
-    outputDir: values.get('output-dir'),
-  } : {
+  if (mode === 'accept') {
+    return {
+      mode,
+      batchRoot: values.get('batch-root'),
+      outputDir: values.get('output-dir'),
+    };
+  }
+  if (mode === 'compare') {
+    return {
+      mode,
+      baselineRoot: values.get('baseline-root'),
+      resultRoot: values.get('result-root'),
+      outputDir: values.get('output-dir'),
+    };
+  }
+  const candidates = values.get('candidates').split(',').map((name) => name.trim());
+  if (candidates.some((candidate) => candidate.length === 0)) {
+    throw new TypeError('--candidates must be a comma-separated list of recipe names');
+  }
+  return {
     mode,
     baselineRoot: values.get('baseline-root'),
     resultRoot: values.get('result-root'),
+    comparisonRoot: values.get('comparison-root'),
+    candidates,
     outputDir: values.get('output-dir'),
   };
 }
@@ -468,11 +604,33 @@ const assertRealDirectoryChain = async (directory) => {
 
 const ensureRealDirectory = async (directory, { empty = false } = {}) => {
   const resolved = path.resolve(directory);
-  await mkdir(resolved, { recursive: true });
-  await assertRealDirectoryChain(resolved);
+  const parsed = path.parse(resolved);
+  let current = parsed.root;
+  for (const segment of resolved.slice(parsed.root.length).split(path.sep).filter(Boolean)) {
+    const child = path.join(current, segment);
+    let info;
+    try {
+      info = await lstat(child);
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error;
+      try {
+        await mkdir(child);
+      } catch (mkdirError) {
+        // A concurrent creator is acceptable only if it created a real
+        // directory. Re-lstat below owns the final decision.
+        if (mkdirError?.code !== 'EEXIST') throw mkdirError;
+      }
+      info = await lstat(child);
+    }
+    if (!info.isDirectory() || info.isSymbolicLink()) {
+      throw new Error(`directory path must contain only real directories: ${child}`);
+    }
+    current = child;
+  }
   if (empty && (await readdir(resolved)).length > 0) {
     throw new Error(`output directory must be empty: ${resolved}`);
   }
+  return resolved;
 };
 
 const ensureContainedFile = async (root, relative, label) => {
@@ -523,6 +681,26 @@ const writeAtomic = async (file, contents) => {
   }
 };
 
+const acquirePromotionLock = async (directory) => {
+  const lockPath = path.join(directory, '.visual-lab-promotion.lock');
+  let handle;
+  try {
+    handle = await open(lockPath, 'wx', 0o600);
+  } catch (error) {
+    if (error?.code === 'EEXIST') {
+      throw new Error(`promotion output is already owned by another writer: ${directory}`);
+    }
+    throw error;
+  }
+  let released = false;
+  return async () => {
+    if (released) return;
+    released = true;
+    await handle.close();
+    await rm(lockPath, { force: true });
+  };
+};
+
 const copyCaptures = async (sourceRoot, outputRoot, candidates) => {
   for (const { candidate } of candidates) {
     const candidateDirectory = path.join(outputRoot, 'candidates', candidate);
@@ -539,6 +717,34 @@ const copyCaptures = async (sourceRoot, outputRoot, candidates) => {
 const comparisonCandidatesFor = (comparison, side) => comparison.candidates
   .filter((entry) => entry[`${side}Result`] !== null)
   .map((entry) => ({ candidate: entry.candidate, result: entry[`${side}Result`] }));
+
+const validateComparisonPackage = async (root, expected) => {
+  const [jsonPath, htmlPath] = await Promise.all([
+    ensureContainedFile(root, 'comparison.json', 'comparison index'),
+    ensureContainedFile(root, 'index.html', 'comparison sheet'),
+  ]);
+  const [comparison, html] = await Promise.all([
+    readJson(jsonPath, 'comparison index'),
+    readFile(htmlPath, 'utf8'),
+  ]);
+  if (!isDeepStrictEqual(comparison, expected)) {
+    throw new TypeError('comparison package does not match the accepted baseline and current batch');
+  }
+  if (html !== renderVisualLabComparison(expected)) {
+    throw new TypeError('comparison sheet does not match its complete comparison index');
+  }
+  await Promise.all([
+    validateCapturePackage(
+      path.join(root, 'baseline'), comparisonCandidatesFor(expected, 'baseline'),
+      'comparison baseline',
+    ),
+    validateCapturePackage(
+      path.join(root, 'current'), comparisonCandidatesFor(expected, 'current'),
+      'comparison current',
+    ),
+  ]);
+  return comparison;
+};
 
 const rootsOverlap = (left, right) => {
   const a = path.resolve(left);
@@ -566,7 +772,7 @@ const assertComparisonOutput = (output, baselineRoot, resultRoot) => {
   // CI adds the portable comparison there before uploading one review root.
 };
 
-export async function runVisualLabBaseline(options) {
+export async function runVisualLabBaseline(options, dependencies = {}) {
   if (options.mode === 'accept') {
     const batchRoot = path.resolve(options.batchRoot);
     const outputDirectory = path.resolve(options.outputDir);
@@ -632,7 +838,77 @@ export async function runVisualLabBaseline(options) {
     await writeAtomic(json, `${JSON.stringify(comparison, null, 2)}\n`);
     return { mode: 'compare', comparison, html, json };
   }
-  throw new TypeError('mode must be accept or compare');
+  if (options.mode === 'promote') {
+    const baselineRoot = path.resolve(options.baselineRoot);
+    const resultRoot = path.resolve(options.resultRoot);
+    const comparisonRoot = path.resolve(options.comparisonRoot);
+    const outputDirectory = path.resolve(options.outputDir);
+    assertDisjointOutput(outputDirectory, [baselineRoot, resultRoot, comparisonRoot]);
+    if (rootsOverlap(baselineRoot, resultRoot)) {
+      throw new Error('accepted baseline and result packages must be disjoint');
+    }
+    assertComparisonOutput(comparisonRoot, baselineRoot, resultRoot);
+    // Reject an existing symlink/non-directory output before doing any review
+    // work. A later evidence failure may leave only this empty real directory,
+    // never a manifest or a partially valid package.
+    await ensureRealDirectory(outputDirectory, { empty: true });
+    const releasePromotionLock = await acquirePromotionLock(outputDirectory);
+    const executeLockedPromotion = async () => {
+      const [baselineIndex, batchIndex] = await Promise.all([
+        ensureContainedFile(baselineRoot, 'index.json', 'accepted baseline index'),
+        ensureContainedFile(resultRoot, 'index.json', 'batch index'),
+      ]);
+      const [baselineInput, batch] = await Promise.all([
+        readJson(baselineIndex, 'accepted baseline'),
+        readJson(batchIndex, 'batch index'),
+      ]);
+      const baseline = normalizeVisualLabBaseline(baselineInput);
+      const currentCandidates = normalizeCompleteBatch(batch);
+      await Promise.all([
+        validateCapturePackage(baselineRoot, baseline.candidates, 'accepted baseline'),
+        validateCapturePackage(resultRoot, currentCandidates, 'batch'),
+      ]);
+      const expectedComparison = compareVisualLabBaseline(baseline, batch);
+      const comparison = await validateComparisonPackage(comparisonRoot, expectedComparison);
+      const proposal = promoteVisualLabBaseline(
+        baseline, batch, comparison, options.candidates,
+      );
+      const promoted = new Set(
+        proposal.promotion.promoted.map(({ candidate }) => candidate),
+      );
+      const retainedCandidates = baseline.candidates.filter(
+        ({ candidate }) => !promoted.has(candidate),
+      );
+      const promotedCandidates = currentCandidates.filter(
+        ({ candidate }) => promoted.has(candidate),
+      );
+      await copyCaptures(baselineRoot, outputDirectory, retainedCandidates);
+      await copyCaptures(resultRoot, outputDirectory, promotedCandidates);
+      await validateCapturePackage(
+        outputDirectory, proposal.baseline.candidates, 'promoted baseline output',
+      );
+      const promotionPath = path.join(outputDirectory, 'promotion.json');
+      const indexPath = path.join(outputDirectory, 'index.json');
+      const publishFile = dependencies.publishFile ?? writeAtomic;
+      // The decision record precedes the content manifest. An interrupted write
+      // therefore cannot leave a valid-looking promoted baseline without its
+      // exact source comparison and candidate decision.
+      await publishFile(
+        promotionPath, `${JSON.stringify(proposal.promotion, null, 2)}\n`,
+      );
+      await publishFile(indexPath, `${JSON.stringify(proposal.baseline, null, 2)}\n`);
+      return {
+        mode: 'promote',
+        ...proposal,
+        changed: proposal.baseline.id !== baseline.id,
+        outputDirectory,
+        promotionPath,
+        indexPath,
+      };
+    };
+    return executeLockedPromotion().finally(releasePromotionLock);
+  }
+  throw new TypeError('mode must be accept, compare, or promote');
 }
 
 async function main() {
@@ -642,18 +918,34 @@ async function main() {
     return;
   }
   const result = await runVisualLabBaseline(options);
-  process.stdout.write(`${JSON.stringify(result.mode === 'accept' ? {
-    schema: result.baseline.schema,
-    id: result.baseline.id,
-    candidates: result.baseline.candidates.length,
-    outputDirectory: result.outputDirectory,
-  } : {
-    schema: result.comparison.schema,
-    id: result.comparison.id,
-    summary: result.comparison.summary,
-    html: result.html,
-    json: result.json,
-  })}\n`);
+  let summary;
+  if (result.mode === 'accept') {
+    summary = {
+      schema: result.baseline.schema,
+      id: result.baseline.id,
+      candidates: result.baseline.candidates.length,
+      outputDirectory: result.outputDirectory,
+    };
+  } else if (result.mode === 'compare') {
+    summary = {
+      schema: result.comparison.schema,
+      id: result.comparison.id,
+      summary: result.comparison.summary,
+      html: result.html,
+      json: result.json,
+    };
+  } else {
+    summary = {
+      schema: result.promotion.schema,
+      id: result.promotion.id,
+      previousBaselineId: result.promotion.baseline.id,
+      resultBaselineId: result.baseline.id,
+      promoted: result.promotion.promoted.map(({ candidate }) => candidate),
+      changed: result.changed,
+      outputDirectory: result.outputDirectory,
+    };
+  }
+  process.stdout.write(`${JSON.stringify(summary)}\n`);
 }
 
 if (path.resolve(process.argv[1] ?? '') === MODULE_PATH) {

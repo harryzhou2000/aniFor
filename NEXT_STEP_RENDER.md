@@ -6,9 +6,12 @@ profiles, named capture recipes, content-addressed result records, deterministic
 batch runner, and static contact-sheet index are deployed. Frozen renderer and
 capture descriptors share exact domain, target, Detail/fallback, evidence, URL,
 backend/pipeline, and resource-budget semantics, and the generic runner consumes
-them without domain branches. The opt-in CI review/deploy gate is complete. The
-immediate milestone is a versioned accepted-baseline/result layer over the
-already-verified batch artifact. A
+them without domain branches. The opt-in CI review/deploy gate and versioned
+accepted-baseline/result layer are complete. The immediate milestone is safe
+candidate-scoped promotion: bind an explicit human acceptance decision to the
+exact portable comparison, overlay only named current candidates into a new
+complete baseline proposal, and preserve every unsampled accepted record and
+PNG. A
 normal-scale A/B experiment should touch one domain module and one catalog
 entry—not presenter setup, app lifecycle, package/workflow duplication, or CDP
 branching.
@@ -18,24 +21,30 @@ declarative fixture startup, and production-bundle off/A/B route already form
 the base. E62 Oxygen, E69 Oil motion, and E65 Water motion have been folded into
 their accepted parent baselines and their one-off selector/telemetry/verifier
 plumbing removed. The batch/index and CI review framework checkpoints are
-complete and deployed: `main_codex` and Pages serve revision
-`34c8a3db2dbcf0d497524aac15f0055984faf999` after full-catalog gated workflow
-run `31284862276`; all four candidates passed in canonical order before deploy,
-and hosted plus independent checks closed all 19 runtime resources on attempt
-one.
+complete and deployed: `main_codex` and Pages serve accepted-baseline revision
+`a3789eaca86ce3a75f0f4f82d7d23633cba0d480` after full-catalog gated workflow
+run `31286841909`; all four candidates and comparisons passed in canonical order
+before deploy, and hosted plus independent checks closed all 19 runtime
+resources on attempt one.
 
-The next stable checkpoint is accepted-baseline comparison, not a fourth
+The next stable checkpoint is comparison-bound partial promotion, not a fourth
 effect. A complete batch may be accepted into a content-only manifest plus its
 pinned off/A/B images. Later complete batches are re-hashed and compared without
 another build or browser session, then copied beside the accepted captures into
-one portable relative-path review package. Encoded changes request human review
-but remain successful; only incomplete, missing, tampered, unsafe, or request-
-incompatible evidence blocks. Run IDs, revisions, timestamps, warnings, machine
-paths, and Actions ZIP identity remain outside the manifest hash. The accepted
-v1 source is revision `34c8a3d`, run `31284862276`, with manifest
+one portable relative-path review package. After review, a proposal command
+must require the exact comparison and an explicit candidate list, overlay only
+those current records/images, retain all unsampled accepted bytes, and publish
+a durable decision record before the new content manifest. Encoded changes
+request human review but remain successful; only incomplete, missing, tampered,
+unsafe, request-incompatible, or stale decision evidence blocks. Run IDs,
+revisions, timestamps, warnings, machine paths, and Actions ZIP identity remain
+outside the baseline manifest hash. The accepted v1 source is revision
+`34c8a3d`, run `31284862276`, with manifest
 `sha256:b95e09ecb1df93c2b9ae718d205159b17dc56379723f2d1ad904458e16c5653c`.
 The sheet aids human comparison and remains a downloadable artifact, not a
-Pages asset or visual-quality score. Canvas remains the
+Pages asset or visual-quality score. Promotion writes only a new disjoint
+proposal; it never replaces the checked baseline, commits, pushes, or deploys.
+Canvas remains the
 resilient semantic fallback and true 8× stays on its compact direct path unless
 a separately budgeted design proves otherwise.
 
@@ -132,6 +141,27 @@ manifest ID
 CI adds this portable comparison beneath the ordinary downloadable review
 artifact without rebuilding or launching another browser. RGB pixel metrics
 remain a possible v2 only after the hash/thumbnail workflow proves useful.
+
+### Candidate-scoped promotion acceptance
+
+`npm run audit:visual-lab:baseline:promote -- --baseline-root=<accepted> --result-root=<complete-selected-batch> --comparison-root=<complete-comparison> --candidates=<name[,name...]> --output-dir=<new-proposal>`
+closes the selected-review loop without another full-catalog browser run. It
+revalidates the complete accepted and current source packages, independently
+recomputes the comparison, requires its exact JSON, deterministic sheet, and
+accepted/current PNG copies, then normalizes the explicit selection into frozen
+catalog order. Selected current records replace their accepted counterparts;
+unselected accepted records and bytes remain untouched, and a newly selected
+catalog candidate may be inserted in canonical order.
+
+The proposal retains `anifor.visual-lab.accepted-baseline/v1` as its content-only
+manifest. A separate `anifor.visual-lab.baseline-promotion/v1` decision record
+binds the previous baseline ID, exact comparison ID, each selected previous and
+current result ID, comparison status, and proposed baseline ID. The decision is
+independently content-addressed but deliberately excluded from baseline visual
+identity. Write `promotion.json` first and `index.json` last. A no-op promotion
+keeps the baseline ID and reports that fact. Output must be a new disjoint empty
+real directory; the command never edits the accepted input or performs Git, CI,
+Pages, or automatic aesthetic decisions.
 
 ## Visual north star
 
@@ -3562,10 +3592,10 @@ fixtures, protocol-owned URL/dataset requirements, bounded Chrome lifecycle,
 named recipes, content-addressed results, deterministic batch index, and static
 contact sheet are complete and deployed at revision
 `e06d11398a37dcf1558411a350af631452c4953e` by workflow run `31283340387`.
-The current milestone is operational CI leverage over that seam: consume the
-verified static-site artifact without another build, publish complete or failed
-batch evidence for review, and optionally make successful review a deployment
-prerequisite. Defer E66 and Powder until
+Operational CI review, accepted-baseline comparison, and gated deployment are
+now complete. The current milestone is proposal-only partial promotion: retain
+the complete baseline while replacing only explicitly accepted candidates from
+an exact comparison. Defer E66 and Powder until
 their extra samples or source-stage stability proof fit the existing budgeted
 facade without creating a second experiment framework.
 
@@ -3726,15 +3756,14 @@ ownership, URL construction, and compatibility aliases; the detached-process
 lifecycle tests remain alongside them in `npm test`. The named Water candidate
 passes at canonical 2× with exact topology/alpha invariants, distinct off/A/B
 images, zero browser errors, and a deterministic content-addressed result.
-Immediate work is the content-only accepted-baseline/result package. The CI
-review gate is already proven by selected run `31284382855` and full deploy run
-`31284862276`; the latter passed all four candidates and exact live asset
-closure. `visual-baselines/accepted-v1` pins that full result without hashing
-run metadata. The comparison route revalidates every source hash and emits
-portable accepted/current off/A/B cards beneath the existing downloadable
-artifact. Changed pixels remain human `review` evidence, never an automated
-aesthetic failure or baseline promotion. Defer a bounded PNG decoder and RGB
-metrics to v2, and do not add another verifier or workflow clone. Defer E66 and
+The CI review and accepted-baseline route are proven by full deploy run
+`31286841909`; all four candidates compared encoded-identical before exact live
+asset closure. `visual-baselines/accepted-v1` pins the accepted result without
+hashing run metadata. Candidate-scoped promotion now closes the manual review
+loop by validating the exact comparison and emitting a full baseline proposal
+plus a separate decision identity; it never auto-promotes or mutates version
+control. Defer a bounded PNG decoder and RGB metrics to v2, and do not add
+another verifier or workflow clone. Defer E66 and
 Powder until the fixed HDR
 seam can receive their stability/body proof without a second experiment
 framework.

@@ -8,11 +8,13 @@ executable capability profiles, named capture recipes, and content-addressed
 result records are deployed, as is the deterministic batch runner and static
 contact-sheet index. Renderer and capture descriptors share exact domain,
 target, Detail/fallback, evidence, URL, backend/pipeline, and resource-budget
-semantics. The opt-in CI review/deploy gate is complete. The current checkpoint
-is accepted-baseline leverage: turn one complete batch into a content-only,
-content-addressed accepted package, compare later complete results without a
-new build or browser session, and publish portable accepted/current off/A/B
-evidence beside the ordinary review artifact. A normal A/B idea
+semantics. The opt-in CI review/deploy gate and accepted-baseline comparison are
+complete. The current checkpoint is candidate-scoped promotion leverage: after
+reviewing a selected comparison, merge only explicitly accepted current
+candidates into a new complete baseline proposal while retaining every
+unsampled accepted record and PNG. Bind that proposal to the exact comparison
+with a durable content-addressed decision record; never infer acceptance from a
+hash, metric, CI result, or visual threshold. A normal A/B idea
 should touch one domain module plus one catalog entry—not presenter setup, HDR
 lifecycle, app boot, package-script duplication, workflow duplication, or CDP
 branching.
@@ -25,14 +27,13 @@ motion is an accepted E08 baseline and uses the moving-Oil fixture with liquid
 target `8`; E65 Water surface motion is an accepted E08 baseline and uses the
 retained moving-Water fixture with liquid target `2`. Their legacy resolvers,
 uniforms, queries, datasets, and bespoke verifier paths are removed. E65 is also
-deployed. `main_codex` and Pages now serve revision
-`34c8a3db2dbcf0d497524aac15f0055984faf999` after full-catalog gated workflow
-run `31284862276`: all four recipes passed in canonical order, deployment ran
-only afterward, and both hosted and independent checks closed all 19 runtime
-resources on the first attempt.
+deployed. `main_codex` and Pages serve accepted-baseline framework revision
+`a3789eaca86ce3a75f0f4f82d7d23633cba0d480` after full-catalog gated workflow
+run `31286841909`: all four recipes and comparisons passed in canonical order,
+deployment ran only afterward, and both hosted and independent checks closed
+all 19 runtime resources on the first attempt.
 
-The next stable checkpoint is the versioned accepted-baseline/result layer, not
-a fourth leaf migration. `anifor.visual-lab.accepted-baseline/v1` contains only
+`anifor.visual-lab.accepted-baseline/v1` contains only
 catalog-ordered candidate names and their existing content-addressed result
 records; never put run IDs, revisions, timestamps, machine paths, warnings, or
 artifact ZIP identity into its hash. Acceptance and comparison must re-hash the
@@ -43,6 +44,12 @@ Only incomplete, missing, tampered, unsafe, or request-incompatible evidence is
 blocking. Seed provenance belongs in this guidance and CI logs: accepted-v1 is
 from revision `34c8a3d`, workflow `31284862276`, and manifest
 `sha256:b95e09ecb1df93c2b9ae718d205159b17dc56379723f2d1ad904458e16c5653c`.
+Promotion must require the exact complete comparison package plus an explicit
+nonempty candidate list, write only to a new disjoint empty directory, copy
+unselected bytes from the old baseline and selected bytes from the current
+batch, revalidate the full proposal, write `promotion.json` before `index.json`,
+and report no-op promotion without manufacturing a new baseline identity. It
+must never mutate the checked package, Git, CI, or deployment state.
 Defer RGB decoding and aesthetic thresholds until the comparison workflow has
 proved useful; thumbnails and exact variant hashes are the v1 review contract.
 Defer E66
@@ -1984,18 +1991,20 @@ polish. The fixed `domain/variant/target/gain` state, domain-local shader facade
 executable renderer/capture capability profiles, browser diagnostics, named
 recipes, content-addressed results, and off/A/B harness are complete and
 deployed. The deterministic batch/index and opt-in CI review layers are live at
-revision `34c8a3db2dbcf0d497524aac15f0055984faf999`; full-catalog gated run
-`31284862276` passed review, deploy, and 19-resource verification. E62, E69, and E65 prove that
+revision `a3789eaca86ce3a75f0f4f82d7d23633cba0d480`; full-catalog gated run
+`31286841909` passed baseline comparison, deploy, and 19-resource verification. E62, E69, and E65 prove that
 accepted leaf treatments can be folded into parent baselines while deleting
 selector, uniform, query, telemetry, and bespoke-verifier plumbing. Do not
 reopen them merely to add more effect detail.
 
-The current checkpoint is accepted-baseline/result comparison at the batch-
-record layer. Keep its manifest content-only and content-addressed, re-hash all
-accepted/current PNGs before copying, use only self-contained relative
-thumbnail paths, and publish HTML before the complete comparison JSON. Exact
-request mismatch and structural/tamper failures block; changed hashes produce
-successful `review` evidence rather than a subjective regression verdict.
+The current checkpoint is candidate-scoped promotion at the batch-record layer.
+Keep the baseline manifest content-only and content-addressed; require the exact
+complete comparison package plus an explicit selection before overlaying
+current records into a new full proposal. Re-hash source, comparison-copy, and
+output PNGs; preserve every unsampled record and byte; write the independently
+content-addressed decision before the proposal manifest. Exact request mismatch
+and structural/tamper failures block; changed hashes still produce successful
+human `review` evidence rather than a subjective regression verdict.
 The accepted-v1 package is the complete four-candidate result from run
 `31284862276`; its manifest ID is
 `sha256:b95e09ecb1df93c2b9ae718d205159b17dc56379723f2d1ad904458e16c5653c`.
