@@ -25,6 +25,12 @@ import {
 import { resolveVisualCaptureRequest } from './visual-lab-fixtures.mjs';
 import { visualCaptureVariantLabel as resolveCaptureVariantLabel } from './visual-capture-drivers.mjs';
 import { createVisualLabResultRecord } from './visual-lab-result.mjs';
+import {
+  createVisualLabBaselineCaptureProvenance,
+  normalizeVisualLabBaselineCaptureProvenance,
+  VISUAL_LAB_BASELINE_CAPTURE_PROVENANCE_FILE,
+} from './visual-lab-baseline-provenance.mjs';
+import { createVisualCaptureGeometryProof } from '../src/shared/visual-capture-geometry.js';
 
 export const VISUAL_LAB_BASELINE_SCHEMA = 'anifor.visual-lab.accepted-baseline/v1';
 export const VISUAL_LAB_COMPARISON_SCHEMA = 'anifor.visual-lab.comparison/v1';
@@ -35,6 +41,8 @@ const CANDIDATE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const SHA256_ID = /^sha256:[0-9a-f]{64}$/;
 const MAX_COMPARISON_METRICS_BYTES = 1024 * 1024;
 const MAX_COMPARISON_REVIEW_BOARD_BYTES = 1024 * 1024;
+const MAX_BASELINE_CAPTURE_PROVENANCE_BYTES = 256 * 1024;
+const MAX_SOURCE_REPORT_BYTES = 4 * 1024 * 1024;
 
 const HELP = `Usage:
   node scripts/visual-lab-baseline.mjs accept \\
@@ -1134,8 +1142,99 @@ const ensureContainedFile = async (root, relative, label) => {
   return file;
 };
 
-const validateCapturePackage = async (root, candidates, kind) => {
+const geometryMapFromProvenance = (provenance) => new Map(
+  provenance.candidates.map(({ candidate, captureGeometry }) => [candidate, captureGeometry]),
+);
+
+const readOptionalBaselineCaptureProvenance = async (
+  root, baseline, { required = false } = {},
+) => {
+  let file;
+  try {
+    file = await ensureContainedFile(
+      root, VISUAL_LAB_BASELINE_CAPTURE_PROVENANCE_FILE,
+      'accepted baseline capture provenance',
+    );
+  } catch (error) {
+    if (error?.code === 'ENOENT' && !required) return null;
+    if (error?.code === 'ENOENT') {
+      throw new Error(
+        `accepted baseline is missing required ${VISUAL_LAB_BASELINE_CAPTURE_PROVENANCE_FILE}`,
+        { cause: error },
+      );
+    }
+    throw error;
+  }
+  const source = await readStableRegularFile(
+    file, 'accepted baseline capture provenance', 'utf8',
+    MAX_BASELINE_CAPTURE_PROVENANCE_BYTES,
+  );
+  let input;
+  try { input = JSON.parse(source); }
+  catch (error) {
+    throw new TypeError('accepted baseline capture provenance is not valid JSON', {
+      cause: error,
+    });
+  }
+  return normalizeVisualLabBaselineCaptureProvenance(input, baseline);
+};
+
+const validateSourceCaptureGeometry = async (root, candidates, kind) => {
+  const captureGeometryByCandidate = new Map();
   for (const { candidate, result } of candidates) {
+    const label = `${kind} ${candidate} report`;
+    let file;
+    try {
+      file = await ensureContainedFile(root, `candidates/${candidate}/report.json`, label);
+    } catch (error) {
+      throw new Error(`${label} is required to prove canonical capture geometry`, {
+        cause: error,
+      });
+    }
+    const source = await readStableRegularFile(file, label, 'utf8', MAX_SOURCE_REPORT_BYTES);
+    let report;
+    try { report = JSON.parse(source); }
+    catch (error) { throw new Error(`${label} is not valid JSON`, { cause: error }); }
+    if (!isDeepStrictEqual(report?.result, result)) {
+      throw new TypeError(`${label} does not bind its batch result`);
+    }
+    for (const [name, value] of Object.entries(result.request)) {
+      if (report[name] !== value) {
+        throw new TypeError(`${label} ${name} does not match its batch result request`);
+      }
+    }
+    const expectedGeometry = createVisualCaptureGeometryProof(result.request.renderScale);
+    if (!isDeepStrictEqual(report.captureGeometry, expectedGeometry)) {
+      throw new TypeError(`${label} does not contain canonical captureGeometry`);
+    }
+    const expectedBacking = `${expectedGeometry.canvas.backingWidth}x${
+      expectedGeometry.canvas.backingHeight}`;
+    if (report.backingSize !== expectedBacking) {
+      throw new TypeError(`${label} backingSize does not match captureGeometry`);
+    }
+    for (const variant of VARIANTS) {
+      const capture = report.captures?.[variant];
+      if (capture?.sha256 !== result.captureSha256[variant]) {
+        throw new TypeError(`${label} ${variant} hash does not match its batch result`);
+      }
+      if (capture.width !== expectedGeometry.canvas.width
+        || capture.height !== expectedGeometry.canvas.height
+        || capture.cssWidth !== expectedGeometry.canvas.width
+        || capture.cssHeight !== expectedGeometry.canvas.height
+        || capture.clipScale !== expectedGeometry.canvas.clipScale) {
+        throw new TypeError(`${label} ${variant} does not match captureGeometry`);
+      }
+    }
+    captureGeometryByCandidate.set(candidate, expectedGeometry);
+  }
+  return captureGeometryByCandidate;
+};
+
+const validateCapturePackage = async (
+  root, candidates, kind, captureGeometryByCandidate = null,
+) => {
+  for (const { candidate, result } of candidates) {
+    const captureGeometry = captureGeometryByCandidate?.get(candidate);
     for (const variant of VARIANTS) {
       const relative = `candidates/${candidate}/${variant}.png`;
       const file = await ensureContainedFile(root, relative, `${kind} ${candidate} ${variant}`);
@@ -1144,7 +1243,14 @@ const validateCapturePackage = async (root, candidates, kind) => {
       if (digest !== result.captureSha256[variant]) {
         throw new Error(`${kind} ${candidate} ${variant}.png does not match its pinned SHA-256`);
       }
-      inspectVisualLabPng(bytes, `${kind} ${candidate} ${variant}.png`);
+      const dimensions = inspectVisualLabPng(bytes, `${kind} ${candidate} ${variant}.png`);
+      if (captureGeometry !== undefined
+        && (dimensions.width !== captureGeometry.canvas.width
+          || dimensions.height !== captureGeometry.canvas.height)) {
+        throw new Error(
+          `${kind} ${candidate} ${variant}.png dimensions do not match capture provenance`,
+        );
+      }
     }
   }
 };
@@ -1219,7 +1325,10 @@ const readOptionalComparisonFile = async (root, relative, label, maxBytes) => {
   return readStableRegularFile(file, label, 'utf8', maxBytes);
 };
 
-const validateComparisonPackage = async (root, expected) => {
+const validateComparisonPackage = async (root, expected, {
+  baselineGeometry = null,
+  currentGeometry = null,
+} = {}) => {
   const [jsonPath, htmlPath] = await Promise.all([
     ensureContainedFile(root, 'comparison.json', 'comparison index'),
     ensureContainedFile(root, 'index.html', 'comparison sheet'),
@@ -1247,11 +1356,11 @@ const validateComparisonPackage = async (root, expected) => {
   await Promise.all([
     validateCapturePackage(
       path.join(root, 'baseline'), comparisonCandidatesFor(expected, 'baseline'),
-      'comparison baseline',
+      'comparison baseline', baselineGeometry,
     ),
     validateCapturePackage(
       path.join(root, 'current'), comparisonCandidatesFor(expected, 'current'),
-      'comparison current',
+      'comparison current', currentGeometry,
     ),
   ]);
   let metrics;
@@ -1327,7 +1436,9 @@ export async function verifyVisualLabComparisonPackage(options = {}) {
   if (options === null || typeof options !== 'object' || Array.isArray(options)) {
     throw new TypeError('Visual Lab comparison verification options must be an object');
   }
-  const allowed = new Set(['baselineRoot', 'resultRoot', 'comparisonRoot']);
+  const allowed = new Set([
+    'baselineRoot', 'resultRoot', 'comparisonRoot', 'requireBaselineCaptureProvenance',
+  ]);
   const unexpected = Reflect.ownKeys(options).filter((key) => !allowed.has(key));
   if (unexpected.length > 0) {
     throw new TypeError(`Unknown Visual Lab comparison verification option ${String(unexpected[0])}`);
@@ -1335,6 +1446,10 @@ export async function verifyVisualLabComparisonPackage(options = {}) {
   const baselineRoot = canonicalPackagePath(options.baselineRoot, 'accepted baseline root');
   const resultRoot = canonicalPackagePath(options.resultRoot, 'batch result root');
   const comparisonRoot = canonicalPackagePath(options.comparisonRoot, 'comparison root');
+  const requireBaselineCaptureProvenance = options.requireBaselineCaptureProvenance ?? false;
+  if (typeof requireBaselineCaptureProvenance !== 'boolean') {
+    throw new TypeError('requireBaselineCaptureProvenance must be a boolean');
+  }
   assertComparisonOutput(comparisonRoot, baselineRoot, resultRoot);
   if (rootsOverlap(baselineRoot, resultRoot)) {
     throw new Error('accepted baseline and result packages must be disjoint');
@@ -1350,13 +1465,24 @@ export async function verifyVisualLabComparisonPackage(options = {}) {
   ]);
   const baseline = normalizeVisualLabBaseline(baselineInput);
   const currentCandidates = normalizeCompleteBatch(batch);
+  const baselineProvenance = await readOptionalBaselineCaptureProvenance(
+    baselineRoot, baseline, { required: requireBaselineCaptureProvenance },
+  );
+  const baselineGeometry = baselineProvenance === null
+    ? null : geometryMapFromProvenance(baselineProvenance);
   await Promise.all([
-    validateCapturePackage(baselineRoot, baseline.candidates, 'accepted baseline'),
+    validateCapturePackage(
+      baselineRoot, baseline.candidates, 'accepted baseline', baselineGeometry,
+    ),
     validateCapturePackage(resultRoot, currentCandidates, 'batch'),
   ]);
   const expected = compareVisualLabBaseline(baseline, batch);
-  const comparison = await validateComparisonPackage(comparisonRoot, expected);
-  return deepFreeze({ baseline, comparison, currentCandidates });
+  const comparison = await validateComparisonPackage(comparisonRoot, expected, {
+    baselineGeometry,
+  });
+  return deepFreeze({
+    baseline, baselineCaptureProvenance: baselineProvenance, comparison, currentCandidates,
+  });
 }
 
 export async function runVisualLabBaseline(options, dependencies = {}) {
@@ -1367,15 +1493,27 @@ export async function runVisualLabBaseline(options, dependencies = {}) {
     const batchIndex = await ensureContainedFile(batchRoot, 'index.json', 'batch index');
     const batch = await readJson(batchIndex, 'batch index');
     const candidates = normalizeCompleteBatch(batch);
-    await validateCapturePackage(batchRoot, candidates, 'batch');
+    const sourceGeometry = await validateSourceCaptureGeometry(
+      batchRoot, candidates, 'accepted source',
+    );
+    await validateCapturePackage(batchRoot, candidates, 'batch', sourceGeometry);
     const baseline = createBaselineFromCandidates(candidates);
+    const baselineCaptureProvenance = createVisualLabBaselineCaptureProvenance(
+      baseline, sourceGeometry,
+    );
     await ensureRealDirectory(outputDirectory, { empty: true });
     await copyCaptures(batchRoot, outputDirectory, candidates);
-    await validateCapturePackage(outputDirectory, candidates, 'accepted output');
+    await validateCapturePackage(
+      outputDirectory, candidates, 'accepted output', sourceGeometry,
+    );
+    await writeAtomic(
+      path.join(outputDirectory, VISUAL_LAB_BASELINE_CAPTURE_PROVENANCE_FILE),
+      `${JSON.stringify(baselineCaptureProvenance, null, 2)}\n`,
+    );
     await writeAtomic(
       path.join(outputDirectory, 'index.json'), `${JSON.stringify(baseline, null, 2)}\n`,
     );
-    return { mode: 'accept', baseline, outputDirectory };
+    return { mode: 'accept', baseline, baselineCaptureProvenance, outputDirectory };
   }
   if (options.mode === 'compare') {
     const baselineRoot = path.resolve(options.baselineRoot);
@@ -1395,8 +1533,15 @@ export async function runVisualLabBaseline(options, dependencies = {}) {
     ]);
     const baseline = normalizeVisualLabBaseline(baselineInput);
     const currentCandidates = normalizeCompleteBatch(batch);
+    const baselineCaptureProvenance = await readOptionalBaselineCaptureProvenance(
+      baselineRoot, baseline,
+    );
+    const baselineGeometry = baselineCaptureProvenance === null
+      ? null : geometryMapFromProvenance(baselineCaptureProvenance);
     await Promise.all([
-      validateCapturePackage(baselineRoot, baseline.candidates, 'accepted baseline'),
+      validateCapturePackage(
+        baselineRoot, baseline.candidates, 'accepted baseline', baselineGeometry,
+      ),
       validateCapturePackage(resultRoot, currentCandidates, 'batch'),
     ]);
     const comparison = compareVisualLabBaseline(baseline, batch);
@@ -1412,7 +1557,7 @@ export async function runVisualLabBaseline(options, dependencies = {}) {
     await Promise.all([
       validateCapturePackage(
         baselineOutput, comparisonCandidatesFor(comparison, 'baseline'),
-        'comparison baseline output',
+        'comparison baseline output', baselineGeometry,
       ),
       validateCapturePackage(
         currentOutput, comparisonCandidatesFor(comparison, 'current'),
@@ -1464,12 +1609,25 @@ export async function runVisualLabBaseline(options, dependencies = {}) {
       ]);
       const baseline = normalizeVisualLabBaseline(baselineInput);
       const currentCandidates = normalizeCompleteBatch(batch);
+      const baselineCaptureProvenance = await readOptionalBaselineCaptureProvenance(
+        baselineRoot, baseline,
+      );
+      const baselineGeometry = baselineCaptureProvenance === null
+        ? null : geometryMapFromProvenance(baselineCaptureProvenance);
+      const currentGeometry = await validateSourceCaptureGeometry(
+        resultRoot, currentCandidates, 'promotion source',
+      );
       await Promise.all([
-        validateCapturePackage(baselineRoot, baseline.candidates, 'accepted baseline'),
-        validateCapturePackage(resultRoot, currentCandidates, 'batch'),
+        validateCapturePackage(
+          baselineRoot, baseline.candidates, 'accepted baseline', baselineGeometry,
+        ),
+        validateCapturePackage(resultRoot, currentCandidates, 'batch', currentGeometry),
       ]);
       const expectedComparison = compareVisualLabBaseline(baseline, batch);
-      const comparison = await validateComparisonPackage(comparisonRoot, expectedComparison);
+      const comparison = await validateComparisonPackage(comparisonRoot, expectedComparison, {
+        baselineGeometry,
+        currentGeometry,
+      });
       const proposal = promoteVisualLabBaseline(
         baseline, batch, comparison, options.candidates,
       );
@@ -1482,12 +1640,33 @@ export async function runVisualLabBaseline(options, dependencies = {}) {
       const promotedCandidates = currentCandidates.filter(
         ({ candidate }) => promoted.has(candidate),
       );
+      const promotedGeometry = new Map();
+      for (const { candidate } of proposal.baseline.candidates) {
+        if (promoted.has(candidate)) {
+          promotedGeometry.set(candidate, currentGeometry.get(candidate));
+          continue;
+        }
+        const retainedGeometry = baselineGeometry?.get(candidate);
+        if (retainedGeometry === undefined) {
+          throw new TypeError(
+            `cannot retain ${candidate} without accepted baseline capture provenance`,
+          );
+        }
+        promotedGeometry.set(candidate, retainedGeometry);
+      }
+      const promotedCaptureProvenance = createVisualLabBaselineCaptureProvenance(
+        proposal.baseline, promotedGeometry,
+      );
       await copyCaptures(baselineRoot, outputDirectory, retainedCandidates);
       await copyCaptures(resultRoot, outputDirectory, promotedCandidates);
       await validateCapturePackage(
         outputDirectory, proposal.baseline.candidates, 'promoted baseline output',
+        promotedGeometry,
       );
       const promotionPath = path.join(outputDirectory, 'promotion.json');
+      const provenancePath = path.join(
+        outputDirectory, VISUAL_LAB_BASELINE_CAPTURE_PROVENANCE_FILE,
+      );
       const indexPath = path.join(outputDirectory, 'index.json');
       const publishFile = dependencies.publishFile ?? writeAtomic;
       // The decision record precedes the content manifest. An interrupted write
@@ -1496,13 +1675,18 @@ export async function runVisualLabBaseline(options, dependencies = {}) {
       await publishFile(
         promotionPath, `${JSON.stringify(proposal.promotion, null, 2)}\n`,
       );
+      await publishFile(
+        provenancePath, `${JSON.stringify(promotedCaptureProvenance, null, 2)}\n`,
+      );
       await publishFile(indexPath, `${JSON.stringify(proposal.baseline, null, 2)}\n`);
       return {
         mode: 'promote',
         ...proposal,
+        baselineCaptureProvenance: promotedCaptureProvenance,
         changed: proposal.baseline.id !== baseline.id,
         outputDirectory,
         promotionPath,
+        provenancePath,
         indexPath,
       };
     };

@@ -1,0 +1,114 @@
+{
+  "schema": "anifor.visual-lab.accepted-baseline-capture-provenance/v1",
+  "id": "sha256:0a7dfe433b4b878c67812e116513c0647affff53c97a7e7905505d271af067f8",
+  "baseline": {
+    "schema": "anifor.visual-lab.accepted-baseline/v1",
+    "id": "sha256:b78ac28395d454a13889b2124fa4364119463756407877ab801608a783eba1aa"
+  },
+  "candidates": [
+    {
+      "candidate": "gas-showcase",
+      "resultId": "sha256:35e00c2192df2655dcd1169307e38a9b734acc051e265704f2e06c3f1cd9d536",
+      "captureGeometry": {
+        "schema": "anifor.visual-capture.geometry/v1",
+        "profile": "hermetic-918x576-v1",
+        "viewport": {
+          "width": 1280,
+          "height": 600,
+          "devicePixelRatio": 1,
+          "visualScale": 1,
+          "scrollX": 0,
+          "scrollY": 0
+        },
+        "canvas": {
+          "layoutMarker": "hermetic-918x576-v1",
+          "left": 181,
+          "top": 12,
+          "width": 918,
+          "height": 576,
+          "clipScale": 1,
+          "backingWidth": 1224,
+          "backingHeight": 768
+        }
+      }
+    },
+    {
+      "candidate": "oxygen-showcase",
+      "resultId": "sha256:6b4a4d08de7989e63364702f9d08fe183d27e548cae9c255a08580de1c9e8e2a",
+      "captureGeometry": {
+        "schema": "anifor.visual-capture.geometry/v1",
+        "profile": "hermetic-918x576-v1",
+        "viewport": {
+          "width": 1280,
+          "height": 600,
+          "devicePixelRatio": 1,
+          "visualScale": 1,
+          "scrollX": 0,
+          "scrollY": 0
+        },
+        "canvas": {
+          "layoutMarker": "hermetic-918x576-v1",
+          "left": 181,
+          "top": 12,
+          "width": 918,
+          "height": 576,
+          "clipScale": 1,
+          "backingWidth": 1224,
+          "backingHeight": 768
+        }
+      }
+    },
+    {
+      "candidate": "oil-motion",
+      "resultId": "sha256:1d5483cab30cf903d36cc158af8029c05120f80b8336b06844e77267dcf04bb5",
+      "captureGeometry": {
+        "schema": "anifor.visual-capture.geometry/v1",
+        "profile": "hermetic-918x576-v1",
+        "viewport": {
+          "width": 1280,
+          "height": 600,
+          "devicePixelRatio": 1,
+          "visualScale": 1,
+          "scrollX": 0,
+          "scrollY": 0
+        },
+        "canvas": {
+          "layoutMarker": "hermetic-918x576-v1",
+          "left": 181,
+          "top": 12,
+          "width": 918,
+          "height": 576,
+          "clipScale": 1,
+          "backingWidth": 1224,
+          "backingHeight": 768
+        }
+      }
+    },
+    {
+      "candidate": "water-motion",
+      "resultId": "sha256:2eb311dab81abef9fb1d035a0794a11f5028aafa4f8fe12a484bf583610ecd5a",
+      "captureGeometry": {
+        "schema": "anifor.visual-capture.geometry/v1",
+        "profile": "hermetic-918x576-v1",
+        "viewport": {
+          "width": 1280,
+          "height": 600,
+          "devicePixelRatio": 1,
+          "visualScale": 1,
+          "scrollX": 0,
+          "scrollY": 0
+        },
+        "canvas": {
+          "layoutMarker": "hermetic-918x576-v1",
+          "left": 181,
+          "top": 12,
+          "width": 918,
+          "height": 576,
+          "clipScale": 1,
+          "backingWidth": 1224,
+          "backingHeight": 768
+        }
+      }
+    }
+  ]
+}

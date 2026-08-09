@@ -326,6 +326,7 @@ jobs:
             --require-complete=1
             --require-recipe-set=1
             --require-browser-host-plan=1
+            --require-baseline-capture-provenance=1
             --require-capture-geometry=1
             --require-execution-tuning-plan=1
           )

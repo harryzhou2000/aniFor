@@ -14,7 +14,8 @@ const HELP = `Usage:
     [--recipe-set-source=<checked-recipe-set>] \\
     [--require-complete=0|1] [--require-recipe-set=0|1] \
     [--require-browser-host-plan=0|1] [--require-execution-tuning-plan=0|1] \
-    [--require-origin-attestation=0|1] [--require-capture-geometry=0|1]
+    [--require-origin-attestation=0|1] [--require-capture-geometry=0|1] \
+    [--require-baseline-capture-provenance=0|1]
 
 The verifier is read-only. It reconstructs the batch from reports and PNGs,
 checks the deterministic contact sheet and optional recipe-set sidecar, and can
@@ -22,6 +23,7 @@ also apply the promotion-grade accepted-baseline comparison validation. When a
 baseline is supplied, comparison-root defaults to <batch-root>/comparison.`;
 
 const BOOLEAN_OPTIONS = new Set([
+  'require-baseline-capture-provenance',
   'require-browser-host-plan', 'require-execution-tuning-plan',
   'require-capture-geometry', 'require-complete', 'require-origin-attestation',
   'require-recipe-set',
@@ -70,6 +72,9 @@ export function parseVisualLabVerifyArguments(argv) {
     comparisonRoot: baselineRoot === undefined
       ? undefined : values.get('comparison-root') ?? path.join(batchRoot, 'comparison'),
     recipeSetSourcePath: values.get('recipe-set-source'),
+    requireBaselineCaptureProvenance: parseBoolean(
+      values, 'require-baseline-capture-provenance', false,
+    ),
     requireBrowserHostPlan: parseBoolean(values, 'require-browser-host-plan', false),
     requireExecutionTuningPlan: parseBoolean(
       values, 'require-execution-tuning-plan', false,
@@ -95,6 +100,7 @@ export async function runVisualLabPackageVerification(options, dependencies = {}
   }
   const allowed = new Set([
     'batchRoot', 'baselineRoot', 'comparisonRoot', 'recipeSetSourcePath',
+    'requireBaselineCaptureProvenance',
     'requireBrowserHostPlan', 'requireExecutionTuningPlan',
     'requireCaptureGeometry', 'requireComplete', 'requireOriginAttestation', 'requireRecipeSet',
   ]);
@@ -127,6 +133,7 @@ export async function runVisualLabPackageVerification(options, dependencies = {}
     baselineRoot: options.baselineRoot,
     resultRoot: options.batchRoot,
     comparisonRoot: options.comparisonRoot,
+    requireBaselineCaptureProvenance: options.requireBaselineCaptureProvenance ?? false,
   });
 
   return deepFreeze({
@@ -161,6 +168,11 @@ export async function runVisualLabPackageVerification(options, dependencies = {}
       schema: batch.recipeSet.schema,
       id: batch.recipeSet.id,
       name: batch.recipeSet.name,
+    },
+    baselineCaptureProvenance: comparison?.baselineCaptureProvenance == null ? null : {
+      schema: comparison.baselineCaptureProvenance.schema,
+      id: comparison.baselineCaptureProvenance.id,
+      baseline: comparison.baselineCaptureProvenance.baseline,
     },
     comparison: comparison === null ? null : {
       schema: comparison.comparison.schema,

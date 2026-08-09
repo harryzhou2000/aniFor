@@ -40,6 +40,14 @@ const batchEvidence = {
 };
 
 const comparisonEvidence = {
+  baselineCaptureProvenance: {
+    schema: 'anifor.visual-lab.accepted-baseline-capture-provenance/v1',
+    id: `sha256:${'6'.repeat(64)}`,
+    baseline: {
+      schema: 'anifor.visual-lab.accepted-baseline/v1',
+      id: `sha256:${'7'.repeat(64)}`,
+    },
+  },
   comparison: {
     schema: 'anifor.visual-lab.comparison/v1',
     id: `sha256:${'3'.repeat(64)}`,
@@ -64,6 +72,7 @@ describe('Visual Lab portable package verifier', () => {
       baselineRoot: undefined,
       comparisonRoot: undefined,
       recipeSetSourcePath: undefined,
+      requireBaselineCaptureProvenance: false,
       requireBrowserHostPlan: false,
       requireCaptureGeometry: false,
       requireExecutionTuningPlan: false,
@@ -78,6 +87,7 @@ describe('Visual Lab portable package verifier', () => {
       '--require-complete=0',
       '--require-recipe-set=1',
       '--require-browser-host-plan=1',
+      '--require-baseline-capture-provenance=1',
       '--require-capture-geometry=1',
       '--require-execution-tuning-plan=1',
       '--require-origin-attestation=1',
@@ -87,6 +97,7 @@ describe('Visual Lab portable package verifier', () => {
       baselineRoot: 'visual-baselines/accepted-v1',
       comparisonRoot: 'artifacts/review/comparison',
       recipeSetSourcePath: 'visual-lab/recipe-sets/release.json',
+      requireBaselineCaptureProvenance: true,
       requireBrowserHostPlan: true,
       requireCaptureGeometry: true,
       requireExecutionTuningPlan: true,
@@ -117,6 +128,7 @@ describe('Visual Lab portable package verifier', () => {
       baselineRoot: 'accepted',
       comparisonRoot: 'downloaded-review/comparison',
       recipeSetSourcePath: 'release.json',
+      requireBaselineCaptureProvenance: true,
       requireBrowserHostPlan: true,
       requireCaptureGeometry: true,
       requireExecutionTuningPlan: true,
@@ -146,6 +158,7 @@ describe('Visual Lab portable package verifier', () => {
         baselineRoot: 'accepted',
         resultRoot: 'downloaded-review',
         comparisonRoot: 'downloaded-review/comparison',
+        requireBaselineCaptureProvenance: true,
       }],
     ]);
     expect(result).toEqual({
@@ -166,6 +179,7 @@ describe('Visual Lab portable package verifier', () => {
       executionTuningPlan: batchEvidence.executionTuningPlan,
       originAttestation: null,
       captureSubphases: batchEvidence.captureSubphases,
+      baselineCaptureProvenance: comparisonEvidence.baselineCaptureProvenance,
       comparison: comparisonEvidence.comparison,
     });
     expect(Object.isFrozen(result)).toBe(true);
@@ -183,6 +197,7 @@ describe('Visual Lab portable package verifier', () => {
     expect(batchOnly.browserHostPlan).toBeNull();
     expect(batchOnly.executionTuningPlan).toBeNull();
     expect(batchOnly.originAttestation).toBeNull();
+    expect(batchOnly.baselineCaptureProvenance).toBeNull();
     expect(batchOnly.comparison).toBeNull();
   });
 
@@ -228,6 +243,7 @@ describe('Visual Lab portable package verifier', () => {
     expect(workflow).toContain('--require-complete=1');
     expect(workflow).toContain('--require-recipe-set=1');
     expect(workflow).toContain('--require-browser-host-plan=1');
+    expect(workflow).toContain('--require-baseline-capture-provenance=1');
     expect(workflow).toContain('--require-capture-geometry=1');
     expect(workflow).toContain('--require-execution-tuning-plan=1');
     expect(deployVerification).toBeGreaterThan(verify);

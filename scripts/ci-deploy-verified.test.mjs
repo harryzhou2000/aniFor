@@ -173,6 +173,7 @@ describe('deploy-verified CI workflow contract', () => {
     expect(review).toContain('--require-complete=1');
     expect(review).toContain('--require-recipe-set=1');
     expect(review).toContain('--require-browser-host-plan=1');
+    expect(review).toContain('--require-baseline-capture-provenance=1');
     expect(review).toContain('--require-capture-geometry=1');
     expect(capture).toContain('--browser-host=shared');
     expect(capture.match(/--browser-host=shared/g)).toHaveLength(1);

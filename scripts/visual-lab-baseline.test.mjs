@@ -25,6 +25,13 @@ import {
 import { resolveVisualLabCaptureRecipe } from './visual-lab-recipes.mjs';
 import { VISUAL_LAB_COMPARISON_METRICS_SCHEMA } from './visual-lab-comparison-metrics.mjs';
 import { createVisualLabResultRecord } from './visual-lab-result.mjs';
+import {
+  createVisualLabBaselineCaptureProvenance,
+  normalizeVisualLabBaselineCaptureProvenance,
+  VISUAL_LAB_BASELINE_CAPTURE_PROVENANCE_FILE,
+  VISUAL_LAB_BASELINE_CAPTURE_PROVENANCE_SCHEMA,
+} from './visual-lab-baseline-provenance.mjs';
+import { createVisualCaptureGeometryProof } from '../src/shared/visual-capture-geometry.js';
 
 const VARIANTS = Object.freeze(['off', 'a', 'b']);
 const temporaryDirectories = [];
@@ -104,27 +111,49 @@ const pngChunk = (type, data) => {
   return chunk;
 };
 
-const tinyPng = (seed) => {
+const rgbaPng = (width, height, seed) => {
   const signature = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
   const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(1, 0);
-  ihdr.writeUInt32BE(1, 4);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
   ihdr.set([8, 6, 0, 0, 0], 8);
-  const pixel = Buffer.from([0, seed[0], seed[1], seed[2], 0xFF]);
+  const row = Buffer.alloc(width * 4 + 1);
+  for (let column = 0; column < width; column++) {
+    const offset = 1 + column * 4;
+    row[offset] = seed[0];
+    row[offset + 1] = seed[1];
+    row[offset + 2] = seed[2];
+    row[offset + 3] = 0xFF;
+  }
+  const pixels = Buffer.alloc(row.byteLength * height);
+  for (let line = 0; line < height; line++) row.copy(pixels, line * row.byteLength);
   return Buffer.concat([
     signature,
     pngChunk('IHDR', ihdr),
-    pngChunk('IDAT', deflateSync(pixel)),
+    pngChunk('IDAT', deflateSync(pixels)),
     pngChunk('IEND', Buffer.alloc(0)),
   ]);
 };
 
-const captureBytes = (candidate, salt) => Object.fromEntries(
-  VARIANTS.map((variant) => [
-    variant,
-    tinyPng(createHash('sha256').update(`${candidate}:${salt}:${variant}`).digest()),
-  ]),
-);
+const tinyPng = (seed) => rgbaPng(1, 1, seed);
+
+const captureByteCache = new Map();
+
+const captureBytes = (candidate, salt) => {
+  const key = `${candidate}:${salt}`;
+  let captures = captureByteCache.get(key);
+  if (captures === undefined) {
+    captures = Object.fromEntries(VARIANTS.map((variant) => [
+      variant,
+      rgbaPng(
+        918, 576,
+        createHash('sha256').update(`${candidate}:${salt}:${variant}`).digest(),
+      ),
+    ]));
+    captureByteCache.set(key, captures);
+  }
+  return captures;
+};
 
 const resultFor = (candidate, salt) => {
   const captures = captureBytes(candidate, salt);
@@ -175,13 +204,28 @@ const baselineWithCandidates = (schema, candidates) => {
 
 const writeBatchPackage = async (root, candidate, salt = 'stable') => {
   const batch = batchFor(candidate, salt);
-  const { captures } = resultFor(candidate, salt);
+  const { captures, result } = resultFor(candidate, salt);
   const candidateRoot = path.join(root, 'candidates', candidate);
   await mkdir(candidateRoot, { recursive: true });
   await writeFile(path.join(root, 'index.json'), `${JSON.stringify(batch)}\n`);
   for (const variant of VARIANTS) {
     await writeFile(path.join(candidateRoot, `${variant}.png`), captures[variant]);
   }
+  const geometry = createVisualCaptureGeometryProof(result.request.renderScale);
+  await writeFile(path.join(candidateRoot, 'report.json'), `${JSON.stringify({
+    result,
+    ...result.request,
+    backingSize: `${geometry.canvas.backingWidth}x${geometry.canvas.backingHeight}`,
+    captureGeometry: geometry,
+    captures: Object.fromEntries(VARIANTS.map((variant) => [variant, {
+      sha256: result.captureSha256[variant],
+      width: geometry.canvas.width,
+      height: geometry.canvas.height,
+      cssWidth: geometry.canvas.width,
+      cssHeight: geometry.canvas.height,
+      clipScale: geometry.canvas.clipScale,
+    }])),
+  })}\n`);
   return batch;
 };
 
@@ -196,6 +240,22 @@ const writeBatchPackageForCandidates = async (root, entries) => {
     await Promise.all(VARIANTS.map((variant) => (
       writeFile(path.join(candidateRoot, `${variant}.png`), captures[variant])
     )));
+    const result = batch.candidates.find((entry) => entry.candidate === candidate).result;
+    const geometry = createVisualCaptureGeometryProof(result.request.renderScale);
+    await writeFile(path.join(candidateRoot, 'report.json'), `${JSON.stringify({
+      result,
+      ...result.request,
+      backingSize: `${geometry.canvas.backingWidth}x${geometry.canvas.backingHeight}`,
+      captureGeometry: geometry,
+      captures: Object.fromEntries(VARIANTS.map((variant) => [variant, {
+        sha256: result.captureSha256[variant],
+        width: geometry.canvas.width,
+        height: geometry.canvas.height,
+        cssWidth: geometry.canvas.width,
+        cssHeight: geometry.canvas.height,
+        clipScale: geometry.canvas.clipScale,
+      }])),
+    })}\n`);
   }
   return batch;
 };
@@ -242,6 +302,54 @@ describe('Visual Lab accepted baseline packages', () => {
       candidate: 'gas-showcase', result: staleResult,
     }]);
     expect(() => normalizeVisualLabBaseline(stale)).toThrow('does not match its recipe');
+  });
+
+  it('content-addresses exact canonical capture provenance without rotating baseline v1', () => {
+    const baseline = createVisualLabBaseline(batchForCandidates([
+      { candidate: 'gas-showcase', salt: 'accepted' },
+      { candidate: 'water-motion', salt: 'accepted' },
+    ]));
+    const geometry = new Map(baseline.candidates.map(({ candidate, result }) => [
+      candidate, createVisualCaptureGeometryProof(result.request.renderScale),
+    ]));
+    const provenance = createVisualLabBaselineCaptureProvenance(baseline, geometry);
+    const repeated = createVisualLabBaselineCaptureProvenance(baseline, geometry);
+
+    expect(provenance).toStrictEqual(repeated);
+    expect(provenance).toMatchObject({
+      schema: VISUAL_LAB_BASELINE_CAPTURE_PROVENANCE_SCHEMA,
+      baseline: { schema: baseline.schema, id: baseline.id },
+      candidates: baseline.candidates.map(({ candidate, result }) => ({
+        candidate,
+        resultId: result.id,
+      })),
+    });
+    expect(Object.isFrozen(provenance)).toBe(true);
+    expect(Object.isFrozen(provenance.candidates[0].captureGeometry)).toBe(true);
+    expect(normalizeVisualLabBaselineCaptureProvenance(
+      JSON.parse(JSON.stringify(provenance)), baseline,
+    )).toStrictEqual(provenance);
+    expect(baseline.schema).toBe('anifor.visual-lab.accepted-baseline/v1');
+
+    const reordered = JSON.parse(JSON.stringify(provenance));
+    reordered.candidates.reverse();
+    expect(() => normalizeVisualLabBaselineCaptureProvenance(reordered, baseline))
+      .toThrow('does not match its accepted baseline');
+
+    const tamperedGeometry = JSON.parse(JSON.stringify(provenance));
+    tamperedGeometry.candidates[0].captureGeometry.canvas.left++;
+    expect(() => normalizeVisualLabBaselineCaptureProvenance(tamperedGeometry, baseline))
+      .toThrow('does not match the canonical proof');
+
+    const tamperedResult = JSON.parse(JSON.stringify(provenance));
+    tamperedResult.candidates[0].resultId = `sha256:${'0'.repeat(64)}`;
+    expect(() => normalizeVisualLabBaselineCaptureProvenance(tamperedResult, baseline))
+      .toThrow('does not match its accepted baseline');
+
+    const missing = JSON.parse(JSON.stringify(provenance));
+    missing.candidates.pop();
+    expect(() => normalizeVisualLabBaselineCaptureProvenance(missing, baseline))
+      .toThrow('does not match baseline candidates');
   });
 
   it('reports byte-identical captures and reviewable differences without treating review as failure', () => {
@@ -295,7 +403,7 @@ describe('Visual Lab accepted baseline packages', () => {
     });
     expect(compared.metrics.candidates[0].variants.a.metric).toMatchObject({
       kind: 'rgba-delta',
-      comparedPixels: 1,
+      comparedPixels: 918 * 576,
     });
     expect(Object.isFrozen(compared.metrics)).toBe(true);
     await assertPortableRefs(comparisonRoot, await readFile(compared.html, 'utf8'));
@@ -332,6 +440,121 @@ describe('Visual Lab accepted baseline packages', () => {
       resultRoot: `${currentRoot}/../current`,
       comparisonRoot,
     })).rejects.toThrow('canonical without dot segments');
+  });
+
+  it('requires canonical source-report geometry for acceptance and promotion', async () => {
+    const root = await temporaryDirectory();
+    const missingRoot = path.join(root, 'missing-report');
+    const tamperedRoot = path.join(root, 'tampered-report');
+    const acceptedSource = path.join(root, 'accepted-source');
+    const baselineRoot = path.join(root, 'baseline');
+    const currentRoot = path.join(root, 'current');
+    const comparisonRoot = path.join(root, 'comparison');
+    const candidate = 'gas-showcase';
+
+    await writeBatchPackage(missingRoot, candidate, 'missing');
+    await unlink(path.join(missingRoot, 'candidates', candidate, 'report.json'));
+    await expect(runVisualLabBaseline({
+      mode: 'accept', batchRoot: missingRoot, outputDir: path.join(root, 'missing-output'),
+    })).rejects.toThrow('required to prove canonical capture geometry');
+
+    await writeBatchPackage(tamperedRoot, candidate, 'tampered');
+    const tamperedReportPath = path.join(
+      tamperedRoot, 'candidates', candidate, 'report.json',
+    );
+    const tamperedReport = JSON.parse(await readFile(tamperedReportPath, 'utf8'));
+    tamperedReport.captureGeometry.canvas.left++;
+    await writeFile(tamperedReportPath, `${JSON.stringify(tamperedReport)}\n`);
+    await expect(runVisualLabBaseline({
+      mode: 'accept', batchRoot: tamperedRoot, outputDir: path.join(root, 'tampered-output'),
+    })).rejects.toThrow('does not contain canonical captureGeometry');
+
+    await writeBatchPackage(acceptedSource, candidate, 'accepted');
+    await writeBatchPackage(currentRoot, candidate, 'changed');
+    const accepted = await runVisualLabBaseline({
+      mode: 'accept', batchRoot: acceptedSource, outputDir: baselineRoot,
+    });
+    expect(JSON.parse(await readFile(
+      path.join(baselineRoot, VISUAL_LAB_BASELINE_CAPTURE_PROVENANCE_FILE), 'utf8',
+    ))).toStrictEqual(accepted.baselineCaptureProvenance);
+    await runVisualLabBaseline({
+      mode: 'compare', baselineRoot, resultRoot: currentRoot, outputDir: comparisonRoot,
+    });
+    await unlink(path.join(currentRoot, 'candidates', candidate, 'report.json'));
+    await expect(runVisualLabBaseline({
+      mode: 'promote', baselineRoot, resultRoot: currentRoot, comparisonRoot,
+      candidates: [candidate], outputDir: path.join(root, 'promotion'),
+    })).rejects.toThrow('required to prove canonical capture geometry');
+  });
+
+  it('keeps legacy provenance omission optional and fails closed when explicitly required', async () => {
+    const root = await temporaryDirectory();
+    const sourceRoot = path.join(root, 'source');
+    const baselineRoot = path.join(root, 'baseline');
+    const currentRoot = path.join(root, 'current');
+    const comparisonRoot = path.join(root, 'comparison');
+    await writeBatchPackage(sourceRoot, 'gas-showcase', 'accepted');
+    await writeBatchPackage(currentRoot, 'gas-showcase', 'accepted');
+    await runVisualLabBaseline({ mode: 'accept', batchRoot: sourceRoot, outputDir: baselineRoot });
+    await runVisualLabBaseline({
+      mode: 'compare', baselineRoot, resultRoot: currentRoot, outputDir: comparisonRoot,
+    });
+
+    const provenancePath = path.join(
+      baselineRoot, VISUAL_LAB_BASELINE_CAPTURE_PROVENANCE_FILE,
+    );
+    const provenanceSource = await readFile(provenancePath);
+    await unlink(provenancePath);
+    await expect(verifyVisualLabComparisonPackage({
+      baselineRoot, resultRoot: currentRoot, comparisonRoot,
+    })).resolves.toMatchObject({ baselineCaptureProvenance: null });
+    await expect(verifyVisualLabComparisonPackage({
+      baselineRoot, resultRoot: currentRoot, comparisonRoot,
+      requireBaselineCaptureProvenance: true,
+    })).rejects.toThrow('missing required capture-provenance.json');
+
+    const reordered = JSON.parse(provenanceSource.toString('utf8'));
+    reordered.candidates.push({ ...reordered.candidates[0], candidate: 'water-motion' });
+    await writeFile(provenancePath, `${JSON.stringify(reordered)}\n`);
+    await expect(verifyVisualLabComparisonPackage({
+      baselineRoot, resultRoot: currentRoot, comparisonRoot,
+    })).rejects.toThrow('does not match baseline candidates');
+  });
+
+  it('bootstraps legacy baselines only through a fully geometry-proven promotion', async () => {
+    const root = await temporaryDirectory();
+    const sourceRoot = path.join(root, 'source');
+    const baselineRoot = path.join(root, 'baseline');
+    const currentRoot = path.join(root, 'current');
+    const comparisonRoot = path.join(root, 'comparison');
+    const entries = [
+      { candidate: 'gas-showcase', salt: 'accepted' },
+      { candidate: 'water-motion', salt: 'accepted' },
+    ];
+    await writeBatchPackageForCandidates(sourceRoot, entries);
+    await writeBatchPackageForCandidates(currentRoot, entries.map((entry) => ({
+      ...entry, salt: 'current',
+    })));
+    await runVisualLabBaseline({ mode: 'accept', batchRoot: sourceRoot, outputDir: baselineRoot });
+    await unlink(path.join(baselineRoot, VISUAL_LAB_BASELINE_CAPTURE_PROVENANCE_FILE));
+    await runVisualLabBaseline({
+      mode: 'compare', baselineRoot, resultRoot: currentRoot, outputDir: comparisonRoot,
+    });
+
+    await expect(runVisualLabBaseline({
+      mode: 'promote', baselineRoot, resultRoot: currentRoot, comparisonRoot,
+      candidates: ['gas-showcase'], outputDir: path.join(root, 'partial'),
+    })).rejects.toThrow('cannot retain water-motion without accepted baseline capture provenance');
+
+    const promoted = await runVisualLabBaseline({
+      mode: 'promote', baselineRoot, resultRoot: currentRoot, comparisonRoot,
+      candidates: ['gas-showcase', 'water-motion'], outputDir: path.join(root, 'complete'),
+    });
+    expect(promoted.baselineCaptureProvenance.candidates.map(({ candidate }) => candidate))
+      .toEqual(['gas-showcase', 'water-motion']);
+    expect(normalizeVisualLabBaselineCaptureProvenance(
+      promoted.baselineCaptureProvenance, promoted.baseline,
+    )).toStrictEqual(promoted.baselineCaptureProvenance);
   });
 
   it('renders a deterministic portable review brief that queues decisions ahead of identical captures', async () => {
@@ -924,6 +1147,14 @@ describe('Visual Lab accepted baseline packages', () => {
       .resolves.toEqual(captureBytes('water-motion', 'changed').off);
     expect(JSON.parse(await readFile(path.join(promotionRoot, 'promotion.json'), 'utf8')))
       .toEqual(promoted.promotion);
+    expect(JSON.parse(await readFile(
+      path.join(promotionRoot, VISUAL_LAB_BASELINE_CAPTURE_PROVENANCE_FILE), 'utf8',
+    ))).toEqual(promoted.baselineCaptureProvenance);
+    expect(promoted.baselineCaptureProvenance.candidates.map(({ candidate, resultId }) => ({
+      candidate, resultId,
+    }))).toEqual(promoted.baseline.candidates.map(({ candidate, result }) => ({
+      candidate, resultId: result.id,
+    })));
     expect(JSON.parse(await readFile(path.join(promotionRoot, 'index.json'), 'utf8')))
       .toEqual(promoted.baseline);
 
