@@ -29,7 +29,7 @@ import {
   buildVisualLabCaptureUrl, buildVisualLabStartupExpression,
   resolveVisualLabDomain, resolveVisualLabFixture,
   VISUAL_LAB_CAPTURE_PROTOCOL,
-  visualLabDomainNames, visualLabFixtureNames,
+  visualLabDomainNames, visualLabFixtureNames, visualLabFixturePreparationLabel,
 } from './visual-lab-fixtures.mjs';
 import {
   resolveVisualLabCaptureRecipe, visualLabCaptureRecipeNames,
@@ -314,7 +314,7 @@ async function main() {
       && startupSelection.fixturePrepared === true
       && startupSelection.scene === options.fixtureAdapter.scene
       && startupSelection.preparation
-        === (options.fixtureAdapter.preparation?.method ?? 'scene'),
+        === visualLabFixturePreparationLabel(options.fixtureAdapter),
     `Visual Lab selector was not staged during bounded Canvas startup: ${JSON.stringify(startupSelection)}`);
     await waitForPage(cdp, options, 2);
 
@@ -394,7 +394,7 @@ async function main() {
       target: options.target,
       fixture: options.fixture,
       fixtureScene: options.fixtureAdapter.scene,
-      fixturePreparation: options.fixtureAdapter.preparation?.method ?? 'scene',
+      fixturePreparation: visualLabFixturePreparationLabel(options.fixtureAdapter),
       targetKind: options.domainAdapter.targetKind,
       domainCapability: {
         targetKind: options.domainAdapter.targetKind,

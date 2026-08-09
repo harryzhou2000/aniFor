@@ -22,6 +22,7 @@ import {
   resolveVisualLabDomain,
   resolveVisualLabFixture,
   VISUAL_LAB_CAPTURE_PROTOCOL,
+  visualLabFixturePreparationLabel,
 } from './visual-lab-fixtures.mjs';
 import { resolveVisualLabCaptureRecipe } from './visual-lab-recipes.mjs';
 import { createVisualLabRecipeSet } from './visual-lab-recipe-set.mjs';
@@ -225,7 +226,7 @@ const writeValidCapture = async (directory, candidate, options = {}) => {
   }
   const result = createVisualLabResultRecord(candidate, requestFor(candidate), hashes);
   const backingSize = `${612 * recipe.renderScale}x${384 * recipe.renderScale}`;
-  const fixturePreparation = fixture.preparation?.method ?? 'scene';
+  const fixturePreparation = visualLabFixturePreparationLabel(fixture);
   const report = {
     tool: 'visual-lab-audit-v1',
     result,

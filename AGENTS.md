@@ -10,10 +10,28 @@ contact-sheet index. Renderer and capture descriptors share exact domain,
 target, Detail/fallback, evidence, URL, backend/pipeline, and resource-budget
 semantics. The opt-in CI review/deploy gate, accepted-baseline comparison, and
 candidate-scoped comparison-bound promotion are complete. Portable recipe sets
-are deployed. The current checkpoint is the portable consumer boundary: one
-read-only verifier must reconstruct a downloaded batch, its optional recipe-set
-sidecar, and its accepted-baseline comparison from stable bytes, and CI must run
-it against the exact same-run artifact it uploaded rather than the workspace.
+are deployed. The portable consumer boundary is also complete: the shared
+read-only verifier reconstructs a downloaded batch, its optional recipe-set
+sidecar, and its accepted-baseline comparison from stable bytes, and CI runs it
+against the exact same-run artifact it uploaded rather than the workspace. That
+checkpoint is deployed at revision `76e82301f9824126814653a400a10895f675e81a`
+by workflow run `31292298196`; the fresh downloaded release package verified
+all four candidates, 36 PNG copies, comparison, recipe set, and 19-resource
+closure before Pages deployment.
+
+The active checkpoint is the typed fixture-preparation boundary. A prepared
+Visual Lab fixture crosses CDP as one stable fixture ID and calls exactly one
+`prepareVisualLabFixture(id)` browser API. The app owns a closed typed registry
+that binds each ID to its concrete builder and arguments; never execute a
+catalog-supplied method string, argument array, reflective lookup, or `.apply`.
+Keep specialized audit preparers for their standalone still/reversed gates, but
+future Visual Lab fixtures must add a registry entry and declarative adapter,
+not another browser-API method, Game wrapper, or harness branch. Existing v1
+reports keep the historical Oil/Water preparation labels so downloaded packages
+remain verifiable; those labels are diagnostics only and must not regain
+execution authority. After this bridge is hosted, prefer an additive
+deterministic review brief generated from validated batch/comparison records,
+outside every frozen v1 identity, before migrating another visual leaf.
 Do not widen the frozen result, batch, baseline, or comparison v1 schemas. A normal A/B idea
 should touch one domain module plus one catalog entry—not presenter setup, HDR
 lifecycle, app boot, package-script duplication, workflow duplication, or CDP
@@ -27,11 +45,12 @@ motion is an accepted E08 baseline and uses the moving-Oil fixture with liquid
 target `8`; E65 Water surface motion is an accepted E08 baseline and uses the
 retained moving-Water fixture with liquid target `2`. Their legacy resolvers,
 uniforms, queries, datasets, and bespoke verifier paths are removed. E65 is also
-deployed. `main_codex` and Pages serve recipe-set framework revision
-`294f8e09226c39fc09b56c8270c9b8a6a3edfc59` after release-set gated workflow
-run `31290360459`: all four named recipes and comparisons passed in canonical
-order, deployment ran only afterward, the downloaded 36-PNG artifact validated,
-and both hosted and independent checks closed all 19 runtime resources.
+deployed. `main_codex` and Pages currently serve portable-verifier framework
+revision `76e82301f9824126814653a400a10895f675e81a` after release-set gated
+workflow run `31292298196`: all four named recipes and comparisons passed in
+canonical order, deployment ran only afterward, the freshly downloaded 36-PNG
+artifact validated, and both hosted and independent checks closed all 19
+runtime resources.
 
 `anifor.visual-lab.accepted-baseline/v1` contains only
 catalog-ordered candidate names and their existing content-addressed result

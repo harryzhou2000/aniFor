@@ -53,6 +53,7 @@ import {
 import {
   OIL_MOTION_VFX_AUDIT, prepareOilMotionVfxFixture,
 } from './oil-motion-vfx-audit';
+import { prepareVisualLabFixture } from './visual-lab-fixture-preparation';
 import {
   WATER_CURVATURE_VFX_AUDIT, prepareWaterCurvatureVfxFixture,
 } from './water-curvature-vfx-audit';
@@ -905,6 +906,12 @@ export class Game {
         // E69 consumes the same packed semantic velocity bytes as E08/E65.
         this.renderer.synchronizeFixtureMaterialPlane();
         this.renderer.invalidateDynamicPresentation();
+      },
+      prepareVisualLabFixture: (fixture) => {
+        prepareVisualLabFixture(this.simulation, fixture);
+        // The registry owns all fixture arguments. Reconcile the authored
+        // material plane once; this also invalidates retained dynamic fields.
+        this.renderer.synchronizeFixtureMaterialPlane();
       },
       waterCurvatureVfxFixture: () => WATER_CURVATURE_VFX_AUDIT,
       prepareWaterCurvatureVfxFixture: (mode) => {

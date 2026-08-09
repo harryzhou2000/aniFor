@@ -116,6 +116,7 @@ import type { AcidBodyVfxAuditSnapshot } from './acid-body-vfx-audit';
 import type { SootyPowderBodyVfxAuditSnapshot } from './sooty-powder-body-vfx-audit';
 import type { LiquidSolidMeniscusVfxAuditSnapshot } from './liquid-solid-meniscus-vfx-audit';
 import type { WetSedimentVfxAuditSnapshot } from './wet-sediment-vfx-audit';
+import type { VisualLabPreparedFixtureId } from './visual-lab-fixture-preparation';
 import type {
   MaterialCandidateSurveyAuditSnapshot, MaterialShowcaseAuditSnapshot,
 } from '../renderer/render-lab-scene';
@@ -285,6 +286,8 @@ export interface BrowserInputAuditApi {
   /** E69 varies only exact-owner velocity over one topology-frozen Oil atlas. */
   oilMotionVfxFixture(): OilMotionVfxAuditSnapshot;
   prepareOilMotionVfxFixture(mode: OilMotionVfxFixtureMode): void;
+  /** Generic, closed preparation boundary used by every authored Visual Lab fixture. */
+  prepareVisualLabFixture(fixture: VisualLabPreparedFixtureId): void;
   /** E66 uses the same exact material topology in still/moving forms. */
   waterCurvatureVfxFixture(): WaterCurvatureVfxAuditSnapshot;
   prepareWaterCurvatureVfxFixture(mode: WaterCurvatureVfxFixtureMode): void;

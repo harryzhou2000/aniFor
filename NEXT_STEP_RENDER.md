@@ -10,11 +10,23 @@ them without domain branches. The opt-in CI review/deploy gate and versioned
 accepted-baseline/result layer are complete. Portable recipe-set reuse is
 deployed: local and hosted experiment cohorts are named, self-describing,
 content-addressed, catalog-drift detecting, and reproducible without widening
-the frozen result, batch, baseline, or comparison v1 records. The active
-checkpoint is the portable consumer boundary: one read-only verifier must prove
-a downloaded batch, its optional recipe-set sidecar, and its accepted-baseline
-comparison from bytes alone, and CI must run that verifier against the exact
-same-run artifact it uploaded rather than the mutable workspace. A normal-scale
+the frozen result, batch, baseline, or comparison v1 records. The portable
+consumer boundary is deployed at revision
+`76e82301f9824126814653a400a10895f675e81a` by workflow run `31292298196`: one
+shared read-only verifier proved the fresh same-run downloaded release artifact,
+its recipe-set sidecar, accepted-baseline comparison, 36 PNG copies, and all 19
+runtime resources without another browser or build.
+
+The active checkpoint is a typed generic fixture-preparation boundary. The CDP
+startup transaction may pass one stable fixture ID only; one fixed browser API
+dispatches through an app-owned closed registry that owns concrete builders and
+arguments. Keep historical Oil/Water preparation strings solely as v1 report
+labels so already-downloaded packages remain verifiable. Adding a prepared
+fixture must not require another `BrowserInputAuditApi` method, Game wrapper,
+reflective method lookup, free-form argument array, or harness branch. Once this
+bridge is hosted, the next framework-first increment is an additive deterministic
+review brief derived from already-validated batch/comparison records and kept
+outside every frozen identity. A normal-scale
 A/B experiment should touch one domain module and one catalog
 entry—not presenter setup, app lifecycle, package/workflow duplication, or CDP
 branching.
@@ -24,11 +36,11 @@ declarative fixture startup, and production-bundle off/A/B route already form
 the base. E62 Oxygen, E69 Oil motion, and E65 Water motion have been folded into
 their accepted parent baselines and their one-off selector/telemetry/verifier
 plumbing removed. The batch/index, CI review, promotion, and recipe-set framework
-checkpoints are complete and deployed. `main_codex` and Pages serve recipe-set
-revision `294f8e09226c39fc09b56c8270c9b8a6a3edfc59` after gated workflow run
-`31290360459`: the named four-recipe release set, comparison, deploy, live
-revision, and 19-resource closure all passed, and the downloaded artifact's 36
-PNG copies were independently validated. The accepted visual manifest remains
+checkpoints are complete and deployed. `main_codex` and Pages serve portable-
+verifier revision `76e82301f9824126814653a400a10895f675e81a` after gated workflow
+run `31292298196`: the named four-recipe release set, comparison, fresh artifact
+download and verification, deploy, live revision, 36 PNG copies, and 19-resource
+closure all passed. The accepted visual manifest remains
 `sha256:b95e09ecb1df93c2b9ae718d205159b17dc56379723f2d1ad904458e16c5653c`.
 
 That deployed checkpoint adds a separate
@@ -3665,12 +3677,13 @@ named recipes, content-addressed results, deterministic batch index, and static
 contact sheet are complete and deployed at revision
 `e06d11398a37dcf1558411a350af631452c4953e` by workflow run `31283340387`.
 Operational CI review, accepted-baseline comparison, candidate-scoped promotion,
-recipe sets, and gated deployment are now complete. The current milestone is a
-single reusable portable verifier plus a same-run upload/download CI round trip,
-so the downloadable review object proves itself without a workspace-only check
-or another browser/build. After that proof, prioritize a typed generic fixture
-preparation bridge, then an optional additive review brief; neither may widen
-the frozen v1 records. Defer E66 and Powder until
+recipe sets, gated deployment, and the shared portable verifier's same-run
+upload/download proof are now complete. The current milestone is the typed
+generic fixture-preparation bridge: one closed app registry owns preparation
+arguments and one browser method receives the stable fixture ID. Historical
+preparation strings remain diagnostic compatibility labels only. After that
+bridge is hosted, prioritize an optional additive review brief; neither change
+may widen the frozen v1 records. Defer E66 and Powder until
 their extra samples or source-stage stability proof fit the existing budgeted
 facade without creating a second experiment framework.
 
@@ -3820,10 +3833,12 @@ named-fixture catalogs; `scripts/visual-lab-recipes.mjs` adds validated named
 requests without duplicating capability metadata; and
 `scripts/visual-lab-result.mjs` gives every capture a canonical content identity.
 The catalogs derive CLI validation/help, fixed URL flags, report target kinds,
-field-alpha readers, bootstrap scenes, and optional app-method/argument
-preparation. The serialized startup transaction observes
+field-alpha readers, bootstrap scenes, and whether a typed app-owned fixture
+preparation is required. The serialized startup transaction observes
 the mounted scene and Canvas `webgl-starting` state before any mutation, then
-prepares and stages variant B synchronously; missing or throwing preparers return
+calls the one `prepareVisualLabFixture(id)` bridge and stages variant B
+synchronously; it never reflects through an adapter method name or forwards a
+free-form argument array. Missing or throwing preparers return
 immediate structured failures rather than consuming the 60-second readiness
 budget. The focused Visual Lab tooling suite covers capability/fixture
 catalogs, recipe validation, result identities, startup ordering, fail-fast CLI
@@ -3841,10 +3856,13 @@ proposal plus a separate decision identity without auto-promoting or mutating
 version control. The separately versioned recipe-set input and normalized
 sidecar are deployed at `294f8e09226c39fc09b56c8270c9b8a6a3edfc59` by run
 `31290360459`, so recurring cohorts no longer depend on copied CLI strings or
-workflow dispatch history. The active extension is the read-only portable
-batch/comparison verifier and exact same-run artifact round trip described
-above. Defer a bounded PNG decoder and RGB metrics to v2, and extend the shared
-verifier rather than cloning it or the workflow. Defer E66 and
+workflow dispatch history. The read-only portable batch/comparison verifier and
+exact same-run artifact round trip are deployed at
+`76e82301f9824126814653a400a10895f675e81a` by run `31292298196`. The active
+extension is the typed fixture-preparation bridge described above, followed by
+an additive deterministic review brief. Defer a bounded PNG decoder and RGB
+metrics to v2, and extend the shared verifier rather than cloning it or the
+workflow. Defer E66 and
 Powder until the fixed HDR
 seam can receive their stability/body proof without a second experiment
 framework.

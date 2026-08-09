@@ -23,6 +23,7 @@ import {
   resolveVisualLabDomain,
   resolveVisualLabFixture,
   VISUAL_LAB_CAPTURE_PROTOCOL,
+  visualLabFixturePreparationLabel,
 } from './visual-lab-fixtures.mjs';
 import { createVisualLabResultRecord } from './visual-lab-result.mjs';
 import {
@@ -516,7 +517,7 @@ const assertCurrentCaptureContract = (report, recipe, hashes) => {
   const request = requestForRecipe(recipe);
   const domain = resolveVisualLabDomain(recipe.domain);
   const fixture = resolveVisualLabFixture(recipe.fixture, recipe.domain, recipe.target);
-  const expectedPreparation = fixture.preparation?.method ?? 'scene';
+  const expectedPreparation = visualLabFixturePreparationLabel(fixture);
   const expectedBacking = `${WORLD_WIDTH * recipe.renderScale}x${WORLD_HEIGHT * recipe.renderScale}`;
   const expectedCapability = {
     targetKind: domain.targetKind,

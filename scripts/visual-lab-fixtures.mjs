@@ -68,9 +68,8 @@ const freezeConstraint = (domain, targets = anyTarget) => Object.freeze({
   targets: targets === anyTarget ? anyTarget : Object.freeze([...targets]),
 });
 
-const freezePreparation = (method, args = []) => Object.freeze({
-  method,
-  args: Object.freeze([...args]),
+const freezePreparation = (reportLabel = 'prepareVisualLabFixture') => Object.freeze({
+  reportLabel,
 });
 
 const freezeAdapter = ({
@@ -171,14 +170,14 @@ export const VISUAL_LAB_FIXTURE_ADAPTERS = Object.freeze([
     name: 'oil-motion',
     scene: 'showcase',
     constraints: [freezeConstraint('liquid', [8])],
-    preparation: freezePreparation('prepareOilMotionVfxFixture', ['moving']),
+    preparation: freezePreparation('prepareOilMotionVfxFixture'),
     requirement: '--domain=liquid --target=8',
   }),
   freezeAdapter({
     name: 'water-motion',
     scene: 'showcase',
     constraints: [freezeConstraint('liquid', [2])],
-    preparation: freezePreparation('prepareLiquidMotionVfxFixture', ['moving']),
+    preparation: freezePreparation('prepareLiquidMotionVfxFixture'),
     requirement: '--domain=liquid --target=2',
   }),
 ]);
@@ -197,6 +196,14 @@ export function visualLabFixtureNames() {
 
 export function visualLabDomainNames() {
   return VISUAL_LAB_DOMAIN_ADAPTERS.map(({ name }) => name);
+}
+
+/**
+ * Stable v1 report label. Existing portable packages retain the specialized
+ * labels even though executable preparation now crosses one generic bridge.
+ */
+export function visualLabFixturePreparationLabel(adapter) {
+  return adapter.preparation?.reportLabel ?? 'scene';
 }
 
 export function resolveVisualLabDomain(name) {
@@ -233,7 +240,8 @@ export function buildVisualLabStartupExpression(adapter, variant = 2) {
   const descriptor = JSON.stringify({
     name: adapter.name,
     scene: adapter.scene,
-    preparation: adapter.preparation,
+    prepareFixture: adapter.preparation !== null,
+    preparationLabel: visualLabFixturePreparationLabel(adapter),
   });
   return `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
@@ -246,7 +254,7 @@ export function buildVisualLabStartupExpression(adapter, variant = 2) {
       requestedVariant: ${variant},
       fixture: adapter.name,
       scene: observedScene,
-      preparation: adapter.preparation?.method ?? 'scene',
+      preparation: adapter.preparationLabel,
       fixturePrepared: false,
       backendBeforeSelection: before.backend,
       backendReasonBeforeSelection: before.reason,
@@ -258,13 +266,12 @@ export function buildVisualLabStartupExpression(adapter, variant = 2) {
     if (before.backend !== 'canvas2d' || before.reason !== 'webgl-starting') {
       return { ...result, failure: 'startup-window-missed' };
     }
-    if (adapter.preparation !== null) {
-      const prepare = audit[adapter.preparation.method];
-      if (typeof prepare !== 'function') {
+    if (adapter.prepareFixture) {
+      if (typeof audit.prepareVisualLabFixture !== 'function') {
         return { ...result, failure: 'missing-preparer' };
       }
       try {
-        prepare.apply(audit, adapter.preparation.args);
+        audit.prepareVisualLabFixture(adapter.name);
       } catch (error) {
         return {
           ...result,

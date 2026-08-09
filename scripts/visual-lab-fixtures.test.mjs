@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { describe, expect, it } from 'vitest';
+import { VISUAL_LAB_PREPARED_FIXTURE_IDS } from '../src/app/visual-lab-fixture-preparation.ts';
 import { VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS } from '../src/renderer/visual-lab.ts';
 import { isDetachedProcessGroupAlive } from './detached-process.mjs';
 import {
@@ -21,6 +22,7 @@ import {
   VISUAL_LAB_FIXTURE_ADAPTERS,
   visualLabDomainNames,
   visualLabFixtureNames,
+  visualLabFixturePreparationLabel,
 } from './visual-lab-fixtures.mjs';
 
 const runStartupExpression = (adapter, audit, scene = 'showcase') => Function(
@@ -165,10 +167,11 @@ describe('Visual Lab fixture adapters', () => {
     expect(adapter).toMatchObject({
       name: 'oil-motion',
       scene: 'showcase',
-      preparation: { method: 'prepareOilMotionVfxFixture', args: ['moving'] },
+      preparation: { reportLabel: 'prepareOilMotionVfxFixture' },
     });
+    expect(visualLabFixturePreparationLabel(adapter)).toBe('prepareOilMotionVfxFixture');
     expect(Object.isFrozen(adapter)).toBe(true);
-    expect(Object.isFrozen(adapter.preparation.args)).toBe(true);
+    expect(Object.isFrozen(adapter.preparation)).toBe(true);
   });
 
   it('declares Water preparation and its exact liquid target without harness branching', () => {
@@ -176,10 +179,19 @@ describe('Visual Lab fixture adapters', () => {
     expect(adapter).toMatchObject({
       name: 'water-motion',
       scene: 'showcase',
-      preparation: { method: 'prepareLiquidMotionVfxFixture', args: ['moving'] },
+      preparation: { reportLabel: 'prepareLiquidMotionVfxFixture' },
     });
+    expect(visualLabFixturePreparationLabel(adapter)).toBe('prepareLiquidMotionVfxFixture');
     expect(Object.isFrozen(adapter)).toBe(true);
-    expect(Object.isFrozen(adapter.preparation.args)).toBe(true);
+    expect(Object.isFrozen(adapter.preparation)).toBe(true);
+  });
+
+  it('keeps every prepared adapter in the closed app-owned fixture registry', () => {
+    expect(Object.isFrozen(VISUAL_LAB_PREPARED_FIXTURE_IDS)).toBe(true);
+    expect(VISUAL_LAB_FIXTURE_ADAPTERS
+      .filter(({ preparation }) => preparation !== null)
+      .map(({ name }) => name))
+      .toEqual(VISUAL_LAB_PREPARED_FIXTURE_IDS);
   });
 
   it('rejects unknown fixtures and incompatible domain/target pairs early', () => {
@@ -231,29 +243,37 @@ describe('Visual Lab fixture adapters', () => {
         calls.push('backend');
         return { backend: 'canvas2d', reason: 'webgl-starting' };
       },
-      prepareOilMotionVfxFixture: (mode) => calls.push(`prepare:${mode}`),
+      prepareVisualLabFixture: (fixture) => calls.push(`prepare:${fixture}`),
       setVisualLabVariant: (variant) => calls.push(`variant:${variant}`),
     };
     const result = runStartupExpression(
       resolveVisualLabFixture('oil-motion', 'liquid', 8), audit,
     );
-    expect(calls).toEqual(['backend', 'prepare:moving', 'variant:2']);
+    expect(calls).toEqual(['backend', 'prepare:oil-motion', 'variant:2']);
     expect(result).toMatchObject({
       fixture: 'oil-motion', scene: 'showcase', fixturePrepared: true,
+      preparation: 'prepareOilMotionVfxFixture',
       stagedBeforeWebGL: true, backendReasonBeforeSelection: 'webgl-starting',
     });
+    const expression = buildVisualLabStartupExpression(
+      resolveVisualLabFixture('oil-motion', 'liquid', 8),
+    );
+    expect(expression).toContain('audit.prepareVisualLabFixture(adapter.name)');
+    expect(expression).not.toContain('audit[');
+    expect(expression).not.toContain('.apply(');
 
     calls.length = 0;
     const waterResult = runStartupExpression(
       resolveVisualLabFixture('water-motion', 'liquid', 2), {
         backend: audit.backend,
-        prepareLiquidMotionVfxFixture: (mode) => calls.push(`prepare-water:${mode}`),
+        prepareVisualLabFixture: (fixture) => calls.push(`prepare:${fixture}`),
         setVisualLabVariant: audit.setVisualLabVariant,
       },
     );
-    expect(calls).toEqual(['backend', 'prepare-water:moving', 'variant:2']);
+    expect(calls).toEqual(['backend', 'prepare:water-motion', 'variant:2']);
     expect(waterResult).toMatchObject({
       fixture: 'water-motion', scene: 'showcase', fixturePrepared: true,
+      preparation: 'prepareLiquidMotionVfxFixture',
       stagedBeforeWebGL: true, backendReasonBeforeSelection: 'webgl-starting',
     });
   });
@@ -287,7 +307,7 @@ describe('Visual Lab fixture adapters', () => {
         throwingCalls.push('backend');
         return { backend: 'canvas2d', reason: 'webgl-starting' };
       },
-      prepareOilMotionVfxFixture: () => {
+      prepareVisualLabFixture: () => {
         throwingCalls.push('prepare');
         throw new Error('fixture rejected');
       },
