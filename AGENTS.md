@@ -8,9 +8,11 @@ executable capability profiles, named capture recipes, and content-addressed
 result records are deployed, as is the deterministic batch runner and static
 contact-sheet index. Renderer and capture descriptors share exact domain,
 target, Detail/fallback, evidence, URL, backend/pipeline, and resource-budget
-semantics. The current checkpoint is operational CI leverage: publish an
-opt-in review artifact from the already-verified `dist`, preserve incomplete
-diagnostics, and let a requested review gate deployment. A normal A/B idea
+semantics. The opt-in CI review/deploy gate is complete. The current checkpoint
+is accepted-baseline leverage: turn one complete batch into a content-only,
+content-addressed accepted package, compare later complete results without a
+new build or browser session, and publish portable accepted/current off/A/B
+evidence beside the ordinary review artifact. A normal A/B idea
 should touch one domain module plus one catalog entry—not presenter setup, HDR
 lifecycle, app boot, package-script duplication, workflow duplication, or CDP
 branching.
@@ -23,22 +25,27 @@ motion is an accepted E08 baseline and uses the moving-Oil fixture with liquid
 target `8`; E65 Water surface motion is an accepted E08 baseline and uses the
 retained moving-Water fixture with liquid target `2`. Their legacy resolvers,
 uniforms, queries, datasets, and bespoke verifier paths are removed. E65 is also
-deployed. The batch/index framework checkpoint is live: `main_codex` and Pages
-serve revision `e06d11398a37dcf1558411a350af631452c4953e` after successful
-workflow run `31283340387` and independent 19-resource live asset-closure
-verification.
+deployed. `main_codex` and Pages now serve revision
+`34c8a3db2dbcf0d497524aac15f0055984faf999` after full-catalog gated workflow
+run `31284862276`: all four recipes passed in canonical order, deployment ran
+only afterward, and both hosted and independent checks closed all 19 runtime
+resources on the first attempt.
 
-The next stable deployment checkpoint is the opt-in CI review layer, not a
-fourth leaf migration. A manual review depends on the ordinary verified build,
-downloads that run's static-site artifact, and runs selected frozen recipes in
-fresh sequential SwiftShader sessions without rebuilding WASM or Vite. It
-always uploads the local batch root—including incomplete indexes, PNGs,
-reports, stdout/stderr, and failure tombstones—and succeeds only for an exact
-complete v1 index. A requested review gates deployment; a skipped review must
-leave existing build and build+deploy controls unchanged. The contact sheet is
-a downloadable comparison artifact, never a Pages/runtime asset or aesthetic
-acceptance score. After this layer is deployed, prefer a versioned accepted-
-baseline/result comparison over more workflow or verifier clones. Defer E66
+The next stable checkpoint is the versioned accepted-baseline/result layer, not
+a fourth leaf migration. `anifor.visual-lab.accepted-baseline/v1` contains only
+catalog-ordered candidate names and their existing content-addressed result
+records; never put run IDs, revisions, timestamps, machine paths, warnings, or
+artifact ZIP identity into its hash. Acceptance and comparison must re-hash the
+local PNG bytes. A comparison copies validated accepted/current off/A/B images
+into one portable relative-path package and reports `encoded-identical` or
+`review`; a visual change is informational and must not fail or auto-promote.
+Only incomplete, missing, tampered, unsafe, or request-incompatible evidence is
+blocking. Seed provenance belongs in this guidance and CI logs: accepted-v1 is
+from revision `34c8a3d`, workflow `31284862276`, and manifest
+`sha256:b95e09ecb1df93c2b9ae718d205159b17dc56379723f2d1ad904458e16c5653c`.
+Defer RGB decoding and aesthetic thresholds until the comparison workflow has
+proved useful; thumbnails and exact variant hashes are the v1 review contract.
+Defer E66
 because its tangent reads make it resource-sensitive; migrate another accepted
 leaf only when doing so removes more special-case infrastructure than it adds.
 Same-page variant selection must remain owned across asynchronous WebGL promotion; a
@@ -1976,23 +1983,25 @@ Framework leverage remains the checkpoint priority rather than E83 material
 polish. The fixed `domain/variant/target/gain` state, domain-local shader facade,
 executable renderer/capture capability profiles, browser diagnostics, named
 recipes, content-addressed results, and off/A/B harness are complete and
-deployed. The deterministic batch/index layer is also live at revision
-`e06d11398a37dcf1558411a350af631452c4953e`. E62, E69, and E65 prove that
+deployed. The deterministic batch/index and opt-in CI review layers are live at
+revision `34c8a3db2dbcf0d497524aac15f0055984faf999`; full-catalog gated run
+`31284862276` passed review, deploy, and 19-resource verification. E62, E69, and E65 prove that
 accepted leaf treatments can be folded into parent baselines while deleting
 selector, uniform, query, telemetry, and bespoke-verifier plumbing. Do not
 reopen them merely to add more effect detail.
 
-The current checkpoint is opt-in CI publication of that batch evidence. The
-review job must consume the exact `anifortpt-static-site` artifact produced by
-its prerequisite build, force hosted SwiftShader, preserve every diagnostic
-through an `always()` artifact upload, and require `index.complete === true`.
-An empty candidate input means the full frozen catalog; an explicit comma list
-remains catalog-validated and canonically ordered. Build+deploy may proceed
-only after a requested review succeeds, while a skipped review remains
-compatible with the established controls. Keep variant zero pixel-preserving,
-the direct true-8× fragment untouched, and the generic CDP harness domain-
-branch-free. After this is stable, add accepted-baseline/result comparison at
-the batch-record layer instead of cloning workflow, renderer, or CDP paths.
+The current checkpoint is accepted-baseline/result comparison at the batch-
+record layer. Keep its manifest content-only and content-addressed, re-hash all
+accepted/current PNGs before copying, use only self-contained relative
+thumbnail paths, and publish HTML before the complete comparison JSON. Exact
+request mismatch and structural/tamper failures block; changed hashes produce
+successful `review` evidence rather than a subjective regression verdict.
+The accepted-v1 package is the complete four-candidate result from run
+`31284862276`; its manifest ID is
+`sha256:b95e09ecb1df93c2b9ae718d205159b17dc56379723f2d1ad904458e16c5653c`.
+Keep variant zero pixel-preserving, the direct true-8× fragment untouched, and
+the generic CDP harness domain-branch-free. Do not clone workflow, renderer, or
+CDP paths for this comparison layer.
 Defer E66 and Powder until their resource/stability proof fits the existing
 facade.
 

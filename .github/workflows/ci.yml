@@ -162,6 +162,14 @@ jobs:
           fi
           node scripts/visual-lab-batch.mjs "${review_args[@]}"
 
+      - name: Compare with the accepted Visual Lab baseline
+        if: steps.visual-lab-batch.outcome == 'success'
+        run: |
+          node scripts/visual-lab-baseline.mjs compare \
+            --baseline-root=visual-baselines/accepted-v1 \
+            --result-root=artifacts/visual-lab-review \
+            --output-dir=artifacts/visual-lab-review/comparison
+
       - name: Upload Visual Lab review evidence
         if: always()
         uses: actions/upload-artifact@v7
@@ -184,6 +192,13 @@ jobs:
             ));
             if (index.schema !== 'anifor.visual-lab.batch/v1' || index.complete !== true) {
               throw new Error('Visual Lab review did not publish a complete v1 batch index');
+            }
+            const comparison = JSON.parse(await readFile(
+              'artifacts/visual-lab-review/comparison/comparison.json', 'utf8',
+            ));
+            if (comparison.schema !== 'anifor.visual-lab.comparison/v1'
+              || comparison.complete !== true) {
+              throw new Error('Visual Lab review did not publish a complete v1 comparison');
             }
           "
 

@@ -1,0 +1,86 @@
+{
+  "schema": "anifor.visual-lab.accepted-baseline/v1",
+  "id": "sha256:b95e09ecb1df93c2b9ae718d205159b17dc56379723f2d1ad904458e16c5653c",
+  "candidates": [
+    {
+      "candidate": "gas-showcase",
+      "result": {
+        "schema": "anifor.visual-lab.result/v1",
+        "id": "sha256:676789ad8ac6ea20eef837448de7319b0af62dd2112deb166fbbb4f62d2429c8",
+        "candidate": "gas-showcase",
+        "request": {
+          "domain": "gas",
+          "target": 0,
+          "fixture": "showcase",
+          "gain": 1,
+          "renderScale": 2
+        },
+        "captureSha256": {
+          "off": "405369e220ef53b5a62ff1224a40c6f292d87c762ba12fac373aa160feb6ed9e",
+          "a": "8b412d0fb1cbebab2881f7b131a5ca33faf34e7a833f47b1f25359be4cf6d523",
+          "b": "99097bcd9f264697a09543efac33915b29fe466776a0b3c307200c852c105096"
+        }
+      }
+    },
+    {
+      "candidate": "oxygen-showcase",
+      "result": {
+        "schema": "anifor.visual-lab.result/v1",
+        "id": "sha256:acc4cbaaf29a7af0700494a90fe459fe0002f67d19718192215996c9eeec1f43",
+        "candidate": "oxygen-showcase",
+        "request": {
+          "domain": "gas",
+          "target": 4,
+          "fixture": "showcase",
+          "gain": 1,
+          "renderScale": 2
+        },
+        "captureSha256": {
+          "off": "405369e220ef53b5a62ff1224a40c6f292d87c762ba12fac373aa160feb6ed9e",
+          "a": "b0dafd26452e055599c8d6644b903d88c10285a6417dc60ba41d60ce65bf1928",
+          "b": "c8ee7782bd0a88a348ceacb978f824339392b63467233a69d1c0679116f910f8"
+        }
+      }
+    },
+    {
+      "candidate": "oil-motion",
+      "result": {
+        "schema": "anifor.visual-lab.result/v1",
+        "id": "sha256:e7133f6ef091bff0eaeb159ce49cd07008cf6e79c9b558dfe6e6d6b8b49a8430",
+        "candidate": "oil-motion",
+        "request": {
+          "domain": "liquid",
+          "target": 8,
+          "fixture": "oil-motion",
+          "gain": 1,
+          "renderScale": 2
+        },
+        "captureSha256": {
+          "off": "876a65e7b283477c3e13477bb7245cead661bf2128a521333e54e969aeb20776",
+          "a": "4e945c1f22f9df29794bc3b3919767f36c7d81512ec3e2f32ca6fc6afd6c0a25",
+          "b": "f38559849f86f13701dd60798773b7745575abeb78395c61bbc1ff28712662e1"
+        }
+      }
+    },
+    {
+      "candidate": "water-motion",
+      "result": {
+        "schema": "anifor.visual-lab.result/v1",
+        "id": "sha256:537723af403e676db00d915c781fb70526e73155fd61f1208612ef5ddf909ef5",
+        "candidate": "water-motion",
+        "request": {
+          "domain": "liquid",
+          "target": 2,
+          "fixture": "water-motion",
+          "gain": 1,
+          "renderScale": 2
+        },
+        "captureSha256": {
+          "off": "58e9bb3e4dbaee819e02dc856bc955d9d06c0b12501d40a7676272af36b93ab0",
+          "a": "847a95a2cf5bb9a9fafdb2dd2b2e67a08087153d97b1f003868155dd9709b42a",
+          "b": "53c87a8c5e5bd289120cfaa287e0361d755d7ddd85e00bd9a76b845160e8bcbe"
+        }
+      }
+    }
+  ]
+}

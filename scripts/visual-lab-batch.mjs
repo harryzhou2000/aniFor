@@ -530,7 +530,7 @@ const assertCurrentCaptureContract = (report, recipe, hashes) => {
   }
 };
 
-const inspectPng = (bytes, label) => {
+export const inspectVisualLabPng = (bytes, label) => {
   if (bytes.length < 57 || !bytes.subarray(0, PNG_SIGNATURE.length).equals(PNG_SIGNATURE)) {
     throw new Error(`${label} does not have a PNG signature`);
   }
@@ -726,7 +726,7 @@ const readCandidateReport = async (candidateDirectory, recipe) => {
       );
     }
     let current;
-    try { current = inspectPng(bytes, `${recipe.name} ${variant}.png`); }
+    try { current = inspectVisualLabPng(bytes, `${recipe.name} ${variant}.png`); }
     catch (error) {
       throw new CandidateArtifactError('artifact-invalid', error.message, { cause: error });
     }

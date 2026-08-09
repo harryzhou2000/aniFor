@@ -6,8 +6,9 @@ profiles, named capture recipes, content-addressed result records, deterministic
 batch runner, and static contact-sheet index are deployed. Frozen renderer and
 capture descriptors share exact domain, target, Detail/fallback, evidence, URL,
 backend/pipeline, and resource-budget semantics, and the generic runner consumes
-them without domain branches. The immediate milestone is opt-in CI review
-publication and deployment gating over the already-verified build artifact. A
+them without domain branches. The opt-in CI review/deploy gate is complete. The
+immediate milestone is a versioned accepted-baseline/result layer over the
+already-verified batch artifact. A
 normal-scale A/B experiment should touch one domain module and one catalog
 entry—not presenter setup, app lifecycle, package/workflow duplication, or CDP
 branching.
@@ -16,19 +17,25 @@ The fixed `domain/variant/target/gain` state, promotion-safe same-page switching
 declarative fixture startup, and production-bundle off/A/B route already form
 the base. E62 Oxygen, E69 Oil motion, and E65 Water motion have been folded into
 their accepted parent baselines and their one-off selector/telemetry/verifier
-plumbing removed. The batch/index framework checkpoint is complete and
-deployed: `main_codex` and Pages serve revision
-`e06d11398a37dcf1558411a350af631452c4953e` after successful workflow run
-`31283340387` and independent 19-resource live asset-closure verification.
+plumbing removed. The batch/index and CI review framework checkpoints are
+complete and deployed: `main_codex` and Pages serve revision
+`34c8a3db2dbcf0d497524aac15f0055984faf999` after full-catalog gated workflow
+run `31284862276`; all four candidates passed in canonical order before deploy,
+and hosted plus independent checks closed all 19 runtime resources on attempt
+one.
 
-The next stable deployment checkpoint is the CI review layer, not a fourth
-effect. It must consume the exact static-site artifact from its prerequisite
-build without rebuilding, run selected frozen recipes in fresh sequential
-hosted SwiftShader sessions, and always publish complete or failed evidence.
-Only an exact complete v1 index passes. When review is requested it gates
-deployment; when skipped it leaves the established build and build+deploy
-controls unchanged. The sheet aids human comparison and remains a downloadable
-artifact, not a Pages asset or visual-quality score. Canvas remains the
+The next stable checkpoint is accepted-baseline comparison, not a fourth
+effect. A complete batch may be accepted into a content-only manifest plus its
+pinned off/A/B images. Later complete batches are re-hashed and compared without
+another build or browser session, then copied beside the accepted captures into
+one portable relative-path review package. Encoded changes request human review
+but remain successful; only incomplete, missing, tampered, unsafe, or request-
+incompatible evidence blocks. Run IDs, revisions, timestamps, warnings, machine
+paths, and Actions ZIP identity remain outside the manifest hash. The accepted
+v1 source is revision `34c8a3d`, run `31284862276`, with manifest
+`sha256:b95e09ecb1df93c2b9ae718d205159b17dc56379723f2d1ad904458e16c5653c`.
+The sheet aids human comparison and remains a downloadable artifact, not a
+Pages asset or visual-quality score. Canvas remains the
 resilient semantic fallback and true 8× stays on its compact direct path unless
 a separately budgeted design proves otherwise.
 
@@ -97,11 +104,34 @@ framebuffer-alpha snapshot proof but has a 30-second per-variant settle window;
 native GPU keeps ten seconds. The selected proof run `31284382855` received
 `water-motion,gas-showcase`, published canonical gas-then-water order, passed
 both candidates, and produced a downloaded sheet whose eight relative links
-all resolve. The stable release gate is the full four-candidate catalog coupled
-to build+deploy: successful review permits Pages deployment and failed review
-blocks it while preserving diagnostics. After that checkpoint, the next
-framework work is versioned accepted-baseline/result comparison rather than
-another shader-detail ladder or verifier clone.
+all resolve. Full release run `31284862276` then passed gas, Oxygen, Oil, and
+Water in canonical order, gated deployment, and verified the exact live
+revision plus 19-resource closure. Successful review permits Pages deployment
+and failed review blocks it while preserving diagnostics.
+
+### Accepted-baseline comparison acceptance
+
+`npm run audit:visual-lab:baseline:accept -- --batch-root=<complete-batch> --output-dir=<new-package>`
+creates a new portable accepted package only from a
+complete v1 batch. Its `anifor.visual-lab.accepted-baseline/v1` manifest is
+content-only and hashes the catalog-ordered candidate/result records; the
+package carries exact pinned off/A/B images, but provenance remains outside the
+manifest identity. Both input and accepted bytes are re-hashed before use.
+
+`npm run audit:visual-lab:baseline:compare -- --baseline-root=<accepted> --result-root=<complete-batch> --output-dir=<new-comparison>`
+produces
+`anifor.visual-lab.comparison/v1`, copying verified accepted and current images
+under fixed relative paths. It publishes the static sheet first and the
+complete JSON marker last. Exact request mismatch, incomplete indexes, missing
+or changed source bytes, symlink redirection, and unsafe paths fail. Different
+valid capture hashes instead produce a successful `review` status: v1 is a
+human comparison framework, not an aesthetic threshold. The checked accepted
+package is `visual-baselines/accepted-v1`, seeded from run `31284862276` with
+manifest ID
+`sha256:b95e09ecb1df93c2b9ae718d205159b17dc56379723f2d1ad904458e16c5653c`.
+CI adds this portable comparison beneath the ordinary downloadable review
+artifact without rebuilding or launching another browser. RGB pixel metrics
+remain a possible v2 only after the hash/thumbnail workflow proves useful.
 
 ## Visual north star
 
@@ -3672,9 +3702,11 @@ alpha, support, ownership, or compact-8× branch was added.
 The migration was checkpointed as
 `c85e3cfdd1deb16dd4994a51db29929c01df76a3`; the later recipe/result framework
 checkpoint is deployed at `70d33d8383e75dfb3f071b8e405be2f910d735fa` by
-workflow run `31279274149`, and the batch/index checkpoint is deployed at
-`e06d11398a37dcf1558411a350af631452c4953e` by workflow run `31283340387`.
-Treat E65, the framework facade, and local batch aggregation as complete.
+workflow run `31279274149`; the later batch/index checkpoint was deployed at
+`e06d11398a37dcf1558411a350af631452c4953e`; and the opt-in full-catalog review
+gate is deployed at `34c8a3db2dbcf0d497524aac15f0055984faf999` by workflow
+run `31284862276`. Treat E65, the framework facade, local batch aggregation, and
+CI deployment gating as complete.
 
 The hook runs after bloom extraction. Emission experiments can reshape final
 radiance but cannot seed new bloom until a deliberately budgeted pre-extract
@@ -3694,20 +3726,16 @@ ownership, URL construction, and compatibility aliases; the detached-process
 lifecycle tests remain alongside them in `npm test`. The named Water candidate
 passes at canonical 2× with exact topology/alpha invariants, distinct off/A/B
 images, zero browser errors, and a deterministic content-addressed result.
-Immediate work is the opt-in CI review layer. A manual boolean enables it and an
-optional comma list selects candidates; empty means the full frozen catalog.
-The review job downloads the prerequisite build's `anifortpt-static-site`, runs
-the batch directly against `dist/index.html` with hosted SwiftShader, always
-uploads the batch root, and requires a complete v1 index. A requested review
-must gate build+deploy, while a skipped review must preserve both existing
-controls. The sheet remains a downloadable artifact rather than a Pages asset.
-The selected hosted proof is workflow run `31284382855`: reversed input
-`water-motion,gas-showcase` published canonical gas-then-water order, both
-candidates passed, and all relative sheet links resolved after download. The
-cold software renderer retains the same two-consecutive-snapshot proof with a
-30-second settle budget; native GPU keeps ten seconds. After a full-catalog
-deploy gate is green, prefer accepted-baseline/result comparison metadata over
-another verifier or workflow clone. Defer E66 and Powder until the fixed HDR
+Immediate work is the content-only accepted-baseline/result package. The CI
+review gate is already proven by selected run `31284382855` and full deploy run
+`31284862276`; the latter passed all four candidates and exact live asset
+closure. `visual-baselines/accepted-v1` pins that full result without hashing
+run metadata. The comparison route revalidates every source hash and emits
+portable accepted/current off/A/B cards beneath the existing downloadable
+artifact. Changed pixels remain human `review` evidence, never an automated
+aesthetic failure or baseline promotion. Defer a bounded PNG decoder and RGB
+metrics to v2, and do not add another verifier or workflow clone. Defer E66 and
+Powder until the fixed HDR
 seam can receive their stability/body proof without a second experiment
 framework.
 
