@@ -7,11 +7,11 @@ batch runner, and static contact-sheet index are deployed. Frozen renderer and
 capture descriptors share exact domain, target, Detail/fallback, evidence, URL,
 backend/pipeline, and resource-budget semantics, and the generic runner consumes
 them without domain branches. The opt-in CI review/deploy gate and versioned
-accepted-baseline/result layer are complete. The immediate milestone is safe
-candidate-scoped promotion: bind an explicit human acceptance decision to the
-exact portable comparison, overlay only named current candidates into a new
-complete baseline proposal, and preserve every unsampled accepted record and
-PNG. A
+accepted-baseline/result layer are complete. The current checkpoint implements
+portable recipe-set reuse: local and hosted experiment cohorts are named,
+self-describing, content-addressed, catalog-drift detecting, and reproducible
+without widening the frozen result, batch, baseline, or comparison v1 records.
+A
 normal-scale A/B experiment should touch one domain module and one catalog
 entry—not presenter setup, app lifecycle, package/workflow duplication, or CDP
 branching.
@@ -21,32 +21,58 @@ declarative fixture startup, and production-bundle off/A/B route already form
 the base. E62 Oxygen, E69 Oil motion, and E65 Water motion have been folded into
 their accepted parent baselines and their one-off selector/telemetry/verifier
 plumbing removed. The batch/index and CI review framework checkpoints are
-complete and deployed: `main_codex` and Pages serve accepted-baseline revision
-`a3789eaca86ce3a75f0f4f82d7d23633cba0d480` after full-catalog gated workflow
-run `31286841909`; all four candidates and comparisons passed in canonical order
-before deploy, and hosted plus independent checks closed all 19 runtime
-resources on attempt one.
-
-The next stable checkpoint is comparison-bound partial promotion, not a fourth
-effect. A complete batch may be accepted into a content-only manifest plus its
-pinned off/A/B images. Later complete batches are re-hashed and compared without
-another build or browser session, then copied beside the accepted captures into
-one portable relative-path review package. After review, a proposal command
-must require the exact comparison and an explicit candidate list, overlay only
-those current records/images, retain all unsampled accepted bytes, and publish
-a durable decision record before the new content manifest. Encoded changes
-request human review but remain successful; only incomplete, missing, tampered,
-unsafe, request-incompatible, or stale decision evidence blocks. Run IDs,
-revisions, timestamps, warnings, machine paths, and Actions ZIP identity remain
-outside the baseline manifest hash. The accepted v1 source is revision
-`34c8a3d`, run `31284862276`, with manifest
+complete and deployed. `main_codex` and Pages serve comparison-bound promotion
+revision `aff67f50c6d75d1cf8ccca5e6b2cf2bf1d0c67a7` after gated workflow run
+`31288597052`: the build, four-candidate comparison, deploy, live revision, and
+19-resource closure all passed, and an independent artifact audit validated all
+36 PNG copies. The accepted visual manifest remains
 `sha256:b95e09ecb1df93c2b9ae718d205159b17dc56379723f2d1ad904458e16c5653c`.
-The sheet aids human comparison and remains a downloadable artifact, not a
-Pages asset or visual-quality score. Promotion writes only a new disjoint
-proposal; it never replaces the checked baseline, commits, pushes, or deploys.
+
+This stable checkpoint adds a separate
+`anifor.visual-lab.recipe-set/v1` schema, not another effect and not a batch/v1
+field. A set contains a bounded safe name plus a nonempty canonical-order subset
+of complete built-in recipe descriptors; its identity hashes the reconstructed
+`{schema,name,recipes}` record. Unknown, duplicated, reordered, stale, extended,
+oversized, or ambiguous JSON fails before output mutation. The batch accepts
+either its legacy candidate list or one real recipe-set file, never both,
+publishes the normalized set as `recipe-set.json`, and still writes `index.json`
+last. Consumers must revalidate the sidecar and cross-check every full
+`{name,...result.request}` descriptor against the complete batch. Checked-in
+release, atmosphere, and liquid-motion cohorts shorten local and CI review while
+the frozen result/batch/baseline/comparison identities remain unchanged.
 Canvas remains the
 resilient semantic fallback and true 8× stays on its compact direct path unless
 a separately budgeted design proves otherwise.
+
+### Recipe-set framework acceptance
+
+Create canonical JSON on stdout, or validate a checked-in set, with:
+
+```sh
+npm run audit:visual-lab:recipe-set -- create \
+  --name=liquid-review --candidates=oil-motion,water-motion
+npm run audit:visual-lab:recipe-set -- verify \
+  --input=visual-lab/recipe-sets/liquid-motion.json
+```
+
+Run one existing production bundle from that exact cohort with:
+
+```sh
+npm run audit:visual-lab:batch:capture -- \
+  --recipe-set=visual-lab/recipe-sets/liquid-motion.json
+```
+
+`release.json`, `atmosphere.json`, and `liquid-motion.json` are ordinary tracked
+v1 data, not executable custom recipes. Every full descriptor must still equal
+the in-code catalog entry resolved by its name, so the set cannot bypass domain,
+fixture, target, Detail, or resource constraints. The loader reads one bounded
+regular file, rejects noncanonical dot-segment paths, leaf and ancestor
+symlinks, or replacement, and publishes only its normalized identified
+snapshot. Default and legacy `--candidates`
+runs synthesize deterministic `full-catalog` or `ad-hoc` sets so every new batch
+is self-describing; older batches without the sidecar remain valid. The sidecar
+is deliberately outside result/batch/baseline/comparison identity and is
+authoritative only after its full descriptors are cross-checked with the batch.
 
 ### Batch framework acceptance
 
@@ -54,6 +80,11 @@ a separately budgeted design proves otherwise.
 runs every frozen recipe in catalog order. To reuse the current bundle, run:
 
 `npm run audit:visual-lab:batch:capture -- --candidates=gas-showcase,water-motion`
+
+The equivalent reusable checked cohort is selected with
+`--recipe-set=visual-lab/recipe-sets/<name>.json`; the two selection flags are
+mutually exclusive. Every run publishes the normalized selection as
+`recipe-set.json` before the contact sheet and final batch marker.
 
 Each candidate gets a fresh browser and an isolated
 `candidates/<name>/` directory containing off/A/B PNGs, `report.json`, and
@@ -97,16 +128,20 @@ high-value material treatment.
 
 ### CI review acceptance
 
-Manual dispatch exposes `visual_lab_review` and optional
-`visual_lab_candidates`. Empty candidates mean the complete frozen catalog;
-explicit comma-separated names remain catalog-validated and are emitted in
-canonical order. The review job depends on `build`, downloads that run's
+Manual dispatch exposes `visual_lab_review`, optional `visual_lab_candidates`,
+and optional `visual_lab_recipe_set`. The latter must name a tracked file under
+`visual-lab/recipe-sets/` and is mutually exclusive with candidates. Empty
+selection inputs mean the complete frozen catalog; explicit comma-separated
+names remain catalog-validated and are emitted in canonical order. The review
+job depends on `build`, downloads that run's
 `anifortpt-static-site` into `dist`, and invokes `visual-lab-batch.mjs` directly
 with `--gpu=swiftshader`. It performs no second WASM or Vite build. Its evidence
 artifact is named by the exact commit and uploads under `always()`, including an
 incomplete index, contact sheet, PNGs, reports, stdout/stderr, and failure
 tombstones. A final independent check requires the v1 schema and
-`complete: true`.
+`complete: true`, reloads an explicitly requested source set, requires exact
+identity with the published sidecar, and cross-checks every full recipe against
+the completed result requests.
 
 Hosted software readback retains the exact two-consecutive semantic, field, and
 framebuffer-alpha snapshot proof but has a 30-second per-variant settle window;
@@ -3759,11 +3794,15 @@ images, zero browser errors, and a deterministic content-addressed result.
 The CI review and accepted-baseline route are proven by full deploy run
 `31286841909`; all four candidates compared encoded-identical before exact live
 asset closure. `visual-baselines/accepted-v1` pins the accepted result without
-hashing run metadata. Candidate-scoped promotion now closes the manual review
-loop by validating the exact comparison and emitting a full baseline proposal
-plus a separate decision identity; it never auto-promotes or mutates version
-control. Defer a bounded PNG decoder and RGB metrics to v2, and do not add
-another verifier or workflow clone. Defer E66 and
+hashing run metadata. Candidate-scoped promotion closes the manual review loop
+and is deployed at `aff67f50c6d75d1cf8ccca5e6b2cf2bf1d0c67a7` by run
+`31288597052`; it validates the exact comparison and emits a full baseline
+proposal plus a separate decision identity without auto-promoting or mutating
+version control. The active extension is the separately versioned recipe-set
+input and normalized sidecar described above, so recurring cohorts stop being
+copied through CLI strings or workflow dispatch history. Defer a bounded PNG
+decoder and RGB metrics to v2, and do not add another verifier or workflow
+clone. Defer E66 and
 Powder until the fixed HDR
 seam can receive their stability/body proof without a second experiment
 framework.

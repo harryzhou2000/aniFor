@@ -1,0 +1,39 @@
+{
+  "schema": "anifor.visual-lab.recipe-set/v1",
+  "id": "sha256:28b2d27f44c54ba5de933addbbc1c99358428a79b2ed8da05df9c7c121fec463",
+  "name": "release",
+  "recipes": [
+    {
+      "name": "gas-showcase",
+      "domain": "gas",
+      "target": 0,
+      "fixture": "showcase",
+      "gain": 1,
+      "renderScale": 2
+    },
+    {
+      "name": "oxygen-showcase",
+      "domain": "gas",
+      "target": 4,
+      "fixture": "showcase",
+      "gain": 1,
+      "renderScale": 2
+    },
+    {
+      "name": "oil-motion",
+      "domain": "liquid",
+      "target": 8,
+      "fixture": "oil-motion",
+      "gain": 1,
+      "renderScale": 2
+    },
+    {
+      "name": "water-motion",
+      "domain": "liquid",
+      "target": 2,
+      "fixture": "water-motion",
+      "gain": 1,
+      "renderScale": 2
+    }
+  ]
+}

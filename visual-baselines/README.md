@@ -9,6 +9,32 @@ The current package was accepted from revision
 manifest ID
 `sha256:b95e09ecb1df93c2b9ae718d205159b17dc56379723f2d1ad904458e16c5653c`.
 
+## Reusable capture cohorts
+
+Checked-in `anifor.visual-lab.recipe-set/v1` files live under
+`visual-lab/recipe-sets/`. They contain a bounded name and a nonempty
+catalog-ordered subset of full built-in recipe descriptors; their SHA-256
+identity covers canonical `{schema,name,recipes}`. They select existing recipes
+only—unknown, duplicated, reordered, stale, extended, ambiguous, oversized, or
+symlinked input is rejected before a batch output is touched.
+
+```sh
+npm run audit:visual-lab:recipe-set -- verify \
+  --input=visual-lab/recipe-sets/liquid-motion.json
+
+npm run audit:visual-lab:batch:capture -- \
+  --recipe-set=visual-lab/recipe-sets/liquid-motion.json \
+  --output-dir=/path/to/new-review
+```
+
+`--recipe-set` and `--candidates` are mutually exclusive. New batches publish
+their normalized request as `recipe-set.json`; default and legacy candidate
+runs synthesize deterministic `full-catalog` and `ad-hoc` sets. The sidecar is a
+separate schema and is excluded from result, batch, accepted-baseline,
+comparison, and promotion identities, so older packages remain valid. Before
+using it as evidence, revalidate its ID and require its complete
+`{name,...request}` descriptors to match the completed batch results exactly.
+
 Compare a complete downloaded batch without rebuilding or launching Chrome:
 
 ```sh

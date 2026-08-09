@@ -21,6 +21,7 @@ import {
   VISUAL_LAB_CAPTURE_PROTOCOL,
 } from './visual-lab-fixtures.mjs';
 import { resolveVisualLabCaptureRecipe } from './visual-lab-recipes.mjs';
+import { createVisualLabRecipeSet } from './visual-lab-recipe-set.mjs';
 import { createVisualLabResultRecord } from './visual-lab-result.mjs';
 import { isDetachedProcessGroupAlive } from './detached-process.mjs';
 
@@ -528,14 +529,60 @@ describe('Visual Lab batch runner', () => {
         await writeValidCapture(call.candidateDirectory, call.recipe.name);
         return { code: 0, signal: null, timedOut: false };
       },
-      publishFile: async (file) => {
-        published.push(path.basename(file));
+      publishFile: async (file, source) => {
+        const name = path.basename(file);
+        published.push(name);
+        if (name === 'recipe-set.json') {
+          await writeFile(file, source);
+          return;
+        }
         throw new Error('synthetic contact-sheet publication failure');
       },
     })).rejects.toThrow('synthetic contact-sheet publication failure');
 
-    expect(published).toEqual(['index.html']);
+    expect(published).toEqual(['recipe-set.json', 'index.html']);
     await expect(access(indexPath)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('publishes an exact recipe-set sidecar without widening batch/v1', async () => {
+    const root = await makeTemporaryDirectory();
+    const outputDirectory = path.join(root, 'batch');
+    const candidateRoot = path.join(outputDirectory, 'candidates');
+    const recipeSet = createVisualLabRecipeSet(
+      'cross-domain-review', ['water-motion', 'gas-showcase'],
+    );
+    await writeValidCapture(path.join(candidateRoot, 'gas-showcase'), 'gas-showcase');
+    await writeValidCapture(path.join(candidateRoot, 'water-motion'), 'water-motion');
+
+    const result = await runVisualLabBatch({ recipeSet, outputDir: outputDirectory, indexOnly: true });
+
+    expect(result.ok).toBe(true);
+    expect(result.recipeSet).toStrictEqual(recipeSet);
+    expect(result.index.candidates.map(({ candidate }) => candidate)).toEqual([
+      'gas-showcase', 'water-motion',
+    ]);
+    expect(JSON.parse(await readFile(result.recipeSetPath, 'utf8'))).toEqual(recipeSet);
+    expect(Reflect.ownKeys(result.index)).toEqual([
+      'schema', 'complete', 'summary', 'candidates',
+    ]);
+    expect(JSON.stringify(result.index)).not.toMatch(/recipe.?set/i);
+
+    const sentinel = `${JSON.stringify(result.index)}\n`;
+    await writeFile(result.indexPath, sentinel);
+    const stale = JSON.parse(JSON.stringify(recipeSet));
+    stale.recipes[0].target = 4;
+    await expect(runVisualLabBatch({
+      recipeSet: stale, outputDir: outputDirectory, indexOnly: true,
+    })).rejects.toThrow('does not exactly match');
+    expect(await readFile(result.indexPath, 'utf8')).toBe(sentinel);
+
+    await expect(runVisualLabBatch({
+      recipeSet,
+      recipeSetSourcePath: path.join(outputDirectory, 'input.json'),
+      outputDir: outputDirectory,
+      indexOnly: true,
+    })).rejects.toThrow('source must be outside');
+    expect(await readFile(result.indexPath, 'utf8')).toBe(sentinel);
   });
 
   it('indexes existing reports without a runner and isolates stale or tampered artifacts', async () => {

@@ -8,13 +8,11 @@ executable capability profiles, named capture recipes, and content-addressed
 result records are deployed, as is the deterministic batch runner and static
 contact-sheet index. Renderer and capture descriptors share exact domain,
 target, Detail/fallback, evidence, URL, backend/pipeline, and resource-budget
-semantics. The opt-in CI review/deploy gate and accepted-baseline comparison are
-complete. The current checkpoint is candidate-scoped promotion leverage: after
-reviewing a selected comparison, merge only explicitly accepted current
-candidates into a new complete baseline proposal while retaining every
-unsampled accepted record and PNG. Bind that proposal to the exact comparison
-with a durable content-addressed decision record; never infer acceptance from a
-hash, metric, CI result, or visual threshold. A normal A/B idea
+semantics. The opt-in CI review/deploy gate, accepted-baseline comparison, and
+candidate-scoped comparison-bound promotion are complete. The current checkpoint
+is portable recipe-set leverage: named local and CI cohorts must be
+self-describing, content-addressed, canonical, and stale-detecting without
+widening the frozen result, batch, baseline, or comparison v1 schemas. A normal A/B idea
 should touch one domain module plus one catalog entry—not presenter setup, HDR
 lifecycle, app boot, package-script duplication, workflow duplication, or CDP
 branching.
@@ -27,11 +25,11 @@ motion is an accepted E08 baseline and uses the moving-Oil fixture with liquid
 target `8`; E65 Water surface motion is an accepted E08 baseline and uses the
 retained moving-Water fixture with liquid target `2`. Their legacy resolvers,
 uniforms, queries, datasets, and bespoke verifier paths are removed. E65 is also
-deployed. `main_codex` and Pages serve accepted-baseline framework revision
-`a3789eaca86ce3a75f0f4f82d7d23633cba0d480` after full-catalog gated workflow
-run `31286841909`: all four recipes and comparisons passed in canonical order,
-deployment ran only afterward, and both hosted and independent checks closed
-all 19 runtime resources on the first attempt.
+deployed. `main_codex` and Pages serve promotion framework revision
+`aff67f50c6d75d1cf8ccca5e6b2cf2bf1d0c67a7` after full-catalog gated workflow
+run `31288597052`: all four recipes and comparisons passed in canonical order,
+deployment ran only afterward, the downloaded 36-PNG artifact validated, and
+both hosted and independent checks closed all 19 runtime resources.
 
 `anifor.visual-lab.accepted-baseline/v1` contains only
 catalog-ordered candidate names and their existing content-addressed result
@@ -50,6 +48,20 @@ unselected bytes from the old baseline and selected bytes from the current
 batch, revalidate the full proposal, write `promotion.json` before `index.json`,
 and report no-op promotion without manufacturing a new baseline identity. It
 must never mutate the checked package, Git, CI, or deployment state.
+`anifor.visual-lab.recipe-set/v1` is a separate bounded input snapshot with
+exact fields `schema,id,name,recipes`; its identity hashes canonical
+`{schema,name,recipes}` and every complete recipe descriptor must deep-equal its
+built-in catalog entry. Reject unknown, duplicate, reordered, stale, extended,
+ambiguous, oversized, noncanonical/dot-segment, symlinked, or replaced inputs
+before batch output mutation. `--candidates` and `--recipe-set` are mutually
+exclusive. Every new
+batch publishes normalized `recipe-set.json` before `index.json`, but neither
+the sidecar nor its identity may be inserted into frozen batch/baseline records.
+Cross-check its full `{name,...result.request}` descriptors before treating it as
+authoritative; older batches without the sidecar remain valid. Manual CI may
+only consume tracked sets beneath `visual-lab/recipe-sets/`, and invalid dual
+input must fail the running review job rather than skip it because deployment
+accepts a legitimately skipped optional review.
 Defer RGB decoding and aesthetic thresholds until the comparison workflow has
 proved useful; thumbnails and exact variant hashes are the v1 review contract.
 Defer E66

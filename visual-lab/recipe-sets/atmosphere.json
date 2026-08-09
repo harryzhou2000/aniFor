@@ -1,0 +1,23 @@
+{
+  "schema": "anifor.visual-lab.recipe-set/v1",
+  "id": "sha256:6fa70067d092a16e1b8d2e77283b33bd10067ce5485ae8c79239775eb7cb1e3c",
+  "name": "atmosphere",
+  "recipes": [
+    {
+      "name": "gas-showcase",
+      "domain": "gas",
+      "target": 0,
+      "fixture": "showcase",
+      "gain": 1,
+      "renderScale": 2
+    },
+    {
+      "name": "oxygen-showcase",
+      "domain": "gas",
+      "target": 4,
+      "fixture": "showcase",
+      "gain": 1,
+      "renderScale": 2
+    }
+  ]
+}

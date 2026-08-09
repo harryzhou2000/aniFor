@@ -14,6 +14,11 @@ import {
   visualLabCaptureRecipeNames,
 } from './visual-lab-recipes.mjs';
 import {
+  createVisualLabRecipeSet,
+  normalizeVisualLabRecipeSet,
+  readVisualLabRecipeSet,
+} from './visual-lab-recipe-set.mjs';
+import {
   resolveVisualLabDomain,
   resolveVisualLabFixture,
   VISUAL_LAB_CAPTURE_PROTOCOL,
@@ -58,6 +63,7 @@ const HELP = `Usage:
 
 Options (use --name=value):
   --candidates=<name,name>               Named recipes (default: all catalog entries)
+  --recipe-set=<recipe-set.json>         Exact recipe-set/v1 (exclusive with --candidates)
   --bundle=dist/index.html               One existing production bundle for every capture
   --output-dir=/tmp/anifor-visual-lab-batch
   --chrome=/path/to/chrome               Forwarded to the generic capture runner
@@ -66,7 +72,7 @@ Options (use --name=value):
   --index-only=0|1                       Aggregate existing candidate reports without capture
   --help
 
-Outputs: index.json, index.html, and candidates/<name>/ capture artifacts.`;
+Outputs: recipe-set.json, index.json, index.html, and candidates/<name>/ capture artifacts.`;
 
 class CandidateArtifactError extends Error {
   constructor(code, message, options = {}) {
@@ -970,19 +976,23 @@ const defaultRunCandidate = async ({
   }
 };
 
-const normalizeCandidateSelection = (names) => {
-  const catalog = visualLabCaptureRecipeNames();
-  const selected = names ?? catalog;
-  if (!Array.isArray(selected) || selected.length === 0) {
-    throw new TypeError('Visual Lab batch candidates must be a non-empty array');
+const resolveBatchRecipeSet = (options) => {
+  if (options.recipeSet !== undefined && options.candidates !== undefined) {
+    throw new TypeError('Visual Lab batch recipeSet and candidates are mutually exclusive');
   }
-  const seen = new Set();
-  for (const name of selected) {
-    const recipe = resolveVisualLabCaptureRecipe(name);
-    if (seen.has(recipe.name)) throw new Error(`Duplicate --candidates entry ${recipe.name}`);
-    seen.add(recipe.name);
+  if (options.recipeSet !== undefined) return normalizeVisualLabRecipeSet(options.recipeSet);
+  if (options.candidates !== undefined) {
+    const seen = new Set();
+    for (const candidate of options.candidates) {
+      const recipe = resolveVisualLabCaptureRecipe(candidate);
+      if (seen.has(recipe.name)) throw new Error(`Duplicate --candidates entry ${recipe.name}`);
+      seen.add(recipe.name);
+    }
   }
-  return catalog.filter((name) => seen.has(name)).map(resolveVisualLabCaptureRecipe);
+  return createVisualLabRecipeSet(
+    options.candidates === undefined ? 'full-catalog' : 'ad-hoc',
+    options.candidates,
+  );
 };
 
 /**
@@ -990,13 +1000,29 @@ const normalizeCandidateSelection = (names) => {
  * and static contact sheet even when individual candidates fail.
  */
 export async function runVisualLabBatch(options = {}, dependencies = {}) {
-  const recipes = normalizeCandidateSelection(options.candidates);
+  // Resolve and validate the complete request before inspecting or mutating an
+  // output directory. A stale external set therefore cannot invalidate a
+  // previously useful batch package.
+  const recipeSet = resolveBatchRecipeSet(options);
+  const recipes = recipeSet.recipes.map(({ name }) => resolveVisualLabCaptureRecipe(name));
   const defaultOutputDirectory = path.join(
     await realpath(tmpdir()), 'anifor-visual-lab-batch',
   );
   const requestedOutputDirectory = path.resolve(
     options.outputDir ?? defaultOutputDirectory,
   );
+  if (options.recipeSetSourcePath !== undefined) {
+    if (typeof options.recipeSetSourcePath !== 'string'
+      || options.recipeSetSourcePath.length === 0) {
+      throw new TypeError('Visual Lab recipe-set source path must be a non-empty string');
+    }
+    const sourcePath = path.resolve(options.recipeSetSourcePath);
+    const relativeSource = path.relative(requestedOutputDirectory, sourcePath);
+    if (relativeSource === '' || (!relativeSource.startsWith(`..${path.sep}`)
+      && relativeSource !== '..' && !path.isAbsolute(relativeSource))) {
+      throw new Error('Visual Lab recipe-set source must be outside the batch output directory');
+    }
+  }
   const indexOnly = options.indexOnly === true;
   const bundle = path.resolve(options.bundle ?? path.join(REPOSITORY_ROOT, 'dist/index.html'));
   const gpu = options.gpu ?? 'auto';
@@ -1030,6 +1056,7 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   const candidateRoot = path.join(outputDirectory, 'candidates');
   const indexPath = path.join(outputDirectory, 'index.json');
   const contactSheetPath = path.join(outputDirectory, 'index.html');
+  const recipeSetPath = path.join(outputDirectory, 'recipe-set.json');
   const resolvedCandidateRoot = await ensureCandidateRoot(outputDirectory, candidateRoot);
   const candidateDirectories = new Map();
   const lifecycleOwners = new Map();
@@ -1050,7 +1077,8 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   // before new evidence can be aggregated. Remove only root files owned by
   // this tool; candidate logs remain available for diagnosis.
   await Promise.all([
-    indexPath, contactSheetPath, `${indexPath}.tmp`, `${contactSheetPath}.tmp`,
+    indexPath, contactSheetPath, recipeSetPath,
+    `${indexPath}.tmp`, `${contactSheetPath}.tmp`, `${recipeSetPath}.tmp`,
   ].map((file) => rm(file, { force: true })));
   const runCandidate = dependencies.runCandidate ?? defaultRunCandidate;
   const publishFile = dependencies.publishFile ?? writeAtomic;
@@ -1058,6 +1086,15 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   const command = dependencies.command ?? process.execPath;
   const cwd = path.resolve(dependencies.cwd ?? REPOSITORY_ROOT);
   const entries = [];
+
+  // This sidecar is a separate schema family; batch/v1 stays byte-compatible.
+  // Publishing it before any completion marker makes the selected cohort
+  // independently inspectable even when capture is interrupted.
+  await publishFile(recipeSetPath, `${JSON.stringify(recipeSet, null, 2)}\n`);
+  const publishedRecipeSet = await readVisualLabRecipeSet(recipeSetPath);
+  if (!isDeepStrictEqual(publishedRecipeSet, recipeSet)) {
+    throw new Error('Published Visual Lab recipe set does not match the validated request');
+  }
 
   for (const recipe of recipes) {
     if (options.signal?.aborted) throw abortError(options.signal);
@@ -1172,6 +1209,8 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
     index,
     indexPath,
     contactSheetPath,
+    recipeSet,
+    recipeSetPath,
   });
   };
   return executeLockedBatch().finally(releaseBatchLock);
@@ -1180,7 +1219,7 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
 export function parseVisualLabBatchArguments(argv) {
   if (argv.includes('--help')) return Object.freeze({ help: true });
   const known = new Set([
-    'candidates', 'bundle', 'output-dir', 'chrome', 'gpu',
+    'candidates', 'recipe-set', 'bundle', 'output-dir', 'chrome', 'gpu',
     'candidate-timeout-ms', 'index-only',
   ]);
   const values = new Map();
@@ -1202,6 +1241,9 @@ export function parseVisualLabBatchArguments(argv) {
       throw new Error('--candidates must be a comma-separated list of recipe names');
     }
   }
+  if (values.has('candidates') && values.has('recipe-set')) {
+    throw new Error('--candidates and --recipe-set are mutually exclusive');
+  }
   const indexOnlyValue = values.get('index-only') ?? '0';
   if (indexOnlyValue !== '0' && indexOnlyValue !== '1') {
     throw new Error('--index-only must be 0 or 1');
@@ -1218,7 +1260,7 @@ export function parseVisualLabBatchArguments(argv) {
       }`,
     );
   }
-  for (const name of ['bundle', 'output-dir', 'chrome']) {
+  for (const name of ['recipe-set', 'bundle', 'output-dir', 'chrome']) {
     if (values.has(name) && values.get(name).length === 0) {
       throw new Error(`--${name} must not be empty`);
     }
@@ -1227,6 +1269,7 @@ export function parseVisualLabBatchArguments(argv) {
   return Object.freeze({
     help: false,
     candidates,
+    ...(values.has('recipe-set') ? { recipeSetPath: values.get('recipe-set') } : {}),
     bundle: values.get('bundle'),
     outputDir: values.get('output-dir'),
     chrome: values.get('chrome'),
@@ -1253,11 +1296,25 @@ const main = async () => {
   process.once('SIGINT', onSigint);
   process.once('SIGTERM', onSigterm);
   try {
-    const result = await runVisualLabBatch({ ...options, signal: controller.signal });
+    const recipeSet = options.recipeSetPath === undefined
+      ? undefined : await readVisualLabRecipeSet(options.recipeSetPath);
+    const { recipeSetPath: _recipeSetPath, ...batchOptions } = options;
+    const result = await runVisualLabBatch({
+      ...batchOptions,
+      ...(recipeSet === undefined ? {} : {
+        recipeSet,
+        recipeSetSourcePath: path.resolve(options.recipeSetPath),
+      }),
+      signal: controller.signal,
+    });
     process.stdout.write(`${JSON.stringify({
       tool: 'visual-lab-batch-v1',
       ok: result.ok,
       summary: result.index.summary,
+      recipeSet: {
+        id: result.recipeSet.id,
+        path: result.recipeSetPath,
+      },
       index: result.indexPath,
       contactSheet: result.contactSheetPath,
     })}\n`);

@@ -1,0 +1,23 @@
+{
+  "schema": "anifor.visual-lab.recipe-set/v1",
+  "id": "sha256:7fd140a5fef7cb4e692d8db08e35b3bb3da7835451a92289ba2941efe7fab380",
+  "name": "liquid-motion",
+  "recipes": [
+    {
+      "name": "oil-motion",
+      "domain": "liquid",
+      "target": 8,
+      "fixture": "oil-motion",
+      "gain": 1,
+      "renderScale": 2
+    },
+    {
+      "name": "water-motion",
+      "domain": "liquid",
+      "target": 2,
+      "fixture": "water-motion",
+      "gain": 1,
+      "renderScale": 2
+    }
+  ]
+}
