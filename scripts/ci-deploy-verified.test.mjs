@@ -185,8 +185,42 @@ describe('deploy-verified CI workflow contract', () => {
     expect(live.match(/tail -c 65536/g)).toHaveLength(2);
     expect(live).toContain('tee "${DIAGNOSTIC_DIR}/batch.log"');
     expect(live).toContain('tee "${DIAGNOSTIC_DIR}/verify.log"');
+    const portableVerification = live.indexOf(
+      'node scripts/visual-lab-verify.mjs', functionalSmoke,
+    );
+    expect(portableVerification).toBeGreaterThan(functionalSmoke);
+    const evidence = namedStep(live, 'Generate deployed Visual Lab smoke evidence');
+    const evidenceUpload = namedStep(live, 'Upload deployed Visual Lab smoke evidence');
+    const evidenceGeneration = live.indexOf(evidence);
+    const evidencePublication = live.indexOf(evidenceUpload);
+    expect(evidenceGeneration).toBeGreaterThan(portableVerification);
+    expect(evidencePublication).toBeGreaterThan(evidenceGeneration);
+    expect(evidence).toContain(
+      'SMOKE_DIR: ${{ runner.temp }}/anifortpt-live-visual-lab-smoke',
+    );
+    expect(evidence).toContain(
+      'EVIDENCE_DIR: ${{ runner.temp }}/anifortpt-live-visual-lab-evidence',
+    );
+    expect(evidence).toContain('node scripts/live-visual-lab-smoke-evidence.mjs');
+    expect(evidence).toContain('--batch-root="${SMOKE_DIR}"');
+    expect(evidence).toContain('--expected-revision="${GITHUB_SHA}"');
+    expect(evidence).toContain('--browser-version="$(google-chrome --product-version)"');
+    expect(evidence).toContain('> "${EVIDENCE_DIR}/evidence.json"');
+    expect(evidence).toContain('test "$(wc -c < "${EVIDENCE_DIR}/evidence.json")" -le 16384');
+    expect(evidenceUpload).toContain('if: success()');
+    expect(evidenceUpload).toContain('uses: actions/upload-artifact@v7');
+    expect(evidenceUpload).toContain(
+      'name: anifortpt-live-visual-lab-evidence-${{ github.run_attempt }}',
+    );
+    expect(evidenceUpload).toContain(
+      'path: ${{ runner.temp }}/anifortpt-live-visual-lab-evidence/evidence.json',
+    );
+    expect(evidenceUpload).toContain('if-no-files-found: error');
+    expect(evidenceUpload).toContain('retention-days: 7');
+    expect(evidenceUpload).not.toContain('anifortpt-live-visual-lab-smoke');
+    expect(evidenceUpload).not.toContain('anifortpt-live-visual-lab-diagnostics');
     const failureUpload = live.indexOf('Upload deployed Visual Lab failure diagnostics');
-    expect(failureUpload).toBeGreaterThan(functionalSmoke);
+    expect(failureUpload).toBeGreaterThan(evidencePublication);
     expect(live.slice(failureUpload)).toContain('if: failure()');
     expect(live.slice(failureUpload)).toContain('actions/upload-artifact@v7');
     expect(live.slice(failureUpload)).toContain(

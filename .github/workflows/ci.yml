@@ -406,6 +406,28 @@ jobs:
             --require-origin-attestation=1 \
             2>&1 | tail -c 65536 | tee "${DIAGNOSTIC_DIR}/verify.log"
 
+      - name: Generate deployed Visual Lab smoke evidence
+        env:
+          SMOKE_DIR: ${{ runner.temp }}/anifortpt-live-visual-lab-smoke
+          EVIDENCE_DIR: ${{ runner.temp }}/anifortpt-live-visual-lab-evidence
+        run: |
+          mkdir -p "${EVIDENCE_DIR}"
+          node scripts/live-visual-lab-smoke-evidence.mjs \
+            --batch-root="${SMOKE_DIR}" \
+            --expected-revision="${GITHUB_SHA}" \
+            --browser-version="$(google-chrome --product-version)" \
+            > "${EVIDENCE_DIR}/evidence.json"
+          test "$(wc -c < "${EVIDENCE_DIR}/evidence.json")" -le 16384
+
+      - name: Upload deployed Visual Lab smoke evidence
+        if: success()
+        uses: actions/upload-artifact@v7
+        with:
+          name: anifortpt-live-visual-lab-evidence-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/anifortpt-live-visual-lab-evidence/evidence.json
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Upload deployed Visual Lab failure diagnostics
         if: failure()
         uses: actions/upload-artifact@v7

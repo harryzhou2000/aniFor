@@ -182,6 +182,19 @@ a dedicated failure-only diagnostic artifact; it never uploads the raw capture
 package, child stdout/stderr logs, or PNG tree. Shell `pipefail` keeps the batch
 or verifier exit status authoritative through the bounded-log pipeline.
 
+### Success evidence manifest
+
+The post-deploy workflow produces one success-only evidence manifest capped at
+16 KiB. It is a diagnostic record outside result, batch,
+baseline, comparison, recipe-set, execution, tuning, host, and static-contract
+identities. Its allowed fields are the existing result record, deployed
+revision and resource count, Chrome product/version, capture/host/tuning plan
+IDs, backend/HDR/backing-size state, invariant and semantic/field/framebuffer
+signatures, and per-variant hash/byte/dimension/dataset summaries. It excludes
+raw packages, PNGs, paths, URLs, logs, timings, and receipt tickets. Successful
+raw smoke output remains runner-local; the separate failure-only artifact still
+contains only the bounded tails described above.
+
 The real-browser audit first captures and signature-checks this deterministic
 atlas, then clears it and exercises painting, wheel/pan, resizing, and mobile
 touch. It navigates separately to the native backend for configured-source and

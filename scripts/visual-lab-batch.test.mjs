@@ -1326,11 +1326,30 @@ describe('Visual Lab batch runner', () => {
     });
     expect(captured.index.candidates[0].result)
       .toEqual(expectedResult);
-    await expect(verifyVisualLabBatchPackage({
+    const verified = await verifyVisualLabBatchPackage({
       batchRoot: outputDirectory,
       requireExecutionTuningPlan: true,
       requireComplete: true,
-    })).resolves.toMatchObject({ executionTuningPlan: captured.executionTuningPlan });
+    });
+    expect(verified.executionTuningPlan).toEqual(captured.executionTuningPlan);
+    expect(verified.captureDiagnostics).toHaveLength(1);
+    const captureDiagnostic = verified.captureDiagnostics[0];
+    expect(captureDiagnostic).toMatchObject({
+      candidate: 'gas-showcase',
+      result: expectedResult,
+      render: {
+        backend: 'webgl', hdrPipeline: 'active', backingSize: '1224x768',
+      },
+      captures: {
+        off: { sha256: expectedResult.captureSha256.off },
+        a: { sha256: expectedResult.captureSha256.a },
+        b: { sha256: expectedResult.captureSha256.b },
+      },
+    });
+    const captureDiagnosticJson = JSON.stringify(captureDiagnostic);
+    expect(captureDiagnosticJson).not.toMatch(
+      /unrelated\/absolute\/machine\/path|timings|ticket|submission|report\.json/,
+    );
 
     const reportPath = path.join(
       outputDirectory, 'candidates', 'gas-showcase', 'report.json',

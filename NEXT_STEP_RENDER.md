@@ -115,7 +115,7 @@ Active priority order:
    was built and deployed by workflow run `31328873048`; the build and exact
    19-resource live closure passed, while both post-deploy attempts exposed a
    load-sensitive receipt timeout rather than an asset or visual mismatch.
-8. Finish the loaded-runner hardening before adding another visual experiment.
+8. Treat loaded-runner hardening as deployed framework infrastructure.
    Chrome-for-Testing 150 reproduced the hosted Water result and all three PNG
    hashes normally, then reproduced the CI failure when constrained to one CPU:
    the old normal-scale 10-second promotion interval retired an otherwise valid
@@ -128,7 +128,28 @@ Active priority order:
    passes all three receipts, strict renderer/target/host teardown, the portable
    verifier, the unchanged result ID
    `sha256:b107a9841f693139043fd2705eb658c6c3ff8a50f403032a3d79217cd92ea9fd`,
-   and leaves no Chrome residue. Deploy this as the next framework checkpoint.
+   and leaves no Chrome residue. Revision
+   `a59203aeb27c47f1e72fdaf9d58eec8a75a68b1a` deployed this checkpoint in
+   workflow run `31330495036`: 1,746 tests passed, ccache restored 269/270
+   compilation hits, and the 19-resource closure plus hosted receipt-v2 Water
+   batch and portable verifier passed. That CI run reported a transient Water
+   result outlier (`sha256:6b6aa589f6fe9b2ea9fa8857aebbf5f6d2752c76ddd895b32a0aa4d029a16ca4`),
+   but two independent live captures of the attested deployed revision
+   reproduced `b107a984…` and all three established PNG hashes. The successful
+   CI smoke did not retain its report/PNGs, so classify that historical result
+   as an unresolved encoded-output review item, not a visual regression or a
+   new accepted baseline.
+
+9. The next milestone is reusable capture/deploy evidence, not another isolated
+   visual treatment. The current source adds one success-only evidence manifest
+   of at most 16 KiB outside every frozen identity. It summarizes the existing
+   result record, deployed revision/resource count, Chrome product/version,
+   capture/host/tuning plan IDs, backend/HDR/backing-size state, invariant and
+   semantic/field/framebuffer signatures, and per-variant hash/byte/dimension/
+   dataset summaries. It excludes raw packages, PNGs, paths, URLs, logs,
+   timings, and receipt tickets. Successful raw smoke output remains
+   runner-local; failure tails remain bounded. Hosted publication and inspection
+   remain the acceptance gate for this framework checkpoint.
 
 Continue improving the registration and evidence loop before spending the
 milestone on isolated shader detail. Visual preference may later accept a

@@ -27,6 +27,32 @@ the normal 10-second promotion interval even though the renderer and deployed
 assets were healthy. Keep the resulting framework distinction explicit:
 promotion readiness and completed-frame audit retirement are different clocks.
 
+The loaded-runner receipt hardening is deployed at revision
+`a59203aeb27c47f1e72fdaf9d58eec8a75a68b1a` by workflow run `31330495036`:
+1,746 tests passed, ccache restored 269/270 compilation hits, and the exact
+19-resource closure plus hosted receipt-v2 Water batch and portable verifier
+passed. That CI smoke reported Water result
+`sha256:6b6aa589f6fe9b2ea9fa8857aebbf5f6d2752c76ddd895b32a0aa4d029a16ca4`,
+whereas two independent live captures of the attested revision reproduced
+`sha256:b107a9841f693139043fd2705eb658c6c3ff8a50f403032a3d79217cd92ea9fd`
+and all three established PNG hashes. Treat the CI value as a reviewable,
+transient encoded-output outlier: no retained successful CI report/PNGs prove
+which variant changed, and it is neither a new baseline nor evidence of a
+source/origin mismatch.
+
+The next framework increment is a success-only evidence manifest, capped at
+16 KiB and deliberately outside result, batch, baseline, comparison, recipe-set,
+execution, tuning, host, and static-contract identities. It may contain only
+the existing result record; revision/resource count; Chrome product/version;
+capture/host/tuning plan IDs; backend/HDR/backing-size state; invariant plus
+semantic/field/framebuffer signatures; and per-variant hash/byte/dimension/
+dataset summaries. It must not contain raw package bytes, PNGs, paths, URLs,
+logs, timings, or receipt tickets. Successful smoke material remains
+runner-local and failure tails remain bounded. The current source implements
+this evidence-manifest stage; hosted publication and inspection are its
+acceptance gate. Do not exchange this reusable capture/deploy observability
+work for another isolated shader detail.
+
 The typed fixture-preparation boundary is also complete and deployed at revision
 `83894aa6fe98fc5a537cd4c23c9b2400dc37081f` by release-set workflow run
 `31293472696`. A prepared

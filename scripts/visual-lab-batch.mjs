@@ -506,6 +506,82 @@ const deepFreeze = (value) => {
   return Object.freeze(value);
 };
 
+const verifiedUnsignedInteger = (value, label, maximum = Number.MAX_SAFE_INTEGER) => {
+  if (!Number.isSafeInteger(value) || value < 0 || value > maximum) {
+    throw new TypeError(`${label} must be a bounded unsigned integer`);
+  }
+  return value;
+};
+
+const verifiedSemanticDiagnostic = (semantic) => Object.freeze({
+  hash: verifiedUnsignedInteger(semantic?.hash, 'semantic.hash', 0xffff_ffff),
+  occupied: verifiedUnsignedInteger(semantic?.occupied, 'semantic.occupied', WORLD_WIDTH * WORLD_HEIGHT),
+  countHash: verifiedUnsignedInteger(semantic?.countHash, 'semantic.countHash', 0xffff_ffff),
+});
+
+const verifiedAlphaDiagnostic = (alpha, label) => Object.freeze({
+  hash: verifiedUnsignedInteger(alpha?.hash, `${label}.hash`, 0xffff_ffff),
+  supportHash: verifiedUnsignedInteger(alpha?.supportHash, `${label}.supportHash`, 0xffff_ffff),
+  alphaSum: verifiedUnsignedInteger(alpha?.alphaSum, `${label}.alphaSum`),
+  nonzero: verifiedUnsignedInteger(alpha?.nonzero, `${label}.nonzero`),
+});
+
+/**
+ * Projects only bounded, path-free diagnostics from an already validated
+ * report. This record is runtime evidence and never enters batch/result IDs.
+ */
+const createVerifiedCaptureDiagnostic = (
+  recipe, report, result, executionProof, executionTuningProof, executionPlan,
+) => deepFreeze({
+  candidate: recipe.name,
+  result,
+  execution: {
+    captureEntryId: executionProof.entryId,
+    gpu: executionProof.gpu,
+    executionTuning: executionTuningProof,
+  },
+  render: {
+    backend: report.backend,
+    hdrPipeline: report.hdrPipeline,
+    backingSize: report.backingSize,
+  },
+  invariants: {
+    semantic: true,
+    fieldAlpha: true,
+    framebufferAlpha: true,
+  },
+  // Older portable packages legitimately predate these report signatures.
+  // Preserve their verifier contract while projecting every signature that a
+  // newer capture supplies; consumers such as the live receipt-v2 manifest
+  // remain free to require the complete set.
+  ...(report.semantic === undefined ? {} : {
+    semantic: verifiedSemanticDiagnostic(report.semantic),
+  }),
+  ...(report.fieldAlpha === undefined ? {} : {
+    fieldAlpha: verifiedAlphaDiagnostic(report.fieldAlpha, 'fieldAlpha'),
+  }),
+  ...(report.framebufferAlpha === undefined ? {} : {
+    framebufferAlpha: verifiedAlphaDiagnostic(report.framebufferAlpha, 'framebufferAlpha'),
+  }),
+  captures: Object.fromEntries(VARIANTS.map((variant, index) => {
+    const capture = report.captures[variant];
+    const receipt = capture.completedFrameReceipt;
+    return [variant, {
+      sha256: result.captureSha256[variant],
+      bytes: capture.bytes,
+      width: capture.width,
+      height: capture.height,
+      cssWidth: capture.cssWidth,
+      cssHeight: capture.cssHeight,
+      clipScale: capture.clipScale,
+      selection: executionPlan.compiled.variants[index].expectedDataset,
+      ...(receipt === undefined ? {} : {
+        completedFrameReceipt: { schema: receipt.schema, state: receipt.state },
+      }),
+    }];
+  })),
+});
+
 const normalizeResult = (recipe, result) => {
   let expected;
   try {
@@ -859,6 +935,8 @@ const readCandidateReport = async (candidateDirectory, recipe, {
   let captureSubphases = null;
   let executionProof;
   let executionTuningProof = null;
+  let captureExecutionPlan;
+  let captureDiagnostic;
   try {
     if (report?.tool !== 'visual-lab-audit-v1') throw new Error('unexpected report tool');
     const hashes = Object.fromEntries(VARIANTS.map((variant) => [
@@ -904,6 +982,7 @@ const readCandidateReport = async (candidateDirectory, recipe, {
       baseUrl: reportBaseUrl,
       gpu: report.gpu,
     }).entries[0];
+    captureExecutionPlan = resolvedExecutionPlan;
     assertCurrentCaptureContract(report, resolvedExecutionPlan, hashes);
     executionProof = Object.freeze({
       entryId: resolvedExecutionPlan.inspection.id,
@@ -944,6 +1023,9 @@ const readCandidateReport = async (candidateDirectory, recipe, {
         throw new Error('execution-tuning proof does not match the captured plan entry');
       }
     }
+    captureDiagnostic = createVerifiedCaptureDiagnostic(
+      recipe, report, expected, executionProof, executionTuningProof, captureExecutionPlan,
+    );
   } catch (error) {
     throw new CandidateArtifactError(
       'report-invalid', `${recipe.name} report validation failed: ${error.message}`, { cause: error },
@@ -999,6 +1081,7 @@ const readCandidateReport = async (candidateDirectory, recipe, {
     warnings: [...report.warnings],
     executionProof,
     executionTuningProof,
+    captureDiagnostic,
     ...(timings === null ? {} : { timings }),
     ...(captureSubphases === null ? {} : { captureSubphases }),
   };
@@ -1461,6 +1544,9 @@ export async function verifyVisualLabBatchPackage(options = {}) {
     browserHostPlan,
     executionTuningPlan,
     originAttestation,
+    captureDiagnostics: entries.flatMap((entry) => (
+      entry.status === 'passed' ? [entry.captureDiagnostic] : []
+    )),
     timings: summarizeEntryTimings(entries),
     captureSubphases: summarizeEntryCaptureSubphases(entries),
   });
