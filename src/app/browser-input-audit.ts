@@ -2,7 +2,9 @@ import type {
   AtmosphereSupportAudit, CanvasPresentationTiming, PresentationRefreshAudit, RendererBackendInfo,
   SuspensionSupportAudit,
 } from '../renderer/field-renderer';
-import type { WebGLPresentationTiming } from '../renderer/pixi-field-presenter';
+import type {
+  WebGLCompletedFrameReceipt, WebGLPresentationTiming,
+} from '../renderer/pixi-field-presenter';
 import type { PowderRenderStyle } from '../renderer/powder-render-style';
 import { Material } from '../shared/materials';
 import type { VisualCaptureEvidencePlane } from '../shared/visual-capture-static-contract.js';
@@ -466,6 +468,8 @@ export interface BrowserInputAuditApi {
   presentationRefreshAudit(): PresentationRefreshAudit | undefined;
   requestWebGLPresentationTimingSample(): boolean;
   webGLPresentationTiming(): WebGLPresentationTiming | undefined;
+  requestWebGLCompletedFrameReceipt(): number | undefined;
+  webGLCompletedFrameReceipt(ticket: number): WebGLCompletedFrameReceipt | undefined;
   forceEightXRenderStall(): boolean;
   /** Audit-only strict outgoing-renderer teardown before target disposal. */
   disposeRendererForNavigation(): Promise<void>;

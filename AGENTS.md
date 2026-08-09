@@ -253,15 +253,23 @@ summary; retain only bounded aggregate timing and host lifecycle counts. Prove
 that the portable result identities are equal across all four legs before
 publishing, but do not serialize those identities into the summary.
 
-For the future completion receipt, bind every ticket to the renderer's exact
-submission generation. A later render makes the ticket `superseded`; context
-loss, teardown, timeout, or fence failure makes it unavailable/failed. At
-normal scale insert a non-blocking WebGL sync only after the complete HDR
-presentation and flush it; at 8× extend the one existing render-fence owner
-rather than creating a competing fence. Never substitute timer-query readiness,
-two RAFs, dataset state, CPU submission time, or `gl.finish()` for this receipt,
-and do not reduce the current two-snapshot proof until a versioned tuning schema
-and real browser gate explicitly opt in.
+The renderer-owned completed-frame receipt is now a protected audit capability.
+`anifor.renderer.completed-frame-receipt/v1` binds every ticket to the exact
+presentation submission and exposes only `pending`, `completed`, `superseded`,
+or `failed`; retain at most four ticket records so an immediately preceding
+ticket remains queryable without unbounded history. A later completed
+presentation makes an older pending/completed ticket `superseded`; context loss,
+teardown, timeout, fence creation/flush failure, or `WAIT_FAILED` makes the
+attached ticket `failed`. At normal scale, keep one non-blocking WebGL sync only
+after the complete HDR/default-framebuffer presentation and flush it. At 8×,
+attach the ticket to the one existing render-fence owner; never create a sibling
+receipt fence. Timing samples and receipts are mutually exclusive while either
+owns a request. Never substitute timer-query readiness, two RAFs, dataset state,
+CPU submission time, or `gl.finish()` for this receipt. The real built
+`audit:webgl-completed-frame-receipt` and `:8x` SwiftShader gates must pass and
+leave no Chrome residue. Do not reduce the current two-snapshot proof until a
+separate versioned tuning schema and fresh/shared browser gates explicitly opt
+in; GPU completion alone is not compositor or screenshot completion.
 
 The typed Visual Lab state, fixed normal-HDR composition seam, promotion-safe
 same-page off/A/B selection, declarative fixtures, and production-bundle capture

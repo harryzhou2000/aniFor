@@ -3,7 +3,9 @@ import type { VisualCaptureEvidencePlane } from '../shared/visual-capture-static
 import type { SimulationBackend } from '../simulation';
 import { clientToViewport, ViewTransform, type Point, type ViewState } from './view-transform';
 import { clientToVisualViewport, contentBoxFromBounds, viewportToClient } from './client-coordinate-map';
-import type { PixiFieldPresenter, WebGLPresentationTiming } from './pixi-field-presenter';
+import type {
+  PixiFieldPresenter, WebGLCompletedFrameReceipt, WebGLPresentationTiming,
+} from './pixi-field-presenter';
 import type { VisualLabVariant } from './visual-lab';
 import { readVisualCaptureEvidenceAlpha } from './visual-capture-evidence';
 import {
@@ -828,6 +830,14 @@ export class MaterialRenderer {
 
   getWebGLPresentationTiming(): WebGLPresentationTiming | undefined {
     return this.presenter?.getWebGLPresentationTiming();
+  }
+
+  requestWebGLCompletedFrameReceipt(): number | undefined {
+    return this.presenter?.requestWebGLCompletedFrameReceipt();
+  }
+
+  getWebGLCompletedFrameReceipt(ticket: number): WebGLCompletedFrameReceipt | undefined {
+    return this.presenter?.getWebGLCompletedFrameReceipt(ticket);
   }
 
   forceEightXRenderStallForAudit(): boolean {

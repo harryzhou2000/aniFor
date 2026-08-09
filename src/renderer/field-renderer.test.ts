@@ -233,6 +233,38 @@ describe('field renderer layout scheduling', () => {
     expect(setVisualLabVariant).toHaveBeenCalledWith(1);
   });
 
+  it('forwards completed-frame tickets only through an active WebGL presenter', () => {
+    const receipt = {
+      schema: 'anifor.renderer.completed-frame-receipt/v1' as const,
+      ticket: 7,
+      submission: 19,
+      state: 'completed' as const,
+    };
+    const requestWebGLCompletedFrameReceipt = vi.fn(() => 7);
+    const getWebGLCompletedFrameReceipt = vi.fn(() => receipt);
+    const renderer = Object.create(MaterialRenderer.prototype) as {
+      presenter?: {
+        requestWebGLCompletedFrameReceipt(): number | undefined;
+        getWebGLCompletedFrameReceipt(ticket: number): typeof receipt | undefined;
+      };
+      requestWebGLCompletedFrameReceipt(): number | undefined;
+      getWebGLCompletedFrameReceipt(ticket: number): typeof receipt | undefined;
+    };
+    renderer.presenter = {
+      requestWebGLCompletedFrameReceipt,
+      getWebGLCompletedFrameReceipt,
+    };
+
+    expect(renderer.requestWebGLCompletedFrameReceipt()).toBe(7);
+    expect(renderer.getWebGLCompletedFrameReceipt(7)).toBe(receipt);
+    expect(requestWebGLCompletedFrameReceipt).toHaveBeenCalledOnce();
+    expect(getWebGLCompletedFrameReceipt).toHaveBeenCalledWith(7);
+
+    renderer.presenter = undefined;
+    expect(renderer.requestWebGLCompletedFrameReceipt()).toBeUndefined();
+    expect(renderer.getWebGLCompletedFrameReceipt(7)).toBeUndefined();
+  });
+
   it('ignores a queued frame after navigation has disposed the outgoing renderer', () => {
     const renderer = Object.create(MaterialRenderer.prototype) as {
       disposed: boolean;

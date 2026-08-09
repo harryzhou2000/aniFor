@@ -19,15 +19,22 @@ runtime resources without another browser or build.
 
 Active priority order:
 
-1. Make performance evidence repeatable: bounded non-identity subphase
-   telemetry, fixed fresh/shared ABBA cohorts, portable verification after each
-   cohort, and a path-free summary published only after the whole run passes.
-2. Add a renderer-owned completed-frame receipt with explicit completed,
-   pending, superseded, and failed states. Bind it to the exact presentation
-   generation and reuse the sole true-8× fence owner.
-3. Version any proof reduction as an opt-in execution capability, retain the
+1. Treat repeatable performance evidence as complete infrastructure. Revision
+   `351bcf747f6f8c80df269a2bd7b483f9cb9457b0` deployed bounded non-identity
+   subphase telemetry, fixed fresh/shared/shared/fresh cohorts, portable
+   verification after every cohort, and a publish-last path-free summary;
+   workflow run `31318817673` passed live 19-resource closure.
+2. Treat the renderer-owned completed-frame receipt as the next protected
+   framework seam. It exposes versioned pending/completed/superseded/failed
+   tickets bound to exact presentation submissions, keeps four bounded audit
+   records, fences only after the final HDR/default-framebuffer presentation,
+   and reuses the sole true-8× render fence. Real built SwiftShader gates passed
+   at 2× and true 4896×3072 8× with zero browser errors; normal-scale settling
+   honestly superseded five stale requests before one exact frame completed.
+3. Now version any proof reduction as an opt-in execution capability, retain the
    current two-snapshot convergence profile as the default, and prove the new
-   path in real WebGL before it can affect capture policy.
+   policy path across fresh/shared normal WebGL before it can affect capture
+   policy. The receipt alone is GPU completion, not compositor/screenshot proof.
 4. Use this framework to compare and checkpoint material experiments. Visual
    preference may accept a candidate without broad unit-test expansion, but it
    must retain topology, renderer lifecycle, portable evidence, and deployment
@@ -37,6 +44,14 @@ Do not spend the active milestone on another isolated highlight, texture, or
 material-specific shader branch. The intended leverage is a faster, observable,
 reusable experiment loop that makes later powder/liquid/gas work cheaper to
 author, compare, recover, and deploy.
+
+The receipt implementation is audit-only and does not alter renderer output,
+capture identities, execution/tuning plans, or the current two-snapshot proof.
+Run `npm run audit:webgl-completed-frame-receipt` for built normal WebGL and
+`npm run audit:webgl-completed-frame-receipt:8x` for the shared-fence path. The
+gate waits for finite paused-field hydration, accepts observable supersession,
+requires a completed successor, proves the earlier ticket becomes superseded,
+strictly disposes the renderer, and leaves no Chrome process/profile behind.
 
 The typed generic fixture-preparation boundary is deployed at revision
 `83894aa6fe98fc5a537cd4c23c9b2400dc37081f` by release-set workflow run

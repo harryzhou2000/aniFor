@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { PixiFieldPresenter } from './pixi-field-presenter';
 import { powderRenderStyleValue } from './powder-render-style';
 import {
-  WEBGL_EIGHT_X_FRAME_STALL_MS, type FieldOutputScale,
+  WEBGL_EIGHT_X_FRAME_STALL_MS, WEBGL_PROMOTION_TIMEOUT_MS, type FieldOutputScale,
 } from './render-resolution';
 
 interface PresenterHarness {
@@ -75,8 +75,15 @@ interface PresenterHarness {
   enableWebGLPresentationTiming: PixiFieldPresenter['enableWebGLPresentationTiming'];
   requestWebGLPresentationTimingSample: PixiFieldPresenter['requestWebGLPresentationTimingSample'];
   getWebGLPresentationTiming: PixiFieldPresenter['getWebGLPresentationTiming'];
+  requestWebGLCompletedFrameReceipt: PixiFieldPresenter['requestWebGLCompletedFrameReceipt'];
+  getWebGLCompletedFrameReceipt: PixiFieldPresenter['getWebGLCompletedFrameReceipt'];
   webGLTimingRequested: boolean;
   webGLTimingSequence: number;
+  presentationSubmission: number;
+  completedFrameTicketSequence: number;
+  completedFrameFencePoll: number;
+  completedFrameFenceWatchdog: ReturnType<typeof setTimeout> | undefined;
+  renderFenceSubmission: number;
 }
 
 function presenterHarness(outputScale = 2): PresenterHarness {
@@ -100,8 +107,13 @@ function presenterHarness(outputScale = 2): PresenterHarness {
     webGLTimingSequence: 0,
     webGLTimingFenceStartedAt: 0,
     webGLTimingFencePoll: 0,
+    presentationSubmission: 0,
+    completedFrameTicketSequence: 0,
+    completedFrameFencePoll: 0,
+    completedFrameFenceWatchdog: undefined,
     renderFencePoll: 0,
     renderFenceWatchdog: undefined,
+    renderFenceSubmission: 0,
     renderQueued: false,
     renderFenceStallForcedForAudit: false,
   });
@@ -4574,6 +4586,281 @@ describe('Pixi presenter startup configuration', () => {
     expect(timing?.sequence).toBe(1);
     expect(timing?.usableSamples).toBe(1);
     expect(gl.deleteSync).toHaveBeenCalledWith(fence);
+  });
+
+  it('completes a normal receipt only after its non-blocking presentation fence signals', () => {
+    let status = 0x911b; // TIMEOUT_EXPIRED
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const fence = {} as WebGLSync;
+    const gl = {
+      SYNC_GPU_COMMANDS_COMPLETE: 0x9117,
+      SYNC_FLUSH_COMMANDS_BIT: 0x00000001,
+      TIMEOUT_EXPIRED: 0x911b,
+      WAIT_FAILED: 0x911d,
+      ALREADY_SIGNALED: 0x911a,
+      CONDITION_SATISFIED: 0x911c,
+      fenceSync: vi.fn(() => fence),
+      flush: vi.fn(),
+      clientWaitSync: vi.fn(() => status),
+      deleteSync: vi.fn(),
+    } as unknown as WebGL2RenderingContext;
+    const presenter = presenterHarness();
+    Object.assign(presenter.app, { renderer: { gl } });
+
+    const ticket = presenter.requestWebGLCompletedFrameReceipt();
+
+    expect(ticket).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+    expect(gl.fenceSync).toHaveBeenCalledWith(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+    expect(gl.flush).toHaveBeenCalledOnce();
+    expect(presenter.getWebGLCompletedFrameReceipt(ticket!)).toMatchObject({
+      ticket: 1, submission: 1, state: 'pending',
+    });
+    expect(gl.clientWaitSync).toHaveBeenCalledWith(fence, gl.SYNC_FLUSH_COMMANDS_BIT, 0);
+
+    status = gl.CONDITION_SATISFIED;
+
+    expect(presenter.getWebGLCompletedFrameReceipt(ticket!)).toMatchObject({
+      ticket: 1, submission: 1, state: 'completed',
+    });
+    expect(gl.deleteSync).toHaveBeenCalledWith(fence);
+  });
+
+  it('supersedes a completed-frame receipt when a later full presentation submits', () => {
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const fence = {} as WebGLSync;
+    const gl = {
+      SYNC_GPU_COMMANDS_COMPLETE: 0x9117,
+      SYNC_FLUSH_COMMANDS_BIT: 0x00000001,
+      TIMEOUT_EXPIRED: 0x911b,
+      WAIT_FAILED: 0x911d,
+      ALREADY_SIGNALED: 0x911a,
+      CONDITION_SATISFIED: 0x911c,
+      fenceSync: vi.fn(() => fence),
+      flush: vi.fn(),
+      clientWaitSync: vi.fn(() => 0x911a),
+      deleteSync: vi.fn(),
+    } as unknown as WebGL2RenderingContext;
+    const presenter = presenterHarness();
+    Object.assign(presenter.app, { renderer: { gl } });
+
+    const ticket = presenter.requestWebGLCompletedFrameReceipt();
+    expect(presenter.getWebGLCompletedFrameReceipt(ticket!)).toMatchObject({ state: 'completed' });
+    presenter.setGasFieldLightingEnabled(true);
+
+    expect(presenter.app.render).toHaveBeenCalledTimes(2);
+    expect(presenter.getWebGLCompletedFrameReceipt(ticket!)).toMatchObject({
+      ticket: 1, submission: 1, state: 'superseded',
+    });
+    expect(gl.fenceSync).toHaveBeenCalledOnce();
+    expect(gl.deleteSync).toHaveBeenCalledWith(fence);
+  });
+
+  it('retains a bounded superseded receipt when a successor ticket submits', () => {
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const fences = [{} as WebGLSync, {} as WebGLSync];
+    const gl = {
+      SYNC_GPU_COMMANDS_COMPLETE: 0x9117,
+      SYNC_FLUSH_COMMANDS_BIT: 0x00000001,
+      TIMEOUT_EXPIRED: 0x911b,
+      WAIT_FAILED: 0x911d,
+      ALREADY_SIGNALED: 0x911a,
+      CONDITION_SATISFIED: 0x911c,
+      fenceSync: vi.fn().mockReturnValueOnce(fences[0]).mockReturnValueOnce(fences[1]),
+      flush: vi.fn(),
+      clientWaitSync: vi.fn(() => 0x911a),
+      deleteSync: vi.fn(),
+    } as unknown as WebGL2RenderingContext;
+    const presenter = presenterHarness();
+    Object.assign(presenter.app, { renderer: { gl } });
+
+    const first = presenter.requestWebGLCompletedFrameReceipt()!;
+    expect(presenter.getWebGLCompletedFrameReceipt(first)).toMatchObject({ state: 'completed' });
+    const second = presenter.requestWebGLCompletedFrameReceipt()!;
+
+    expect(second).toBe(2);
+    expect(presenter.getWebGLCompletedFrameReceipt(first)).toMatchObject({
+      ticket: 1, submission: 1, state: 'superseded',
+    });
+    expect(presenter.getWebGLCompletedFrameReceipt(second)).toMatchObject({
+      ticket: 2, submission: 2, state: 'completed',
+    });
+  });
+
+  it('fences only after the final HDR presentation returns', () => {
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const order: string[] = [];
+    const fence = {} as WebGLSync;
+    const gl = {
+      SYNC_GPU_COMMANDS_COMPLETE: 0x9117,
+      SYNC_FLUSH_COMMANDS_BIT: 0x00000001,
+      TIMEOUT_EXPIRED: 0x911b,
+      WAIT_FAILED: 0x911d,
+      ALREADY_SIGNALED: 0x911a,
+      CONDITION_SATISFIED: 0x911c,
+      fenceSync: vi.fn(() => { order.push('fence'); return fence; }),
+      flush: vi.fn(),
+      clientWaitSync: vi.fn(() => 0x911a),
+      deleteSync: vi.fn(),
+    } as unknown as WebGL2RenderingContext;
+    const presenter = presenterHarness();
+    Object.assign(presenter, {
+      hdrVfxPipeline: { render: () => { order.push('hdr-composite'); } },
+      app: { ...presenter.app, renderer: { gl } },
+    });
+
+    const ticket = presenter.requestWebGLCompletedFrameReceipt()!;
+    expect(order).toEqual(['hdr-composite', 'fence']);
+    expect(presenter.app.render).not.toHaveBeenCalled();
+    expect(presenter.getWebGLCompletedFrameReceipt(ticket)).toMatchObject({ state: 'completed' });
+  });
+
+  it('fails a receipt when its fence cannot be created or a wait reports failure', () => {
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const noFence = {
+      SYNC_GPU_COMMANDS_COMPLETE: 0x9117,
+      SYNC_FLUSH_COMMANDS_BIT: 0x00000001,
+      WAIT_FAILED: 0x911d,
+      fenceSync: vi.fn(() => null),
+      clientWaitSync: vi.fn(),
+    } as unknown as WebGL2RenderingContext;
+    const noFencePresenter = presenterHarness();
+    Object.assign(noFencePresenter.app, { renderer: { gl: noFence } });
+
+    const failedToCreate = noFencePresenter.requestWebGLCompletedFrameReceipt();
+    expect(noFencePresenter.getWebGLCompletedFrameReceipt(failedToCreate!)).toMatchObject({
+      state: 'failed',
+    });
+
+    const fence = {} as WebGLSync;
+    const waitFailed = {
+      SYNC_GPU_COMMANDS_COMPLETE: 0x9117,
+      SYNC_FLUSH_COMMANDS_BIT: 0x00000001,
+      TIMEOUT_EXPIRED: 0x911b,
+      WAIT_FAILED: 0x911d,
+      ALREADY_SIGNALED: 0x911a,
+      CONDITION_SATISFIED: 0x911c,
+      fenceSync: vi.fn(() => fence),
+      flush: vi.fn(),
+      clientWaitSync: vi.fn(() => 0x911d),
+      deleteSync: vi.fn(),
+    } as unknown as WebGL2RenderingContext;
+    const waitFailedPresenter = presenterHarness();
+    Object.assign(waitFailedPresenter.app, { renderer: { gl: waitFailed } });
+
+    const failedWait = waitFailedPresenter.requestWebGLCompletedFrameReceipt();
+    expect(waitFailedPresenter.getWebGLCompletedFrameReceipt(failedWait!)).toMatchObject({
+      state: 'failed',
+    });
+    expect(waitFailed.deleteSync).toHaveBeenCalledWith(fence);
+  });
+
+  it('fails an unsignalled normal receipt at its watchdog deadline', () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const fence = {} as WebGLSync;
+    const gl = {
+      SYNC_GPU_COMMANDS_COMPLETE: 0x9117,
+      SYNC_FLUSH_COMMANDS_BIT: 0x00000001,
+      TIMEOUT_EXPIRED: 0x911b,
+      WAIT_FAILED: 0x911d,
+      ALREADY_SIGNALED: 0x911a,
+      CONDITION_SATISFIED: 0x911c,
+      fenceSync: vi.fn(() => fence),
+      flush: vi.fn(),
+      clientWaitSync: vi.fn(() => 0x911b),
+      deleteSync: vi.fn(),
+    } as unknown as WebGL2RenderingContext;
+    const presenter = presenterHarness();
+    Object.assign(presenter.app, { renderer: { gl } });
+
+    const ticket = presenter.requestWebGLCompletedFrameReceipt();
+    vi.advanceTimersByTime(WEBGL_PROMOTION_TIMEOUT_MS);
+
+    expect(presenter.getWebGLCompletedFrameReceipt(ticket!)).toMatchObject({ state: 'failed' });
+    expect(gl.deleteSync).toHaveBeenCalledWith(fence);
+    vi.useRealTimers();
+  });
+
+  it('uses the sole true-8x render fence for a receipt after first-frame readiness', () => {
+    let scheduled: FrameRequestCallback | undefined;
+    vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => {
+      scheduled = callback;
+      return 1;
+    }));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const fence = {} as WebGLSync;
+    const gl = {
+      SYNC_GPU_COMMANDS_COMPLETE: 0x9117,
+      SYNC_FLUSH_COMMANDS_BIT: 0x00000001,
+      TIMEOUT_EXPIRED: 0x911b,
+      WAIT_FAILED: 0x911d,
+      ALREADY_SIGNALED: 0x911a,
+      CONDITION_SATISFIED: 0x911c,
+      fenceSync: vi.fn(() => fence),
+      flush: vi.fn(),
+      clientWaitSync: vi.fn(() => 0x911a),
+      deleteSync: vi.fn(),
+    } as unknown as WebGL2RenderingContext;
+    const presenter = presenterHarness(8);
+    Object.assign(presenter, {
+      firstFrameReady: true,
+      app: { ...presenter.app, renderer: { gl } },
+    });
+
+    const ticket = presenter.requestWebGLCompletedFrameReceipt();
+
+    expect(ticket).toBe(1);
+    expect(presenter.getWebGLCompletedFrameReceipt(ticket!)).toMatchObject({ state: 'pending' });
+    expect(gl.fenceSync).toHaveBeenCalledTimes(1);
+    expect(scheduled).toBeTypeOf('function');
+
+    scheduled?.(0);
+
+    expect(presenter.getWebGLCompletedFrameReceipt(ticket!)).toMatchObject({
+      ticket: 1, submission: 1, state: 'completed',
+    });
+    expect(gl.fenceSync).toHaveBeenCalledTimes(1);
+    expect(gl.deleteSync).toHaveBeenCalledWith(fence);
+  });
+
+  it('fails an attached true-8x receipt before replacing its fence for forced recovery', () => {
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const receiptFence = {} as WebGLSync;
+    const forcedFence = {} as WebGLSync;
+    const gl = {
+      SYNC_GPU_COMMANDS_COMPLETE: 0x9117,
+      SYNC_FLUSH_COMMANDS_BIT: 0x00000001,
+      TIMEOUT_EXPIRED: 0x911b,
+      WAIT_FAILED: 0x911d,
+      ALREADY_SIGNALED: 0x911a,
+      CONDITION_SATISFIED: 0x911c,
+      fenceSync: vi.fn()
+        .mockReturnValueOnce(receiptFence)
+        .mockReturnValueOnce(forcedFence),
+      flush: vi.fn(),
+      clientWaitSync: vi.fn(() => 0x911b),
+      deleteSync: vi.fn(),
+    } as unknown as WebGL2RenderingContext;
+    const presenter = presenterHarness(8);
+    Object.assign(presenter, {
+      firstFrameReady: true,
+      app: { ...presenter.app, renderer: { gl } },
+    });
+
+    const ticket = presenter.requestWebGLCompletedFrameReceipt()!;
+    expect(presenter.forceEightXRenderStallForAudit()).toBe(true);
+
+    expect(presenter.getWebGLCompletedFrameReceipt(ticket)).toMatchObject({ state: 'failed' });
+    expect(gl.deleteSync).toHaveBeenCalledWith(receiptFence);
+    expect(gl.fenceSync).toHaveBeenCalledTimes(2);
   });
 
   it('defers an 8x timing request until the in-flight presentation fence signals', () => {

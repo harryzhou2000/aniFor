@@ -146,11 +146,37 @@ export interface WebGLPresentationTiming {
   readonly maximumMs: number;
 }
 
+export const WEBGL_COMPLETED_FRAME_RECEIPT_SCHEMA =
+  'anifor.renderer.completed-frame-receipt/v1' as const;
+
+export type WebGLCompletedFrameReceiptState =
+  'pending' | 'completed' | 'superseded' | 'failed';
+
+/**
+ * Audit-only proof that the GPU completed one exact default-framebuffer
+ * presentation. This is deliberately separate from elapsed-time diagnostics:
+ * CPU submission, timer-query availability, RAFs, and dataset state cannot
+ * advance a receipt to `completed`.
+ */
+export interface WebGLCompletedFrameReceipt {
+  readonly schema: typeof WEBGL_COMPLETED_FRAME_RECEIPT_SCHEMA;
+  readonly ticket: number;
+  readonly submission: number;
+  readonly state: WebGLCompletedFrameReceiptState;
+}
+
+interface MutableWebGLCompletedFrameReceipt extends WebGLCompletedFrameReceipt {
+  state: WebGLCompletedFrameReceiptState;
+  fence?: WebGLSync;
+  fenceStartedAt: number;
+}
+
 // A browser can expose EXT_disjoint_timer_query_webgl2 yet leave its first
 // query unavailable forever after an otherwise-presented frame. The ordinary
 // WebGL audit has a five-second completed-frame budget, so diagnose the
 // optional precision source before it consumes that whole bounded window.
 const WEBGL_TIMING_QUERY_STALL_MS = 2_000;
+const WEBGL_COMPLETED_FRAME_RECEIPT_HISTORY = 4;
 
 const FIELD_VERTEX = `
 in vec2 aPosition;
@@ -11681,6 +11707,12 @@ export class PixiFieldPresenter {
   private readonly webGLTimingSamples: number[] = [];
   private webGLTimingDiscarded = 0;
   private webGLTimingSequence = 0;
+  private presentationSubmission = 0;
+  private completedFrameTicketSequence = 0;
+  private completedFrameReceipt?: MutableWebGLCompletedFrameReceipt;
+  private completedFrameReceipts?: Map<number, MutableWebGLCompletedFrameReceipt>;
+  private completedFrameFencePoll = 0;
+  private completedFrameFenceWatchdog?: ReturnType<typeof setTimeout>;
   private powderSurfaceDirty = true;
   /** Bounded follow-up cadence while a slow powder owner evolves 0 -> 255. */
   private boundaryEvolutionPending = false;
@@ -11699,6 +11731,7 @@ export class PixiFieldPresenter {
   private contextLost = false;
   private destroyed = false;
   private renderFence?: WebGLSync;
+  private renderFenceSubmission = 0;
   private renderFenceStartedAt = 0;
   private renderQueued = false;
   private renderFencePoll = 0;
@@ -11728,7 +11761,8 @@ export class PixiFieldPresenter {
       if (this.contextLost) return;
       this.contextLost = true;
       this.resolveFirstFrame(false);
-      this.releaseRenderFence();
+      this.releaseRenderFence('failed');
+      this.failCompletedFrameReceipt();
       this.releaseWebGLTimingQuery();
       this.releaseWebGLTimingFence();
       this.contextLossHandler?.();
@@ -12929,7 +12963,8 @@ export class PixiFieldPresenter {
     this.contextLossHandler = undefined;
     this.renderStallHandler = undefined;
     this.removeContextLossListener();
-    this.releaseRenderFence();
+    this.releaseRenderFence('failed');
+    this.failCompletedFrameReceipt();
     this.releaseWebGLTimingQuery();
     this.releaseWebGLTimingFence();
     try { this.hdrVfxPipeline?.destroy(); }
@@ -12971,7 +13006,8 @@ export class PixiFieldPresenter {
     this.contextLossHandler = undefined;
     this.renderStallHandler = undefined;
     attempt(() => this.removeContextLossListener());
-    attempt(() => this.releaseRenderFence());
+    attempt(() => this.releaseRenderFence('failed'));
+    attempt(() => this.failCompletedFrameReceipt());
     attempt(() => this.releaseWebGLTimingQuery());
     attempt(() => this.releaseWebGLTimingFence());
     attempt(() => this.hdrVfxPipeline?.destroy());
@@ -13198,7 +13234,7 @@ export class PixiFieldPresenter {
     // fence. Removing a sync object does not cancel submitted GPU commands;
     // replace it with the forced-stall audit fence so the same recovery
     // branch is deterministic regardless of capture timing.
-    if (this.renderFence) this.releaseRenderFence();
+    if (this.renderFence) this.releaseRenderFence('failed');
     let fence: WebGLSync | null = null;
     try { fence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0); }
     catch { return false; }
@@ -13848,6 +13884,8 @@ export class PixiFieldPresenter {
 
   requestWebGLPresentationTimingSample(): boolean {
     if (!this.webGLTimingEnabled) return false;
+    this.pollCompletedFrameFence();
+    if (this.completedFrameReceipt?.state === 'pending') return false;
     this.pollWebGLTimingQuery();
     this.pollWebGLTimingFence();
     if (this.webGLTimingRequested || this.webGLTimingPending || this.webGLTimingFence) return false;
@@ -13865,6 +13903,79 @@ export class PixiFieldPresenter {
     // request, leaving a correct renderer looking like a hung timer query.
     this.renderApplication();
     return true;
+  }
+
+  /**
+   * Requests one exact full-presentation GPU receipt. Only one ticket may be
+   * live at a time; callers must observe its terminal state before replacing
+   * it. At true 8x the ticket attaches to the existing sole render fence.
+   */
+  requestWebGLCompletedFrameReceipt(): number | undefined {
+    this.pollCompletedFrameFence();
+    this.pollWebGLTimingQuery();
+    this.pollWebGLTimingFence();
+    if (this.destroyed || this.contextLost) return undefined;
+    const gl = this.webGLContext();
+    if (!gl || typeof gl.fenceSync !== 'function'
+      || typeof gl.clientWaitSync !== 'function') return undefined;
+    if (this.completedFrameReceipt?.state === 'pending') return undefined;
+    if (this.webGLTimingRequested || this.webGLTimingPending || this.webGLTimingFence) {
+      return undefined;
+    }
+    if (this.outputScale === 8) {
+      // Promotion itself already owns a receipt-quality fence, but it is not a
+      // ticketed capture frame. Accept a request only after promotion and after
+      // the prior sole owner has retired; never turn a queued mutation into a
+      // falsely attributed receipt.
+      if (!this.firstFrameReady || this.renderQueued) return undefined;
+      if (!this.prepareEightXRender() || this.renderFence || this.webGLTimingFence) {
+        return undefined;
+      }
+    }
+
+    const ticket = (this.completedFrameTicketSequence ?? 0) + 1;
+    this.completedFrameTicketSequence = ticket;
+    const submission = (this.presentationSubmission ?? 0) + 1;
+    this.completedFrameReceipt = {
+      schema: WEBGL_COMPLETED_FRAME_RECEIPT_SCHEMA,
+      ticket,
+      submission,
+      state: 'pending',
+      fenceStartedAt: 0,
+    };
+    const receipts = this.completedFrameReceipts ??= new Map();
+    receipts.set(ticket, this.completedFrameReceipt);
+    while (receipts.size > WEBGL_COMPLETED_FRAME_RECEIPT_HISTORY) {
+      const oldest = receipts.keys().next().value as number | undefined;
+      if (oldest === undefined) break;
+      receipts.delete(oldest);
+    }
+    try {
+      this.renderApplication();
+    } catch {
+      this.failCompletedFrameReceipt(submission);
+    }
+    // A context transition or an unexpected coalescing path can prevent the
+    // synchronous audit request from owning the promised submission.
+    if (this.completedFrameReceipt?.ticket === ticket
+      && this.completedFrameReceipt.state === 'pending'
+      && this.presentationSubmission < submission) {
+      this.failCompletedFrameReceipt(submission);
+    }
+    return ticket;
+  }
+
+  getWebGLCompletedFrameReceipt(ticket: number): WebGLCompletedFrameReceipt | undefined {
+    if (!Number.isSafeInteger(ticket) || ticket <= 0) return undefined;
+    this.pollCompletedFrameFence();
+    const receipt = this.completedFrameReceipts?.get(ticket);
+    if (!receipt || receipt.ticket !== ticket) return undefined;
+    return Object.freeze({
+      schema: receipt.schema,
+      ticket: receipt.ticket,
+      submission: receipt.submission,
+      state: receipt.state,
+    });
   }
 
   getWebGLPresentationTiming(): WebGLPresentationTiming | undefined {
@@ -14084,7 +14195,12 @@ export class PixiFieldPresenter {
     // mistake it for another update and redraw the 15M-fragment target again.
     if (this.outputScale === 8) this.renderQueued = false;
     this.renderApplicationNow();
-    if (this.outputScale === 8 && !this.webGLTimingFence) this.insertEightXRenderFence();
+    const submission = this.presentationSubmission;
+    if (this.outputScale === 8 && !this.webGLTimingFence) {
+      this.insertEightXRenderFence(submission);
+    } else if (this.outputScale !== 8) {
+      this.armCompletedFrameFence(submission);
+    }
   }
 
   private renderApplicationNow(): void {
@@ -14148,6 +14264,137 @@ export class PixiFieldPresenter {
     }
   }
 
+  /** Records only a successfully submitted full HDR/fallback presentation. */
+  private recordPresentationSubmission(): number {
+    const submission = (this.presentationSubmission ?? 0) + 1;
+    this.presentationSubmission = submission;
+    for (const receipt of this.completedFrameReceipts?.values() ?? []) {
+      if ((receipt.state === 'pending' || receipt.state === 'completed')
+        && submission > receipt.submission) {
+        this.transitionCompletedFrameReceipt(receipt.submission, 'superseded');
+      }
+    }
+    return submission;
+  }
+
+  private armCompletedFrameFence(submission: number): void {
+    const receipt = this.completedFrameReceipt;
+    if (!receipt || receipt.state !== 'pending' || receipt.submission !== submission) return;
+    const gl = this.webGLContext();
+    if (!gl || this.contextLost || this.destroyed) {
+      this.failCompletedFrameReceipt(submission);
+      return;
+    }
+    let fence: WebGLSync | null = null;
+    try { fence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0); }
+    catch { /* handled by the explicit failed receipt below */ }
+    if (!fence) {
+      this.failCompletedFrameReceipt(submission);
+      return;
+    }
+    receipt.fence = fence;
+    receipt.fenceStartedAt = performance.now();
+    try { gl.flush(); }
+    catch {
+      this.failCompletedFrameReceipt(submission);
+      return;
+    }
+    this.scheduleCompletedFrameFencePoll(receipt.ticket, fence);
+    this.completedFrameFenceWatchdog = setTimeout(() => {
+      const current = this.completedFrameReceipt;
+      if (current?.ticket === receipt.ticket && current.fence === fence
+        && current.state === 'pending') {
+        this.failCompletedFrameReceipt(submission);
+      }
+    }, webGLPromotionTimeout(this.outputScale));
+  }
+
+  private scheduleCompletedFrameFencePoll(ticket: number, fence: WebGLSync): void {
+    if (this.completedFrameFencePoll !== 0 || this.destroyed || this.contextLost) return;
+    this.completedFrameFencePoll = requestAnimationFrame(() => {
+      this.completedFrameFencePoll = 0;
+      const receipt = this.completedFrameReceipt;
+      if (receipt?.ticket !== ticket || receipt.fence !== fence
+        || receipt.state !== 'pending') return;
+      this.pollCompletedFrameFence();
+      if (this.completedFrameReceipt?.ticket === ticket
+        && this.completedFrameReceipt.state === 'pending') {
+        this.scheduleCompletedFrameFencePoll(ticket, fence);
+      }
+    });
+  }
+
+  private pollCompletedFrameFence(): void {
+    const receipt = this.completedFrameReceipt;
+    const fence = receipt?.fence;
+    if (!receipt || receipt.state !== 'pending' || !fence) return;
+    if (performance.now() - receipt.fenceStartedAt >= webGLPromotionTimeout(this.outputScale)) {
+      this.failCompletedFrameReceipt(receipt.submission);
+      return;
+    }
+    const gl = this.webGLContext();
+    if (!gl || this.contextLost || this.destroyed) {
+      this.failCompletedFrameReceipt(receipt.submission);
+      return;
+    }
+    let status: number;
+    try { status = gl.clientWaitSync(fence, gl.SYNC_FLUSH_COMMANDS_BIT, 0); }
+    catch { status = gl.WAIT_FAILED; }
+    if (status === gl.TIMEOUT_EXPIRED) return;
+    this.transitionCompletedFrameReceipt(
+      receipt.submission,
+      status === gl.ALREADY_SIGNALED || status === gl.CONDITION_SATISFIED
+        ? 'completed'
+        : 'failed',
+    );
+  }
+
+  private failCompletedFrameReceipt(submission?: number): void {
+    const receipt = this.completedFrameReceipt;
+    if (!receipt || receipt.state !== 'pending'
+      || (submission !== undefined && receipt.submission !== submission)) return;
+    this.transitionCompletedFrameReceipt(receipt.submission, 'failed');
+  }
+
+  private transitionCompletedFrameReceipt(
+    submission: number,
+    state: Exclude<WebGLCompletedFrameReceiptState, 'pending'>,
+  ): void {
+    let receipt: MutableWebGLCompletedFrameReceipt | undefined;
+    for (const candidate of this.completedFrameReceipts?.values() ?? []) {
+      if (candidate.submission !== submission) continue;
+      receipt = candidate;
+      break;
+    }
+    if (!receipt) return;
+    if (receipt.state === 'failed' || receipt.state === 'superseded') return;
+    this.releaseCompletedFrameFence(receipt);
+    receipt.state = state;
+  }
+
+  private releaseCompletedFrameFence(
+    receipt = this.completedFrameReceipt,
+  ): void {
+    const isCurrent = receipt === this.completedFrameReceipt;
+    if (isCurrent && this.completedFrameFenceWatchdog !== undefined) {
+      clearTimeout(this.completedFrameFenceWatchdog);
+      this.completedFrameFenceWatchdog = undefined;
+    }
+    if (isCurrent && this.completedFrameFencePoll !== 0) {
+      cancelAnimationFrame(this.completedFrameFencePoll);
+      this.completedFrameFencePoll = 0;
+    }
+    const fence = receipt?.fence;
+    const gl = this.webGLContext();
+    if (fence && gl) {
+      try { gl.deleteSync(fence); } catch { /* context may already be invalid */ }
+    }
+    if (receipt) {
+      receipt.fence = undefined;
+      receipt.fenceStartedAt = 0;
+    }
+  }
+
   /**
    * True 8x submits 15,040,512 fragments per frame. Keep exactly one frame in
    * flight and let texture/uniform mutations coalesce while the GPU catches up.
@@ -14158,13 +14405,13 @@ export class PixiFieldPresenter {
     if (this.firstFrameReady && (this.renderFenceStallForcedForAudit
       || (this.renderFenceStartedAt > 0
         && performance.now() - this.renderFenceStartedAt >= WEBGL_EIGHT_X_FRAME_STALL_MS))) {
-      this.releaseRenderFence();
+      this.releaseRenderFence('failed');
       this.renderStallHandler?.();
       return false;
     }
     const gl = this.webGLContext();
     if (!gl || this.contextLost || this.destroyed) {
-      this.releaseRenderFence();
+      this.releaseRenderFence('failed');
       if (!this.firstFrameReady) {
         this.firstFrameFailed = true;
         this.resolveFirstFrame(false);
@@ -14187,7 +14434,7 @@ export class PixiFieldPresenter {
       }
     }
     catch {
-      this.releaseRenderFence();
+      this.releaseRenderFence('failed');
       if (!this.firstFrameReady) {
         this.firstFrameFailed = true;
         this.resolveFirstFrame(false);
@@ -14196,7 +14443,7 @@ export class PixiFieldPresenter {
       return true;
     }
     if (status === gl.WAIT_FAILED) {
-      this.releaseRenderFence();
+      this.releaseRenderFence('failed');
       if (!this.firstFrameReady) {
         this.firstFrameFailed = true;
         this.resolveFirstFrame(false);
@@ -14205,20 +14452,28 @@ export class PixiFieldPresenter {
       return true;
     }
     if (status === gl.ALREADY_SIGNALED || status === gl.CONDITION_SATISFIED) {
-      this.releaseRenderFence();
+      this.releaseRenderFence('completed');
       return true;
     }
     this.scheduleEightXRenderPoll();
     return false;
   }
 
-  private insertEightXRenderFence(): void {
+  private insertEightXRenderFence(submission: number): void {
     const gl = this.webGLContext();
-    if (!gl || this.contextLost || this.destroyed) return;
+    if (!gl || this.contextLost || this.destroyed) {
+      this.failCompletedFrameReceipt(submission);
+      return;
+    }
+    let fence: WebGLSync | null = null;
     try {
-      const fence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
-      if (!fence) return;
+      fence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+      if (!fence) {
+        this.failCompletedFrameReceipt(submission);
+        return;
+      }
       this.renderFence = fence;
+      this.renderFenceSubmission = submission;
       this.renderFenceStartedAt = performance.now();
       gl.flush();
       // Poll even when no second redraw has arrived. Promotion must not remove
@@ -14229,7 +14484,13 @@ export class PixiFieldPresenter {
       // has promoted, however, rAF alone is insufficient to guarantee that an
       // unsignalled later fence restores Canvas after thirty seconds.
       this.armPromotedEightXFenceWatchdog(fence);
-    } catch { /* context loss will promote the Canvas fallback */ }
+    } catch {
+      // A created-but-unflushed owner must not survive as a phantom in-flight
+      // frame. The ordinary recovery path handles context loss; the receipt
+      // remains an explicit failure either way.
+      if (this.renderFence === fence) this.releaseRenderFence('failed');
+      else this.failCompletedFrameReceipt(submission);
+    }
   }
 
   /**
@@ -14245,7 +14506,7 @@ export class PixiFieldPresenter {
       this.renderFenceWatchdog = undefined;
       if (this.destroyed || this.contextLost || !this.firstFrameReady
         || this.renderFence !== fence) return;
-      this.releaseRenderFence();
+      this.releaseRenderFence('failed');
       this.renderStallHandler?.();
     }, WEBGL_EIGHT_X_FRAME_STALL_MS);
   }
@@ -14270,7 +14531,9 @@ export class PixiFieldPresenter {
     for (const waiter of [...this.firstFrameWaiters]) waiter(ready);
   }
 
-  private releaseRenderFence(): void {
+  private releaseRenderFence(
+    receiptState?: Extract<WebGLCompletedFrameReceiptState, 'completed' | 'failed'>,
+  ): void {
     if (this.renderFenceWatchdog !== undefined) {
       clearTimeout(this.renderFenceWatchdog);
       this.renderFenceWatchdog = undefined;
@@ -14280,11 +14543,20 @@ export class PixiFieldPresenter {
       this.renderFencePoll = 0;
     }
     const fence = this.renderFence;
+    const submission = this.renderFenceSubmission;
+    if (receiptState && submission > 0) {
+      if (receiptState === 'completed') {
+        this.transitionCompletedFrameReceipt(submission, 'completed');
+      } else {
+        this.failCompletedFrameReceipt(submission);
+      }
+    }
     const gl = this.webGLContext();
     if (fence && gl) {
       try { gl.deleteSync(fence); } catch { /* context may already be invalid */ }
     }
     this.renderFence = undefined;
+    this.renderFenceSubmission = 0;
     this.renderFenceStartedAt = 0;
     this.renderFenceStallForcedForAudit = false;
     this.renderQueued = false;
@@ -14459,6 +14731,7 @@ export class PixiFieldPresenter {
     if (pipeline) {
       try {
         pipeline.render();
+        this.recordPresentationSubmission();
         return;
       } catch {
         // A driver can accept the 2x2 float probe yet reject a world-size
@@ -14629,6 +14902,7 @@ export class PixiFieldPresenter {
       }
     }
     this.app.render();
+    this.recordPresentationSubmission();
   }
 
   private useFenceTimingFallback(): void {

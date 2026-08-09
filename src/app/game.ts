@@ -1368,6 +1368,8 @@ export class Game {
       presentationRefreshAudit: () => this.renderer.getPresentationRefreshAudit(),
       requestWebGLPresentationTimingSample: () => this.renderer.requestWebGLPresentationTimingSample(),
       webGLPresentationTiming: () => this.renderer.getWebGLPresentationTiming(),
+      requestWebGLCompletedFrameReceipt: () => this.renderer.requestWebGLCompletedFrameReceipt(),
+      webGLCompletedFrameReceipt: (ticket) => this.renderer.getWebGLCompletedFrameReceipt(ticket),
       forceEightXRenderStall: () => this.renderer.forceEightXRenderStallForAudit(),
     };
   }

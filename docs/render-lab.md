@@ -49,6 +49,28 @@ npm run audit:showcase-screenshot -- --canvas-only --screenshot=.artifacts/showc
 The command opts into the existing diagnostic clock only for its paused capture,
 so normal public showcase URLs retain their ordinary non-audit behavior.
 
+## Completed-frame receipt audit
+
+The renderer exposes an audit-only, versioned GPU completion receipt for one
+exact full presentation. Normal WebGL inserts its non-blocking sync only after
+the final HDR/default-framebuffer composite; true 8× attaches the ticket to its
+existing sole render fence. A later presentation supersedes the older ticket,
+and timeout, context loss, teardown, or fence failure fails it. This capability
+does not replace Visual Lab's two stable semantic/field/framebuffer snapshots or
+prove compositor screenshot handoff.
+
+Run the production-bundle proof with:
+
+```sh
+npm run audit:webgl-completed-frame-receipt
+npm run audit:webgl-completed-frame-receipt:8x
+```
+
+The gate accepts honest supersession while the paused fixture finishes finite
+field hydration, then requires a completed successor, verifies that a newer
+submission leaves the earlier ticket observably superseded, checks browser
+errors, strictly disposes the renderer, and tears down its owned Chrome profile.
+
 The real-browser audit first captures and signature-checks this deterministic
 atlas, then clears it and exercises painting, wheel/pan, resizing, and mobile
 touch. It navigates separately to the native backend for configured-source and
