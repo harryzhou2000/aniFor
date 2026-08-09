@@ -58,6 +58,22 @@ describe('deploy-verified CI workflow contract', () => {
     expect(inputReferences).toHaveLength(1);
   });
 
+  it('exposes a bounded Visual Lab capture-proof choice without changing its default', () => {
+    const captureProof = indentedEntry(workflow, 'visual_lab_capture_proof', 6);
+    const choices = [...captureProof.matchAll(/^          - ([a-z-]+)\s*$/gm)]
+      .map(([, choice]) => choice);
+    expect(captureProof).toContain('description: Evidence proof used by an optional Visual Lab review');
+    expect(captureProof).toContain('required: true');
+    expect(captureProof).toContain('default: stable-snapshots');
+    expect(captureProof).toContain('type: choice');
+    expect(choices).toEqual(['stable-snapshots', 'completed-frame-receipt']);
+
+    const inputReferences = workflow.match(
+      /\$\{\{\s*inputs\.visual_lab_capture_proof\s*\}\}/g,
+    ) ?? [];
+    expect(inputReferences).toHaveLength(1);
+  });
+
   it('makes build and exact-SHA reuse mutually exclusive and resolves provenance first', () => {
     const build = indentedEntry(workflow, 'build', 2);
     const verified = indentedEntry(workflow, 'verified_build', 2);
@@ -140,6 +156,7 @@ describe('deploy-verified CI workflow contract', () => {
 
   it('retains review artifact verification and exact live-revision verification order', () => {
     const review = indentedEntry(workflow, 'visual-lab-review', 2);
+    const capture = namedStep(review, 'Capture deterministic Visual Lab review');
     const comparison = review.indexOf('Compare with the accepted Visual Lab baseline');
     const upload = review.indexOf('Upload Visual Lab review evidence');
     const download = review.indexOf('Download uploaded Visual Lab review evidence');
@@ -157,6 +174,11 @@ describe('deploy-verified CI workflow contract', () => {
     expect(review).toContain('--require-recipe-set=1');
     expect(review).toContain('--require-browser-host-plan=1');
     expect(review).toContain('--require-capture-geometry=1');
+    expect(capture).toContain(
+      'VISUAL_LAB_CAPTURE_PROOF: ${{ inputs.visual_lab_capture_proof }}',
+    );
+    expect(capture).toContain('"--capture-proof=${VISUAL_LAB_CAPTURE_PROOF}"');
+    expect(capture.match(/--capture-proof=/g)).toHaveLength(1);
 
     const live = indentedEntry(workflow, 'verify-deployment', 2);
     expect(live).toContain("if: always() && needs.deploy.result == 'success'");
@@ -178,6 +200,9 @@ describe('deploy-verified CI workflow contract', () => {
     expect(live).toContain('--candidates=water-motion');
     expect(live).toContain('--gpu=swiftshader');
     expect(live).toContain('--capture-proof=completed-frame-receipt');
+    expect(live.match(/--capture-proof=completed-frame-receipt/g)).toHaveLength(1);
+    expect(live).not.toContain('VISUAL_LAB_CAPTURE_PROOF');
+    expect(live).not.toContain('inputs.visual_lab_capture_proof');
     expect(live).toContain('node scripts/visual-lab-verify.mjs');
     expect(live).toContain('--require-capture-geometry=1');
     expect(live).toContain('--require-origin-attestation=1');

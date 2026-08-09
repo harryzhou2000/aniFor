@@ -4,6 +4,7 @@ import {
   buildVisualCaptureDatasetProjectionExpression,
   buildVisualCaptureSelectionExpression,
   createVisualCaptureDriverRegistry,
+  createVisualCaptureFixtureBoundExpressions,
   resolveVisualCaptureDriver,
   resolveVisualCaptureVariant,
   VISUAL_CAPTURE_DRIVER_NAMES,
@@ -125,6 +126,52 @@ describe('typed visual capture drivers', () => {
     ]);
   });
 
+  it('binds a second Powder fixture to the same exact selection and projection context', () => {
+    const fixtureId = 'powder-comparison-atlas';
+    const expressions = createVisualCaptureFixtureBoundExpressions([
+      { fixtureId: 'powder-style-atlas', driver: 'powder-render-style' },
+      { fixtureId, driver: 'powder-render-style' },
+    ]);
+    const selectionExpression = expressions.buildSelectionExpression(
+      'powder-render-style', 1, { fixtureId },
+    );
+    const projectionExpression = expressions.buildDatasetProjectionExpression(
+      'powder-render-style', { fixtureId },
+    );
+    expect(selectionExpression).toContain(`setPreparedVisualCaptureVariant(${JSON.stringify(fixtureId)}, 1)`);
+    expect(projectionExpression)
+      .toContain(`preparedVisualCaptureVariant(${JSON.stringify(fixtureId)})`);
+    expect(selectionExpression).not.toContain('setPreparedVisualCaptureVariant("powder-style-atlas",');
+    expect(projectionExpression).not.toContain('preparedVisualCaptureVariant("powder-style-atlas")');
+
+    let selectedVariant = 0;
+    const calls = [];
+    const audit = {
+      setPreparedVisualCaptureVariant: (fixture, variant) => {
+        calls.push(['set', fixture, variant]);
+        selectedVariant = variant;
+      },
+      preparedVisualCaptureVariant: (fixture) => {
+        calls.push(['read', fixture]);
+        return selectedVariant;
+      },
+    };
+    expect(Function('audit', `return ${selectionExpression};`)(audit))
+      .toEqual({ ok: true, selection: 'local' });
+    expect(Function('audit', `return ${projectionExpression};`)(audit))
+      .toEqual({ powderRenderStyle: 'local' });
+    expect(calls).toEqual([
+      ['set', fixtureId, 1], ['read', fixtureId], ['read', fixtureId],
+    ]);
+
+    expect(() => expressions.buildSelectionExpression(
+      'normal-hdr', 1, { fixtureId },
+    )).toThrow('does not use driver normal-hdr');
+    expect(() => expressions.buildDatasetProjectionExpression(
+      'normal-hdr', { fixtureId },
+    )).toThrow('does not use driver normal-hdr');
+  });
+
   it('keeps Powder outside HDR state and publishes self-describing review labels', () => {
     const request = { domain: 'powder', target: 0, gain: 1 };
     expect(visualCaptureDriverUrlValues('powder-render-style', request)).toEqual({
@@ -148,10 +195,14 @@ describe('typed visual capture drivers', () => {
 
   it('owns observed state, startup/report metadata, and labels in one registry', () => {
     const normalObserved = Function(
-      'audit', `return ${buildVisualCaptureDatasetProjectionExpression('normal-hdr')};`,
+      'audit', `return ${buildVisualCaptureDatasetProjectionExpression(
+        'normal-hdr', { fixtureId: 'showcase' },
+      )};`,
     )({});
     const powderObserved = Function(
-      'audit', `return ${buildVisualCaptureDatasetProjectionExpression('powder-render-style')};`,
+      'audit', `return ${buildVisualCaptureDatasetProjectionExpression(
+        'powder-render-style', { fixtureId: 'powder-style-atlas' },
+      )};`,
     )({
       preparedVisualCaptureVariant: (fixture) => {
         expect(fixture).toBe('powder-style-atlas');
@@ -206,7 +257,9 @@ describe('typed visual capture drivers', () => {
     });
 
     const project = (audit) => Function(
-      'audit', `return ${buildVisualCaptureDatasetProjectionExpression('powder-render-style')};`,
+      'audit', `return ${buildVisualCaptureDatasetProjectionExpression(
+        'powder-render-style', { fixtureId: 'powder-style-atlas' },
+      )};`,
     )(audit);
     expect(project({})).toEqual({ powderRenderStyle: undefined });
     expect(project({ preparedVisualCaptureVariant: () => { throw new Error('unprepared'); } }))
@@ -443,7 +496,7 @@ describe('typed visual capture drivers', () => {
     }))
       .toThrow('Unsafe visual capture audit identifier');
     expect(() => buildVisualCaptureDatasetProjectionExpression(
-      'normal-hdr', 'audit.call()',
+      'normal-hdr', { fixtureId: 'showcase', auditIdentifier: 'audit.call()' },
     )).toThrow('Unsafe visual capture audit identifier');
     expect(runSelection('powder-render-style', 0, {}))
       .toEqual({ ok: false, failure: 'missing-selector' });

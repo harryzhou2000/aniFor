@@ -188,7 +188,9 @@ const compileEntry = (
     startupExpression: buildVisualLabStartupExpression(fixtureAdapter, 2, captureDriver),
     startupFields: visualCaptureDriverStartupFields(captureDriver, 2),
     reportFields: visualCaptureDriverReportFields(captureDriver),
-    datasetProjectionExpression: buildVisualCaptureDatasetProjectionExpression(captureDriver),
+    datasetProjectionExpression: buildVisualCaptureDatasetProjectionExpression(
+      captureDriver, { fixtureId: fixtureAdapter.name },
+    ),
     evidenceReaderExpression: buildVisualCaptureEvidenceReaderExpression(
       domainAdapter.evidence.plane,
     ),

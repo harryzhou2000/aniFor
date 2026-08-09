@@ -1,4 +1,6 @@
 import type { PowderRenderStyle } from '../renderer/powder-render-style';
+import { VISUAL_CAPTURE_STATIC_CONTRACT } from '../shared/visual-capture-static-contract.js';
+import { VISUAL_LAB_STATIC_CONTRACT } from '../shared/visual-lab-static-contract.js';
 import {
   VISUAL_LAB_FIXTURE_IDS,
   type VisualLabFixtureId,
@@ -19,40 +21,28 @@ const POWDER_STYLE_BY_VARIANT = Object.freeze({
   2: 'grains',
 } satisfies Record<VisualCaptureControlVariant, PowderRenderStyle>);
 
+type VisualCaptureControlDriver = (
+  typeof VISUAL_CAPTURE_STATIC_CONTRACT.drivers[number]['name']
+);
+
 interface VisualCaptureControlDescriptor {
-  readonly fixture: VisualLabFixtureId;
   set(host: VisualCaptureControlHost, variant: VisualCaptureControlVariant): void;
   get(host: VisualCaptureControlHost): VisualCaptureControlVariant;
 }
 
 /**
- * Closed executable side of fixture-owned same-page controls. Future material
- * experiments add one descriptor here; the browser bridge remains unchanged.
+ * Closed executable side of driver-owned same-page controls. A fixture using an
+ * existing driver needs only a static-contract entry; the browser bridge and
+ * app registry remain unchanged.
  */
-const VISUAL_CAPTURE_CONTROL_DESCRIPTORS = Object.freeze([
-  Object.freeze({
-    fixture: 'showcase',
+const VISUAL_CAPTURE_CONTROL_DESCRIPTORS = Object.freeze({
+  'normal-hdr': Object.freeze({
     set: (host: VisualCaptureControlHost, variant: VisualCaptureControlVariant) => {
       host.setVisualLabVariant(variant);
     },
     get: (host: VisualCaptureControlHost) => host.getVisualLabVariant(),
   }),
-  Object.freeze({
-    fixture: 'oil-motion',
-    set: (host: VisualCaptureControlHost, variant: VisualCaptureControlVariant) => {
-      host.setVisualLabVariant(variant);
-    },
-    get: (host: VisualCaptureControlHost) => host.getVisualLabVariant(),
-  }),
-  Object.freeze({
-    fixture: 'water-motion',
-    set: (host: VisualCaptureControlHost, variant: VisualCaptureControlVariant) => {
-      host.setVisualLabVariant(variant);
-    },
-    get: (host: VisualCaptureControlHost) => host.getVisualLabVariant(),
-  }),
-  Object.freeze({
-    fixture: 'powder-style-atlas',
+  'powder-render-style': Object.freeze({
     set: (host: VisualCaptureControlHost, variant: VisualCaptureControlVariant) => {
       host.setPowderRenderStyle(POWDER_STYLE_BY_VARIANT[variant]);
     },
@@ -60,26 +50,37 @@ const VISUAL_CAPTURE_CONTROL_DESCRIPTORS = Object.freeze([
       variantForPowderStyle(host.getPowderRenderStyle())
     ),
   }),
-] satisfies readonly VisualCaptureControlDescriptor[]);
+} satisfies Record<VisualCaptureControlDriver, VisualCaptureControlDescriptor>);
+
+const VISUAL_CAPTURE_CONTROL_FIXTURES = Object.freeze([
+  ...VISUAL_LAB_STATIC_CONTRACT.fixtures.map(({ name }) => Object.freeze({
+    fixture: name,
+    driver: 'normal-hdr' as const,
+  })),
+  ...VISUAL_CAPTURE_STATIC_CONTRACT.fixtures.map(({ name, driver }) => Object.freeze({
+    fixture: name,
+    driver,
+  })),
+]);
 
 /** Fixtures whose same-page A/B control is implemented by this registry. */
 export const VISUAL_CAPTURE_CONTROL_FIXTURE_IDS = Object.freeze(
-  VISUAL_CAPTURE_CONTROL_DESCRIPTORS.map(({ fixture }) => fixture),
+  VISUAL_CAPTURE_CONTROL_FIXTURES.map(({ fixture }) => fixture),
 );
 
 const CONTROL_BY_FIXTURE = new Map<VisualLabFixtureId, VisualCaptureControlDescriptor>();
-for (const descriptor of VISUAL_CAPTURE_CONTROL_DESCRIPTORS) {
-  if (!VISUAL_LAB_FIXTURE_IDS.some((known) => known === descriptor.fixture)) {
+for (const { fixture, driver } of VISUAL_CAPTURE_CONTROL_FIXTURES) {
+  if (!VISUAL_LAB_FIXTURE_IDS.some((known) => known === fixture)) {
     throw new TypeError(
-      `Visual capture control fixture ${JSON.stringify(descriptor.fixture)} is not a known fixture`,
+      `Visual capture control fixture ${JSON.stringify(fixture)} is not a known fixture`,
     );
   }
-  if (CONTROL_BY_FIXTURE.has(descriptor.fixture)) {
+  if (CONTROL_BY_FIXTURE.has(fixture)) {
     throw new TypeError(
-      `Duplicate Visual capture control fixture ${JSON.stringify(descriptor.fixture)}`,
+      `Duplicate Visual capture control fixture ${JSON.stringify(fixture)}`,
     );
   }
-  CONTROL_BY_FIXTURE.set(descriptor.fixture, descriptor);
+  CONTROL_BY_FIXTURE.set(fixture, VISUAL_CAPTURE_CONTROL_DESCRIPTORS[driver]);
 }
 if (CONTROL_BY_FIXTURE.size !== VISUAL_LAB_FIXTURE_IDS.length
   || VISUAL_LAB_FIXTURE_IDS.some((fixture) => !CONTROL_BY_FIXTURE.has(fixture))) {

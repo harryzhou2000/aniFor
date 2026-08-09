@@ -94,6 +94,33 @@ describe('Visual Lab execution plan', () => {
       visualLab: 'inactive', powderRenderStyle: 'grains',
     });
     expect(powder.canonicalQuery).not.toMatch(/visualLab=|visualVariant=/);
+
+    const powderRuntime = plan.entries.find(({ candidate }) => (
+      candidate === 'powder-style-atlas'
+    ));
+    expect(powderRuntime.compiled.datasetProjectionExpression)
+      .toContain('preparedVisualCaptureVariant("powder-style-atlas")');
+    for (const variant of powderRuntime.compiled.variants) {
+      expect(variant.selectionExpression)
+        .toContain('setPreparedVisualCaptureVariant("powder-style-atlas",');
+    }
+  });
+
+  it('rejects fixture and driver mismatches during plan compilation', () => {
+    expect(() => createVisualCaptureExecutionEntry({
+      request: {
+        domain: 'gas', target: 0, fixture: 'powder-style-atlas', gain: 1, renderScale: 2,
+      },
+      baseUrl: 'file:///bundle/index.html',
+      outputDir: '/never-created',
+    })).toThrow('--fixture=powder-style-atlas requires --domain=powder --target=0');
+    expect(() => createVisualCaptureExecutionEntry({
+      request: {
+        domain: 'powder', target: 0, fixture: 'showcase', gain: 1, renderScale: 2,
+      },
+      baseUrl: 'file:///bundle/index.html',
+      outputDir: '/never-created',
+    })).toThrow('--fixture=showcase requires --domain to be one of');
   });
 
   it('records prepared fixture IDs without serializing executable preparation authority', () => {

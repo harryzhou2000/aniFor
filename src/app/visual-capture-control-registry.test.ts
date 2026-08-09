@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PowderRenderStyle } from '../renderer/powder-render-style';
+import { VISUAL_CAPTURE_STATIC_CONTRACT } from '../shared/visual-capture-static-contract.js';
+import { VISUAL_LAB_STATIC_CONTRACT } from '../shared/visual-lab-static-contract.js';
 import {
   VISUAL_CAPTURE_CONTROL_FIXTURE_IDS,
   VisualCaptureControlRegistry,
@@ -7,13 +9,13 @@ import {
 } from './visual-capture-control-registry';
 
 const POWDER_FIXTURE = 'powder-style-atlas' as const;
-const NORMAL_FIXTURES = ['showcase', 'oil-motion', 'water-motion'] as const;
+const NORMAL_FIXTURES = VISUAL_LAB_STATIC_CONTRACT.fixtures.map(({ name }) => name);
 
 describe('Visual capture control registry', () => {
   it('exports the exact frozen supported fixture list', () => {
     expect(VISUAL_CAPTURE_CONTROL_FIXTURE_IDS).toEqual([
       ...NORMAL_FIXTURES,
-      POWDER_FIXTURE,
+      ...VISUAL_CAPTURE_STATIC_CONTRACT.fixtures.map(({ name }) => name),
     ]);
     expect(Object.isFrozen(VISUAL_CAPTURE_CONTROL_FIXTURE_IDS)).toBe(true);
   });

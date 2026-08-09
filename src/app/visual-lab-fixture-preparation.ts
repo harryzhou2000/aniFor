@@ -27,6 +27,11 @@ export const VISUAL_LAB_FIXTURE_IDS = Object.freeze(
   STATIC_VISUAL_CAPTURE_FIXTURES.map(({ name }) => name),
 ) as readonly VisualLabFixtureId[];
 
+const VISUAL_LAB_FIXTURE_ID_SET = new Set<VisualLabFixtureId>(VISUAL_LAB_FIXTURE_IDS);
+if (VISUAL_LAB_FIXTURE_ID_SET.size !== VISUAL_LAB_FIXTURE_IDS.length) {
+  throw new TypeError('Visual Lab fixture catalog contains duplicate IDs');
+}
+
 const PREPARED_STATIC_VISUAL_LAB_FIXTURES = STATIC_VISUAL_CAPTURE_FIXTURES.filter(
   (fixture): fixture is PreparedStaticVisualLabFixture => (
     fixture.preparationReportLabel !== null
@@ -56,38 +61,14 @@ if (REGISTERED_PREPARER_IDS.length !== VISUAL_LAB_PREPARED_FIXTURE_IDS.length
   throw new TypeError('Visual Lab fixture preparation registry does not match the static contract');
 }
 
-type VisualLabFixtureActivation = (simulation: SimulationBackend) => boolean;
-
-/**
- * Closed app-owned activation registry. A fixture without a concrete preparer
- * is still acknowledged through this boundary, never via a special browser API.
- */
-const VISUAL_LAB_FIXTURE_ACTIVATIONS = Object.freeze({
-  showcase: () => false,
-  'oil-motion': (simulation) => {
-    VISUAL_LAB_FIXTURE_PREPARERS['oil-motion'](simulation);
-    return true;
-  },
-  'water-motion': (simulation) => {
-    VISUAL_LAB_FIXTURE_PREPARERS['water-motion'](simulation);
-    return true;
-  },
-  'powder-style-atlas': (simulation) => {
-    VISUAL_LAB_FIXTURE_PREPARERS['powder-style-atlas'](simulation);
-    return true;
-  },
-} satisfies Record<VisualLabFixtureId, VisualLabFixtureActivation>);
-
-const REGISTERED_ACTIVATION_IDS = Object.keys(VISUAL_LAB_FIXTURE_ACTIVATIONS);
-if (REGISTERED_ACTIVATION_IDS.length !== VISUAL_LAB_FIXTURE_IDS.length
-  || VISUAL_LAB_FIXTURE_IDS.some((fixture) => (
-    !Object.hasOwn(VISUAL_LAB_FIXTURE_ACTIVATIONS, fixture)
-  ))) {
-  throw new TypeError('Visual Lab fixture activation registry does not match the static contract');
+function isVisualLabFixtureId(fixture: string): fixture is VisualLabFixtureId {
+  return VISUAL_LAB_FIXTURE_ID_SET.has(fixture as VisualLabFixtureId);
 }
 
-function isVisualLabFixtureId(fixture: string): fixture is VisualLabFixtureId {
-  return Object.hasOwn(VISUAL_LAB_FIXTURE_ACTIVATIONS, fixture);
+function hasVisualLabFixturePreparer(
+  fixture: VisualLabFixtureId,
+): fixture is VisualLabPreparedFixtureId {
+  return Object.hasOwn(VISUAL_LAB_FIXTURE_PREPARERS, fixture);
 }
 
 /** Rejects an untrusted browser string before it can mutate simulation state. */
@@ -98,5 +79,7 @@ export function prepareVisualLabFixture(
   if (!isVisualLabFixtureId(fixture)) {
     throw new Error(`Unknown Visual Lab fixture ${JSON.stringify(fixture)}`);
   }
-  return VISUAL_LAB_FIXTURE_ACTIVATIONS[fixture](simulation);
+  if (!hasVisualLabFixturePreparer(fixture)) return false;
+  VISUAL_LAB_FIXTURE_PREPARERS[fixture](simulation);
+  return true;
 }
