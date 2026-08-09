@@ -4,10 +4,15 @@
 recipes. Its manifest identity covers only catalog-ordered candidate/result
 records; provenance is deliberately external to that identity.
 
-The current package was accepted from revision
-`34c8a3db2dbcf0d497524aac15f0055984faf999`, workflow run `31284862276`, with
-manifest ID
-`sha256:b95e09ecb1df93c2b9ae718d205159b17dc56379723f2d1ad904458e16c5653c`.
+The current package was visually accepted from a fresh local SwiftShader review
+of source revision `627ef5070ffd4628356ba5b27cefbf6554ecae08`. All four release
+recipes passed with WebGL/HDR, zero browser errors, and the audit-only
+`hermetic-918x576-v1` geometry proof. The old 749×469 package compared as four
+expected dimension-mismatch review items; the reviewed promotion
+`sha256:261fdf5d7b6b2ce358e193a30b55498b3c7597a5a0db11bf40309ad3f9d868f2`
+then compared four-for-four encoded-identical against its capture source. The
+accepted manifest ID is
+`sha256:b78ac28395d454a13889b2124fa4364119463756407877ab801608a783eba1aa`.
 
 ## Reusable capture cohorts
 

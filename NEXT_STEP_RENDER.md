@@ -158,14 +158,20 @@ Active priority order:
    remain untouched. Audit, batch, portable verification, and post-deploy smoke
    must all carry and require the same geometry proof. Two independent local
    SwiftShader captures under this profile were byte-identical: OFF
-   `5d2a196…`, A `25f21ee…`, and B `d262b25…`. This implementation is locally
-   proven, not yet deployed.
-11. Commit the geometry implementation as a clean framework checkpoint before
-   regenerating evidence. Then capture the complete release recipe set, inspect
-   the review board, migrate the accepted baseline as a separate explicit
-   decision, and compare the deployed manifest with the local package. Only
-   after local/hosted capture geometry and bytes are reproducible should the
-   loop be used for reusable powder, liquid, gas, and material experiments.
+   `5d2a196…`, A `25f21ee…`, and B `d262b25…`. The implementation is checkpointed
+   at `1cd23cc`; review-CLI boundary repair `627ef50` is also complete.
+11. Treat the accepted-baseline geometry migration as reviewed and complete.
+   The fresh four-recipe SwiftShader release set passed WebGL/HDR, exact geometry,
+   portable verification, and zero browser errors. Human review accepted all
+   four dimension-only changes through promotion
+   `sha256:261fdf5d7b6b2ce358e193a30b55498b3c7597a5a0db11bf40309ad3f9d868f2`.
+   Baseline
+   `sha256:b78ac28395d454a13889b2124fa4364119463756407877ab801608a783eba1aa`
+   then compared four-for-four encoded-identical against the capture source.
+12. Deploy this framework/baseline checkpoint and compare the hosted success
+   manifest, geometry proof, and Water PNG hashes with the local evidence. Only
+   after that local/hosted closure should the loop move into reusable powder,
+   liquid, gas, and material experiments.
 
 Continue improving the registration and evidence loop before spending the
 milestone on isolated shader detail. Visual preference may later accept a

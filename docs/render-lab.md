@@ -232,11 +232,16 @@ record; current CI and post-deploy packages use
 `--require-capture-geometry=1` so missing, legacy, or drifting geometry cannot
 silently become new release evidence. Two independent local SwiftShader runs
 were byte-identical at OFF `5d2a196…`, A `25f21ee…`, and B `d262b25…`.
-This proves the local profile but is not a deployment claim. Commit the framework
-implementation before generating the complete release comparison; review and
-promote any geometry-driven baseline replacement separately, then compare the
-deployed manifest with the local package before starting reusable material
-experiments.
+The geometry implementation is checkpointed at `1cd23cc`, and review-CLI repair
+`627ef50` enabled the complete fresh release comparison. All four candidates
+passed; human review accepted the expected dimension-only migration through
+promotion
+`sha256:261fdf5d7b6b2ce358e193a30b55498b3c7597a5a0db11bf40309ad3f9d868f2`.
+Accepted baseline
+`sha256:b78ac28395d454a13889b2124fa4364119463756407877ab801608a783eba1aa`
+compares four-for-four encoded-identical to that source. The remaining
+acceptance boundary is deployed manifest/PNG equality before reusable material
+experiments begin.
 
 The real-browser audit first captures and signature-checks this deterministic
 atlas, then clears it and exercises painting, wheel/pan, resizing, and mobile

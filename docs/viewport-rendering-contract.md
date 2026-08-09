@@ -50,8 +50,11 @@ PNG and recheck them after it. Batch and portable verification must carry the
 same proof; new framework/release evidence requires it rather than accepting a
 legacy omission. Two independent local SwiftShader captures under this profile
 were byte-identical (OFF `5d2a196…`, A `25f21ee…`, B `d262b25…`). The profile is
-locally proven but is not deployed yet. Its implementation must be checkpointed
-before a separately reviewed baseline migration.
+checkpointed at `1cd23cc`; after review-CLI repair `627ef50`, its complete
+four-recipe release evidence passed and the separately reviewed promotion
+produced accepted baseline
+`sha256:b78ac28395d454a13889b2124fa4364119463756407877ab801608a783eba1aa`.
+Deployment must still prove the hosted geometry and bytes against that source.
 
 The bounded manifest that exposed this need is deployed at revision
 `95cab0b4e3f885c1b956875322e9e9e2caa4866f` by workflow run `31331716229` as

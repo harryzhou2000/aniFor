@@ -60,12 +60,18 @@ retain the ordinary 2× backing at 1224×768. Ordinary responsive desktop/mobile
 layout, viewport input, and production presentation must remain untouched.
 Carry one exact geometry proof through audit reports, batch projection, portable
 verification, and post-deploy evidence; new framework/release packages must fail
-closed when that required proof is absent or drifts. Two independent local
-SwiftShader captures already matched byte-for-byte at OFF `5d2a196…`, A
-`25f21ee…`, and B `d262b25…`, but this geometry implementation is not deployed
-yet. Checkpoint it cleanly before regenerating captures; then review and migrate
-accepted baselines as a separate commit, prove the deployed bytes against local
-evidence, and only then resume reusable powder/liquid/gas/material experiments.
+closed when that required proof is absent or drifts. The implementation is
+checkpointed at `1cd23cc`; review-CLI boundary repair `627ef50` then enabled a
+fresh four-recipe SwiftShader release review. All candidates passed with WebGL,
+HDR, zero browser errors, exact 918×576 crops, and 1224×768 backing. Human review
+accepted the geometry-only migration through promotion
+`sha256:261fdf5d7b6b2ce358e193a30b55498b3c7597a5a0db11bf40309ad3f9d868f2`;
+the new baseline is
+`sha256:b78ac28395d454a13889b2124fa4364119463756407877ab801608a783eba1aa`
+and compares four-for-four encoded-identical to its source. This checkpoint is
+not deployed yet. Next prove the deployed manifest and PNG bytes against this
+local evidence, then use the framework for reusable powder/liquid/gas/material
+experiments.
 
 The typed fixture-preparation boundary is also complete and deployed at revision
 `83894aa6fe98fc5a537cd4c23c9b2400dc37081f` by release-set workflow run

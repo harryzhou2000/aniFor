@@ -125,10 +125,13 @@ the ordinary 1224×768 backing. The profile activates only for
 and mobile layout is unchanged. Reports carry this geometry proof through the
 batch and portable verifier, and new release evidence requires it explicitly.
 Two independent local SwiftShader captures matched byte-for-byte (OFF
-`5d2a196…`, A `25f21ee…`, B `d262b25…`). This geometry implementation is not
-deployed yet: checkpoint it before regenerating and explicitly reviewing a
-baseline migration, then use the reproducible loop for reusable material
-experiments.
+`5d2a196…`, A `25f21ee…`, B `d262b25…`). The implementation is checkpointed at
+`1cd23cc`; after the review adapter fix at `627ef50`, a fresh four-recipe release
+review passed and the explicitly reviewed geometry migration produced accepted
+baseline
+`sha256:b78ac28395d454a13889b2124fa4364119463756407877ab801608a783eba1aa`.
+The next acceptance boundary is hosted manifest/PNG equality, after which this
+reproducible loop becomes the default route for reusable material experiments.
 
 Readiness and settle behavior is independently bound by
 `execution-tuning-plan.json`. Its content-addressed entries come from one
