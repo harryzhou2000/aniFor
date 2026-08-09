@@ -66,6 +66,14 @@ experiment should reduce to one static catalog record, one leaf shader module,
 one renderer-registry entry, and—only for authored simulation state—one typed
 app preparer.
 
+The active bounded follow-up centralizes the evidence-only capture ABI in
+`scripts/visual-lab-capture-abi.mjs`. One frozen tuple owns the exact ordered
+`off=0`, `a=1`, and `b=2` mapping; audit capture consumes descriptors while
+result, batch, baseline, review, and metrics consumers derive the ordered names.
+Keep it dependency-free and Node-side, preserve every historical v1 byte and
+ID, and do not widen the browser static contract or typed fixture boundary for
+this evidence concern.
+
 ### Cross-runtime static-contract acceptance
 
 `src/shared/visual-lab-static-contract.js` is the dependency-neutral source of

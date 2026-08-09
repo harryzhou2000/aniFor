@@ -29,6 +29,9 @@ import {
   isDetachedProcessGroupAlive,
   terminateDetachedProcessGroup,
 } from './detached-process.mjs';
+import {
+  VISUAL_LAB_CAPTURE_VARIANT_NAMES as VARIANTS,
+} from './visual-lab-capture-abi.mjs';
 import { inspectVisualLabPng } from './visual-lab-png.mjs';
 
 export { inspectVisualLabPng } from './visual-lab-png.mjs';
@@ -45,7 +48,6 @@ const CANDIDATE_KILL_SETTLEMENT_MS = 5_000;
 const MAX_CANDIDATE_TIMEOUT_MS = 2_147_483_647;
 const WORLD_WIDTH = 612;
 const WORLD_HEIGHT = 384;
-const VARIANTS = Object.freeze(['off', 'a', 'b']);
 const LIFECYCLE_FILE_NAME = 'chrome-lifecycle.json';
 const LIFECYCLE_SCHEMA = 'anifor.visual-lab.lifecycle/v1';
 const BATCH_LOCK_FILE_NAME = '.visual-lab-batch.lock';

@@ -1,5 +1,8 @@
 import { createHash } from 'node:crypto';
 
+import {
+  VISUAL_LAB_CAPTURE_VARIANT_NAMES as VARIANTS,
+} from './visual-lab-capture-abi.mjs';
 import { decodeVisualLabPng } from './visual-lab-png.mjs';
 
 export const VISUAL_LAB_COMPARISON_METRICS_SCHEMA = (
@@ -9,7 +12,6 @@ export const VISUAL_LAB_COMPARISON_METRICS_SCHEMA = (
 const COMPARISON_SCHEMA = 'anifor.visual-lab.comparison/v1';
 const SHA256_ID = /^sha256:[0-9a-f]{64}$/;
 const SHA256_HEX = /^[0-9a-f]{64}$/;
-const VARIANTS = Object.freeze(['off', 'a', 'b']);
 
 const deepFreeze = (value) => {
   if (value && typeof value === 'object' && !Object.isFrozen(value)) {

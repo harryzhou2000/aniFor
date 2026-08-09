@@ -1,5 +1,9 @@
 import { createHash } from 'node:crypto';
 
+import {
+  VISUAL_LAB_CAPTURE_VARIANT_NAMES as CAPTURE_KEYS,
+} from './visual-lab-capture-abi.mjs';
+
 export const VISUAL_LAB_RESULT_SCHEMA = 'anifor.visual-lab.result/v1';
 
 const REQUEST_KEYS = Object.freeze([
@@ -9,7 +13,6 @@ const REQUEST_KEYS = Object.freeze([
   'gain',
   'renderScale',
 ]);
-const CAPTURE_KEYS = Object.freeze(['off', 'a', 'b']);
 const SHA256_HEX = /^[0-9a-f]{64}$/;
 
 const assertExactRecord = (value, expectedKeys, label) => {

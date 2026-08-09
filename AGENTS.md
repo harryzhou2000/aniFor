@@ -78,6 +78,15 @@ one typed renderer-registry entry, and where needed one app preparer—not
 presenter setup, HDR lifecycle, app boot, package/workflow duplication,
 reflective preparation data, or harness branching.
 
+The evidence-only capture ABI lives in
+`scripts/visual-lab-capture-abi.mjs`. Its frozen ordered descriptors own exactly
+`off=0`, `a=1`, and `b=2`; audit capture uses the descriptors and result, batch,
+baseline, review, and metrics tooling derive their ordered names. Keep this leaf
+dependency-free and Node-side. Do not duplicate that tuple in another consumer,
+move it into the browser static contract, or change its order without an
+explicit frozen-schema migration. Identity tests must continue to assert the
+historical result and comparison bytes independently of the shared tuple.
+
 The typed Visual Lab state, fixed normal-HDR composition seam, promotion-safe
 same-page off/A/B selection, declarative fixtures, and production-bundle capture
 route are established. Three leaf migrations are complete. E62 Oxygen volume

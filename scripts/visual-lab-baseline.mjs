@@ -16,6 +16,9 @@ import {
   VISUAL_LAB_COMPARISON_METRICS_SCHEMA,
 } from './visual-lab-comparison-metrics.mjs';
 import {
+  VISUAL_LAB_CAPTURE_VARIANT_NAMES as VARIANTS,
+} from './visual-lab-capture-abi.mjs';
+import {
   resolveVisualLabCaptureRecipe,
   visualLabCaptureRecipeNames,
 } from './visual-lab-recipes.mjs';
@@ -26,7 +29,6 @@ export const VISUAL_LAB_COMPARISON_SCHEMA = 'anifor.visual-lab.comparison/v1';
 export const VISUAL_LAB_PROMOTION_SCHEMA = 'anifor.visual-lab.baseline-promotion/v1';
 
 const MODULE_PATH = fileURLToPath(import.meta.url);
-const VARIANTS = Object.freeze(['off', 'a', 'b']);
 const CANDIDATE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const SHA256_ID = /^sha256:[0-9a-f]{64}$/;
 const MAX_COMPARISON_METRICS_BYTES = 1024 * 1024;

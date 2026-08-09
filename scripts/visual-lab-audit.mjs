@@ -38,6 +38,7 @@ import { createVisualLabResultRecord } from './visual-lab-result.mjs';
 import {
   requestBrowserShutdown, terminateDetachedProcess,
 } from './detached-process.mjs';
+import { VISUAL_LAB_CAPTURE_VARIANTS as VARIANTS } from './visual-lab-capture-abi.mjs';
 
 const CDP_CONNECT_TIMEOUT_MS = 10_000;
 const CDP_COMMAND_TIMEOUT_MS = 20_000;
@@ -50,11 +51,6 @@ const VARIANT_SETTLE_TIMEOUT_MS = 10_000;
 const SWIFTSHADER_VARIANT_SETTLE_TIMEOUT_MS = 30_000;
 const VISUAL_LAB_LIFECYCLE_SCHEMA = 'anifor.visual-lab.lifecycle/v1';
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-const VARIANTS = Object.freeze([
-  Object.freeze({ value: 0, name: 'off' }),
-  Object.freeze({ value: 1, name: 'a' }),
-  Object.freeze({ value: 2, name: 'b' }),
-]);
 
 const HELP = `Usage:
   node scripts/visual-lab-audit.mjs [options]
