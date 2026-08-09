@@ -17,6 +17,27 @@ shared read-only verifier proved the fresh same-run downloaded release artifact,
 its recipe-set sidecar, accepted-baseline comparison, 36 PNG copies, and all 19
 runtime resources without another browser or build.
 
+Active priority order:
+
+1. Make performance evidence repeatable: bounded non-identity subphase
+   telemetry, fixed fresh/shared ABBA cohorts, portable verification after each
+   cohort, and a path-free summary published only after the whole run passes.
+2. Add a renderer-owned completed-frame receipt with explicit completed,
+   pending, superseded, and failed states. Bind it to the exact presentation
+   generation and reuse the sole true-8× fence owner.
+3. Version any proof reduction as an opt-in execution capability, retain the
+   current two-snapshot convergence profile as the default, and prove the new
+   path in real WebGL before it can affect capture policy.
+4. Use this framework to compare and checkpoint material experiments. Visual
+   preference may accept a candidate without broad unit-test expansion, but it
+   must retain topology, renderer lifecycle, portable evidence, and deployment
+   contracts.
+
+Do not spend the active milestone on another isolated highlight, texture, or
+material-specific shader branch. The intended leverage is a faster, observable,
+reusable experiment loop that makes later powder/liquid/gas work cheaper to
+author, compare, recover, and deploy.
+
 The typed generic fixture-preparation boundary is deployed at revision
 `83894aa6fe98fc5a537cd4c23c9b2400dc37081f` by release-set workflow run
 `31293472696`. The CDP
@@ -251,14 +272,38 @@ and both result IDs byte-identical and no Chrome residue. Powder A+B measured
 shared cohort plus its supervisor was about 59.7 s versus 66.6 s fresh in this
 cold run. Treat these single-run timings as directional, not a stable benchmark.
 
-The next active framework work is measurement and completion signaling, not a
-new material effect. Add bounded non-identity subphase diagnostics for dataset
-wait, refresh/selection, snapshot attempts, readback/hash, screenshot, and write;
-then repeat fresh/shared cohorts in alternating order before changing proof
-semantics. Only a renderer-owned completed-frame/fence capability may justify a
-future one-snapshot profile. Two RAFs or dataset acknowledgement alone are not
-GPU completion, and the current digest-convergence profile must remain the
-default until real WebGL evidence proves a versioned replacement.
+The bounded non-identity measurement increment is now implemented. New reports
+optionally carry `anifor.visual-lab.capture-subphase-timings/v1`, with exact
+readiness dataset-wait/refresh/snapshot/readback values and OFF/A/B
+selection/dataset-wait/snapshot/readback/screenshot/PNG-write values. Batch and
+portable verification normalize and aggregate it while legacy omission remains
+valid; no result, batch index, recipe-set, capture-plan, tuning-plan, baseline,
+or comparison identity includes it. A real built SwiftShader Gas capture kept
+the accepted three PNG hashes and result ID while attributing most of its 33.2
+seconds to the 14.6-second readiness dataset wait, 3.7-second readiness
+readback/hash, and 5.7-second OFF readback/hash.
+
+Repeatable alternating-order evidence is now implemented by the opt-in
+performance-cohort runner. It accepts only tracked 1×/2×/4× recipe sets, fails
+before output mutation when shared Chrome is unsupported, fixes the order to
+fresh/shared/shared/fresh, requires complete timing/subphase coverage, verifies
+every cohort portably, and publishes its bounded path-free summary last. A real
+two-candidate atmosphere run completed all four legs: fresh totals were about
+63.3 and 61.4 seconds, while shared totals were about 61.8 and 60.7 seconds;
+each shared leg used one host, two assignments, and zero restart. This is useful
+directional evidence, not a stable machine-independent benchmark.
+The runner also requires every portable result identity to remain equal across
+all four legs while keeping candidate names and result IDs out of its summary.
+
+The next active framework work is renderer completion signaling, not a new
+material effect. Only a renderer-owned completed-frame receipt, bound to a
+submission generation and reported superseded after any later render, may
+justify a future one-snapshot profile. At normal scale it must fence immediately
+after the complete HDR presentation; at true 8× it must reuse the sole existing
+render-fence owner. Two RAFs, dataset acknowledgement, timer queries, CPU
+submission time, or `gl.finish()` fallback alone are not that proof, and current
+two-snapshot digest convergence remains the default until a versioned capability
+and real WebGL gate prove its replacement.
 
 ### Cross-runtime static-contract acceptance
 

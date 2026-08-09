@@ -166,6 +166,9 @@ describe('typed visual capture drivers', () => {
     expect(typeof audit.digestVisualLabFramebufferAlpha).toBe('function');
     const source = readFileSync(new URL('./visual-lab-audit.mjs', import.meta.url), 'utf8');
     expect(source).toContain('entry: options.executionPlan');
+    expect(source).toContain('createVisualLabCaptureSubphaseTimingRecorder');
+    expect(source).toContain('captureSubphases: captureSubphases.finish()');
+    expect(source).toContain("measureSnapshot(\n        'readiness'");
     expect(source).toContain("pageCdp.send('Page.enable')");
     expect(source).toContain('browserErrors = collectBrowserErrors(pageCdp)');
     expect(source).toContain('realpathSync(process.argv[1]) === realpathSync(MODULE_PATH)');

@@ -124,6 +124,44 @@ captures retained identical PNG bytes and result IDs; Powder A+B fell from the
 prior 6.46/5.79 seconds to 4.49/3.77 seconds, while the direct digest's isolated
 2× CPU walk was byte-identical and about 5.9× faster.
 
+Every new capture also emits optional `captureSubphases` diagnostics under the
+separate `anifor.visual-lab.capture-subphase-timings/v1` schema. It measures the
+readiness dataset wait and explicit refresh, then per OFF/A/B selection,
+dataset acknowledgement, snapshot attempts, complete CDP readback/hash time,
+screenshot time, and PNG write time. These bounded monotonic values are
+validated and aggregated by batch and portable verification, but remain absent
+from result IDs, `index.json`, recipe sets, execution plans, tuning plans,
+baselines, and comparisons; legacy reports may omit them. A real built
+SwiftShader Gas capture retained the accepted PNG/result hashes and attributed
+its 33.2-second run chiefly to readiness (14.6-second dataset wait plus 3.7
+seconds of readback/hash) and the OFF proof (5.7 seconds of readback/hash),
+making the next optimization target explicit without weakening evidence.
+
+Run the opt-in performance cohort outside CI with a new or empty output
+directory:
+
+```bash
+npm run audit:visual-lab:performance-cohorts -- \
+  --recipe-set=visual-lab/recipe-sets/atmosphere.json \
+  --output-dir=/tmp/anifor-visual-lab-abba \
+  --gpu=swiftshader
+```
+
+The runner fixes the host order to fresh/shared/shared/fresh, gives every cohort
+its own evidence root, and portable-verifies each root before continuing. It
+writes the bounded, path-free `performance-summary.json` only after all four
+cohorts pass; partial cohort evidence remains available when a later run fails.
+All four cohorts must retain identical accepted result identities, but names and
+result IDs stay out of the aggregate summary. This command has no CI or
+baseline-promotion authority.
+
+The final two-candidate atmosphere ABBA gate completed all four portable roots.
+Fresh cohorts took about 63.3s and 61.4s; shared cohorts took about 61.8s and
+60.7s, each with one host, two assignments, and no restart. Treat those values
+as directional local evidence. Readiness and OFF readback/proof still dominate,
+so the next framework step is a renderer-owned completed-frame receipt—not a
+weaker timer or animation-frame assumption.
+
 Each recipe keeps the stable six fields `name/domain/target/fixture/gain/renderScale`.
 The resolved fixture—not the material domain—selects its capture driver, so one
 domain can host multiple independent controls. Add declarative driver, fixture,

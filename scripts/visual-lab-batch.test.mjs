@@ -41,7 +41,10 @@ import {
 import {
   createVisualLabExecutionTuningPlan,
 } from './visual-lab-execution-tuning-plan.mjs';
-import { VISUAL_LAB_TIMING_SCHEMA } from './visual-lab-timing.mjs';
+import {
+  VISUAL_LAB_CAPTURE_SUBPHASE_TIMING_SCHEMA,
+  VISUAL_LAB_TIMING_SCHEMA,
+} from './visual-lab-timing.mjs';
 import { isDetachedProcessGroupAlive } from './detached-process.mjs';
 
 const temporaryDirectories = [];
@@ -159,6 +162,24 @@ const timingRecord = (multiplier = 1) => ({
     hostRestarts: 0,
     captures: 3,
   },
+});
+
+const captureSubphaseRecord = (multiplier = 1) => ({
+  schema: VISUAL_LAB_CAPTURE_SUBPHASE_TIMING_SCHEMA,
+  readiness: {
+    datasetWaitMs: 1 * multiplier,
+    refreshMs: 2 * multiplier,
+    snapshotAttempts: 2 * multiplier,
+    readbackHashMs: 3 * multiplier,
+  },
+  captures: Object.fromEntries(['off', 'a', 'b'].map((variant, index) => [variant, {
+    selectionMs: (index + 1) * multiplier,
+    datasetWaitMs: (index + 2) * multiplier,
+    snapshotAttempts: 2 * multiplier,
+    readbackHashMs: (index + 3) * multiplier,
+    screenshotMs: (index + 4) * multiplier,
+    writeMs: (index + 5) * multiplier,
+  }])),
 });
 
 const crc32 = (bytes) => {
@@ -347,6 +368,8 @@ const writeValidCapture = async (directory, candidate, options = {}) => {
     },
     browserErrors: 0,
     ...(options.timings === undefined ? {} : { timings: options.timings }),
+    ...(options.captureSubphases === undefined
+      ? {} : { captureSubphases: options.captureSubphases }),
   };
   if (options.mutateReport) options.mutateReport(report);
   await writeFile(
@@ -1032,12 +1055,13 @@ describe('Visual Lab batch runner', () => {
     expect(await readFile(result.indexPath, 'utf8')).toBe(sentinel);
   });
 
-  it('aggregates optional phase telemetry outside frozen batch identity', async () => {
+  it('aggregates optional phase and capture-subphase telemetry outside frozen batch identity', async () => {
     const root = await makeTemporaryDirectory();
     const outputDirectory = path.join(root, 'batch');
     const candidateRoot = path.join(outputDirectory, 'candidates');
     await writeValidCapture(path.join(candidateRoot, 'gas-showcase'), 'gas-showcase', {
       timings: timingRecord(2),
+      captureSubphases: captureSubphaseRecord(2),
     });
     await writeValidCapture(
       path.join(candidateRoot, 'oxygen-showcase'), 'oxygen-showcase',
@@ -1062,14 +1086,28 @@ describe('Visual Lab batch runner', () => {
       hostRestarts: 0,
       captures: 3,
     });
-    expect(JSON.stringify(generated.index)).not.toMatch(/timings|browserHosts|totalMs/);
-    expect(await readFile(generated.indexPath, 'utf8')).not.toMatch(/timings|browserHosts/);
+    expect(generated.captureSubphases.sampledCandidates).toEqual(['gas-showcase']);
+    expect(generated.captureSubphases.readiness.datasetWaitMs).toEqual({
+      totalMs: 2,
+      meanMs: 2,
+      maxMs: 2,
+    });
+    expect(generated.captureSubphases.captures.b.snapshotAttempts).toEqual({
+      totalAttempts: 4,
+      meanAttempts: 4,
+      maxAttempts: 4,
+    });
+    expect(JSON.stringify(generated.index))
+      .not.toMatch(/timings|captureSubphases|browserHosts|totalMs|snapshotAttempts/);
+    expect(await readFile(generated.indexPath, 'utf8'))
+      .not.toMatch(/timings|captureSubphases|browserHosts|snapshotAttempts/);
 
     const verified = await verifyVisualLabBatchPackage({
       batchRoot: outputDirectory,
       requireComplete: true,
     });
     expect(verified.timings).toEqual(generated.timings);
+    expect(verified.captureSubphases).toEqual(generated.captureSubphases);
 
     await writeValidCapture(path.join(candidateRoot, 'gas-showcase'), 'gas-showcase', {
       timings: { ...timingRecord(), machinePath: '/tmp/not-portable' },
@@ -1083,6 +1121,47 @@ describe('Visual Lab batch runner', () => {
     expect(await readFile(
       path.join(candidateRoot, 'gas-showcase', 'failure.log'), 'utf8',
     )).toContain('Visual Lab timings must contain exactly');
+  });
+
+  it('rejects malformed capture subphases while legacy omission preserves identity', async () => {
+    const root = await makeTemporaryDirectory();
+    const outputDirectory = path.join(root, 'batch');
+    const candidateDirectory = path.join(
+      outputDirectory, 'candidates', 'gas-showcase',
+    );
+    const written = await writeValidCapture(candidateDirectory, 'gas-showcase', {
+      captureSubphases: captureSubphaseRecord(),
+    });
+    const withTelemetry = await runVisualLabBatch({
+      candidates: ['gas-showcase'], outputDir: outputDirectory, indexOnly: true,
+    });
+    const identityBytes = JSON.stringify(withTelemetry.index);
+
+    const legacyReport = structuredClone(written.report);
+    delete legacyReport.captureSubphases;
+    await writeFile(
+      path.join(candidateDirectory, 'report.json'), `${JSON.stringify(legacyReport)}\n`,
+    );
+    const legacy = await runVisualLabBatch({
+      candidates: ['gas-showcase'], outputDir: outputDirectory, indexOnly: true,
+    });
+    expect(JSON.stringify(legacy.index)).toBe(identityBytes);
+    expect(legacy.captureSubphases.sampledCandidates).toEqual([]);
+
+    const malformed = structuredClone(written.report);
+    malformed.captureSubphases.machinePath = '/tmp/not-portable';
+    await writeFile(
+      path.join(candidateDirectory, 'report.json'), `${JSON.stringify(malformed)}\n`,
+    );
+    const rejected = await runVisualLabBatch({
+      candidates: ['gas-showcase'], outputDir: outputDirectory, indexOnly: true,
+    });
+    expect(rejected.index.candidates[0]).toMatchObject({
+      candidate: 'gas-showcase', status: 'failed', failure: 'report-invalid',
+    });
+    expect(await readFile(
+      path.join(candidateDirectory, 'failure.log'), 'utf8',
+    )).toContain('Visual Lab capture subphases must contain exactly');
   });
 
   it('revalidates a complete portable package without changing any evidence', async () => {

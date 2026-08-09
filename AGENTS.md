@@ -221,10 +221,47 @@ context-loss recovery marks all fallback contours. Keep framebuffer-alpha
 digest semantics byte-identical when optimizing its direct RGBA walk. Current
 local evidence preserves all six fresh/shared PNGs and both result IDs, cuts the
 sampled Powder A+B pair from roughly 6.46/5.79 seconds to 4.49/3.77 seconds, and
-leaves no Chrome process. Next add non-identity subphase timing and repeat
+leaves no Chrome process. Use the non-identity subphase timing below to repeat
 alternating-order cohorts; never replace two full snapshots with RAFs or dataset
 state alone. A future one-snapshot mode requires an explicit renderer-owned GPU
 completion/fence proof and a versioned capability grammar.
+
+The capture-subphase timing increment is now a protected additive diagnostic.
+Keep `timings/v1` unchanged and emit the separate optional
+`capture-subphase-timings/v1` record: readiness owns dataset wait, explicit
+refresh, snapshot attempts, and complete CDP readback/hash time; OFF/A/B each
+own selection, dataset wait, snapshot attempts, complete readback/hash,
+screenshot, and PNG-write time. Durations are monotonic, finite, bounded, and
+aggregated in canonical candidate order. Count attempted snapshots in `finally`
+so retried errors remain visible. Never serialize paths, timestamps, raw
+samples, browser/environment metadata, or this telemetry into result IDs,
+batch indexes, recipe sets, execution/tuning/host plans, baselines, comparisons,
+or review identity. Legacy omission remains valid. Do not claim that
+`readbackHashMs` is GPU-only: it is the whole Node-observed `snapshotState` CDP
+round trip. The first real Gas sample retained all accepted hashes and exposed
+readiness dataset wait plus readiness/OFF readback as the dominant cost.
+
+Performance comparisons use the opt-in
+`audit:visual-lab:performance-cohorts` runner. Preserve its fixed
+fresh/shared/shared/fresh order, tracked recipe-set requirement, distinct cohort
+roots, strict portable verification after every cohort, and publish-last
+bounded path-free summary. It is diagnostic only: do not add it to required CI,
+let it promote baselines, accept arbitrary host orders, reuse a nonempty output
+root, or publish a successful summary after partial failure. Keep paths, raw
+assignments, candidate names, browser metadata, and timestamps out of the
+summary; retain only bounded aggregate timing and host lifecycle counts. Prove
+that the portable result identities are equal across all four legs before
+publishing, but do not serialize those identities into the summary.
+
+For the future completion receipt, bind every ticket to the renderer's exact
+submission generation. A later render makes the ticket `superseded`; context
+loss, teardown, timeout, or fence failure makes it unavailable/failed. At
+normal scale insert a non-blocking WebGL sync only after the complete HDR
+presentation and flush it; at 8× extend the one existing render-fence owner
+rather than creating a competing fence. Never substitute timer-query readiness,
+two RAFs, dataset state, CPU submission time, or `gl.finish()` for this receipt,
+and do not reduce the current two-snapshot proof until a versioned tuning schema
+and real browser gate explicitly opt in.
 
 The typed Visual Lab state, fixed normal-HDR composition seam, promotion-safe
 same-page off/A/B selection, declarative fixtures, and production-bundle capture

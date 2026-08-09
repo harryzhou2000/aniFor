@@ -32,6 +32,11 @@ const batchEvidence = {
     id: `sha256:${'5'.repeat(64)}`,
     gpuMode: 'swiftshader',
   },
+  captureSubphases: {
+    sampledCandidates: ['gas-showcase'],
+    readiness: {},
+    captures: {},
+  },
 };
 
 const comparisonEvidence = {
@@ -149,6 +154,7 @@ describe('Visual Lab portable package verifier', () => {
       },
       browserHostPlan: batchEvidence.browserHostPlan,
       executionTuningPlan: batchEvidence.executionTuningPlan,
+      captureSubphases: batchEvidence.captureSubphases,
       comparison: comparisonEvidence.comparison,
     });
     expect(Object.isFrozen(result)).toBe(true);

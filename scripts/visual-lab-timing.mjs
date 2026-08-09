@@ -1,6 +1,11 @@
 import { performance } from 'node:perf_hooks';
+import {
+  VISUAL_LAB_CAPTURE_VARIANT_NAMES,
+} from './visual-lab-capture-abi.mjs';
 
 export const VISUAL_LAB_TIMING_SCHEMA = 'anifor.visual-lab.timings/v1';
+export const VISUAL_LAB_CAPTURE_SUBPHASE_TIMING_SCHEMA =
+  'anifor.visual-lab.capture-subphase-timings/v1';
 
 const PHASE_NAMES = Object.freeze([
   'plan',
@@ -26,6 +31,35 @@ const COUNTER_NAMES = Object.freeze([
   'hostRestarts',
   'captures',
 ]);
+
+const READINESS_SUBPHASE_DURATION_NAMES = Object.freeze([
+  'datasetWaitMs',
+  'refreshMs',
+  'readbackHashMs',
+]);
+const CAPTURE_SUBPHASE_DURATION_NAMES = Object.freeze([
+  'selectionMs',
+  'datasetWaitMs',
+  'readbackHashMs',
+  'screenshotMs',
+  'writeMs',
+]);
+const READINESS_SUBPHASE_FIELDS = Object.freeze([
+  'datasetWaitMs',
+  'refreshMs',
+  'snapshotAttempts',
+  'readbackHashMs',
+]);
+const CAPTURE_SUBPHASE_FIELDS = Object.freeze([
+  'selectionMs',
+  'datasetWaitMs',
+  'snapshotAttempts',
+  'readbackHashMs',
+  'screenshotMs',
+  'writeMs',
+]);
+const CAPTURE_SUBPHASE_TOP_LEVEL_FIELDS = Object.freeze(['schema', 'readiness', 'captures']);
+const MAX_SNAPSHOT_ATTEMPTS = 1_000_000;
 
 const SAFE_CANDIDATE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const MAX_PHASE_MS = 300_000;
@@ -74,6 +108,49 @@ const normalizeCounter = (value, label) => {
   return Object.is(value, -0) ? 0 : value;
 };
 
+const normalizeSnapshotAttempts = (value, label) => {
+  if (!Number.isSafeInteger(value) || value < 1 || value > MAX_SNAPSHOT_ATTEMPTS) {
+    throw new TypeError(
+      `${label} must be a safe integer from 1 through ${MAX_SNAPSHOT_ATTEMPTS}`,
+    );
+  }
+  return value;
+};
+
+const normalizeSubphaseDurations = (value, fields, label) => Object.fromEntries(fields.map((name) => [
+  name,
+  normalizePhaseMilliseconds(value[name], `${label}.${name}`),
+]));
+
+const normalizeReadinessSubphases = (value) => {
+  assertExactFields(value, READINESS_SUBPHASE_FIELDS, 'Visual Lab readiness subphases');
+  const durations = normalizeSubphaseDurations(
+    value, READINESS_SUBPHASE_DURATION_NAMES, 'Visual Lab readiness subphases',
+  );
+  return Object.freeze({
+    datasetWaitMs: durations.datasetWaitMs,
+    refreshMs: durations.refreshMs,
+    snapshotAttempts: normalizeSnapshotAttempts(
+      value.snapshotAttempts, 'Visual Lab readiness subphases.snapshotAttempts',
+    ),
+    readbackHashMs: durations.readbackHashMs,
+  });
+};
+
+const normalizeCaptureSubphases = (value, variant) => {
+  const label = `Visual Lab ${variant} capture subphases`;
+  assertExactFields(value, CAPTURE_SUBPHASE_FIELDS, label);
+  const durations = normalizeSubphaseDurations(value, CAPTURE_SUBPHASE_DURATION_NAMES, label);
+  return Object.freeze({
+    selectionMs: durations.selectionMs,
+    datasetWaitMs: durations.datasetWaitMs,
+    snapshotAttempts: normalizeSnapshotAttempts(value.snapshotAttempts, `${label}.snapshotAttempts`),
+    readbackHashMs: durations.readbackHashMs,
+    screenshotMs: durations.screenshotMs,
+    writeMs: durations.writeMs,
+  });
+};
+
 const normalizePhases = (value) => {
   assertExactFields(value, PHASE_NAMES, 'Visual Lab timing phases');
   const phases = Object.fromEntries(PHASE_NAMES.map((name) => [
@@ -113,6 +190,31 @@ export function normalizeVisualLabTimings(value) {
     schema: VISUAL_LAB_TIMING_SCHEMA,
     phases: normalizePhases(value.phases),
     counters: normalizeCounters(value.counters),
+  });
+}
+
+/**
+ * Normalizes bounded capture-internal telemetry. This is a separate additive
+ * diagnostic record so timings/v1 and every content-addressed identity retain
+ * their historical exact shape.
+ */
+export function normalizeVisualLabCaptureSubphaseTimings(value) {
+  assertExactFields(value, CAPTURE_SUBPHASE_TOP_LEVEL_FIELDS, 'Visual Lab capture subphases');
+  if (value.schema !== VISUAL_LAB_CAPTURE_SUBPHASE_TIMING_SCHEMA) {
+    throw new TypeError(
+      `Visual Lab capture subphases require ${VISUAL_LAB_CAPTURE_SUBPHASE_TIMING_SCHEMA}`,
+    );
+  }
+  assertExactFields(
+    value.captures, VISUAL_LAB_CAPTURE_VARIANT_NAMES, 'Visual Lab capture subphase variants',
+  );
+  return Object.freeze({
+    schema: VISUAL_LAB_CAPTURE_SUBPHASE_TIMING_SCHEMA,
+    readiness: normalizeReadinessSubphases(value.readiness),
+    captures: Object.freeze(Object.fromEntries(VISUAL_LAB_CAPTURE_VARIANT_NAMES.map((variant) => [
+      variant,
+      normalizeCaptureSubphases(value.captures[variant], variant),
+    ]))),
   });
 }
 
@@ -199,6 +301,125 @@ export function createVisualLabTimingRecorder({ now = () => performance.now() } 
 }
 
 /**
+ * Measures fixed, bounded capture internals without changing timings/v1. A
+ * snapshot operation is one complete `snapshotState` round trip, including its
+ * CDP transport, semantic/field/framebuffer readback, and digest work.
+ */
+export function createVisualLabCaptureSubphaseTimingRecorder({ now = () => performance.now() } = {}) {
+  if (typeof now !== 'function') {
+    throw new TypeError('Visual Lab capture subphase timing clock must be a function');
+  }
+
+  const readiness = {
+    datasetWaitMs: 0,
+    refreshMs: 0,
+    snapshotAttempts: 0,
+    readbackHashMs: 0,
+  };
+  const captures = Object.fromEntries(VISUAL_LAB_CAPTURE_VARIANT_NAMES.map((variant) => [variant, {
+    selectionMs: 0,
+    datasetWaitMs: 0,
+    snapshotAttempts: 0,
+    readbackHashMs: 0,
+    screenshotMs: 0,
+    writeMs: 0,
+  }]));
+  const measured = new Map([
+    ['readiness', new Set()],
+    ...VISUAL_LAB_CAPTURE_VARIANT_NAMES.map((variant) => [variant, new Set()]),
+  ]);
+  let lastClockReading = null;
+  let finished = false;
+
+  const assertOpen = () => {
+    if (finished) throw new Error('Visual Lab capture subphase timing recorder is already finished');
+  };
+
+  const readClock = () => {
+    const reading = normalizeNonnegativeMilliseconds(now(), 'Visual Lab capture subphase monotonic clock');
+    if (lastClockReading !== null && reading < lastClockReading) {
+      throw new RangeError('Visual Lab capture subphase timing clock moved backwards');
+    }
+    lastClockReading = reading;
+    return reading;
+  };
+
+  const scopeRecord = (scope) => {
+    if (scope === 'readiness') return readiness;
+    if (VISUAL_LAB_CAPTURE_VARIANT_NAMES.includes(scope)) return captures[scope];
+    throw new TypeError(`Unknown Visual Lab capture subphase scope ${JSON.stringify(scope)}`);
+  };
+
+  const durationNames = (scope) => (
+    scope === 'readiness' ? READINESS_SUBPHASE_DURATION_NAMES : CAPTURE_SUBPHASE_DURATION_NAMES
+  );
+
+  const measureScope = async (scope, name, action) => {
+    assertOpen();
+    const record = scopeRecord(scope);
+    if (!durationNames(scope).includes(name)) {
+      throw new TypeError(`Unknown Visual Lab ${scope} capture subphase ${JSON.stringify(name)}`);
+    }
+    if (typeof action !== 'function') {
+      throw new TypeError('Visual Lab capture subphase action must be a function');
+    }
+    const started = readClock();
+    try {
+      return await action();
+    } finally {
+      const elapsed = readClock() - started;
+      record[name] = normalizePhaseMilliseconds(
+        record[name] + elapsed, `Visual Lab ${scope} capture subphase ${name}`,
+      );
+      measured.get(scope).add(name);
+    }
+  };
+
+  const measureReadiness = (name, action) => measureScope('readiness', name, action);
+  const measureCapture = async (variant, name, action) => {
+    assertOpen();
+    if (!VISUAL_LAB_CAPTURE_VARIANT_NAMES.includes(variant)) {
+      throw new TypeError(`Unknown Visual Lab capture variant ${JSON.stringify(variant)}`);
+    }
+    return measureScope(variant, name, action);
+  };
+  const measureSnapshot = async (scope, action) => {
+    assertOpen();
+    const record = scopeRecord(scope);
+    try {
+      return await measureScope(scope, 'readbackHashMs', action);
+    } finally {
+      record.snapshotAttempts = normalizeSnapshotAttempts(
+        record.snapshotAttempts + 1, `Visual Lab ${scope} capture subphase snapshotAttempts`,
+      );
+    }
+  };
+
+  const finish = () => {
+    assertOpen();
+    const missing = [];
+    for (const [scope, names] of measured) {
+      const expected = durationNames(scope);
+      const absent = expected.filter((name) => !names.has(name));
+      if (absent.length > 0) missing.push(`${scope}.${absent.join(',')}`);
+      if (scopeRecord(scope).snapshotAttempts < 1) missing.push(`${scope}.snapshotAttempts`);
+    }
+    if (missing.length > 0) {
+      throw new Error(`Missing Visual Lab capture subphase measurements: ${missing.join('; ')}`);
+    }
+    const normalized = normalizeVisualLabCaptureSubphaseTimings({
+      schema: VISUAL_LAB_CAPTURE_SUBPHASE_TIMING_SCHEMA,
+      readiness,
+      captures,
+    });
+    finished = true;
+    return normalized;
+  };
+
+  return Object.freeze({ measureReadiness, measureCapture, measureSnapshot, finish });
+}
+
+/**
  * Aggregates normalized per-candidate timing records without introducing them
  * into any capture or batch identity. Candidate order is canonicalized so
  * floating-point accumulation and serialized output are deterministic.
@@ -257,5 +478,89 @@ export function summarizeVisualLabTimings(candidateRecords) {
     sampledCandidates: Object.freeze(normalized.map(({ candidate }) => candidate)),
     phases: Object.freeze(phaseSummary),
     counters: Object.freeze(counterSummary),
+  });
+}
+
+/**
+ * Aggregates optional capture-internal telemetry in canonical candidate order.
+ * Like the underlying records, this diagnostic summary is never an identity.
+ */
+export function summarizeVisualLabCaptureSubphaseTimings(candidateRecords) {
+  if (!Array.isArray(candidateRecords)) {
+    throw new TypeError('Visual Lab capture subphase timing candidates must be an array');
+  }
+  const normalized = candidateRecords.map((entry, index) => {
+    assertExactFields(entry, ['candidate', 'captureSubphases'],
+      `Visual Lab capture subphase timing candidate ${index}`);
+    if (typeof entry.candidate !== 'string' || !SAFE_CANDIDATE.test(entry.candidate)) {
+      throw new TypeError(`Invalid Visual Lab capture subphase timing candidate ${JSON.stringify(entry.candidate)}`);
+    }
+    return Object.freeze({
+      candidate: entry.candidate,
+      captureSubphases: normalizeVisualLabCaptureSubphaseTimings(entry.captureSubphases),
+    });
+  }).sort((left, right) => left.candidate.localeCompare(right.candidate));
+  for (let index = 1; index < normalized.length; index++) {
+    if (normalized[index - 1].candidate === normalized[index].candidate) {
+      throw new TypeError(
+        `Duplicate Visual Lab capture subphase timing candidate ${normalized[index].candidate}`,
+      );
+    }
+  }
+
+  const summarizeDuration = (read) => {
+    let totalMs = 0;
+    let maxMs = 0;
+    for (const entry of normalized) {
+      const value = read(entry.captureSubphases);
+      totalMs += value;
+      maxMs = Math.max(maxMs, value);
+    }
+    if (!Number.isFinite(totalMs)) {
+      throw new RangeError('Visual Lab capture subphase timing total exceeds the finite number range');
+    }
+    return Object.freeze({
+      totalMs,
+      meanMs: normalized.length === 0 ? 0 : totalMs / normalized.length,
+      maxMs,
+    });
+  };
+  const summarizeAttempts = (read) => {
+    let totalAttempts = 0;
+    let maxAttempts = 0;
+    for (const entry of normalized) {
+      const value = read(entry.captureSubphases);
+      totalAttempts += value;
+      maxAttempts = Math.max(maxAttempts, value);
+      if (!Number.isSafeInteger(totalAttempts)) {
+        throw new RangeError('Visual Lab capture subphase attempt total exceeds the safe integer range');
+      }
+    }
+    return Object.freeze({
+      totalAttempts,
+      meanAttempts: normalized.length === 0 ? 0 : totalAttempts / normalized.length,
+      maxAttempts,
+    });
+  };
+  const summarizeReadiness = () => Object.freeze({
+    ...Object.fromEntries(READINESS_SUBPHASE_DURATION_NAMES.map((name) => [name,
+      summarizeDuration((timings) => timings.readiness[name]),
+    ])),
+    snapshotAttempts: summarizeAttempts((timings) => timings.readiness.snapshotAttempts),
+  });
+  const summarizeCapture = (variant) => Object.freeze({
+    ...Object.fromEntries(CAPTURE_SUBPHASE_DURATION_NAMES.map((name) => [name,
+      summarizeDuration((timings) => timings.captures[variant][name]),
+    ])),
+    snapshotAttempts: summarizeAttempts((timings) => timings.captures[variant].snapshotAttempts),
+  });
+
+  return Object.freeze({
+    sampledCandidates: Object.freeze(normalized.map(({ candidate }) => candidate)),
+    readiness: summarizeReadiness(),
+    captures: Object.freeze(Object.fromEntries(VISUAL_LAB_CAPTURE_VARIANT_NAMES.map((variant) => [
+      variant,
+      summarizeCapture(variant),
+    ]))),
   });
 }

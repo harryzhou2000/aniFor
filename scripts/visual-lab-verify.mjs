@@ -142,6 +142,7 @@ export async function runVisualLabPackageVerification(options, dependencies = {}
       id: batch.executionTuningPlan.id,
       gpuMode: batch.executionTuningPlan.gpuMode,
     },
+    captureSubphases: batch.captureSubphases,
     recipeSet: batch.recipeSet === null ? null : {
       schema: batch.recipeSet.schema,
       id: batch.recipeSet.id,

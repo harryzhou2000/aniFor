@@ -35,7 +35,10 @@ import {
   resolveVisualLabCaptureRecipe, visualLabCaptureRecipeNames,
 } from './visual-lab-recipes.mjs';
 import { createVisualLabResultRecord } from './visual-lab-result.mjs';
-import { createVisualLabTimingRecorder } from './visual-lab-timing.mjs';
+import {
+  createVisualLabCaptureSubphaseTimingRecorder,
+  createVisualLabTimingRecorder,
+} from './visual-lab-timing.mjs';
 import { VISUAL_LAB_CAPTURE_VARIANTS as VARIANTS } from './visual-lab-capture-abi.mjs';
 import {
   Cdp,
@@ -337,6 +340,7 @@ async function captureVisualLabCandidateEvidence({
   pageCdp,
   gpuMode,
   browserErrors,
+  captureSubphases,
   measure = async (_phase, operation) => operation(),
 }) {
   const options = Object.freeze({
@@ -377,28 +381,33 @@ async function captureVisualLabCandidateEvidence({
 
   await measure('readiness', async () => {
     const { profile, effectiveTimeouts } = options.executionTuning;
-    await waitForPage(
-      cdp,
-      options,
-      profile.startup.variant,
-      effectiveTimeouts.readinessMs,
-      profile.readiness.pollIntervalMs,
+    await captureSubphases.measureReadiness(
+      'datasetWaitMs',
+      () => waitForPage(
+        cdp,
+        options,
+        profile.startup.variant,
+        effectiveTimeouts.readinessMs,
+        profile.readiness.pollIntervalMs,
+      ),
     );
-    await evaluate(cdp, `(() => {
-      const audit = window.__ANIFOR_INPUT_AUDIT__;
-      audit.refreshPresentationFields();
-      let remaining = ${profile.startup.rafs};
-      return new Promise((resolve) => {
-        const advance = () => {
-          remaining--;
-          if (remaining === 0) resolve(true);
-          else requestAnimationFrame(advance);
-        };
-        requestAnimationFrame(advance);
-      });
-    })()`);
+    await captureSubphases.measureReadiness('refreshMs', () => evaluate(cdp, `(() => {
+        const audit = window.__ANIFOR_INPUT_AUDIT__;
+        audit.refreshPresentationFields();
+        let remaining = ${profile.startup.rafs};
+        return new Promise((resolve) => {
+          const advance = () => {
+            remaining--;
+            if (remaining === 0) resolve(true);
+            else requestAnimationFrame(advance);
+          };
+          requestAnimationFrame(advance);
+        });
+      })()`));
     await waitFor(async () => {
-      const snapshot = await snapshotState(cdp, options.executionPlan);
+      const snapshot = await captureSubphases.measureSnapshot(
+        'readiness', () => snapshotState(cdp, options.executionPlan),
+      );
       return snapshot.semantic.occupied > 0
         && snapshot.fieldAlpha.nonzero > 0
         && snapshot.framebufferAlpha.nonzero > 0;
@@ -409,7 +418,7 @@ async function captureVisualLabCandidateEvidence({
   const captures = {};
   for (const variant of VARIANTS) {
     captures[variant.name] = await measure(
-      variant.name, () => captureVariant(cdp, options, variant),
+      variant.name, () => captureVariant(cdp, options, variant, captureSubphases),
     );
   }
 
@@ -504,6 +513,7 @@ async function captureVisualLabCandidateEvidence({
       renderScale: options.renderScale,
       gpu: options.gpu,
       ...(executionTuningProof === undefined ? {} : { executionTuning: executionTuningProof }),
+      captureSubphases: captureSubphases.finish(),
       startupSelection,
       backend: reference.backend.backend,
       hdrPipeline: reference.dataset.hdrPipeline,
@@ -550,6 +560,7 @@ export async function captureVisualLabCandidatePage({
   }
   const resolvedExecutionTuningEntry = executionTuningEntry
     ?? localExecutionTuningEntry(entry, gpuMode);
+  const captureSubphases = createVisualLabCaptureSubphaseTimingRecorder();
   let pageCdp;
   let browserErrors = [];
   let report;
@@ -582,6 +593,7 @@ export async function captureVisualLabCandidatePage({
       pageCdp,
       gpuMode,
       browserErrors,
+      captureSubphases,
       measure,
     });
   } catch (error) {
@@ -1030,7 +1042,7 @@ async function waitForPage(
   }
 }
 
-async function captureVariant(cdp, options, variant) {
+async function captureVariant(cdp, options, variant, captureSubphases) {
   const { profile, effectiveTimeouts } = options.executionTuning;
   const settleTimeoutMs = effectiveTimeouts.stabilityMs;
   const compiledVariant = options.executionPlan.compiled.variants.find(
@@ -1040,44 +1052,50 @@ async function captureVariant(cdp, options, variant) {
   const selectionExpression = compiledVariant.selectionExpression;
   const expectedDriverState = compiledVariant.expectedDataset;
   const observedDriverState = options.executionPlan.compiled.datasetProjectionExpression;
-  await evaluate(cdp, `(() => {
-    const audit = window.__ANIFOR_INPUT_AUDIT__;
-    const selection = ${selectionExpression};
-    if (!selection.ok) throw new Error('visual capture selector failed: ' + selection.failure);
-    let remaining = ${profile.selection.rafs};
-    return new Promise((resolve) => {
-      const advance = () => {
-        remaining--;
-        if (remaining === 0) resolve(selection);
-        else requestAnimationFrame(advance);
+  await captureSubphases.measureCapture(variant.name, 'selectionMs', () => evaluate(cdp, `(() => {
+      const audit = window.__ANIFOR_INPUT_AUDIT__;
+      const selection = ${selectionExpression};
+      if (!selection.ok) throw new Error('visual capture selector failed: ' + selection.failure);
+      let remaining = ${profile.selection.rafs};
+      return new Promise((resolve) => {
+        const advance = () => {
+          remaining--;
+          if (remaining === 0) resolve(selection);
+          else requestAnimationFrame(advance);
+        };
+        requestAnimationFrame(advance);
+      });
+    })()`));
+  await captureSubphases.measureCapture(variant.name, 'datasetWaitMs', () => waitFor(
+    () => evaluate(cdp, `(() => {
+      const audit = window.__ANIFOR_INPUT_AUDIT__;
+      const canvas = document.querySelector('.semantic-field-canvas');
+      if (!audit || !canvas) return false;
+      const dataset = canvas.dataset;
+      const driverState = {
+        visualLab: dataset.visualLab,
+        visualLabDomain: dataset.visualLabDomain,
+        visualLabVariant: dataset.visualLabVariant,
+        visualLabTarget: dataset.visualLabTarget,
+        visualLabGain: dataset.visualLabGain,
+        ...${observedDriverState},
       };
-      requestAnimationFrame(advance);
-    });
-  })()`);
-  await waitFor(() => evaluate(cdp, `(() => {
-    const audit = window.__ANIFOR_INPUT_AUDIT__;
-    const canvas = document.querySelector('.semantic-field-canvas');
-    if (!audit || !canvas) return false;
-    const dataset = canvas.dataset;
-    const driverState = {
-      visualLab: dataset.visualLab,
-      visualLabDomain: dataset.visualLabDomain,
-      visualLabVariant: dataset.visualLabVariant,
-      visualLabTarget: dataset.visualLabTarget,
-      visualLabGain: dataset.visualLabGain,
-      ...${observedDriverState},
-    };
-    const expectedDriverState = ${JSON.stringify(expectedDriverState)};
-    return Object.entries(expectedDriverState).every(([name, value]) => (
-      driverState[name] === value
-    ));
-  })()`), settleTimeoutMs, `${variant.name} capture-driver state`,
-  profile.stability.pollIntervalMs);
+      const expectedDriverState = ${JSON.stringify(expectedDriverState)};
+      return Object.entries(expectedDriverState).every(([name, value]) => (
+        driverState[name] === value
+      ));
+    })()`),
+    settleTimeoutMs,
+    `${variant.name} capture-driver state`,
+    profile.stability.pollIntervalMs,
+  ));
 
   let previousState;
   let consecutiveSnapshots = 0;
   const state = await waitFor(async () => {
-    const current = await snapshotState(cdp, options.executionPlan);
+    const current = await captureSubphases.measureSnapshot(
+      variant.name, () => snapshotState(cdp, options.executionPlan),
+    );
     const stable = previousState
       && sameDigest(previousState.semantic, current.semantic)
       && sameDigest(previousState.fieldAlpha, current.fieldAlpha)
@@ -1099,16 +1117,22 @@ async function captureVariant(cdp, options, variant) {
     };
   })()`);
   assert(clip.width > 0 && clip.height > 0, `${variant.name} canvas has an empty visual rect`);
-  const screenshot = await cdp.send('Page.captureScreenshot', {
-    format: 'png', fromSurface: true, captureBeyondViewport: true, clip,
-  }, CDP_COMMAND_TIMEOUT_MS);
+  const screenshot = await captureSubphases.measureCapture(
+    variant.name,
+    'screenshotMs',
+    () => cdp.send('Page.captureScreenshot', {
+      format: 'png', fromSurface: true, captureBeyondViewport: true, clip,
+    }, CDP_COMMAND_TIMEOUT_MS),
+  );
   const bytes = Buffer.from(screenshot.data, 'base64');
   const dimensions = capturePngDimensions(bytes, variant.name);
   assert(Math.abs(dimensions.width - clip.width) <= 1
     && Math.abs(dimensions.height - clip.height) <= 1,
   `${variant.name} PNG dimensions do not match its scale-1 CSS canvas clip`);
   const png = options.executionPlan.runtime.artifacts.captures[variant.name];
-  await writeFile(png, bytes);
+  await captureSubphases.measureCapture(
+    variant.name, 'writeMs', () => writeFile(png, bytes),
+  );
   return {
     state,
     png,

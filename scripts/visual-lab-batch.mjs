@@ -34,7 +34,9 @@ import {
 } from './visual-lab-execution-plan.mjs';
 import { createVisualLabResultRecord } from './visual-lab-result.mjs';
 import {
+  normalizeVisualLabCaptureSubphaseTimings,
   normalizeVisualLabTimings,
+  summarizeVisualLabCaptureSubphaseTimings,
   summarizeVisualLabTimings,
 } from './visual-lab-timing.mjs';
 import {
@@ -743,6 +745,7 @@ const readCandidateReport = async (candidateDirectory, recipe, {
 
   let expected;
   let timings = null;
+  let captureSubphases = null;
   let executionProof;
   let executionTuningProof = null;
   try {
@@ -770,6 +773,11 @@ const readCandidateReport = async (candidateDirectory, recipe, {
     }
     if (report.timings !== undefined) {
       timings = normalizeVisualLabTimings(report.timings);
+    }
+    if (report.captureSubphases !== undefined) {
+      captureSubphases = normalizeVisualLabCaptureSubphaseTimings(
+        report.captureSubphases,
+      );
     }
     if (typeof report.url !== 'string') throw new Error('capture URL must be a string');
     let reportBaseUrl;
@@ -877,6 +885,7 @@ const readCandidateReport = async (candidateDirectory, recipe, {
     executionProof,
     executionTuningProof,
     ...(timings === null ? {} : { timings }),
+    ...(captureSubphases === null ? {} : { captureSubphases }),
   };
 };
 
@@ -885,6 +894,15 @@ const summarizeEntryTimings = (entries) => summarizeVisualLabTimings(
     candidate: entry.candidate,
     timings: entry.timings,
   }]),
+);
+
+const summarizeEntryCaptureSubphases = (entries) => (
+  summarizeVisualLabCaptureSubphaseTimings(
+    entries.flatMap((entry) => entry.captureSubphases === undefined ? [] : [{
+      candidate: entry.candidate,
+      captureSubphases: entry.captureSubphases,
+    }]),
+  )
 );
 
 const readPortableFailureEntry = async (candidateDirectory, recipe) => {
@@ -1255,6 +1273,7 @@ export async function verifyVisualLabBatchPackage(options = {}) {
     browserHostPlan,
     executionTuningPlan,
     timings: summarizeEntryTimings(entries),
+    captureSubphases: summarizeEntryCaptureSubphases(entries),
   });
 }
 
@@ -2038,6 +2057,7 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
     );
   }
   const timingSummary = summarizeEntryTimings(entries);
+  const captureSubphaseSummary = summarizeEntryCaptureSubphases(entries);
   // Publish the human sheet first and the machine-readable completion marker
   // last. A crash or sheet error therefore cannot leave complete:true without
   // its corresponding contact sheet.
@@ -2062,6 +2082,7 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
       recycleReasons: Object.freeze([...browserHostRuntime.recycleReasons]),
     }),
     timings: timingSummary,
+    captureSubphases: captureSubphaseSummary,
   });
   };
   return executeLockedBatch().finally(releaseBatchLock);
@@ -2204,6 +2225,7 @@ const main = async () => {
       index: result.indexPath,
       contactSheet: result.contactSheetPath,
       timings: result.timings,
+      captureSubphases: result.captureSubphases,
     };
     process.stdout.write(`${JSON.stringify(output)}\n`);
     process.exitCode = interruptedExitCode ?? result.exitCode;

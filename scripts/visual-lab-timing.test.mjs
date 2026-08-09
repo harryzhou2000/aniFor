@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  createVisualLabCaptureSubphaseTimingRecorder,
   createVisualLabTimingRecorder,
+  normalizeVisualLabCaptureSubphaseTimings,
   normalizeVisualLabTimings,
+  summarizeVisualLabCaptureSubphaseTimings,
   summarizeVisualLabTimings,
+  VISUAL_LAB_CAPTURE_SUBPHASE_TIMING_SCHEMA,
   VISUAL_LAB_TIMING_SCHEMA,
 } from './visual-lab-timing.mjs';
 
@@ -27,6 +31,27 @@ const timingRecord = (multiplier = 1) => {
     counters: Object.fromEntries(COUNTERS.map((name, index) => [name, index * multiplier])),
   };
 };
+
+const subphaseTimingRecord = (multiplier = 1) => ({
+  schema: VISUAL_LAB_CAPTURE_SUBPHASE_TIMING_SCHEMA,
+  readiness: {
+    datasetWaitMs: 1 * multiplier,
+    refreshMs: 2 * multiplier,
+    snapshotAttempts: multiplier,
+    readbackHashMs: 3 * multiplier,
+  },
+  captures: Object.fromEntries(['off', 'a', 'b'].map((variant, index) => {
+    const offset = index * 10;
+    return [variant, {
+      selectionMs: (offset + 1) * multiplier,
+      datasetWaitMs: (offset + 2) * multiplier,
+      snapshotAttempts: multiplier,
+      readbackHashMs: (offset + 3) * multiplier,
+      screenshotMs: (offset + 4) * multiplier,
+      writeMs: (offset + 5) * multiplier,
+    }];
+  })),
+});
 
 const expectRecursivelyFrozen = (value) => {
   if (value === null || typeof value !== 'object') return;
@@ -83,6 +108,114 @@ describe('Visual Lab timing telemetry', () => {
     expect(JSON.stringify(timings)).not.toMatch(/timestamp|\/tmp|file:\/\//i);
     expect(() => recorder.record('plan', 1)).toThrow(/already finished/);
     expect(() => recorder.finish(timings.counters)).toThrow(/already finished/);
+  });
+
+  it('records fixed bounded capture subphases without changing timings/v1', async () => {
+    let clock = 0;
+    const recorder = createVisualLabCaptureSubphaseTimingRecorder({ now: () => clock++ });
+    await recorder.measureReadiness('datasetWaitMs', async () => 'dataset-ready');
+    await recorder.measureReadiness('refreshMs', async () => 'refreshed');
+    await recorder.measureSnapshot('readiness', async () => 'readiness-snapshot');
+    for (const variant of ['off', 'a', 'b']) {
+      await recorder.measureCapture(variant, 'selectionMs', async () => variant);
+      await recorder.measureCapture(variant, 'datasetWaitMs', async () => variant);
+      await recorder.measureSnapshot(variant, async () => variant);
+      await recorder.measureCapture(variant, 'screenshotMs', async () => variant);
+      await recorder.measureCapture(variant, 'writeMs', async () => variant);
+    }
+    const subphases = recorder.finish();
+
+    expect(subphases).toEqual({
+      schema: VISUAL_LAB_CAPTURE_SUBPHASE_TIMING_SCHEMA,
+      readiness: {
+        datasetWaitMs: 1,
+        refreshMs: 1,
+        snapshotAttempts: 1,
+        readbackHashMs: 1,
+      },
+      captures: Object.fromEntries(['off', 'a', 'b'].map((variant) => [variant, {
+        selectionMs: 1,
+        datasetWaitMs: 1,
+        snapshotAttempts: 1,
+        readbackHashMs: 1,
+        screenshotMs: 1,
+        writeMs: 1,
+      }])),
+    });
+    expect(Object.keys(subphases.captures)).toEqual(['off', 'a', 'b']);
+    expectRecursivelyFrozen(subphases);
+    expect(JSON.parse(JSON.stringify(subphases))).toEqual(subphases);
+    expect(JSON.stringify(subphases)).not.toMatch(/timestamp|\/tmp|file:\/\//i);
+    expect(() => recorder.finish()).toThrow(/already finished/);
+    await expect(recorder.measureCapture('off', 'writeMs', async () => true))
+      .rejects.toThrow(/already finished/);
+  });
+
+  it('strictly validates and bounds capture subphase telemetry', async () => {
+    const valid = subphaseTimingRecord();
+    expect(normalizeVisualLabCaptureSubphaseTimings(valid)).toEqual(valid);
+
+    const extra = subphaseTimingRecord();
+    extra.captures.off.path = '/tmp/not-portable';
+    expect(() => normalizeVisualLabCaptureSubphaseTimings(extra)).toThrow(/exactly/);
+    const missingVariant = subphaseTimingRecord();
+    delete missingVariant.captures.b;
+    expect(() => normalizeVisualLabCaptureSubphaseTimings(missingVariant)).toThrow(/exactly/);
+    const zeroAttempts = subphaseTimingRecord();
+    zeroAttempts.readiness.snapshotAttempts = 0;
+    expect(() => normalizeVisualLabCaptureSubphaseTimings(zeroAttempts)).toThrow(/1 through/);
+    const tooManyAttempts = subphaseTimingRecord();
+    tooManyAttempts.captures.a.snapshotAttempts = 1_000_001;
+    expect(() => normalizeVisualLabCaptureSubphaseTimings(tooManyAttempts)).toThrow(/1 through/);
+    const overBudget = subphaseTimingRecord();
+    overBudget.captures.b.readbackHashMs = 300_000.001;
+    expect(() => normalizeVisualLabCaptureSubphaseTimings(overBudget)).toThrow(/300000 ms/);
+    const negativeZero = subphaseTimingRecord();
+    negativeZero.captures.off.writeMs = -0;
+    expect(Object.is(normalizeVisualLabCaptureSubphaseTimings(negativeZero).captures.off.writeMs, -0))
+      .toBe(false);
+    const wrongSchema = subphaseTimingRecord();
+    wrongSchema.schema = 'anifor.visual-lab.capture-subphase-timings/v0';
+    expect(() => normalizeVisualLabCaptureSubphaseTimings(wrongSchema)).toThrow(/require/);
+    expect(() => normalizeVisualLabCaptureSubphaseTimings({
+      ...subphaseTimingRecord(), machinePath: '/tmp/not-portable',
+    })).toThrow(/exactly/);
+
+    const backwards = createVisualLabCaptureSubphaseTimingRecorder({
+      now: (() => {
+        const readings = [4, 3];
+        return () => readings.shift();
+      })(),
+    });
+    await expect(backwards.measureReadiness('datasetWaitMs', () => true))
+      .rejects.toThrow(/moved backwards/);
+    const failedSnapshot = createVisualLabCaptureSubphaseTimingRecorder({
+      now: (() => {
+        let value = 0;
+        return () => value++;
+      })(),
+    });
+    await expect(failedSnapshot.measureSnapshot('off', () => {
+      throw new Error('planned snapshot failure');
+    })).rejects.toThrow(/planned snapshot failure/);
+    await expect(failedSnapshot.measureSnapshot('other', async () => true))
+      .rejects.toThrow(/Unknown Visual Lab capture subphase scope/);
+    await failedSnapshot.measureSnapshot('off', async () => true);
+    await failedSnapshot.measureReadiness('datasetWaitMs', async () => true);
+    await failedSnapshot.measureReadiness('refreshMs', async () => true);
+    await failedSnapshot.measureSnapshot('readiness', async () => true);
+    for (const variant of ['off', 'a', 'b']) {
+      await failedSnapshot.measureCapture(variant, 'selectionMs', async () => true);
+      await failedSnapshot.measureCapture(variant, 'datasetWaitMs', async () => true);
+      if (variant !== 'off') await failedSnapshot.measureSnapshot(variant, async () => true);
+      await failedSnapshot.measureCapture(variant, 'screenshotMs', async () => true);
+      await failedSnapshot.measureCapture(variant, 'writeMs', async () => true);
+    }
+    const retried = failedSnapshot.finish();
+    expect(retried.captures.off.snapshotAttempts).toBe(2);
+    expect(retried.captures.off.readbackHashMs).toBe(2);
+    await expect(failedSnapshot.measureSnapshot('other', async () => true))
+      .rejects.toThrow(/already finished/);
   });
 
   it('strictly rejects missing, duplicate, unknown, nonfinite, and nonmonotonic input', async () => {
@@ -173,6 +306,52 @@ describe('Visual Lab timing telemetry', () => {
     ])).toThrow(/Invalid/);
     expect(() => summarizeVisualLabTimings([
       { candidate: 'gas-showcase', timings: timingRecord(), path: '/tmp/review' },
+    ])).toThrow(/exactly/);
+  });
+
+  it('canonically aggregates capture subphases in candidate order', () => {
+    const summary = summarizeVisualLabCaptureSubphaseTimings([
+      { candidate: 'powder-style-atlas', captureSubphases: subphaseTimingRecord(2) },
+      { candidate: 'gas-showcase', captureSubphases: subphaseTimingRecord(1) },
+    ]);
+
+    expect(summary.sampledCandidates).toEqual(['gas-showcase', 'powder-style-atlas']);
+    expect(summary.readiness.datasetWaitMs).toEqual({ totalMs: 3, meanMs: 1.5, maxMs: 2 });
+    expect(summary.readiness.snapshotAttempts).toEqual({
+      totalAttempts: 3,
+      meanAttempts: 1.5,
+      maxAttempts: 2,
+    });
+    expect(summary.captures.off.selectionMs).toEqual({ totalMs: 3, meanMs: 1.5, maxMs: 2 });
+    expect(summary.captures.b.writeMs).toEqual({ totalMs: 75, meanMs: 37.5, maxMs: 50 });
+    expect(summary.captures.a.snapshotAttempts).toEqual({
+      totalAttempts: 3,
+      meanAttempts: 1.5,
+      maxAttempts: 2,
+    });
+    expectRecursivelyFrozen(summary);
+
+    const empty = summarizeVisualLabCaptureSubphaseTimings([]);
+    expect(empty.sampledCandidates).toEqual([]);
+    expect(empty.readiness.refreshMs).toEqual({ totalMs: 0, meanMs: 0, maxMs: 0 });
+    expect(empty.captures.off.snapshotAttempts).toEqual({
+      totalAttempts: 0,
+      meanAttempts: 0,
+      maxAttempts: 0,
+    });
+    expect(() => summarizeVisualLabCaptureSubphaseTimings([
+      { candidate: 'gas-showcase', captureSubphases: subphaseTimingRecord() },
+      { candidate: 'gas-showcase', captureSubphases: subphaseTimingRecord() },
+    ])).toThrow(/Duplicate/);
+    expect(() => summarizeVisualLabCaptureSubphaseTimings([
+      { candidate: '../escape', captureSubphases: subphaseTimingRecord() },
+    ])).toThrow(/Invalid/);
+    expect(() => summarizeVisualLabCaptureSubphaseTimings([
+      {
+        candidate: 'gas-showcase',
+        captureSubphases: subphaseTimingRecord(),
+        path: '/tmp/not-portable',
+      },
     ])).toThrow(/exactly/);
   });
 });
