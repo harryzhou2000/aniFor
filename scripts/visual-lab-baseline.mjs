@@ -13,7 +13,9 @@ import {
 } from './visual-lab-batch.mjs';
 import {
   createVisualLabComparisonMetrics,
+  createVisualLabExperimentResponse,
   VISUAL_LAB_COMPARISON_METRICS_SCHEMA,
+  VISUAL_LAB_EXPERIMENT_RESPONSE_SCHEMA,
 } from './visual-lab-comparison-metrics.mjs';
 import {
   VISUAL_LAB_CAPTURE_VARIANT_NAMES as VARIANTS,
@@ -41,6 +43,8 @@ const CANDIDATE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const SHA256_ID = /^sha256:[0-9a-f]{64}$/;
 const MAX_COMPARISON_METRICS_BYTES = 1024 * 1024;
 const MAX_COMPARISON_REVIEW_BOARD_BYTES = 1024 * 1024;
+const MAX_EXPERIMENT_RESPONSE_BYTES = 1024 * 1024;
+const MAX_EXPERIMENT_BOARD_BYTES = 1024 * 1024;
 const MAX_BASELINE_CAPTURE_PROVENANCE_BYTES = 256 * 1024;
 const MAX_SOURCE_REPORT_BYTES = 4 * 1024 * 1024;
 
@@ -959,6 +963,197 @@ ${renderReviewBoardRuntime()}
 `;
 }
 
+const EXPERIMENT_RESPONSE_PAIRS = Object.freeze([
+  Object.freeze({ key: 'offToA', left: 'off', right: 'a', label: 'OFF → A' }),
+  Object.freeze({ key: 'offToB', left: 'off', right: 'b', label: 'OFF → B' }),
+  Object.freeze({ key: 'aToB', left: 'a', right: 'b', label: 'A → B' }),
+]);
+
+const experimentResponseEntries = (comparison, response) => {
+  if (response?.schema !== VISUAL_LAB_EXPERIMENT_RESPONSE_SCHEMA
+    || response.comparison?.schema !== comparison.schema
+    || response.comparison?.id !== comparison.id
+    || !Array.isArray(response.candidates)
+    || !Array.isArray(comparison.current?.resultIds)
+    || response.candidates.length !== comparison.current.resultIds.length) {
+    throw new TypeError(
+      `experiment board requires ${VISUAL_LAB_EXPERIMENT_RESPONSE_SCHEMA}`,
+    );
+  }
+  const comparisonByResult = new Map(
+    comparison.candidates
+      .filter((entry) => entry.currentResult !== null)
+      .map((entry) => [entry.currentResult.id, entry]),
+  );
+  const seen = new Set();
+  return response.candidates.map((responseEntry, index) => {
+    const expectedResultId = comparison.current.resultIds[index];
+    const entry = comparisonByResult.get(expectedResultId);
+    if (!entry || responseEntry?.candidate !== entry.candidate
+      || seen.has(responseEntry.candidate)) {
+      throw new TypeError('experiment response does not match comparison candidates');
+    }
+    seen.add(responseEntry.candidate);
+    if (responseEntry.currentResult?.schema !== entry.currentResult.schema
+      || responseEntry.currentResult?.id !== entry.currentResult.id
+      || responseEntry.pairs === null || typeof responseEntry.pairs !== 'object') {
+      throw new TypeError(`experiment response does not pin current ${entry.candidate}`);
+    }
+    for (const pair of EXPERIMENT_RESPONSE_PAIRS) {
+      const evidence = responseEntry.pairs[pair.key];
+      if (evidence?.left !== pair.left || evidence?.right !== pair.right
+        || evidence.metric === null || typeof evidence.metric !== 'object') {
+        throw new TypeError(`experiment response has invalid ${entry.candidate} ${pair.key}`);
+      }
+    }
+    return { entry, responseEntry };
+  });
+};
+
+const renderExperimentResponseMetric = (pair, evidence) => {
+  const metric = evidence.metric;
+  if (metric.kind === 'dimension-mismatch') {
+    return `<li><strong>${escapeHtml(pair.label)}</strong> · dimensions ${
+      escapeHtml(pair.left)} ${escapeHtml(metric.baseline?.width)}×${
+      escapeHtml(metric.baseline?.height)} · ${escapeHtml(pair.right)} ${
+      escapeHtml(metric.current?.width)}×${escapeHtml(metric.current?.height)}</li>`;
+  }
+  const pixels = Number(metric.comparedPixels);
+  const rgbSamples = pixels * 3;
+  return `<li><strong>${escapeHtml(pair.label)}</strong> · RGBA-changed ${
+    escapeHtml(formatMetricRatio(metric.rgbaDifferentPixels, pixels))} · RGB ${
+    escapeHtml(formatMetricRatio(metric.rgb?.differentPixels, pixels))} px, mean |Δ| ${
+    escapeHtml(formatMetricMean(metric.rgb?.absoluteDeltaSum, rgbSamples))}, RMS ${
+    escapeHtml(formatMetricRms(metric.rgb?.squaredDeltaSum, rgbSamples))}, peak ${
+    escapeHtml(metric.rgb?.channelPeak)} · alpha ${
+    escapeHtml(formatMetricRatio(metric.alpha?.differentPixels, pixels))} px, mean |Δ| ${
+    escapeHtml(formatMetricMean(metric.alpha?.absoluteDeltaSum, pixels))}, peak ${
+    escapeHtml(metric.alpha?.channelPeak)}</li>`;
+};
+
+const renderExperimentCurrentVariant = (entry, variant) => {
+  const label = visualCaptureVariantLabel(entry, variant);
+  const capture = entry.artifacts.current[variant];
+  return `<section class="variant"><h3>${escapeHtml(label)}</h3>
+      <figure><a href="./${escapeHtml(capture)}"
+        aria-label="Open current ${escapeHtml(label)} capture for ${escapeHtml(entry.candidate)} at full size">
+        <img src="./${escapeHtml(capture)}"
+          alt="${escapeHtml(entry.candidate)} ${variant} current capture"></a>
+        <figcaption>current · ${escapeHtml(shortHash(entry.currentResult.captureSha256[variant]))}</figcaption>
+      </figure></section>`;
+};
+
+const renderExperimentBoardCandidate = (entry, responseEntry) => {
+  const request = entry.currentResult?.request;
+  if (!request) throw new TypeError(`experiment board candidate ${entry.candidate} has no request`);
+  const promotable = entry.status === 'review' || entry.status === 'added';
+  const selection = promotable
+    ? `<label class="selection"><input type="checkbox" value="${escapeHtml(entry.candidate)}"> include in promotion scratch command</label>`
+    : '<span class="selection muted">measurement only</span>';
+  const metrics = `<ul class="response-metrics">${EXPERIMENT_RESPONSE_PAIRS.map((pair) => (
+    renderExperimentResponseMetric(pair, responseEntry.pairs[pair.key])
+  )).join('')}</ul>`;
+  return `<article class="candidate status-${escapeHtml(entry.status)}">
+    <header><div><h2>${escapeHtml(entry.candidate)}</h2>
+      <p class="request">${escapeHtml(request.domain)} · target ${escapeHtml(request.target)} · fixture ${
+  escapeHtml(request.fixture)} · gain ${escapeHtml(request.gain)} · Detail ${
+  escapeHtml(request.renderScale)}×</p></div><span class="status">${escapeHtml(entry.status)}</span></header>
+    ${selection}
+    <div class="variants">${VARIANTS.map((variant) => (
+    renderExperimentCurrentVariant(entry, variant)
+  )).join('')}</div>
+    ${metrics}
+  </article>`;
+};
+
+const renderExperimentBoardRuntime = () => `<script>
+'use strict';
+(() => {
+  const boxes = Array.from(document.querySelectorAll('.selection input[type="checkbox"]'));
+  const output = document.getElementById('promotion-scratch-command');
+  if (!output) return;
+  const update = () => {
+    const selected = boxes.filter((box) => box.checked).map((box) => box.value);
+    output.textContent = selected.length === 0
+      ? 'No candidates selected.'
+      : '--candidates=' + selected.join(',');
+  };
+  for (const box of boxes) box.addEventListener('change', update);
+  update();
+})();
+</script>`;
+
+/**
+ * Current-only OFF/A/B experiment surface. The sidecar and board are additive,
+ * recomputable evidence outside every frozen comparison and promotion identity.
+ */
+export function renderVisualLabExperimentBoard(comparison, response) {
+  if (comparison?.schema !== VISUAL_LAB_COMPARISON_SCHEMA
+    || comparison.complete !== true || !Array.isArray(comparison.candidates)) {
+    throw new TypeError(`experiment board requires ${VISUAL_LAB_COMPARISON_SCHEMA}`);
+  }
+  const entries = experimentResponseEntries(comparison, response);
+  const cards = entries.map(({ entry, responseEntry }) => (
+    renderExperimentBoardCandidate(entry, responseEntry)
+  )).join('');
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AniforTPT current experiment response</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #0d1319; color: #edf3fa; }
+    body { margin: 0 auto; max-width: 2100px; padding: 24px; overflow-wrap: anywhere; }
+    h1, h2, h3, p { margin: 0; }
+    body > header { display: grid; gap: 7px; margin-bottom: 18px; }
+    a { color: #9fd0ff; }
+    .scratch { margin-bottom: 18px; padding: 14px; border: 1px solid #35516a; border-radius: 10px; background: #172331; }
+    .scratch p + p { margin-top: 7px; }
+    .scratch code { user-select: all; color: #d8eaff; }
+    main { display: grid; gap: 18px; }
+    .candidate { background: #1b222c; border: 1px solid #3d4b5d; border-radius: 12px; padding: 16px; }
+    .candidate > header { display: flex; justify-content: space-between; gap: 14px; margin-bottom: 10px; }
+    .request { margin-top: 5px; color: #b9c7d6; }
+    .status { align-self: start; border-radius: 999px; padding: 3px 9px; background: #30475e; white-space: nowrap; }
+    .status-review .status, .status-added .status { background: #66501e; color: #ffe4a1; }
+    .selection { display: inline-flex; gap: 7px; align-items: center; margin-bottom: 12px; color: #d4e4f2; }
+    .selection input { inline-size: 18px; block-size: 18px; }
+    .selection.muted { color: #8fa0b1; }
+    .variants { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .variant { min-width: 0; }
+    .variant h3 { margin-bottom: 6px; font-size: .9rem; color: #b8c5d2; }
+    figure { margin: 0; min-width: 0; }
+    figure > a { display: block; }
+    img { display: block; width: 100%; height: auto; border-radius: 7px; background: #080b0f; }
+    figcaption, .empty { margin-top: 4px; color: #b8c5d2; }
+    .empty { min-height: 72px; display: grid; place-items: center; border: 1px dashed #405065; border-radius: 7px; }
+    .response-metrics { margin: 12px 0 0; padding: 10px 12px 10px 30px; background: #121a22; border-radius: 8px; color: #d3dfec; font-size: .84rem; line-height: 1.45; }
+    .empty-response { margin-top: 12px; color: #aebdca; }
+    noscript p { margin-bottom: 18px; padding: 12px; border: 1px solid #5c4c2c; border-radius: 8px; background: #2a2418; }
+    @media (max-width: 960px) { .variants { grid-template-columns: 1fr; } }
+    @media (max-width: 620px) { body { padding: 12px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Current experiment response</h1>
+    <p>Comparison ${escapeHtml(comparison.id)}</p>
+    <p><a href="./experiment-response.json">Open the portable response packet</a> · <a href="./review-board.html">open accepted/current review</a> · <a href="./index.html">open the exhaustive sheet</a></p>
+    <p>OFF/A/B differences are integer measurements only; there is no aesthetic score, threshold, ranking, or automatic promotion.</p>
+  </header>
+  <section class="scratch" aria-label="Promotion command scratchpad">
+    <p>Select review or added candidates to assemble a local command argument. This records nothing.</p>
+    <p><code id="promotion-scratch-command">No candidates selected.</code></p>
+  </section>
+  <noscript><p>All experiment evidence remains visible; the optional command scratchpad requires JavaScript.</p></noscript>
+  <main>${cards}</main>
+${renderExperimentBoardRuntime()}
+</body>
+</html>
+`;
+}
+
 export function parseVisualLabBaselineArguments(argv) {
   if (!Array.isArray(argv)) throw new TypeError('arguments must be an array');
   if (argv.includes('--help') || argv.includes('-h')) return { help: true };
@@ -1315,6 +1510,19 @@ const createComparisonPackageMetrics = (root, comparison) => (
   })
 );
 
+const createComparisonPackageExperimentResponse = (root, comparison) => (
+  createVisualLabExperimentResponse(comparison, async (side, candidate, variant) => {
+    if (side !== 'current') {
+      throw new TypeError(`experiment response cannot read ${side} capture evidence`);
+    }
+    const label = `experiment current ${candidate} ${variant}.png`;
+    const file = await ensureContainedFile(
+      root, `current/candidates/${candidate}/${variant}.png`, label,
+    );
+    return readStableRegularFile(file, label);
+  })
+);
+
 const readOptionalComparisonFile = async (root, relative, label, maxBytes) => {
   let file;
   try { file = await ensureContainedFile(root, relative, label); }
@@ -1328,7 +1536,11 @@ const readOptionalComparisonFile = async (root, relative, label, maxBytes) => {
 const validateComparisonPackage = async (root, expected, {
   baselineGeometry = null,
   currentGeometry = null,
+  requireExperimentResponse = false,
 } = {}) => {
+  if (typeof requireExperimentResponse !== 'boolean') {
+    throw new TypeError('requireExperimentResponse must be a boolean');
+  }
   const [jsonPath, htmlPath] = await Promise.all([
     ensureContainedFile(root, 'comparison.json', 'comparison index'),
     ensureContainedFile(root, 'index.html', 'comparison sheet'),
@@ -1343,7 +1555,7 @@ const validateComparisonPackage = async (root, expected, {
   if (html !== renderVisualLabComparison(expected)) {
     throw new TypeError('comparison sheet does not match its complete comparison index');
   }
-  const [brief, metricsSource, board] = await Promise.all([
+  const [brief, metricsSource, board, responseSource, experimentBoard] = await Promise.all([
     readOptionalComparisonFile(root, 'review-brief.html', 'comparison review brief'),
     readOptionalComparisonFile(
       root, 'metrics.json', 'comparison metrics', MAX_COMPARISON_METRICS_BYTES,
@@ -1351,6 +1563,14 @@ const validateComparisonPackage = async (root, expected, {
     readOptionalComparisonFile(
       root, 'review-board.html', 'comparison review board',
       MAX_COMPARISON_REVIEW_BOARD_BYTES,
+    ),
+    readOptionalComparisonFile(
+      root, 'experiment-response.json', 'experiment response',
+      MAX_EXPERIMENT_RESPONSE_BYTES,
+    ),
+    readOptionalComparisonFile(
+      root, 'experiment-board.html', 'experiment response board',
+      MAX_EXPERIMENT_BOARD_BYTES,
     ),
   ]);
   await Promise.all([
@@ -1390,7 +1610,34 @@ const validateComparisonPackage = async (root, expected, {
       throw new TypeError('comparison review board does not match its complete comparison evidence');
     }
   }
-  return comparison;
+  let experimentResponse;
+  if (responseSource !== undefined) {
+    try { experimentResponse = JSON.parse(responseSource); }
+    catch (error) {
+      throw new TypeError(`experiment response is not valid JSON: ${error.message}`, {
+        cause: error,
+      });
+    }
+    const expectedResponse = await createComparisonPackageExperimentResponse(root, expected);
+    if (!isDeepStrictEqual(experimentResponse, expectedResponse)) {
+      throw new TypeError('experiment response does not match the pinned current captures');
+    }
+  }
+  if (experimentBoard !== undefined) {
+    if (experimentResponse === undefined) {
+      throw new TypeError('experiment response board requires a verified experiment response');
+    }
+    if (experimentBoard !== renderVisualLabExperimentBoard(expected, experimentResponse)) {
+      throw new TypeError('experiment response board does not match its portable evidence');
+    }
+  }
+  if (requireExperimentResponse
+    && (experimentResponse === undefined || experimentBoard === undefined)) {
+    throw new TypeError(
+      'comparison package is missing required experiment response evidence',
+    );
+  }
+  return { comparison, experimentResponse: experimentResponse ?? null };
 };
 
 const rootsOverlap = (left, right) => {
@@ -1438,6 +1685,7 @@ export async function verifyVisualLabComparisonPackage(options = {}) {
   }
   const allowed = new Set([
     'baselineRoot', 'resultRoot', 'comparisonRoot', 'requireBaselineCaptureProvenance',
+    'requireExperimentResponse',
   ]);
   const unexpected = Reflect.ownKeys(options).filter((key) => !allowed.has(key));
   if (unexpected.length > 0) {
@@ -1449,6 +1697,10 @@ export async function verifyVisualLabComparisonPackage(options = {}) {
   const requireBaselineCaptureProvenance = options.requireBaselineCaptureProvenance ?? false;
   if (typeof requireBaselineCaptureProvenance !== 'boolean') {
     throw new TypeError('requireBaselineCaptureProvenance must be a boolean');
+  }
+  const requireExperimentResponse = options.requireExperimentResponse ?? false;
+  if (typeof requireExperimentResponse !== 'boolean') {
+    throw new TypeError('requireExperimentResponse must be a boolean');
   }
   assertComparisonOutput(comparisonRoot, baselineRoot, resultRoot);
   if (rootsOverlap(baselineRoot, resultRoot)) {
@@ -1477,11 +1729,16 @@ export async function verifyVisualLabComparisonPackage(options = {}) {
     validateCapturePackage(resultRoot, currentCandidates, 'batch'),
   ]);
   const expected = compareVisualLabBaseline(baseline, batch);
-  const comparison = await validateComparisonPackage(comparisonRoot, expected, {
+  const verifiedComparison = await validateComparisonPackage(comparisonRoot, expected, {
     baselineGeometry,
+    requireExperimentResponse,
   });
   return deepFreeze({
-    baseline, baselineCaptureProvenance: baselineProvenance, comparison, currentCandidates,
+    baseline,
+    baselineCaptureProvenance: baselineProvenance,
+    comparison: verifiedComparison.comparison,
+    experimentResponse: verifiedComparison.experimentResponse,
+    currentCandidates,
   });
 }
 
@@ -1565,22 +1822,40 @@ export async function runVisualLabBaseline(options, dependencies = {}) {
       ),
     ]);
     const metrics = await createComparisonPackageMetrics(outputDirectory, comparison);
+    const experimentResponse = await createComparisonPackageExperimentResponse(
+      outputDirectory, comparison,
+    );
     const html = path.join(outputDirectory, 'index.html');
     const brief = path.join(outputDirectory, 'review-brief.html');
     const board = path.join(outputDirectory, 'review-board.html');
     const metricsPath = path.join(outputDirectory, 'metrics.json');
+    const responsePath = path.join(outputDirectory, 'experiment-response.json');
+    const experimentBoard = path.join(outputDirectory, 'experiment-board.html');
     const json = path.join(outputDirectory, 'comparison.json');
     const boardSource = renderVisualLabReviewBoard(comparison, metrics);
+    const responseSource = `${JSON.stringify(experimentResponse, null, 2)}\n`;
+    const experimentBoardSource = renderVisualLabExperimentBoard(
+      comparison, experimentResponse,
+    );
     if (Buffer.byteLength(boardSource, 'utf8') > MAX_COMPARISON_REVIEW_BOARD_BYTES) {
       throw new Error('comparison review board exceeds its bounded file budget');
+    }
+    if (Buffer.byteLength(responseSource, 'utf8') > MAX_EXPERIMENT_RESPONSE_BYTES) {
+      throw new Error('experiment response exceeds its bounded file budget');
+    }
+    if (Buffer.byteLength(experimentBoardSource, 'utf8') > MAX_EXPERIMENT_BOARD_BYTES) {
+      throw new Error('experiment response board exceeds its bounded file budget');
     }
     await writeAtomic(html, renderVisualLabComparison(comparison));
     await writeAtomic(metricsPath, `${JSON.stringify(metrics, null, 2)}\n`);
     await writeAtomic(brief, renderVisualLabReviewBrief(comparison, metrics));
     await writeAtomic(board, boardSource);
+    await writeAtomic(responsePath, responseSource);
+    await writeAtomic(experimentBoard, experimentBoardSource);
     await writeAtomic(json, `${JSON.stringify(comparison, null, 2)}\n`);
     return {
-      mode: 'compare', comparison, metrics, html, brief, board, metricsPath, json,
+      mode: 'compare', comparison, metrics, experimentResponse,
+      html, brief, board, metricsPath, responsePath, experimentBoard, json,
     };
   }
   if (options.mode === 'promote') {
@@ -1624,7 +1899,7 @@ export async function runVisualLabBaseline(options, dependencies = {}) {
         validateCapturePackage(resultRoot, currentCandidates, 'batch', currentGeometry),
       ]);
       const expectedComparison = compareVisualLabBaseline(baseline, batch);
-      const comparison = await validateComparisonPackage(comparisonRoot, expectedComparison, {
+      const { comparison } = await validateComparisonPackage(comparisonRoot, expectedComparison, {
         baselineGeometry,
         currentGeometry,
       });

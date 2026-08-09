@@ -65,8 +65,11 @@ npm run visual-lab:review -- \
 When `dist/index.html` is already current, use `visual-lab:review:reuse` to omit
 the rebuild. The lower-level `audit:visual-lab:review` command remains available
 when CI or a diagnostic script must choose the output directory and capture
-options explicitly. Neither command opens the board, scores a variant, promotes
-a baseline, or mutates Git.
+options explicitly. Verified new reviews include a current-only
+`experiment-response.json` and `experiment-board.html` with OFF→A, OFF→B, and
+A→B integer RGBA measurements. These sidecars are recomputable, excluded from
+the frozen comparison identity, and optional only for legacy packages. Neither
+command opens the board, scores a variant, promotes a baseline, or mutates Git.
 
 Compare a complete downloaded batch without rebuilding or launching Chrome:
 

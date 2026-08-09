@@ -241,7 +241,10 @@ export async function runVisualLabDeveloperReview(argv, runtime = {}) {
     if (result?.ok !== true) {
       throw new Error('Visual Lab developer review cycle did not report success');
     }
-    const [board, brief, contactSheet] = await Promise.all([
+    const [experimentBoard, board, brief, contactSheet] = await Promise.all([
+      requireReviewArtifact(
+        result.comparison?.experimentBoard, 'the experiment response board', reviewRoot, filesystem,
+      ),
       requireReviewArtifact(
         result.comparison?.board, 'the review board', reviewRoot, filesystem,
       ),
@@ -252,7 +255,8 @@ export async function runVisualLabDeveloperReview(argv, runtime = {}) {
         result.batch?.contactSheet, 'the raw capture sheet', reviewRoot, filesystem,
       ),
     ]);
-    const links = Object.freeze({ board, brief, contactSheet });
+    const links = Object.freeze({ experimentBoard, board, brief, contactSheet });
+    stdout.write(`Experiment response: ${links.experimentBoard}\n`);
     stdout.write(`Review board: ${links.board}\n`);
     stdout.write(`Compact brief: ${links.brief}\n`);
     stdout.write(`Raw captures: ${links.contactSheet}\n`);

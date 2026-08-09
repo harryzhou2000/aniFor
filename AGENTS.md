@@ -3,16 +3,20 @@
 ## Current direction
 
 Pause the detail-first E-number ladder. The active goal is practical framework
-leverage, not another isolated material treatment or another evidence schema
-without a clear authoring benefit. The next checkpoint is a thin developer
-launcher over the existing trusted review cycle: one explicit candidate or
-tracked recipe set, one automatically allocated ignored evidence root, useful
-SwiftShader/shared-host/receipt defaults, accepted-baseline provenance, and
-direct static review-board links. Keep the batch, comparison, verifier, and
+leverage, not another isolated material treatment or evidence ceremony without
+a clear authoring benefit. The thin developer launcher is deployed at revision
+`55624597f2cf04ea280485959f33644a19b7b39e` by workflow run `31338337792`:
+build, shared-host review, Pages deployment, exact 19-resource closure, and the
+live Water fixture all passed. The current checkpoint adds portable current-only
+OFF→A, OFF→B, and A→B response evidence for sampled experiments—including new
+candidates without an accepted baseline—and makes that triptych the launcher's
+primary static review link. Keep it measurement-only, recomputable from pinned
+PNGs, ordered by the current batch result IDs, outside every frozen identity,
+and required only by new trusted review/CI packages so legacy packages remain
+valid. After that, prioritize declarative cohort/fixture authoring only where it
+removes real registration work. Keep the batch, comparison, verifier, and
 promotion implementations single-owned rather than creating a second capture
-pipeline. After that, prioritize current OFF/A/B response measurements for new
-experiments and declarative cohort/fixture authoring where it removes real
-registration work. The modular typed Visual Lab facade,
+pipeline. The modular typed Visual Lab facade,
 executable capability profiles, named capture recipes, and content-addressed
 result records are deployed, as is the deterministic batch runner and static
 contact-sheet index. Renderer and capture descriptors share exact domain,

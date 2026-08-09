@@ -37,6 +37,8 @@ const completeComparison = (outputDir) => ({
   html: path.join(outputDir, 'index.html'),
   brief: path.join(outputDir, 'brief.html'),
   board: path.join(outputDir, 'board.html'),
+  responsePath: path.join(outputDir, 'experiment-response.json'),
+  experimentBoard: path.join(outputDir, 'experiment-board.html'),
   metricsPath: path.join(outputDir, 'metrics.json'),
   json: path.join(outputDir, 'comparison.json'),
 });
@@ -158,6 +160,7 @@ describe('Visual Lab review-cycle orchestration', () => {
         requireBrowserHostPlan: true,
         requireCaptureGeometry: true,
         requireExecutionTuningPlan: true,
+        requireExperimentResponse: true,
         requireOriginAttestation: false,
         requireComplete: true,
         requireRecipeSet: true,
@@ -167,7 +170,12 @@ describe('Visual Lab review-cycle orchestration', () => {
       ok: true,
       reviewRoot: outputDir,
       batch: { index: path.join(outputDir, 'index.json') },
-      comparison: { id: 'sha256:comparison', json: path.join(comparisonRoot, 'comparison.json') },
+      comparison: {
+        id: 'sha256:comparison',
+        json: path.join(comparisonRoot, 'comparison.json'),
+        response: path.join(comparisonRoot, 'experiment-response.json'),
+        experimentBoard: path.join(comparisonRoot, 'experiment-board.html'),
+      },
     });
   });
 

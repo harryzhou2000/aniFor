@@ -61,9 +61,15 @@ npm run visual-lab:review -- \
 ```
 
 It uses the existing trusted review-cycle implementation, chooses a unique
-ignored evidence root, and prints static review-board links after complete
-verification. `visual-lab:review:reuse` skips only the build when `dist/` is
-already current; it does not weaken capture or provenance checks.
+ignored evidence root, and prints static review links after complete
+verification. The primary `experiment-board.html` is current-only: it groups
+OFF/A/B and their OFF→A, OFF→B, and A→B integer RGBA response measurements for
+every sampled candidate, including a new candidate without accepted evidence.
+Its optional checkbox scratchpad only assembles a canonical `--candidates=`
+argument; it records no decision and never promotes. The response JSON and board
+are recomputed by the portable verifier and remain outside all frozen package
+identities. `visual-lab:review:reuse` skips only the build when `dist/` is already
+current; it does not weaken capture, provenance, or response checks.
 
 The renderer exposes an audit-only, versioned GPU completion receipt for one
 exact full presentation. Normal WebGL inserts its non-blocking sync only after

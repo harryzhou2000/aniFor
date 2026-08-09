@@ -17,13 +17,17 @@ import {
   normalizeVisualLabReviewBoardQuery,
   renderVisualLabReviewBrief,
   renderVisualLabReviewBoard,
+  renderVisualLabExperimentBoard,
   runVisualLabBaseline,
   serializeVisualLabReviewBoardQuery,
   verifyVisualLabComparisonPackage,
   visualLabReviewBoardCandidateMatches,
 } from './visual-lab-baseline.mjs';
 import { resolveVisualLabCaptureRecipe } from './visual-lab-recipes.mjs';
-import { VISUAL_LAB_COMPARISON_METRICS_SCHEMA } from './visual-lab-comparison-metrics.mjs';
+import {
+  VISUAL_LAB_COMPARISON_METRICS_SCHEMA,
+  VISUAL_LAB_EXPERIMENT_RESPONSE_SCHEMA,
+} from './visual-lab-comparison-metrics.mjs';
 import { createVisualLabResultRecord } from './visual-lab-result.mjs';
 import {
   createVisualLabBaselineCaptureProvenance,
@@ -406,7 +410,33 @@ describe('Visual Lab accepted baseline packages', () => {
       comparedPixels: 918 * 576,
     });
     expect(Object.isFrozen(compared.metrics)).toBe(true);
+    expect(compared.experimentResponse).toMatchObject({
+      schema: VISUAL_LAB_EXPERIMENT_RESPONSE_SCHEMA,
+      comparison: {
+        schema: compared.comparison.schema,
+        id: compared.comparison.id,
+      },
+      candidates: [{
+        candidate: 'gas-showcase',
+        pairs: {
+          offToA: { left: 'off', right: 'a' },
+          offToB: { left: 'off', right: 'b' },
+          aToB: { left: 'a', right: 'b' },
+        },
+      }],
+    });
+    expect(Object.isFrozen(compared.experimentResponse)).toBe(true);
     await assertPortableRefs(comparisonRoot, await readFile(compared.html, 'utf8'));
+    const experimentBoard = await readFile(compared.experimentBoard, 'utf8');
+    expect(experimentBoard).toBe(renderVisualLabExperimentBoard(
+      compared.comparison, compared.experimentResponse,
+    ));
+    expect(experimentBoard).toContain('OFF → A');
+    expect(experimentBoard).toContain('OFF → B');
+    expect(experimentBoard).toContain('A → B');
+    expect([...experimentBoard.matchAll(/<img src="([^"]+)"/g)].map((match) => match[1]))
+      .toEqual(VARIANTS.map((variant) => `./current/candidates/gas-showcase/${variant}.png`));
+    await assertPortableRefs(comparisonRoot, experimentBoard);
 
     const beforeTrees = await Promise.all([
       snapshotPackageTree(baselineRoot),
@@ -417,9 +447,11 @@ describe('Visual Lab accepted baseline packages', () => {
     const beforeHtml = await readFile(compared.html);
     const verified = await verifyVisualLabComparisonPackage({
       baselineRoot, resultRoot: currentRoot, comparisonRoot,
+      requireExperimentResponse: true,
     });
     expect(verified.baseline.id).toBe(accepted.baseline.id);
     expect(verified.comparison).toStrictEqual(compared.comparison);
+    expect(verified.experimentResponse).toStrictEqual(compared.experimentResponse);
     expect(verified.currentCandidates.map(({ candidate }) => candidate))
       .toEqual(['gas-showcase']);
     expect(await readFile(compared.json)).toStrictEqual(beforeJson);
@@ -795,6 +827,41 @@ describe('Visual Lab accepted baseline packages', () => {
     const originalBrief = await readFile(output.brief);
     const originalMetrics = await readFile(output.metricsPath);
     const originalBoard = await readFile(output.board);
+    const originalResponse = await readFile(output.responsePath);
+    const originalExperimentBoard = await readFile(output.experimentBoard);
+
+    const tamperedResponse = JSON.parse(originalResponse.toString('utf8'));
+    tamperedResponse.candidates[0].pairs.offToA.metric.rgbaDifferentPixels++;
+    await writeFile(output.responsePath, `${JSON.stringify(tamperedResponse, null, 2)}\n`);
+    await expect(verifyVisualLabComparisonPackage({
+      baselineRoot, resultRoot: currentRoot, comparisonRoot,
+    })).rejects.toThrow('experiment response does not match');
+    await writeFile(output.responsePath, originalResponse);
+
+    await writeFile(output.responsePath, Buffer.alloc(1024 * 1024 + 1, 0x20));
+    await expect(verifyVisualLabComparisonPackage({
+      baselineRoot, resultRoot: currentRoot, comparisonRoot,
+    })).rejects.toThrow('bounded file budget');
+    await writeFile(output.responsePath, originalResponse);
+
+    await writeFile(
+      output.experimentBoard,
+      `${originalExperimentBoard.toString('utf8')}\n<!-- tampered -->\n`,
+    );
+    await expect(verifyVisualLabComparisonPackage({
+      baselineRoot, resultRoot: currentRoot, comparisonRoot,
+    })).rejects.toThrow('experiment response board');
+    await writeFile(output.experimentBoard, originalExperimentBoard);
+
+    const externalExperimentBoard = path.join(root, 'external-experiment-board.html');
+    await writeFile(externalExperimentBoard, originalExperimentBoard);
+    await unlink(output.experimentBoard);
+    await symlink(externalExperimentBoard, output.experimentBoard);
+    await expect(verifyVisualLabComparisonPackage({
+      baselineRoot, resultRoot: currentRoot, comparisonRoot,
+    })).rejects.toThrow('must use only real contained files');
+    await unlink(output.experimentBoard);
+    await writeFile(output.experimentBoard, originalExperimentBoard);
 
     await writeFile(output.board, `${originalBoard.toString('utf8')}\n<!-- tampered -->\n`);
     await expect(verifyVisualLabComparisonPackage({
@@ -880,6 +947,29 @@ describe('Visual Lab accepted baseline packages', () => {
     await expect(verifyVisualLabComparisonPackage({
       baselineRoot, resultRoot: currentRoot, comparisonRoot,
     })).resolves.toMatchObject({ comparison: output.comparison });
+
+    await unlink(output.experimentBoard);
+    await expect(verifyVisualLabComparisonPackage({
+      baselineRoot, resultRoot: currentRoot, comparisonRoot,
+    })).resolves.toMatchObject({ experimentResponse: output.experimentResponse });
+    await expect(verifyVisualLabComparisonPackage({
+      baselineRoot, resultRoot: currentRoot, comparisonRoot,
+      requireExperimentResponse: true,
+    })).rejects.toThrow('missing required experiment response evidence');
+
+    await writeFile(output.experimentBoard, originalExperimentBoard);
+    await unlink(output.responsePath);
+    await expect(verifyVisualLabComparisonPackage({
+      baselineRoot, resultRoot: currentRoot, comparisonRoot,
+    })).rejects.toThrow('experiment response board requires');
+    await unlink(output.experimentBoard);
+    await expect(verifyVisualLabComparisonPackage({
+      baselineRoot, resultRoot: currentRoot, comparisonRoot,
+    })).resolves.toMatchObject({ experimentResponse: null });
+    await expect(verifyVisualLabComparisonPackage({
+      baselineRoot, resultRoot: currentRoot, comparisonRoot,
+      requireExperimentResponse: true,
+    })).rejects.toThrow('missing required experiment response evidence');
   });
 
   it('rejects symlinked and replaced portable comparison verification inputs', async () => {

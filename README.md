@@ -37,10 +37,13 @@ npm run visual-lab:review -- \
 
 On Linux it defaults to SwiftShader, one shared browser host, and completed-frame
 receipt proof. The command prints the retained evidence root before capture and
-prints clickable `file://` links to the review board, compact brief, and raw
-contact sheet only after the complete package verifies. It never clears an old
-review or opens a user browser. Use `npm run visual-lab:review:reuse -- ...` when
-`dist/index.html` is already current.
+prints clickable `file://` links to the current experiment-response board,
+accepted/current review board, compact brief, and raw contact sheet only after
+the complete package verifies. The response board places OFF/A/B together and
+reports OFF→A, OFF→B, and A→B integer RGBA differences; it does not score,
+threshold, rank, or promote them. It never clears an old review or opens a user
+browser. Use `npm run visual-lab:review:reuse -- ...` when `dist/index.html` is
+already current.
 
 ## Visual Lab planning and capture
 

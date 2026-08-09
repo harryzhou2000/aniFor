@@ -3,8 +3,10 @@ import { deflateSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import {
   createVisualLabComparisonMetrics,
+  createVisualLabExperimentResponse,
   measureVisualLabPngPair,
   VISUAL_LAB_COMPARISON_METRICS_SCHEMA,
+  VISUAL_LAB_EXPERIMENT_RESPONSE_SCHEMA,
 } from './visual-lab-comparison-metrics.mjs';
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -54,29 +56,37 @@ const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const result = (salt, capture) => ({
   schema: 'anifor.visual-lab.result/v1',
   id: `sha256:${createHash('sha256').update(salt).digest('hex')}`,
-  captureSha256: {
-    off: sha256(capture),
-    a: sha256(capture),
-    b: sha256(capture),
-  },
+  captureSha256: Object.fromEntries(
+    ['off', 'a', 'b'].map((variant) => [
+      variant,
+      sha256(Buffer.isBuffer(capture) ? capture : capture[variant]),
+    ]),
+  ),
 });
 
-const pairedComparison = (accepted, current) => ({
-  schema: 'anifor.visual-lab.comparison/v1',
-  id: `sha256:${'a'.repeat(64)}`,
-  complete: true,
-  candidates: [{
-    candidate: 'sample',
-    status: 'review',
-    baselineResult: result('accepted', accepted),
-    currentResult: result('current', current),
-    variants: {
-      off: { status: 'encoded-identical' },
-      a: { status: 'review' },
-      b: { status: 'encoded-identical' },
+const pairedComparison = (accepted, current) => {
+  const currentResult = result('current', current);
+  return {
+    schema: 'anifor.visual-lab.comparison/v1',
+    id: `sha256:${'a'.repeat(64)}`,
+    complete: true,
+    current: {
+      schema: 'anifor.visual-lab.batch/v1',
+      resultIds: [currentResult.id],
     },
-  }],
-});
+    candidates: [{
+      candidate: 'sample',
+      status: 'review',
+      baselineResult: result('accepted', accepted),
+      currentResult,
+      variants: {
+        off: { status: 'encoded-identical' },
+        a: { status: 'review' },
+        b: { status: 'encoded-identical' },
+      },
+    }],
+  };
+};
 
 describe('Visual Lab comparison metrics', () => {
   it('reports exact integer RGB and alpha deltas without assigning a score', () => {
@@ -176,5 +186,163 @@ describe('Visual Lab comparison metrics', () => {
     expect(metrics.candidates).toEqual([
       { candidate: 'added', status: 'added', variants: null },
     ]);
+  });
+
+  it('measures every current OFF/A/B response once, including added candidates', async () => {
+    const sample = {
+      off: png(1, 1, 4, [10, 20, 30, 40]),
+      a: png(1, 1, 4, [12, 18, 35, 44]),
+      b: png(1, 1, 4, [9, 24, 30, 50]),
+    };
+    const added = {
+      off: png(1, 1, 3, [100, 110, 120]),
+      a: png(1, 1, 3, [100, 110, 120]),
+      b: png(1, 1, 3, [102, 110, 117]),
+    };
+    const comparison = pairedComparison(sample.off, sample.a);
+    const sampleResult = result('sample-current', sample);
+    const addedResult = result('added-current', added);
+    comparison.candidates = [
+      {
+        candidate: 'sample', status: 'review',
+        baselineResult: result('accepted', sample.off),
+        currentResult: sampleResult, variants: {},
+      },
+      {
+        candidate: 'not-run', status: 'not-sampled',
+        baselineResult: result('not-run-accepted', sample.off),
+        currentResult: null, variants: {},
+      },
+      {
+        candidate: 'added', status: 'added', baselineResult: null,
+        currentResult: addedResult, variants: {},
+      },
+    ];
+    comparison.current.resultIds = [addedResult.id, sampleResult.id];
+    const captures = { sample, added };
+    const reads = [];
+    const response = await createVisualLabExperimentResponse(
+      comparison,
+      async (side, candidate, variant) => {
+        reads.push(`${side}:${candidate}:${variant}`);
+        return captures[candidate][variant];
+      },
+    );
+
+    expect(reads).toEqual([
+      'current:added:off', 'current:added:a', 'current:added:b',
+      'current:sample:off', 'current:sample:a', 'current:sample:b',
+    ]);
+    expect(response).toMatchObject({
+      schema: VISUAL_LAB_EXPERIMENT_RESPONSE_SCHEMA,
+      comparison: { schema: comparison.schema, id: comparison.id },
+      candidates: [
+        {
+          candidate: 'added',
+          pairs: {
+            offToA: { metric: { kind: 'rgba-delta', rgbaDifferentPixels: 0 } },
+            offToB: { metric: { kind: 'rgba-delta', rgbaDifferentPixels: 1 } },
+            aToB: { metric: { kind: 'rgba-delta', rgbaDifferentPixels: 1 } },
+          },
+        },
+        {
+          candidate: 'sample',
+          currentResult: { schema: 'anifor.visual-lab.result/v1' },
+          pairs: {
+            offToA: {
+              left: 'off', right: 'a',
+              metric: {
+                kind: 'rgba-delta', rgbaDifferentPixels: 1,
+                rgb: { absoluteDeltaSum: 9, squaredDeltaSum: 33, channelPeak: 5 },
+                alpha: { absoluteDeltaSum: 4, squaredDeltaSum: 16, channelPeak: 4 },
+              },
+            },
+            offToB: {
+              left: 'off', right: 'b',
+              metric: {
+                kind: 'rgba-delta', rgbaDifferentPixels: 1,
+                rgb: { absoluteDeltaSum: 5, squaredDeltaSum: 17, channelPeak: 4 },
+                alpha: { absoluteDeltaSum: 10, squaredDeltaSum: 100, channelPeak: 10 },
+              },
+            },
+            aToB: {
+              left: 'a', right: 'b',
+              metric: {
+                kind: 'rgba-delta', rgbaDifferentPixels: 1,
+                rgb: { absoluteDeltaSum: 14, squaredDeltaSum: 70, channelPeak: 6 },
+                alpha: { absoluteDeltaSum: 6, squaredDeltaSum: 36, channelPeak: 6 },
+              },
+            },
+          },
+        },
+      ],
+    });
+    expect(response.candidates.every(({ currentResult, pairs }) => (
+      currentResult !== null && pairs !== null
+    ))).toBe(true);
+    expect(Object.isFrozen(response)).toBe(true);
+    expect(Object.isFrozen(response.candidates[0].pairs.aToB.metric.rgb)).toBe(true);
+    expect('score' in response.candidates[0]).toBe(false);
+    expect('status' in response.candidates[0]).toBe(false);
+  });
+
+  it('hash-checks current captures and rejects inconsistent omission claims', async () => {
+    const capture = png(1, 1, 3, [10, 20, 30]);
+    const replacement = png(1, 1, 3, [30, 20, 10]);
+    const comparison = pairedComparison(capture, capture);
+
+    await expect(createVisualLabExperimentResponse(
+      comparison,
+      async (_side, _candidate, variant) => (variant === 'b' ? replacement : capture),
+    )).rejects.toThrow('does not match its pinned capture SHA-256');
+
+    comparison.candidates[0].status = 'not-sampled';
+    await expect(createVisualLabExperimentResponse(
+      comparison,
+      async () => capture,
+    )).rejects.toThrow('sampled sample with not-sampled status');
+
+    comparison.candidates[0].status = 'review';
+    comparison.candidates[0].currentResult = null;
+    await expect(createVisualLabExperimentResponse(
+      comparison,
+      async () => capture,
+    )).rejects.toThrow('unsampled sample without not-sampled status');
+  });
+
+  it('rejects non-bijective current result ordering', async () => {
+    const capture = png(1, 1, 3, [10, 20, 30]);
+    const duplicateOrder = pairedComparison(capture, capture);
+    const currentId = duplicateOrder.candidates[0].currentResult.id;
+    duplicateOrder.current.resultIds = [currentId, currentId];
+    await expect(createVisualLabExperimentResponse(
+      duplicateOrder, async () => capture,
+    )).rejects.toThrow('duplicate current result ID');
+
+    const duplicateEntry = pairedComparison(capture, capture);
+    duplicateEntry.candidates.push({
+      ...duplicateEntry.candidates[0], candidate: 'duplicate-sample',
+    });
+    await expect(createVisualLabExperimentResponse(
+      duplicateEntry, async () => capture,
+    )).rejects.toThrow('duplicate current result ID');
+
+    const unknown = pairedComparison(capture, capture);
+    unknown.current.resultIds = [`sha256:${'f'.repeat(64)}`];
+    await expect(createVisualLabExperimentResponse(
+      unknown, async () => capture,
+    )).rejects.toThrow('unknown current result ID');
+
+    const omitted = pairedComparison(capture, capture);
+    omitted.current.resultIds = [];
+    await expect(createVisualLabExperimentResponse(
+      omitted, async () => capture,
+    )).rejects.toThrow('was omitted from current result IDs');
+
+    const missing = pairedComparison(capture, capture);
+    missing.current.resultIds = [null];
+    await expect(createVisualLabExperimentResponse(
+      missing, async () => capture,
+    )).rejects.toThrow('is missing or invalid');
   });
 });

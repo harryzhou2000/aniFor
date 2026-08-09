@@ -15,7 +15,8 @@ const HELP = `Usage:
     [--require-complete=0|1] [--require-recipe-set=0|1] \
     [--require-browser-host-plan=0|1] [--require-execution-tuning-plan=0|1] \
     [--require-origin-attestation=0|1] [--require-capture-geometry=0|1] \
-    [--require-baseline-capture-provenance=0|1]
+    [--require-baseline-capture-provenance=0|1] \
+    [--require-experiment-response=0|1]
 
 The verifier is read-only. It reconstructs the batch from reports and PNGs,
 checks the deterministic contact sheet and optional recipe-set sidecar, and can
@@ -26,7 +27,7 @@ const BOOLEAN_OPTIONS = new Set([
   'require-baseline-capture-provenance',
   'require-browser-host-plan', 'require-execution-tuning-plan',
   'require-capture-geometry', 'require-complete', 'require-origin-attestation',
-  'require-recipe-set',
+  'require-experiment-response', 'require-recipe-set',
 ]);
 const PATH_OPTIONS = new Set([
   'batch-root', 'baseline-root', 'comparison-root', 'recipe-set-source',
@@ -63,6 +64,9 @@ export function parseVisualLabVerifyArguments(argv) {
   if (values.has('comparison-root') && !values.has('baseline-root')) {
     throw new Error('--comparison-root requires --baseline-root');
   }
+  if (values.get('require-experiment-response') === '1' && !values.has('baseline-root')) {
+    throw new Error('--require-experiment-response=1 requires --baseline-root');
+  }
   const batchRoot = values.get('batch-root');
   const baselineRoot = values.get('baseline-root');
   return Object.freeze({
@@ -79,6 +83,7 @@ export function parseVisualLabVerifyArguments(argv) {
     requireExecutionTuningPlan: parseBoolean(
       values, 'require-execution-tuning-plan', false,
     ),
+    requireExperimentResponse: parseBoolean(values, 'require-experiment-response', false),
     requireCaptureGeometry: parseBoolean(values, 'require-capture-geometry', false),
     requireOriginAttestation: parseBoolean(
       values, 'require-origin-attestation', false,
@@ -102,7 +107,8 @@ export async function runVisualLabPackageVerification(options, dependencies = {}
     'batchRoot', 'baselineRoot', 'comparisonRoot', 'recipeSetSourcePath',
     'requireBaselineCaptureProvenance',
     'requireBrowserHostPlan', 'requireExecutionTuningPlan',
-    'requireCaptureGeometry', 'requireComplete', 'requireOriginAttestation', 'requireRecipeSet',
+    'requireCaptureGeometry', 'requireComplete', 'requireExperimentResponse',
+    'requireOriginAttestation', 'requireRecipeSet',
   ]);
   const unexpected = Reflect.ownKeys(options).filter((key) => !allowed.has(key));
   if (unexpected.length > 0) {
@@ -110,6 +116,9 @@ export async function runVisualLabPackageVerification(options, dependencies = {}
   }
   if (options.baselineRoot === undefined && options.comparisonRoot !== undefined) {
     throw new TypeError('comparisonRoot requires baselineRoot');
+  }
+  if (options.requireExperimentResponse === true && options.baselineRoot === undefined) {
+    throw new TypeError('requireExperimentResponse requires baselineRoot');
   }
   if (options.baselineRoot !== undefined && options.comparisonRoot === undefined) {
     throw new TypeError('baselineRoot requires comparisonRoot');
@@ -134,6 +143,7 @@ export async function runVisualLabPackageVerification(options, dependencies = {}
     resultRoot: options.batchRoot,
     comparisonRoot: options.comparisonRoot,
     requireBaselineCaptureProvenance: options.requireBaselineCaptureProvenance ?? false,
+    requireExperimentResponse: options.requireExperimentResponse ?? false,
   });
 
   return deepFreeze({
@@ -173,6 +183,10 @@ export async function runVisualLabPackageVerification(options, dependencies = {}
       schema: comparison.baselineCaptureProvenance.schema,
       id: comparison.baselineCaptureProvenance.id,
       baseline: comparison.baselineCaptureProvenance.baseline,
+    },
+    experimentResponse: comparison?.experimentResponse == null ? null : {
+      schema: comparison.experimentResponse.schema,
+      candidateCount: comparison.experimentResponse.candidates.length,
     },
     comparison: comparison === null ? null : {
       schema: comparison.comparison.schema,

@@ -40,6 +40,7 @@ const successfulReview = async (reviewRoot) => {
   await mkdir(comparisonRoot, { recursive: true });
   await Promise.all([
     writeFile(path.join(reviewRoot, 'index.html'), 'captures'),
+    writeFile(path.join(comparisonRoot, 'experiment-board.html'), 'experiment'),
     writeFile(path.join(comparisonRoot, 'review-board.html'), 'board'),
     writeFile(path.join(comparisonRoot, 'review-brief.html'), 'brief'),
   ]);
@@ -47,6 +48,7 @@ const successfulReview = async (reviewRoot) => {
     ok: true,
     batch: { contactSheet: path.join(reviewRoot, 'index.html') },
     comparison: {
+      experimentBoard: path.join(comparisonRoot, 'experiment-board.html'),
       board: path.join(comparisonRoot, 'review-board.html'),
       brief: path.join(comparisonRoot, 'review-brief.html'),
     },
@@ -129,6 +131,7 @@ describe('Visual Lab developer review execution', () => {
     expect(outcome.reviewRoot).toBe(expectedRoot);
     expect(stdout.read().split('\n')).toEqual([
       `Visual Lab review root: ${expectedRoot}`,
+      `Experiment response: ${pathToFileURL(path.join(expectedRoot, 'comparison', 'experiment-board.html')).href}`,
       `Review board: ${pathToFileURL(path.join(expectedRoot, 'comparison', 'review-board.html')).href}`,
       `Compact brief: ${pathToFileURL(path.join(expectedRoot, 'comparison', 'review-brief.html')).href}`,
       `Raw captures: ${pathToFileURL(path.join(expectedRoot, 'index.html')).href}`,

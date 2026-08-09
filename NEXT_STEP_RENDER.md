@@ -211,18 +211,34 @@ Active priority order:
    and Pages passed exact 19-resource closure plus the live receipt-bound Water
    capture.
 15. Make the trusted framework pleasant enough to use for each visual iteration.
-   The current increment adds one thin developer launcher over the existing
+   One thin developer launcher over the existing
    review-cycle API, requires an explicit candidate selection or tracked recipe
    set, allocates a unique ignored `.artifacts/visual-lab-reviews/` root, and
    defaults local Linux work to
    the production bundle, SwiftShader, one shared browser, completed-frame
    receipt proof, baseline comparison, and provenance-required portable
-   verification. Print the retained root before capture and direct static file
+   verification. It prints the retained root before capture and direct static file
    links only after verified success; never auto-open a browser, reuse evidence,
-   clear an old root, or create another capture implementation. Once this
-   practical loop is checkpointed, add current-only OFF→A, OFF→B, and A→B
-   measurements for new candidates before adding further provenance ceremony or
-   isolated material styling.
+   clear an old root, or create another capture implementation. This checkpoint
+   is deployed at exact revision
+   `55624597f2cf04ea280485959f33644a19b7b39e` by workflow run `31338337792`:
+   ccache restored 269/270 compilations, the four-recipe shared-host review was
+   encoded-identical, Pages deployed, exact 19-resource closure passed, and the
+   live receipt-bound Water result remained
+   `sha256:2eb311dab81abef9fb1d035a0794a11f5028aafa4f8fe12a484bf583610ecd5a`.
+16. Make experiment response visible before adding more visual detail. Generate
+   a portable `experiment-response.json` directly from each sampled current
+   OFF/A/B triptych, ordered by the batch's pinned result IDs and including new
+   candidates that have no accepted baseline. Measure OFF→A, OFF→B, and A→B
+   with the existing integer RGBA arithmetic after reading, hashing, and decoding
+   each current PNG once. Publish an exact-rerendered current-only
+   `experiment-board.html` with a local promotion-argument scratchpad, but no
+   score, threshold, ranking, persisted decision, or automatic promotion. Keep
+   both files outside result, batch, baseline, comparison, promotion, recipe-set,
+   execution, tuning, host, and provenance identities. Legacy packages may omit
+   them; new developer and CI review packages require them through the portable
+   verifier. Once this is checkpointed and deployed, prefer declarative cohort
+   or fixture authoring only where it removes concrete repeated registration.
 
 Continue improving the registration and evidence loop before spending the
 milestone on isolated shader detail. Visual preference may later accept a

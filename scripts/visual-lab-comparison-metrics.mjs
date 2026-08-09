@@ -8,8 +8,13 @@ import { decodeVisualLabPng } from './visual-lab-png.mjs';
 export const VISUAL_LAB_COMPARISON_METRICS_SCHEMA = (
   'anifor.visual-lab.comparison-metrics/v1'
 );
+export const VISUAL_LAB_EXPERIMENT_RESPONSE_SCHEMA = (
+  'anifor.visual-lab.experiment-response/v1'
+);
 
 const COMPARISON_SCHEMA = 'anifor.visual-lab.comparison/v1';
+const BATCH_SCHEMA = 'anifor.visual-lab.batch/v1';
+const RESULT_SCHEMA = 'anifor.visual-lab.result/v1';
 const SHA256_ID = /^sha256:[0-9a-f]{64}$/;
 const SHA256_HEX = /^[0-9a-f]{64}$/;
 
@@ -38,10 +43,7 @@ const assertPinnedCapture = (bytes, expectedSha256, label) => {
   return bytes;
 };
 
-/** Integer-only RGBA evidence; it deliberately makes no aesthetic decision. */
-export function measureVisualLabPngPair(baselineBytes, currentBytes, label = 'capture pair') {
-  const baseline = decodeVisualLabPng(baselineBytes, `${label} accepted`);
-  const current = decodeVisualLabPng(currentBytes, `${label} current`);
+const measureDecodedVisualLabPngPair = (baseline, current) => {
   if (baseline.width !== current.width || baseline.height !== current.height) {
     return deepFreeze({
       kind: 'dimension-mismatch',
@@ -102,6 +104,13 @@ export function measureVisualLabPngPair(baselineBytes, currentBytes, label = 'ca
       channelPeak: alphaChannelPeak,
     },
   });
+};
+
+/** Integer-only RGBA evidence; it deliberately makes no aesthetic decision. */
+export function measureVisualLabPngPair(baselineBytes, currentBytes, label = 'capture pair') {
+  const baseline = decodeVisualLabPng(baselineBytes, `${label} accepted`);
+  const current = decodeVisualLabPng(currentBytes, `${label} current`);
+  return measureDecodedVisualLabPngPair(baseline, current);
 }
 
 /**
@@ -162,6 +171,121 @@ export async function createVisualLabComparisonMetrics(comparison, readCapture) 
 
   return deepFreeze({
     schema: VISUAL_LAB_COMPARISON_METRICS_SCHEMA,
+    comparison: { schema: comparison.schema, id: comparison.id },
+    candidates,
+  });
+}
+
+/**
+ * Measures the current experiment itself, independently of accepted-baseline
+ * availability. Current results follow their pinned batch order; accepted-only
+ * comparison entries are deliberately absent. Each current PNG is pinned and
+ * decoded exactly once, then reused for the three ordered OFF/A/B response
+ * pairs. This additive record assigns no score, threshold, or verdict.
+ */
+export async function createVisualLabExperimentResponse(comparison, readCapture) {
+  if (comparison?.schema !== COMPARISON_SCHEMA || comparison.complete !== true
+    || !SHA256_ID.test(comparison.id) || !Array.isArray(comparison.candidates)) {
+    throw new TypeError(`experiment response requires ${COMPARISON_SCHEMA}`);
+  }
+  if (comparison.current?.schema !== BATCH_SCHEMA
+    || !Array.isArray(comparison.current.resultIds)) {
+    throw new TypeError(`experiment response requires ${BATCH_SCHEMA} current result IDs`);
+  }
+  if (typeof readCapture !== 'function') {
+    throw new TypeError('experiment response requires a capture reader');
+  }
+
+  const sampledById = new Map();
+  for (const entry of comparison.candidates) {
+    if (entry.currentResult === null) {
+      if (entry.status !== 'not-sampled') {
+        throw new TypeError(
+          `experiment response received unsampled ${entry.candidate} without not-sampled status`,
+        );
+      }
+      continue;
+    }
+    if (entry.status === 'not-sampled') {
+      throw new TypeError(
+        `experiment response received sampled ${entry.candidate} with not-sampled status`,
+      );
+    }
+    if (entry.currentResult?.schema !== RESULT_SCHEMA
+      || !SHA256_ID.test(entry.currentResult.id)) {
+      throw new TypeError(`experiment response requires a current result for ${entry.candidate}`);
+    }
+    if (sampledById.has(entry.currentResult.id)) {
+      throw new TypeError(
+        `experiment response received duplicate current result ID ${entry.currentResult.id}`,
+      );
+    }
+    sampledById.set(entry.currentResult.id, entry);
+  }
+
+  const seenResultIds = new Set();
+  const sampled = comparison.current.resultIds.map((resultId, index) => {
+    if (!SHA256_ID.test(resultId ?? '')) {
+      throw new TypeError(`experiment response current result ID ${index} is missing or invalid`);
+    }
+    if (seenResultIds.has(resultId)) {
+      throw new TypeError(`experiment response received duplicate current result ID ${resultId}`);
+    }
+    seenResultIds.add(resultId);
+    const entry = sampledById.get(resultId);
+    if (!entry) {
+      throw new TypeError(`experiment response received unknown current result ID ${resultId}`);
+    }
+    return entry;
+  });
+  for (const [resultId, entry] of sampledById) {
+    if (!seenResultIds.has(resultId)) {
+      throw new TypeError(
+        `experiment response sampled ${entry.candidate} was omitted from current result IDs`,
+      );
+    }
+  }
+
+  const candidates = [];
+  for (const entry of sampled) {
+    const images = {};
+    for (const variant of VARIANTS) {
+      const bytes = await readCapture('current', entry.candidate, variant);
+      assertPinnedCapture(
+        bytes,
+        entry.currentResult.captureSha256?.[variant],
+        `${entry.candidate} ${variant} current`,
+      );
+      images[variant] = decodeVisualLabPng(bytes, `${entry.candidate} ${variant} current`);
+    }
+    candidates.push({
+      candidate: entry.candidate,
+      currentResult: {
+        schema: entry.currentResult.schema,
+        id: entry.currentResult.id,
+      },
+      pairs: {
+        offToA: {
+          left: 'off',
+          right: 'a',
+          metric: measureDecodedVisualLabPngPair(images.off, images.a),
+        },
+        offToB: {
+          left: 'off',
+          right: 'b',
+          metric: measureDecodedVisualLabPngPair(images.off, images.b),
+        },
+        aToB: {
+          left: 'a',
+          right: 'b',
+          metric: measureDecodedVisualLabPngPair(images.a, images.b),
+        },
+      },
+    });
+  }
+
+  return deepFreeze({
+    schema: VISUAL_LAB_EXPERIMENT_RESPONSE_SCHEMA,
     comparison: { schema: comparison.schema, id: comparison.id },
     candidates,
   });
