@@ -242,6 +242,7 @@ jobs:
             --bundle=dist/index.html
             --output-dir=artifacts/visual-lab-review
             --gpu=swiftshader
+            --browser-host=shared
             "--capture-proof=${VISUAL_LAB_CAPTURE_PROOF}"
           )
           candidate_request="${VISUAL_LAB_CANDIDATES//[[:space:]]/}"

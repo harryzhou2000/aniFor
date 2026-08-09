@@ -174,6 +174,8 @@ describe('deploy-verified CI workflow contract', () => {
     expect(review).toContain('--require-recipe-set=1');
     expect(review).toContain('--require-browser-host-plan=1');
     expect(review).toContain('--require-capture-geometry=1');
+    expect(capture).toContain('--browser-host=shared');
+    expect(capture.match(/--browser-host=shared/g)).toHaveLength(1);
     expect(capture).toContain(
       'VISUAL_LAB_CAPTURE_PROOF: ${{ inputs.visual_lab_capture_proof }}',
     );
