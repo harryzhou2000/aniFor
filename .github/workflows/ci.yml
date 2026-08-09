@@ -8,13 +8,19 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: Choose whether to verify the build or also deploy it to GitHub Pages
+        description: Build, build and deploy, or deploy a verified exact-SHA artifact
         required: true
         default: build
         type: choice
         options:
           - build
           - build-and-deploy
+          - deploy-verified
+      verified_build_run_id:
+        description: Successful exact-SHA build run to reuse for deploy-verified
+        required: false
+        default: ''
+        type: string
       visual_lab_review:
         description: Capture and publish a deterministic Visual Lab review batch
         required: true
@@ -40,6 +46,7 @@ concurrency:
 
 jobs:
   build:
+    if: github.event_name != 'workflow_dispatch' || inputs.operation != 'deploy-verified'
     runs-on: ubuntu-latest
     # A lost hosted runner can otherwise leave the manual Pages control in an
     # apparently-running state indefinitely.  Native compilation is normally
@@ -133,9 +140,73 @@ jobs:
         with:
           path: dist
 
+  verified_build:
+    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'deploy-verified'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Resolve exact successful build artifact
+        id: verified-source
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          VERIFIED_BUILD_RUN_ID: ${{ inputs.verified_build_run_id }}
+        run: >-
+          node scripts/verify-pages-artifact-source.mjs
+          --repository="${GITHUB_REPOSITORY}"
+          --source-run-id="${VERIFIED_BUILD_RUN_ID}"
+          --current-run-id="${GITHUB_RUN_ID}"
+          --expected-sha="${GITHUB_SHA}"
+
+      - name: Download exact verified static site
+        uses: actions/download-artifact@v8
+        with:
+          artifact-ids: ${{ steps.verified-source.outputs.artifact_id }}
+          path: ${{ runner.temp }}/anifortpt-static-site
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.verified-source.outputs.source_run_id }}
+          digest-mismatch: error
+
+      - name: Verify reused revision and runtime asset closure
+        run: >-
+          node scripts/verify-pages-artifact.mjs
+          "${RUNNER_TEMP}/anifortpt-static-site"
+          "${GITHUB_SHA}"
+
+      - name: Publish verified static site for current-run consumers
+        uses: actions/upload-artifact@v7
+        with:
+          name: anifortpt-static-site
+          path: ${{ runner.temp }}/anifortpt-static-site
+          if-no-files-found: error
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload verified GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: ${{ runner.temp }}/anifortpt-static-site
+
   visual-lab-review:
-    if: github.event_name == 'workflow_dispatch' && inputs.visual_lab_review == true
-    needs: build
+    if: >-
+      always() &&
+      github.event_name == 'workflow_dispatch' &&
+      inputs.visual_lab_review == true &&
+      ((needs.build.result == 'success' && needs.verified_build.result == 'skipped') ||
+       (needs.build.result == 'skipped' && needs.verified_build.result == 'success'))
+    needs:
+      - build
+      - verified_build
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -252,13 +323,16 @@ jobs:
   deploy:
     if: >-
       always() &&
-      needs.build.result == 'success' &&
       (needs.visual-lab-review.result == 'success' ||
        needs.visual-lab-review.result == 'skipped') &&
+      ((needs.build.result == 'success' && needs.verified_build.result == 'skipped') ||
+       (needs.build.result == 'skipped' && needs.verified_build.result == 'success')) &&
       ((github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-       (github.event_name == 'workflow_dispatch' && inputs.operation == 'build-and-deploy'))
+       (github.event_name == 'workflow_dispatch' &&
+        (inputs.operation == 'build-and-deploy' || inputs.operation == 'deploy-verified')))
     needs:
       - build
+      - verified_build
       - visual-lab-review
     runs-on: ubuntu-latest
     permissions:

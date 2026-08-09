@@ -1,41 +1,62 @@
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(process.argv[2] ?? 'dist');
-const required = ['assets/app.js', 'assets/style.css', 'wasm/stillroom_core.js', 'wasm/stillroom_core.wasm', 'wasm/powder_core.wasm'];
-const queue = ['index.html', ...required];
-const seen = new Set();
-const failures = [];
+export const REQUIRED_STATIC_ASSETS = Object.freeze([
+  'assets/app.js',
+  'assets/style.css',
+  'wasm/stillroom_core.js',
+  'wasm/stillroom_core.wasm',
+  'wasm/powder_core.wasm',
+]);
 
-while (queue.length) {
-  const relative = queue.shift();
-  if (!relative || seen.has(relative)) continue;
-  seen.add(relative);
-  const absolute = path.resolve(root, relative);
-  if (!absolute.startsWith(root + path.sep) && absolute !== root) {
-    failures.push(`${relative}: escapes static root`);
-    continue;
+export async function verifyStaticAssets(rootInput = 'dist') {
+  const root = path.resolve(rootInput);
+  const queue = ['index.html', ...REQUIRED_STATIC_ASSETS];
+  const seen = new Set();
+  const failures = [];
+
+  while (queue.length) {
+    const relative = queue.shift();
+    if (!relative || seen.has(relative)) continue;
+    seen.add(relative);
+    const absolute = path.resolve(root, relative);
+    if (!absolute.startsWith(root + path.sep) && absolute !== root) {
+      failures.push(`${relative}: escapes static root`);
+      continue;
+    }
+    let details;
+    try { details = await stat(absolute); }
+    catch { failures.push(`${relative}: missing`); continue; }
+    if (!details.isFile() || details.size === 0) {
+      failures.push(`${relative}: empty or not a file`);
+      continue;
+    }
+    if (!/\.(?:html|js|css)$/i.test(relative)) continue;
+    const source = await readFile(absolute, 'utf8');
+    for (const reference of references(source, relative)) {
+      const resolved = resolveReference(relative, reference.path, reference.fromRoot);
+      if (resolved) queue.push(resolved);
+    }
   }
-  let details;
-  try { details = await stat(absolute); }
-  catch { failures.push(`${relative}: missing`); continue; }
-  if (!details.isFile() || details.size === 0) {
-    failures.push(`${relative}: empty or not a file`);
-    continue;
+
+  if (failures.length) {
+    throw new Error(
+      `Static asset verification failed:\n${failures.map((failure) => `- ${failure}`).join('\n')}`,
+    );
   }
-  if (!/\.(?:html|js|css)$/i.test(relative)) continue;
-  const source = await readFile(absolute, 'utf8');
-  for (const reference of references(source, relative)) {
-    const resolved = resolveReference(relative, reference.path, reference.fromRoot);
-    if (resolved) queue.push(resolved);
-  }
+  return seen.size;
 }
 
-if (failures.length) {
-  console.error(`Static asset verification failed:\n${failures.map((failure) => `- ${failure}`).join('\n')}`);
-  process.exit(1);
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  try {
+    const checked = await verifyStaticAssets(process.argv[2] ?? 'dist');
+    console.log(`Static asset closure verified (${checked} referenced files)`);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  }
 }
-console.log(`Static asset closure verified (${seen.size} referenced files)`);
 
 function references(source, relative) {
   const found = [];

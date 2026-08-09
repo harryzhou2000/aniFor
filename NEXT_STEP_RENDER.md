@@ -99,19 +99,28 @@ proved the corrected build/deploy dependency: `verify-deployment` executed
 after a successful Pages deployment, the build restored 269/270 ccache entries,
 and live closure passed all 19 runtime resources.
 
-The active objective is framework execution leverage, not another isolated
-visual-detail pass. Close the capture evidence boundary first: serialized static
-metadata may name only a bounded data-plane ID, one fixed typed browser bridge
-must dispatch that ID exhaustively to existing renderer reads, and historical
-`{readerMethod, plane}` report bytes remain a scripts-owned compatibility
-projection with no execution authority. Then eliminate duplicated deploy builds
-with a fail-closed `deploy-verified` operation that reuses one successful,
-unexpired exact-SHA static-site artifact only after repository/workflow/run,
-artifact uniqueness, embedded revision, and resource-closure validation. Keep a
-fresh `build-and-deploy` escape path. After that, move driver binding from a
-one-driver-per-domain restriction to a single fixture/request resolver so one
-material family can host multiple independent presentation controls without
-adding runner branches or changing the frozen six-field recipe ABI.
+The closed capture-evidence boundary is complete and deployed at revision
+`9d3e091e406b67d5d95614bb33fdaaa75ef1abda` by workflow run `31303706661`.
+Serialized static metadata now names only bounded data-plane IDs; one fixed
+typed browser bridge dispatches them exhaustively to existing renderer reads,
+while historical `{readerMethod, plane}` report bytes remain a scripts-owned
+compatibility projection with no execution authority. A fresh production Gas
+plus Powder batch passed both WebGL/HDR invariants and the portable verifier,
+and the deployed live revision and all 19 resources passed.
+
+The active objective is CI/framework execution leverage, not another isolated
+visual-detail pass. Eliminate duplicated deploy builds with a fail-closed
+`deploy-verified` operation that reuses one successful, unexpired exact-SHA
+static-site artifact only after current/source repository, workflow, run,
+successful build job, artifact ID/digest/uniqueness, embedded revision,
+symlink-free tree, stable-entry aliases, and resource-closure validation.
+Downloaded content remains data in a fresh runner-temporary directory and is
+never executed. Keep a fresh `build-and-deploy` escape path and preserve the
+optional review consumer through a current-run re-upload. After that, move
+driver binding from a one-driver-per-domain restriction to a single
+fixture/request resolver so one material family can host multiple independent
+presentation controls without adding runner branches or changing the frozen
+six-field recipe ABI.
 
 ### Cross-runtime static-contract acceptance
 

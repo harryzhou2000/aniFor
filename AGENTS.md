@@ -112,16 +112,21 @@ The typed visual-capture driver boundary is deployed at revision
 `3a6f51172e7ec7ca54fdb3407d903587fa411eb8` by workflow run `31302407020`.
 Its first extension maps `off/a/b` to the real Powder
 `Smooth/Local/Grains` control without adding a renderer resource, while legacy
-normal-HDR reports retain their exact shape. The active direction is now
-framework execution leverage. Serialized capture metadata may name only closed
-data-plane IDs; one fixed typed browser bridge dispatches those IDs to existing
-renderer reads, and historical `readerMethod` labels are scripts-owned report
-projections with no execution authority. Next, prefer an exact-SHA,
+normal-HDR reports retain their exact shape. The closed evidence-plane bridge
+is deployed at revision `9d3e091e406b67d5d95614bb33fdaaa75ef1abda` by workflow
+run `31303706661`: serialized metadata names only data planes, one fixed typed
+browser method dispatches them, and historical `readerMethod` labels are
+scripts-owned report projections with no execution authority. The active
+direction is now framework execution leverage. Prefer an exact-SHA,
 artifact-reusing `deploy-verified` CI operation over rebuilding an already
-successful static site, but validate run provenance, artifact uniqueness,
-embedded revision, and asset closure and retain `build-and-deploy` for a fresh
-build. Then make driver selection fixture/request-owned so a domain can host
-multiple presentation controls without runner branches or frozen-ABI changes.
+successful static site, but require same-repository/current-workflow provenance,
+one successful source `build` job, one nonexpired artifact ID and canonical
+digest, exact embedded revision, a symlink-free regular tree, stable aliases,
+and full asset closure. Download into a fresh runner-temporary directory and
+never execute artifact content. Retain `build-and-deploy` for a fresh build and
+keep the optional Visual Lab consumer on a current-run re-upload. Then make
+driver selection fixture/request-owned so a domain can host multiple
+presentation controls without runner branches or frozen-ABI changes.
 Preserve `anifor.visual-lab.static-contract/v1`, every result/batch/baseline/
 comparison/recipe-set identity, and the generic WebGL capture path throughout.
 

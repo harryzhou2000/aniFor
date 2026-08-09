@@ -215,9 +215,8 @@ describe('Visual Lab recipe-set/v1', () => {
     const workflow = await readFile(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
     expect(workflow).toContain('visual_lab_recipe_set:');
     expect(workflow).toContain('VISUAL_LAB_RECIPE_SET: ${{ inputs.visual_lab_recipe_set }}');
-    expect(workflow).toContain(
-      'if: github.event_name == \'workflow_dispatch\' && inputs.visual_lab_review == true',
-    );
+    expect(workflow).toContain("github.event_name == 'workflow_dispatch' &&");
+    expect(workflow).toContain('inputs.visual_lab_review == true &&');
     expect(workflow).toContain(
       'visual_lab_candidates and visual_lab_recipe_set are mutually exclusive',
     );
