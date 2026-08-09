@@ -281,6 +281,10 @@ jobs:
           timeout: 600000
 
   verify-deployment:
+    # `deploy` deliberately tolerates a skipped optional visual review. Without
+    # an explicit condition GitHub propagates that skipped transitive ancestor
+    # through the default `success()` guard and silently skips live verification.
+    if: always() && needs.deploy.result == 'success'
     needs: deploy
     runs-on: ubuntu-latest
     permissions:

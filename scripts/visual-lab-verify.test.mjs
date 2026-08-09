@@ -164,6 +164,14 @@ describe('Visual Lab portable package verifier', () => {
     const upload = workflow.indexOf('Upload Visual Lab review evidence');
     const download = workflow.indexOf('Download uploaded Visual Lab review evidence');
     const verify = workflow.indexOf('node scripts/visual-lab-verify.mjs "${verify_args[@]}"');
+    const deployVerification = workflow.indexOf('  verify-deployment:');
+    const deploySuccessGuard = workflow.indexOf(
+      "if: always() && needs.deploy.result == 'success'", deployVerification,
+    );
+    const liveVerification = workflow.indexOf(
+      'node scripts/verify-live-pages.mjs "${PAGE_URL}" "${GITHUB_SHA}"',
+      deployVerification,
+    );
     expect(upload).toBeGreaterThan(0);
     expect(download).toBeGreaterThan(upload);
     expect(verify).toBeGreaterThan(download);
@@ -172,5 +180,8 @@ describe('Visual Lab portable package verifier', () => {
     expect(workflow).toContain('"--comparison-root=${REVIEW_ROOT}/comparison"');
     expect(workflow).toContain('--require-complete=1');
     expect(workflow).toContain('--require-recipe-set=1');
+    expect(deployVerification).toBeGreaterThan(verify);
+    expect(deploySuccessGuard).toBeGreaterThan(deployVerification);
+    expect(liveVerification).toBeGreaterThan(deploySuccessGuard);
   });
 });
