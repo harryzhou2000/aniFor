@@ -75,15 +75,24 @@ Keep it dependency-free and Node-side, preserve every historical v1 byte and
 ID, and do not widen the browser static contract or typed fixture boundary for
 this evidence concern.
 
-The active bounded follow-up adds deterministic `review-board.html` as a local
-filtering surface over decision candidates. It derives from comparison/v1 and
-verified metrics, preserves catalog order, exposes exact status/domain/fixture
-and bounded literal-name filters through canonical query state, and keeps every
-card visible without JavaScript. Add no score, ranking, recommendation,
-decision write, promotion action, external dependency, or interpolated script
-data. Bound it to 1 MiB, use only portable relative capture links, exact-rerender
-it in the shared verifier when present, keep it outside all frozen identities,
-and accept legacy packages that omit it.
+The deterministic `review-board.html` is deployed at revision
+`6eff691b50f00ffd0f3366b66a089779439e39ee` by release-set workflow run
+`31298776917`. Its freshly downloaded package, board, brief, metrics, release
+recipe set, and all capture bytes passed the portable verifier; all four recipes
+were encoded-identical and live closure passed all 19 resources on attempt one.
+Preserve its catalog order, exact filters, no-JavaScript evidence, bounded
+relative links, 1 MiB budget, exact rerender, and exclusion from frozen
+identities.
+
+The active bounded follow-up is one trusted local review-cycle command over the
+existing framework. It must require a new or real empty explicit review root,
+then run the generic batch capture, accepted-baseline comparison, and shared
+read-only verifier in that exact order. It reuses the existing production
+bundle, recipe-set reader, batch parser, component APIs, Chrome lifecycle, and
+artifact schemas; incomplete or interrupted capture stops before comparison.
+The verified handoff may print its review-board/brief/metrics/comparison paths
+and identities, but it must never open UI automatically, score or select a
+variant, promote, mutate Git, deploy, or make CI-only path policy local.
 
 ### Cross-runtime static-contract acceptance
 
@@ -99,7 +108,7 @@ place executable fixture-preparation method names, argument arrays, builders,
 or preparers in the serialized contract.
 
 The compatibility gate is the shared-contract, bounded PNG decoder,
-comparison-metrics, capture-ABI, and review-board tooling proof plus existing renderer-state,
+comparison-metrics, capture-ABI, review-board, and review-cycle tooling proof plus existing renderer-state,
 fixture-preparation, and Node-adapter tests; TypeScript and the production Vite
 build; and a real built-bundle batch spanning at least one volume-field fixture
 and one prepared liquid-surface fixture. The batch must be complete under
@@ -3771,10 +3780,11 @@ browser method receives the stable fixture ID, while historical preparation
 strings remain diagnostic compatibility labels only. The additive review brief
 is deployed at `3400a5db92d587d9b68e0abcd0052839702dc678` by run `31294286484`.
 Declarative shader assembly is deployed at
-`6abece4f43710a4547650bd93af4ca8834f77224` by run `31294986555`. The current
-milestone is the shared static cross-runtime contract described above; it may
-not widen the frozen v1 records, alter public adapters, add compositor inputs,
-or fork verification. Defer E66 and Powder until
+`6abece4f43710a4547650bd93af4ca8834f77224` by run `31294986555`. The shared
+static contract, capture ABI, metrics, and filterable review board are deployed;
+the current milestone is the local review-cycle orchestration described above.
+It may not widen frozen v1 records, alter public adapters, add compositor
+inputs, or fork validation. Defer E66 and Powder until
 their extra samples or source-stage stability proof fit the existing budgeted
 facade without creating a second experiment framework.
 

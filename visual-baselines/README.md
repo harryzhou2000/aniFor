@@ -35,6 +35,26 @@ comparison, and promotion identities, so older packages remain valid. Before
 using it as evidence, revalidate its ID and require its complete
 `{name,...request}` descriptors to match the completed batch results exactly.
 
+For the ordinary local edit-to-review loop, build once and compose capture,
+comparison, and read-only package verification with one command:
+
+```sh
+npm run audit:visual-lab:review -- \
+  --recipe-set=visual-lab/recipe-sets/liquid-motion.json \
+  --output-dir=/path/to/new-review
+```
+
+When `dist/index.html` is already current, omit the rebuild with
+`audit:visual-lab:review:capture`. The command requires an explicit review root
+that is absent or a real empty directory, so stale captures cannot be mistaken
+for the current cohort. It writes its comparison beneath
+`<review-root>/comparison` and prints the exact
+review-board, brief, metrics, and comparison paths only after the shared
+portable verifier accepts the package. It does not open the board, score a
+variant, promote a baseline, or mutate Git. The lower-level batch, compare, and
+verify commands below remain available for CI, downloaded artifacts, and
+failure diagnosis.
+
 Compare a complete downloaded batch without rebuilding or launching Chrome:
 
 ```sh

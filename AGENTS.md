@@ -89,8 +89,9 @@ move it into the browser static contract, or change its order without an
 explicit frozen-schema migration. Identity tests must continue to assert the
 historical result and comparison bytes independently of the shared tuple.
 
-The active framework increment is an additive deterministic
-`review-board.html` generated from comparison/v1 plus its verified metrics. It
+The additive deterministic `review-board.html` is deployed at revision
+`6eff691b50f00ffd0f3366b66a089779439e39ee` by release-set workflow run
+`31298776917`. It is generated from comparison/v1 plus its verified metrics and
 contains only decision candidates in catalog order and may filter locally by
 exact status, domain, fixture, and a bounded literal candidate substring. Query
 state is shareable but never ranks, scores, accepts, promotes, persists, or
@@ -101,6 +102,17 @@ the final `comparison.json` marker, stable-read and exact-rerender verified when
 present, and excluded from every frozen identity. Legacy packages may omit it;
 if it is present, verified metrics and the matching brief must also be present.
 
+The active framework increment is a thin local review-cycle orchestrator. It
+must compose the existing batch capture, baseline comparison, and portable
+package verifier in that exact order, require an explicit output root, write the
+comparison only beneath `<review-root>/comparison`, and stop before later stages
+when capture is incomplete or interrupted. Reuse the existing batch parser,
+recipe-set reader, component APIs, production bundle, and Chrome lifecycle; do
+not duplicate candidate metadata, validation, capture logic, artifact schemas,
+or CI path policy. It may print verified handoff paths and identities only. It
+must never open UI automatically, score or choose a variant, promote a baseline,
+mutate Git, or deploy.
+
 The typed Visual Lab state, fixed normal-HDR composition seam, promotion-safe
 same-page off/A/B selection, declarative fixtures, and production-bundle capture
 route are established. Three leaf migrations are complete. E62 Oxygen volume
@@ -110,11 +122,11 @@ target `8`; E65 Water surface motion is an accepted E08 baseline and uses the
 retained moving-Water fixture with liquid target `2`. Their legacy resolvers,
 uniforms, queries, datasets, and bespoke verifier paths are removed. E65 is also
 deployed. The latest fully verified release base for the active increment is
-revision `2fcf93f75057569134cfa252f1b8470ccd6f7965`, deployed by release-set
-workflow run `31297587591`: the build passed with 269/270 ccache hits, all four
-named recipes were encoded-identical, the freshly downloaded package verified
-the brief and metrics, and live closure passed all 19 resources on its first
-attempt.
+revision `6eff691b50f00ffd0f3366b66a089779439e39ee`, deployed by release-set
+workflow run `31298776917`: 1,436 source and 105 tooling tests passed with
+269/270 ccache hits, all four named recipes were encoded-identical, the freshly
+downloaded package verified its board, brief, metrics, captures, and recipe set,
+and live closure passed all 19 resources on its first attempt.
 
 `anifor.visual-lab.accepted-baseline/v1` contains only
 catalog-ordered candidate names and their existing content-addressed result
