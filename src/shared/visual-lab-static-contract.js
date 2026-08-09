@@ -108,9 +108,48 @@ const contract = {
       requirement: '--domain=liquid --target=2',
     },
   ],
+  captureRecipes: [
+    {
+      name: 'gas-showcase',
+      domain: 'gas',
+      target: 0,
+      fixture: 'showcase',
+      gain: 1,
+      renderScale: 2,
+    },
+    {
+      name: 'oxygen-showcase',
+      domain: 'gas',
+      target: 4,
+      fixture: 'showcase',
+      gain: 1,
+      renderScale: 2,
+    },
+    {
+      name: 'oil-motion',
+      domain: 'liquid',
+      target: 8,
+      fixture: 'oil-motion',
+      gain: 1,
+      renderScale: 2,
+    },
+    {
+      name: 'water-motion',
+      domain: 'liquid',
+      target: 2,
+      fixture: 'water-motion',
+      gain: 1,
+      renderScale: 2,
+    },
+  ],
 };
 
 const SAFE_NAME = /^[a-z][a-z0-9-]*$/;
+const SAFE_RECIPE_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const CAPTURE_RECIPE_FIELDS = [
+  'name', 'domain', 'target', 'fixture', 'gain', 'renderScale',
+];
+const CAPTURE_RECIPE_FIELD_SET = new Set(CAPTURE_RECIPE_FIELDS);
 
 const validateContract = (candidate) => {
   const names = new Set();
@@ -155,6 +194,7 @@ const validateContract = (candidate) => {
   }
 
   const fixtures = new Set();
+  const fixtureConstraints = new Map();
   for (const fixture of candidate.fixtures) {
     if (!SAFE_NAME.test(fixture.name) || fixtures.has(fixture.name)) {
       throw new TypeError(`invalid or duplicate Visual Lab fixture ${JSON.stringify(fixture.name)}`);
@@ -172,6 +212,44 @@ const validateContract = (candidate) => {
       }
     }
     fixtures.add(fixture.name);
+    fixtureConstraints.set(fixture.name, fixture.constraints);
+  }
+
+  const recipeNames = new Set();
+  for (const recipe of candidate.captureRecipes) {
+    const keys = Reflect.ownKeys(recipe);
+    if (keys.length !== CAPTURE_RECIPE_FIELDS.length
+      || CAPTURE_RECIPE_FIELDS.some((field) => !Object.hasOwn(recipe, field))
+      || keys.some((field) => typeof field !== 'string' || !CAPTURE_RECIPE_FIELD_SET.has(field))) {
+      throw new TypeError('Visual Lab capture recipe must define the exact stable descriptor fields');
+    }
+    if (!SAFE_RECIPE_NAME.test(recipe.name) || recipeNames.has(recipe.name)) {
+      throw new TypeError(`invalid or duplicate Visual Lab capture recipe ${JSON.stringify(recipe.name)}`);
+    }
+    if (!captureDomains.has(recipe.domain)) {
+      throw new TypeError(`Visual Lab capture recipe ${recipe.name} uses uncapturable domain ${recipe.domain}`);
+    }
+    if (!Number.isInteger(recipe.target) || recipe.target < 0 || recipe.target > 255) {
+      throw new TypeError(`Visual Lab capture recipe ${recipe.name} has an invalid target`);
+    }
+    if (!Number.isFinite(recipe.gain) || recipe.gain <= 0 || recipe.gain > 2) {
+      throw new TypeError(`Visual Lab capture recipe ${recipe.name} has an invalid gain`);
+    }
+    if (!candidate.normalHdrExecutionProfile.detailScales.includes(recipe.renderScale)) {
+      throw new TypeError(`Visual Lab capture recipe ${recipe.name} has an unsupported render scale`);
+    }
+    const constraints = fixtureConstraints.get(recipe.fixture);
+    if (!constraints) {
+      throw new TypeError(`Visual Lab capture recipe ${recipe.name} uses unknown fixture ${recipe.fixture}`);
+    }
+    const compatible = constraints.some((constraint) => (
+      constraint.domain === recipe.domain
+      && (constraint.targets === null || constraint.targets.includes(recipe.target))
+    ));
+    if (!compatible) {
+      throw new TypeError(`Visual Lab capture recipe ${recipe.name} is incompatible with fixture ${recipe.fixture}`);
+    }
+    recipeNames.add(recipe.name);
   }
 };
 

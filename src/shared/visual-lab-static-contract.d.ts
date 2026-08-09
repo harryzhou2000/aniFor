@@ -80,4 +80,22 @@ export declare const VISUAL_LAB_STATIC_CONTRACT: Readonly<{
       requirement: '--domain=liquid --target=2';
     }>,
   ];
+  captureRecipes: readonly [
+    Readonly<{
+      name: 'gas-showcase'; domain: 'gas'; target: 0;
+      fixture: 'showcase'; gain: 1; renderScale: 2;
+    }>,
+    Readonly<{
+      name: 'oxygen-showcase'; domain: 'gas'; target: 4;
+      fixture: 'showcase'; gain: 1; renderScale: 2;
+    }>,
+    Readonly<{
+      name: 'oil-motion'; domain: 'liquid'; target: 8;
+      fixture: 'oil-motion'; gain: 1; renderScale: 2;
+    }>,
+    Readonly<{
+      name: 'water-motion'; domain: 'liquid'; target: 2;
+      fixture: 'water-motion'; gain: 1; renderScale: 2;
+    }>,
+  ];
 }>;

@@ -130,6 +130,32 @@ describe('Visual Lab static cross-runtime contract', () => {
     }
   });
 
+  it('declares the stable capture recipes without executable metadata', () => {
+    expect(VISUAL_LAB_STATIC_CONTRACT.captureRecipes).toEqual([
+      {
+        name: 'gas-showcase', domain: 'gas', target: 0,
+        fixture: 'showcase', gain: 1, renderScale: 2,
+      },
+      {
+        name: 'oxygen-showcase', domain: 'gas', target: 4,
+        fixture: 'showcase', gain: 1, renderScale: 2,
+      },
+      {
+        name: 'oil-motion', domain: 'liquid', target: 8,
+        fixture: 'oil-motion', gain: 1, renderScale: 2,
+      },
+      {
+        name: 'water-motion', domain: 'liquid', target: 2,
+        fixture: 'water-motion', gain: 1, renderScale: 2,
+      },
+    ]);
+    for (const recipe of VISUAL_LAB_STATIC_CONTRACT.captureRecipes) {
+      expect(Reflect.ownKeys(recipe)).toEqual([
+        'name', 'domain', 'target', 'fixture', 'gain', 'renderScale',
+      ]);
+    }
+  });
+
   it('is recursively frozen and JSON-safe static data', () => {
     expect(JSON.parse(JSON.stringify(VISUAL_LAB_STATIC_CONTRACT)))
       .toStrictEqual(VISUAL_LAB_STATIC_CONTRACT);

@@ -2,6 +2,7 @@ import {
   resolveVisualLabDomain,
   resolveVisualLabFixture,
 } from './visual-lab-fixtures.mjs';
+import { VISUAL_LAB_STATIC_CONTRACT } from '../src/shared/visual-lab-static-contract.js';
 
 const RECIPE_FIELDS = Object.freeze([
   'name', 'domain', 'target', 'fixture', 'gain', 'renderScale',
@@ -106,40 +107,9 @@ export function createVisualLabCaptureRecipeCatalog(entries) {
   ));
 }
 
-export const VISUAL_LAB_CAPTURE_RECIPES = createVisualLabCaptureRecipeCatalog([
-  {
-    name: 'gas-showcase',
-    domain: 'gas',
-    target: 0,
-    fixture: 'showcase',
-    gain: 1,
-    renderScale: 2,
-  },
-  {
-    name: 'oxygen-showcase',
-    domain: 'gas',
-    target: 4,
-    fixture: 'showcase',
-    gain: 1,
-    renderScale: 2,
-  },
-  {
-    name: 'oil-motion',
-    domain: 'liquid',
-    target: 8,
-    fixture: 'oil-motion',
-    gain: 1,
-    renderScale: 2,
-  },
-  {
-    name: 'water-motion',
-    domain: 'liquid',
-    target: 2,
-    fixture: 'water-motion',
-    gain: 1,
-    renderScale: 2,
-  },
-]);
+export const VISUAL_LAB_CAPTURE_RECIPES = createVisualLabCaptureRecipeCatalog(
+  VISUAL_LAB_STATIC_CONTRACT.captureRecipes,
+);
 
 const RECIPE_BY_NAME = new Map(
   VISUAL_LAB_CAPTURE_RECIPES.map((recipe) => [recipe.name, recipe]),

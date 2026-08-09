@@ -6,6 +6,7 @@ import {
   VISUAL_LAB_CAPTURE_RECIPES,
   visualLabCaptureRecipeNames,
 } from './visual-lab-recipes.mjs';
+import { VISUAL_LAB_STATIC_CONTRACT } from '../src/shared/visual-lab-static-contract.js';
 
 const validRecipe = Object.freeze({
   name: 'custom-gas',
@@ -45,6 +46,9 @@ describe('Visual Lab capture recipes', () => {
     ]);
     expect(resolveVisualLabCaptureRecipe('water-motion'))
       .toBe(VISUAL_LAB_CAPTURE_RECIPES[3]);
+    expect(VISUAL_LAB_CAPTURE_RECIPES).not.toBe(VISUAL_LAB_STATIC_CONTRACT.captureRecipes);
+    expect(VISUAL_LAB_CAPTURE_RECIPES[0])
+      .not.toBe(VISUAL_LAB_STATIC_CONTRACT.captureRecipes[0]);
   });
 
   it('returns a deeply frozen JSON-safe catalog detached from its inputs', () => {
