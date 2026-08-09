@@ -47,6 +47,8 @@ const PROTECTED_FIXED_URL_PARAMETER_NAMES = new Set([
   ...VISUAL_LAB_CAPTURE_PROTOCOL.dynamicUrlParameterNames,
 ]);
 
+const RESOLVED_CAPTURE_REQUEST_BINDINGS = new WeakMap();
+
 const assertFixedUrlParametersDoNotCollide = (domain, fixedUrlParameters) => {
   for (const parameterName of Object.keys(fixedUrlParameters)) {
     if (PROTECTED_FIXED_URL_PARAMETER_NAMES.has(parameterName)) {
@@ -143,11 +145,20 @@ export const VISUAL_CAPTURE_DOMAIN_ADAPTERS = Object.freeze([
   ...VISUAL_CAPTURE_EXTENSION_DOMAIN_ADAPTERS,
 ]);
 
-/** Builds one deterministic capture URL without mutating the supplied base URL. */
-export function buildVisualLabCaptureUrl(baseUrl, request) {
+/**
+ * Builds a URL from a resolver-issued tuple. The WeakMap binding prevents a
+ * caller from supplying spoofed adapters while allowing an execution plan to
+ * resolve fixture/driver ownership exactly once.
+ */
+export function buildVisualLabCaptureUrlFromResolvedRequest(baseUrl, request, resolved) {
+  const binding = RESOLVED_CAPTURE_REQUEST_BINDINGS.get(resolved);
+  if (!binding || binding.domain !== request?.domain || binding.target !== request?.target
+    || binding.fixture !== request?.fixture) {
+    throw new Error('Visual capture URL requires its canonical resolved request tuple');
+  }
   const url = new URL(baseUrl);
   const parameters = url.searchParams;
-  const { domainAdapter, fixtureAdapter, captureDriver } = resolveVisualCaptureRequest(request);
+  const { domainAdapter, fixtureAdapter, captureDriver } = resolved;
   for (const [name, value] of Object.entries(VISUAL_LAB_CAPTURE_PROTOCOL.fixedUrlParameters)) {
     parameters.set(name, value);
   }
@@ -178,6 +189,13 @@ export function buildVisualLabCaptureUrl(baseUrl, request) {
     parameters.set(name, value);
   }
   return url;
+}
+
+/** Builds one deterministic capture URL without mutating the supplied base URL. */
+export function buildVisualLabCaptureUrl(baseUrl, request) {
+  return buildVisualLabCaptureUrlFromResolvedRequest(
+    baseUrl, request, resolveVisualCaptureRequest(request),
+  );
 }
 
 export const VISUAL_LAB_FIXTURE_ADAPTERS = Object.freeze(
@@ -315,11 +333,17 @@ export function createVisualCaptureRequestResolver({
     const fixtureAdapter = resolveFixtureCompatibility(
       fixtureByName.get(request?.fixture), request.domain, request.target, fixtureNames,
     );
-    return Object.freeze({
+    const resolved = Object.freeze({
       domainAdapter,
       fixtureAdapter,
       captureDriver: driverByFixture.get(fixtureAdapter.name),
     });
+    RESOLVED_CAPTURE_REQUEST_BINDINGS.set(resolved, Object.freeze({
+      domain: request.domain,
+      target: request.target,
+      fixture: request.fixture,
+    }));
+    return resolved;
   });
 }
 

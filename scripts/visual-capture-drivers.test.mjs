@@ -149,6 +149,7 @@ describe('typed visual capture drivers', () => {
       'visual-lab-audit.mjs',
       'visual-lab-batch.mjs',
       'visual-lab-baseline.mjs',
+      'visual-lab-execution-plan.mjs',
       'visual-lab-recipes.mjs',
     ]) {
       const source = readFileSync(new URL(`./${file}`, import.meta.url), 'utf8');

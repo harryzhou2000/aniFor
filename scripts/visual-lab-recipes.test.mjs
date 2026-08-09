@@ -187,6 +187,14 @@ describe('Visual Lab capture recipes', () => {
         ['--domain=gas', '--domain=gas'],
         'Option --domain may only be provided once',
       ],
+      [
+        [
+          '--candidate=gas-showcase',
+          `--execution-plan-id=sha256:${'0'.repeat(64)}`,
+          '--chrome=/definitely/missing/chrome',
+        ],
+        'Visual capture execution plan mismatch',
+      ],
     ]) {
       const child = spawnSync(process.execPath, [auditScript.pathname, ...arguments_], {
         encoding: 'utf8', timeout: 5_000,

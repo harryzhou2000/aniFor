@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fsPromises from 'node:fs/promises';
 import {
@@ -19,6 +19,7 @@ import {
   VISUAL_LAB_BATCH_SCHEMA,
 } from './visual-lab-batch.mjs';
 import {
+  buildVisualLabCaptureUrl,
   resolveVisualCaptureRequest,
   VISUAL_LAB_CAPTURE_PROTOCOL,
   visualLabFixturePreparationLabel,
@@ -238,6 +239,9 @@ const writeValidCapture = async (directory, candidate, options = {}) => {
     tool: 'visual-lab-audit-v1',
     ...visualCaptureDriverReportFields(driver),
     result,
+    url: buildVisualLabCaptureUrl(
+      'http://127.0.0.1:5173/', requestFor(candidate),
+    ).href,
     domain: recipe.domain,
     target: recipe.target,
     fixture: recipe.fixture,
@@ -472,6 +476,10 @@ describe('Visual Lab batch runner', () => {
     ]);
     for (const call of calls) {
       expect(call.command).toBe('/fake/node');
+      expect(call.executionPlan.candidate).toBe(call.recipe.name);
+      expect(call.executionPlan.request).toEqual(requestFor(call.recipe.name));
+      expect(call.executionPlan.compiled.variants.map(({ name }) => name))
+        .toEqual(['off', 'a', 'b']);
       expect(call.args).toContain(`--bundle=${path.resolve(bundle)}`);
       expect(call.args).toContain(`--candidate=${call.recipe.name}`);
       expect(call.args).toContain('--gpu=swiftshader');
@@ -902,6 +910,38 @@ describe('Visual Lab batch runner', () => {
     expect(await readFile(
       path.join(candidateRoot, 'water-motion', 'failure.log'), 'utf8',
     )).toContain('top-level target does not match');
+  });
+
+  it('rejects render-affecting URL state outside the hermetic plan query', async () => {
+    const root = await makeTemporaryDirectory();
+    const outputDirectory = path.join(root, 'batch');
+    const candidateRoot = path.join(outputDirectory, 'candidates');
+    await writeValidCapture(path.join(candidateRoot, 'gas-showcase'), 'gas-showcase', {
+      mutateReport: (report) => {
+        const url = new URL(report.url);
+        url.searchParams.set('gasCoreDepthVfx', '0');
+        report.url = url.href;
+      },
+    });
+    await writeValidCapture(
+      path.join(candidateRoot, 'oxygen-showcase'), 'oxygen-showcase',
+    );
+
+    const result = await runVisualLabBatch({
+      candidates: ['gas-showcase', 'oxygen-showcase'],
+      outputDir: outputDirectory,
+      indexOnly: true,
+    });
+
+    expect(result.index.candidates.map(({ candidate, status, failure }) => (
+      [candidate, status, failure]
+    ))).toEqual([
+      ['gas-showcase', 'failed', 'report-invalid'],
+      ['oxygen-showcase', 'passed', undefined],
+    ]);
+    expect(await readFile(
+      path.join(candidateRoot, 'gas-showcase', 'failure.log'), 'utf8',
+    )).toContain('capture URL query does not match the hermetic execution plan');
   });
 
   it('validates the typed Powder source-stage driver without weakening HDR reports', async () => {
@@ -1392,6 +1432,78 @@ describe('Visual Lab batch runner', () => {
 });
 
 describe('Visual Lab batch CLI', () => {
+  it('inspects the same complete plan without creating output or running a candidate', async () => {
+    const root = await makeTemporaryDirectory();
+    const bundle = path.join(root, 'bundle-does-not-exist', 'index.html');
+    const outputDirectory = path.join(root, 'plan-must-not-be-created');
+    let runnerCalls = 0;
+    let publicationCalls = 0;
+
+    const result = await runVisualLabBatch({
+      candidates: ['powder-style-atlas', 'gas-showcase'],
+      bundle,
+      outputDir: outputDirectory,
+      gpu: 'swiftshader',
+      planOnly: true,
+    }, {
+      runCandidate: async () => { runnerCalls++; throw new Error('must not run'); },
+      publishFile: async () => { publicationCalls++; throw new Error('must not publish'); },
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      exitCode: 0,
+      planOnly: true,
+      plan: {
+        schema: 'anifor.visual-capture.execution-plan/v1',
+        summary: { selected: 2 },
+      },
+      runtime: { gpu: 'swiftshader', outputDir: outputDirectory },
+    });
+    expect(result.plan.entries.map(({ candidate }) => candidate)).toEqual([
+      'gas-showcase', 'powder-style-atlas',
+    ]);
+    expect(runnerCalls).toBe(0);
+    expect(publicationCalls).toBe(0);
+    await expect(access(outputDirectory)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('emits portable structured plan records before a build exists', async () => {
+    const root = await makeTemporaryDirectory();
+    const bundle = path.join(root, 'missing-dist', 'index.html');
+    const outputDirectory = path.join(root, 'must-not-be-created');
+    const script = new URL('./visual-lab-batch.mjs', import.meta.url);
+    const planned = spawnSync(process.execPath, [
+      script.pathname,
+      '--plan-only=1',
+      '--candidates=gas-showcase',
+      `--bundle=${bundle}`,
+      `--output-dir=${outputDirectory}`,
+    ], { encoding: 'utf8', timeout: 5_000 });
+
+    expect(planned.status).toBe(0);
+    expect(planned.stderr).toBe('');
+    expect(JSON.parse(planned.stdout)).toMatchObject({
+      tool: 'visual-lab-plan-v1',
+      ok: true,
+      plan: { summary: { selected: 1 } },
+      runtime: { outputDir: outputDirectory },
+    });
+    await expect(access(outputDirectory)).rejects.toMatchObject({ code: 'ENOENT' });
+
+    const malformed = spawnSync(process.execPath, [
+      script.pathname, '--plan-only=yes',
+    ], { encoding: 'utf8', timeout: 5_000 });
+    expect(malformed.status).toBe(1);
+    expect(malformed.stdout).toBe('');
+    expect(JSON.parse(malformed.stderr)).toEqual({
+      tool: 'visual-lab-plan-v1',
+      ok: false,
+      error: '--plan-only must be 0 or 1',
+    });
+    expect(malformed.stderr).not.toContain(process.cwd());
+  });
+
   it('parses selected recipes and environment options without recipe-owned flags', () => {
     expect(parseVisualLabBatchArguments([
       '--candidates=oxygen-showcase, water-motion',
@@ -1410,6 +1522,10 @@ describe('Visual Lab batch CLI', () => {
       gpu: 'swiftshader',
       candidateTimeoutMs: 123456,
       indexOnly: true,
+      planOnly: false,
+    });
+    expect(parseVisualLabBatchArguments(['--plan-only=1'])).toMatchObject({
+      planOnly: true, indexOnly: false,
     });
     expect(parseVisualLabBatchArguments(['--help'])).toEqual({ help: true });
     expect(parseVisualLabBatchArguments([]).candidateTimeoutMs).toBe(300_000);
@@ -1420,6 +1536,10 @@ describe('Visual Lab batch CLI', () => {
       .toThrow('comma-separated list');
     expect(() => parseVisualLabBatchArguments(['--index-only=yes']))
       .toThrow('--index-only must be 0 or 1');
+    expect(() => parseVisualLabBatchArguments(['--plan-only=yes']))
+      .toThrow('--plan-only must be 0 or 1');
+    expect(() => parseVisualLabBatchArguments(['--index-only=1', '--plan-only=1']))
+      .toThrow('mutually exclusive');
     for (const value of ['0', '-1', '1.5', '2147483648', 'not-a-number']) {
       expect(() => parseVisualLabBatchArguments([`--candidate-timeout-ms=${value}`]))
         .toThrow('--candidate-timeout-ms must be a positive integer');

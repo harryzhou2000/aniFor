@@ -127,14 +127,37 @@ ID/digest pinning, fresh runner-temporary extraction, a symlink-free regular
 tree, exact revision/stable aliases/asset closure, provider XOR, the fresh-build
 escape path, optional-review reuse, and live verification. Fixture/request-owned
 driver selection, exhaustive executable adapters, and registry-owned labels are
-the current deployment checkpoint: production consumers must resolve the
-fixture-owned tuple and must not dispatch from `domain.driver` or a driver-name
-branch. Preserve the synthetic same-domain/multiple-driver proof, startup/report
-metadata exposure policy, `OFF/A/B` and `Smooth/Local/Grains` labels, frozen
-identities, and real Gas+Powder portable batch. The next direction is authoring
-and execution throughput: one immutable execution plan, a pre-Chrome catalog
-inspection gate, and evidence-based safe batch-session reuse. Adding a control
-must not require edits to audit, batch, baseline, review, CI, or sheet dispatch.
+deployed at revision `6e2c3ebfd7d0719aa0d8bbb28c544995734f37a2`: source run
+`31306575350` produced the artifact and `deploy-verified` run `31306791220`
+reused it without `build`, deployed Pages, and passed first-attempt live
+19-resource closure. Production consumers must resolve the fixture-owned tuple
+and must not dispatch from `domain.driver` or a driver-name branch. Preserve the
+synthetic same-domain/multiple-driver proof, startup/report metadata exposure
+policy, `OFF/A/B` and `Smooth/Local/Grains` labels, frozen identities, and real
+Gas+Powder portable batch.
+
+The immutable execution-plan increment is the current local checkpoint. Compile
+the complete selected recipe set, request tuple, executable evidence/startup/
+selection state, canonical URL, expected datasets, labels, and artifact paths
+before any output mutation or Chrome launch. The normal batch must consume the
+same frozen entries exposed by `--plan-only=1`. The printed inspection is
+content-addressed and data-only: never serialize executable expressions,
+preparer/evidence dispatch authority, absolute paths, or timing into its
+portable identity. Bind those private expressions through an opaque executable
+digest. Capture base URLs are hermetic and may not inherit a query or fragment;
+all render-affecting parameters belong to the canonical plan query. Historical
+preparation report labels remain diagnostics, and machine paths stay in the
+unhashed runtime envelope. Plan
+mode must not create directories, lock, publish, resolve Chrome, or spawn.
+
+The next direction is evidence-based safe batch-session reuse. Reuse only a
+killable Chrome host; give each candidate a fresh isolated browser context,
+direct-URL target, document, simulation, WebGL context, error collector, and
+explicit renderer disposal. On timeout, context loss, fallback, or disposal
+failure, recycle the entire host before continuing. Instrument phase timings
+before claiming a speedup, and keep true 8×/recovery gates fresh-browser-only.
+Adding a control must not require edits to audit, batch, baseline, review, CI,
+or sheet dispatch.
 Preserve `anifor.visual-lab.static-contract/v1`, every result/batch/baseline/
 comparison/recipe-set identity, and the generic WebGL capture path throughout.
 
@@ -225,18 +248,18 @@ off so they do not compile or bind the expanded lab compositor. Powder capture
 is supported by the source-stage `powder-render-style` driver; do not fracture the
 fixed HDR seam merely to claim domain coverage.
 The rejected Powder-concavity idea must not be revived by misnaming directional
-slope or adding an unbudgeted sample. Continue material breadth, native material
-behaviour, and graphics:
-expose more TPT
-forces/sources, radioactive matter, botanical growth, phase changes, and
-reactions; give material families distinctive topology-preserving body optics,
-mesostructure, depth, transmission/reflection, and emission; and tune composed
-powder, solid, liquid, gas, energy, and contact scenes across Canvas and WebGL at
-1×/2×/4×/8×. Treat the now-correct viewport, cursor, brush, pan, zoom, aspect-fit,
-mobile gestures, save/load, CI, and Pages deployment as protected regression
-contracts rather than the primary feature stream.
+slope or adding an unbudgeted sample. Retain material breadth, native material
+behaviour, and graphics as a deferred product backlog. Do not begin another
+material/rendering treatment while the execution/session framework objective
+is active. Later work may expose more TPT forces/sources, radioactive matter,
+botanical growth, phase changes, and reactions, and give material families
+distinctive topology-preserving optics. Treat the now-correct viewport, input,
+save/load, CI, and Pages deployment as protected regression contracts.
 
-## Visual experiment cadence
+## Frozen visual experiment contracts (reference only)
+
+The E-number ladder is paused. These records protect accepted output when
+affected; they are not a task queue.
 
 Optimize presentation work for iteration speed. For an RGB-only visual idea,
 build a deterministic comparison scene, capture disabled/enabled images at one
@@ -258,7 +281,7 @@ avoid making every new colour, light, or texture experiment wait for the whole
 historical suite. Shader changes still require a real WebGL run, and anything
 that can affect compact true 8× must receive the bounded 8× safety check.
 
-The accepted visual experiment ladder now runs through E79. E12 is the
+The accepted visual experiment ladder now runs through E82. E12 is the
 species-safe Sand/Clay/Concrete wet-sediment checkpoint; preserve its exact
 aqueous owner/stability proof, split moving-powder/stationary-Water control,
 Local/Grains no-op, fine structures, authored gaps, Canvas fallback, and true
@@ -2155,7 +2178,9 @@ accepted leaf treatments can be folded into parent baselines while deleting
 selector, uniform, query, telemetry, and bespoke-verifier plumbing. Do not
 reopen them merely to add more effect detail.
 
-The current checkpoint is candidate-scoped promotion at the batch-record layer.
+Candidate-scoped promotion is deployed historical infrastructure. The active
+checkpoint is measured, failure-safe batch-session reuse over the immutable
+execution plan.
 Keep the baseline manifest content-only and content-addressed; require the exact
 complete comparison package plus an explicit selection before overlaying
 current records into a new full proposal. Re-hash source, comparison-copy, and

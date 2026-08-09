@@ -121,8 +121,11 @@ artifact-ID/digest pinning, fresh temporary extraction, symlink-free regular
 tree, exact embedded revision, stable aliases, resource closure, provider XOR,
 optional-review reuse, fresh-build escape path, and live verification contract.
 
-The fixture/request-owned driver milestone is complete locally and is the next
-deployment checkpoint. Static extension fixtures now select a driver, while the
+The fixture/request-owned driver milestone is deployed at revision
+`6e2c3ebfd7d0719aa0d8bbb28c544995734f37a2`. Push run `31306575350`
+produced the exact static artifact; manual `deploy-verified` run `31306791220`
+skipped `build`, reused that artifact, deployed Pages, and passed live revision
+plus 19-resource closure on its first attempt. Static extension fixtures now select a driver, while the
 legacy domain `driver` field remains compatibility metadata with no production
 selection authority. One fail-fast resolver returns the frozen domain, fixture,
 and driver tuple; its synthetic acceptance case resolves two fixtures in one
@@ -137,16 +140,32 @@ and release recipe-set identity remain unchanged. The 1,445-source/193-tooling
 test gates, production build, and a real portable Gas+Powder WebGL/HDR batch all
 pass; its sheet renders `OFF/A/B` and `Smooth/Local/Grains` from the registry.
 
-The next objective is authoring and execution throughput, not visual-detail
-volume. Promote the resolved tuple into one immutable capture execution plan so
-new experiments declare fixture, driver, state projection, and review labels
-once; add a dry-run/catalog inspection surface that proves every named recipe
-has a complete executable plan before Chrome starts; and measure safe process or
-page reuse for compatible batch candidates without weakening fixture reset,
-bounded lifecycle cleanup, content identities, or portable verification. A new
-same-domain control should require a static declaration plus one executable
-adapter and optional typed fixture preparer—not edits to audit, batch, baseline,
-review, CI, or contact-sheet dispatch.
+The immutable execution-plan and pre-Chrome inspection increment is complete
+locally. `scripts/visual-lab-execution-plan.mjs` resolves the selected recipe
+set, fixture-owned driver, evidence reader, startup transaction, URL, all three
+selectors and expected datasets, review labels, and artifact paths before any
+output mutation or browser launch. The real batch iterates those same frozen
+entries. `--plan-only=1` emits a content-addressed, data-only portable
+inspection plus an unhashed runtime envelope; it neither creates the output
+tree nor serializes browser expressions or executable preparer/evidence-reader
+dispatch authority. An opaque executable digest binds that private authority,
+and hermetic base URLs reject inherited query/fragment render state so the
+canonical plan query is complete. Historical preparation report labels remain diagnostics.
+Gas plus Powder passed a real built-bundle WebGL batch with unchanged
+result IDs and portable verification.
+
+The next objective remains execution throughput, not visual-detail volume.
+Instrument per-phase launch, target, WebGL-ready, variant, teardown, and total
+timings, then reuse only a killable Chrome host for compatible normal-scale
+candidates. Every candidate must still receive a fresh isolated browser context,
+fresh direct-URL target, fresh simulation/document/WebGL state, and explicit
+renderer disposal. Any timeout, context loss, backend fallback, or disposal
+failure must recycle the whole host before continuing; true 8× and recovery
+gates remain fresh-browser-only. Preserve bounded lifecycle cleanup, content
+identities, and portable verification. A new same-domain control should require
+a static declaration plus one executable adapter and optional typed fixture
+preparer—not edits to audit, batch, baseline, review, CI, or contact-sheet
+dispatch.
 
 ### Cross-runtime static-contract acceptance
 
@@ -410,11 +429,20 @@ keeps the baseline ID and reports that fact. Output must be a new disjoint empty
 real directory; the command never edits the accepted input or performs Git, CI,
 Pages, or automatic aesthetic decisions.
 
-## Visual north star
+## Deferred visual north star
 
-Define the art target first: **physically-inspired stylized realism** — soft directional lighting, HDR emission, true fluid surfaces, depth through absorption and scatter. Every effect below serves that. I'd also lock in two reference presets early (e.g. "Realistic" and "Neon Lab") so aesthetic decisions stay coherent.
+This is the retained aesthetic target for work after the active execution/session
+increment; it does not authorize another E-number treatment or pipeline
+expansion. The target remains **physically-inspired stylized realism** — soft
+directional lighting, HDR emission, true fluid surfaces, and depth through
+absorption and scatter. Two reference presets such as Realistic and Neon Lab
+should keep later aesthetic decisions coherent.
 
-## Experiment ledger
+## Frozen visual experiment ledger (reference only)
+
+E01–E82 record accepted or rejected evidence. Preserve their contracts when
+affected, but do not select current work from this ledger. “Active” below means
+enabled in the shipped renderer, not current development priority.
 
 The established presentation remains the `classic` control while experiments
 are measured. Select a look with `?renderLook=classic|realistic|neon-lab`; this
@@ -2762,7 +2790,10 @@ next production 4× survey then selected Wood/PLNT as the largest remaining
   coverage `.971`, macro range `50`, zero dark/clipped fraction, and exact
   semantics across the full composed matrix.
 
-**Next visual experiments:** E03–E76 provide accepted liquid body/surface,
+**Deferred visual backlog (not current sequencing):** Retain the following
+owner/control notes for future work; do not start another material experiment
+until the session-reuse milestone is deployed and re-ranked. E03–E76 provide
+accepted liquid body/surface,
 stable-gas, coherent-gas-motion, powder-depth, and powder-local-light
 checkpoints plus exact resting contact grounding, Glass/Ice transmission, and
 state-aware Wax/PLNT subsurface response, composed wet-mineral optics,
@@ -3803,7 +3834,7 @@ hashes, and repeated-off frames remain exact. Requested-on true 8× reports
 inactive `scale-8` at exact `4896×3072`, completes a real GPU fence in about
 `5.31 s`, and records zero browser errors.
 
-## Immediate direction — rendering experiment framework
+## Deployed Visual Lab framework background
 
 The primary objective is framework leverage, not another isolated material
 detail. The established reusable **normal-WebGL Visual Lab** is built at the
@@ -3850,9 +3881,9 @@ is deployed at `3400a5db92d587d9b68e0abcd0052839702dc678` by run `31294286484`.
 Declarative shader assembly is deployed at
 `6abece4f43710a4547650bd93af4ca8834f77224` by run `31294986555`. The shared
 static contract, capture ABI, metrics, filterable review board, and local review
-cycle are deployed. The typed capture-driver boundary and fixture-owned request
-resolver are now closed; the next framework milestone is one inspectable,
-immutable execution plan plus measured safe batch reuse. Neither may widen
+cycle are deployed. The typed capture-driver boundary, fixture-owned request
+resolver, and immutable execution plan are complete locally. The active
+framework increment is measured, failure-safe batch-session reuse. It must not widen
 frozen result/batch/baseline/comparison v1 records, add compositor inputs, or
 reinterpret Powder as an HDR leaf. E66 remains deferred until its extra samples
 fit the established shader budget; Powder style comparison remains a
@@ -4099,7 +4130,7 @@ none of its multi-pass resource expansion is authorized by the active goal.
 - **Keep the Canvas2D fallback honest:** define the "minimum viable look" (albedo + contour + simple tint) and gate everything else behind WebGL capability. You already have the degradation machinery — the new pipeline just adds more rungs.
 - **Budget discipline:** you cap at 30 Hz with dirty-chunk uploads — good. Add a GPU-time governor: measure frame cost, shed bloom octaves → volumetric octaves → AO as needed. Mobile-first means thermal throttling is the real enemy.
 
-## Suggested sequencing
+## Deferred visual sequencing
 
 1. HDR + bloom + tonemap (week 1–2) — immediate wow.
 2. Normal lighting + blackbody emission — materials start feeling physical.

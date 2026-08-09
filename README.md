@@ -23,9 +23,18 @@ available as `npm run build:wasm`, `npm run test`, and `npm run build`.
 
 Deploy `dist/` to GitHub Pages, Cloudflare Pages, or Netlify. Vite uses relative asset paths, so subdirectory hosting works. `.github/workflows/ci.yml` verifies ordinary pushes and pull requests, while pushes to `main_codex` are intentionally manual. Run the **verify-static-game** workflow on `main_codex` and choose `build`, `build-and-deploy`, or `deploy-verified`. The first two perform a fresh verified build; `deploy-verified` additionally requires the run ID of a prior successful build of the exact same commit and republishes that validated artifact without compiling again. Successful runs upload a current-run static artifact, and both deployment modes publish through the GitHub Pages environment. C++ recompilation is accelerated by a project-local ccache directory restored from GitHub Actions cache and saved only after a successful build. In the repository settings, choose **GitHub Actions** as the Pages source.
 
-## Visual experiment workflow
+## Visual Lab planning and capture
 
-Build once, then capture a named experiment without rebuilding:
+Inspect an immutable selected plan before a build exists, before opening Chrome,
+and without writing the result tree:
+
+```sh
+npm run audit:visual-lab:plan -- \
+  --candidates=gas-showcase,powder-style-atlas \
+  --output-dir=/tmp/anifor-visual-review
+```
+
+Then build once and capture named experiments without rebuilding between them:
 
 ```sh
 npm run build
@@ -44,6 +53,16 @@ node scripts/visual-lab-verify.mjs \
   --batch-root=/tmp/anifor-visual-review \
   --require-complete=1 --require-recipe-set=1
 ```
+
+The JSON plan resolves the recipe-set identity, fixture-owned driver, canonical
+query, preparation kind, off/A/B selections and labels, expected browser
+datasets, and disjoint relative artifact paths. Its ID excludes machine-local
+bundle and output roots; those appear in a separate unhashed runtime envelope.
+Base URLs may not carry a query or fragment: every render-affecting capture
+parameter is plan-owned. The normal batch consumes the same immutable compiled
+entries and binds each child to an opaque digest of its executable browser
+authority, while the expressions themselves remain private and are never
+printed in the plan.
 
 Each recipe keeps the stable six fields `name/domain/target/fixture/gain/renderScale`.
 The resolved fixture—not the material domain—selects its capture driver, so one

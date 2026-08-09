@@ -43,7 +43,7 @@ const normalizeCandidate = (candidate) => {
   return candidate;
 };
 
-const normalizeRequest = (request) => {
+export const normalizeVisualLabResultRequest = (request) => {
   assertExactRecord(request, REQUEST_KEYS, 'request');
   assertNonemptyString(request.domain, 'request.domain');
   if (!Number.isInteger(request.target) || request.target < 0 || request.target > 255) {
@@ -82,7 +82,7 @@ const normalizeCaptureHashes = (captures) => {
  */
 export function createVisualLabResultRecord(candidate, request, captures) {
   const normalizedCandidate = normalizeCandidate(candidate);
-  const normalizedRequest = normalizeRequest(request);
+  const normalizedRequest = normalizeVisualLabResultRequest(request);
   const captureSha256 = normalizeCaptureHashes(captures);
   const identity = {
     schema: VISUAL_LAB_RESULT_SCHEMA,

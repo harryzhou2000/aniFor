@@ -13,6 +13,7 @@ import { VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS } from '../src/renderer/visua
 import { isDetachedProcessGroupAlive } from './detached-process.mjs';
 import {
   buildVisualLabCaptureUrl,
+  buildVisualLabCaptureUrlFromResolvedRequest,
   buildVisualLabStartupExpression,
   createVisualCaptureRequestResolver,
   createVisualLabDomainCatalog,
@@ -186,6 +187,22 @@ describe('Visual Lab fixture adapters', () => {
     expect(url.searchParams.get('liquidBodyVfx')).toBe('1');
     expect(url.searchParams.get('liquidSurfaceVfx')).toBe('1');
     expect(url.searchParams.get('keep')).toBe('retained');
+  });
+
+  it('accepts only the resolver-issued tuple for pre-resolved URL construction', () => {
+    const request = {
+      domain: 'gas', fixture: 'showcase', target: 1, gain: 1, renderScale: 2,
+    };
+    const resolved = resolveVisualCaptureRequest(request);
+    expect(buildVisualLabCaptureUrlFromResolvedRequest(
+      'https://example.test/app', request, resolved,
+    ).searchParams.get('visualTarget')).toBe('1');
+    expect(() => buildVisualLabCaptureUrlFromResolvedRequest(
+      'https://example.test/app', { ...request, target: 4 }, resolved,
+    )).toThrow('canonical resolved request tuple');
+    expect(() => buildVisualLabCaptureUrlFromResolvedRequest(
+      'https://example.test/app', request, { ...resolved },
+    )).toThrow('canonical resolved request tuple');
   });
 
   it('keeps the general showcase compatible with every implemented capture domain', () => {

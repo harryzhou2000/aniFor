@@ -26,20 +26,10 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
-  buildVisualLabCaptureUrl, buildVisualLabStartupExpression,
-  resolveVisualCaptureRequest,
   VISUAL_LAB_CAPTURE_PROTOCOL,
-  visualCaptureDomainNames, visualCaptureFixtureNames, visualLabFixturePreparationLabel,
+  visualCaptureDomainNames, visualCaptureFixtureNames,
 } from './visual-lab-fixtures.mjs';
-import {
-  buildVisualCaptureDatasetProjectionExpression,
-  buildVisualCaptureSelectionExpression,
-  visualCaptureDriverDatasetExpectation,
-  visualCaptureDriverReportFields,
-  visualCaptureDriverStartupFields,
-  visualCaptureVariantLabel,
-} from './visual-capture-drivers.mjs';
-import { buildVisualCaptureEvidenceReaderExpression } from './visual-capture-evidence.mjs';
+import { createVisualCaptureExecutionEntry } from './visual-lab-execution-plan.mjs';
 import {
   resolveVisualLabCaptureRecipe, visualLabCaptureRecipeNames,
 } from './visual-lab-recipes.mjs';
@@ -78,6 +68,7 @@ Options (use --name=value):
   --gpu=auto|swiftshader                Prefer local GPU; CI can force software
   --lifecycle-file=/path/to/state.json  Optional detached-Chrome cleanup handoff
   --lifecycle-owner=<sha256>             Required root/candidate identity for that handoff
+  --execution-plan-id=sha256:<hex>       Optional supervisor binding for a named plan entry
   --help
 
 Outputs: off.png, a.png, b.png, and report.json in --output-dir.`;
@@ -86,7 +77,7 @@ function parseArguments(argv) {
   if (argv.includes('--help')) return { help: true };
   const known = new Set([
     'base-url', 'bundle', 'candidate', 'domain', 'target', 'fixture', 'gain', 'render-scale',
-    'output-dir', 'chrome', 'gpu', 'lifecycle-file', 'lifecycle-owner',
+    'output-dir', 'chrome', 'gpu', 'lifecycle-file', 'lifecycle-owner', 'execution-plan-id',
   ]);
   const values = new Map();
   for (const argument of argv) {
@@ -110,6 +101,10 @@ function parseArguments(argv) {
     && !/^[a-f0-9]{64}$/.test(values.get('lifecycle-owner'))) {
     throw new Error('--lifecycle-owner must be a lowercase SHA-256 identity');
   }
+  if (values.has('execution-plan-id')
+    && !/^sha256:[a-f0-9]{64}$/.test(values.get('execution-plan-id'))) {
+    throw new Error('--execution-plan-id must be a lowercase SHA-256 identity');
+  }
 
   const candidate = values.has('candidate')
     ? resolveVisualLabCaptureRecipe(values.get('candidate')) : null;
@@ -130,25 +125,12 @@ function parseArguments(argv) {
     throw new Error('--target must be an integer from 0 through 255');
   }
   const fixture = candidate?.fixture ?? values.get('fixture') ?? 'showcase';
-  const { domainAdapter, fixtureAdapter, captureDriver } = resolveVisualCaptureRequest({
-    domain, target, fixture,
-  });
   const gain = candidate?.gain ?? Number(values.get('gain') ?? 1);
   if (!Number.isFinite(gain) || gain <= 0 || gain > 2) {
     throw new Error('--gain must be greater than 0 and no greater than 2');
   }
-  const defaultRenderScale = domainAdapter.executionProfile.detailScales.includes(2)
-    ? 2 : domainAdapter.executionProfile.detailScales[0];
   const renderScale = candidate?.renderScale
-    ?? Number(values.get('render-scale') ?? defaultRenderScale);
-  if (!domainAdapter.executionProfile.detailScales.includes(renderScale)) {
-    throw new Error(
-      `--render-scale for ${domain} must be ${
-        domainAdapter.executionProfile.detailScales.join(', ')
-      };`
-      + ' unsupported paths preserve the baseline',
-    );
-  }
+    ?? (values.has('render-scale') ? Number(values.get('render-scale')) : undefined);
   const gpu = values.get('gpu') ?? 'auto';
   if (gpu !== 'auto' && gpu !== 'swiftshader') {
     throw new Error('--gpu must be auto or swiftshader');
@@ -177,23 +159,52 @@ function parseArguments(argv) {
   const fixtureSuffix = fixture === 'showcase' ? '' : `-${fixture}`;
   const outputIdentity = candidate?.name ?? `${domain}${fixtureSuffix}`;
   const defaultOutput = path.join(tmpdir(), `anifor-visual-lab-${outputIdentity}`);
+  const outputDir = path.resolve(values.get('output-dir') ?? defaultOutput);
+  const executionPlan = createVisualCaptureExecutionEntry({
+    candidate: candidate?.name ?? null,
+    request: { domain, target, fixture, gain, renderScale },
+    baseUrl,
+    outputDir,
+    artifactRoot: outputDir,
+    artifactKey: outputIdentity,
+    gpu,
+  });
+  if (values.has('execution-plan-id') && candidate === null) {
+    throw new Error('--execution-plan-id requires --candidate');
+  }
+  if (values.has('execution-plan-id')
+    && values.get('execution-plan-id') !== executionPlan.inspection.id) {
+    throw new Error(
+      `Visual capture execution plan mismatch: expected ${values.get('execution-plan-id')},`
+      + ` resolved ${executionPlan.inspection.id}`,
+    );
+  }
+  const lifecycleFile = values.has('lifecycle-file')
+    ? path.resolve(values.get('lifecycle-file')) : undefined;
+  if (values.has('execution-plan-id') && lifecycleFile !== undefined
+    && lifecycleFile !== executionPlan.runtime.lifecycleFile) {
+    throw new Error(
+      'Visual capture execution runtime mismatch: lifecycle handoff is outside'
+      + ' the planned artifact root',
+    );
+  }
   return Object.freeze({
     help: false,
     baseUrl,
-    candidate: candidate?.name ?? null,
-    domain,
-    domainAdapter,
-    captureDriver,
-    target,
-    fixture,
-    fixtureAdapter,
-    gain,
-    renderScale,
+    executionPlan,
+    candidate: executionPlan.candidate,
+    domain: executionPlan.request.domain,
+    domainAdapter: executionPlan.domainAdapter,
+    captureDriver: executionPlan.captureDriver,
+    target: executionPlan.request.target,
+    fixture: executionPlan.request.fixture,
+    fixtureAdapter: executionPlan.fixtureAdapter,
+    gain: executionPlan.request.gain,
+    renderScale: executionPlan.request.renderScale,
     gpu,
-    outputDir: path.resolve(values.get('output-dir') ?? defaultOutput),
+    outputDir,
     chrome: values.get('chrome'),
-    lifecycleFile: values.has('lifecycle-file')
-      ? path.resolve(values.get('lifecycle-file')) : undefined,
+    lifecycleFile,
     lifecycleOwner: values.get('lifecycle-owner'),
     bundle: values.has('bundle'),
   });
@@ -241,9 +252,9 @@ async function main() {
     return;
   }
 
-  const url = buildVisualLabCaptureUrl(options.baseUrl, options);
+  const url = new URL(options.executionPlan.compiled.url);
   await ensureServer(url, options.bundle);
-  await mkdir(options.outputDir, { recursive: true });
+  await mkdir(options.executionPlan.runtime.artifactRoot, { recursive: true });
   if (options.lifecycleFile) {
     await mkdir(path.dirname(options.lifecycleFile), { recursive: true });
   }
@@ -314,7 +325,7 @@ async function main() {
     // target over CDP can withhold its acknowledgement while SwiftShader is
     // compiling, making a healthy load indistinguishable from a protocol hang.
     const startupSelection = await stageVariantDuringStartup(cdp, options);
-    const startupDriverFields = visualCaptureDriverStartupFields(options.captureDriver, 2);
+    const startupDriverFields = options.executionPlan.compiled.startupFields;
     assert(startupSelection.backendBeforeSelection === 'canvas2d'
       && startupSelection.backendReasonBeforeSelection === 'webgl-starting'
       && startupSelection.stagedBeforeWebGL === true
@@ -322,7 +333,7 @@ async function main() {
       && startupSelection.fixturePrepared === true
       && startupSelection.scene === options.fixtureAdapter.scene
       && startupSelection.preparation
-        === visualLabFixturePreparationLabel(options.fixtureAdapter)
+        === options.executionPlan.inspection.fixture.preparation.reportLabel
       && Object.entries(startupDriverFields).every(([name, value]) => (
         startupSelection[name] === value
       )),
@@ -336,9 +347,7 @@ async function main() {
         requestAnimationFrame(() => resolve(true))));
     })()`);
     await waitFor(async () => {
-      const snapshot = await snapshotState(
-        cdp, options.domainAdapter.evidence.plane, options.captureDriver.name,
-      );
+      const snapshot = await snapshotState(cdp, options.executionPlan);
       return snapshot.semantic.occupied > 0
         && snapshot.fieldAlpha.nonzero > 0
         && snapshot.framebufferAlpha.nonzero > 0;
@@ -395,9 +404,12 @@ async function main() {
       dataset: captures[name].state.dataset,
     }]));
     const warnings = [];
-    const offLabel = visualCaptureVariantLabel(options.captureDriver, 'off');
-    const aLabel = visualCaptureVariantLabel(options.captureDriver, 'a');
-    const bLabel = visualCaptureVariantLabel(options.captureDriver, 'b');
+    const labels = Object.fromEntries(options.executionPlan.inspection.driver.variants.map(
+      ({ name, label }) => [name, label],
+    ));
+    const offLabel = labels.off;
+    const aLabel = labels.a;
+    const bLabel = labels.b;
     if (!compactCaptures.a.distinctFromOff && !compactCaptures.b.distinctFromOff) {
       warnings.push(
         `${aLabel} and ${bLabel} PNGs are byte-identical to ${offLabel};`
@@ -407,27 +419,23 @@ async function main() {
     if (compactCaptures.a.sha256 === compactCaptures.b.sha256) {
       warnings.push(`${aLabel} and ${bLabel} PNGs are byte-identical at this Detail scale`);
     }
-    const result = createVisualLabResultRecord(options.candidate, {
-      domain: options.domain,
-      target: options.target,
-      fixture: options.fixture,
-      gain: options.gain,
-      renderScale: options.renderScale,
-    }, {
+    const result = createVisualLabResultRecord(
+      options.candidate, options.executionPlan.request, {
       off: compactCaptures.off.sha256,
       a: compactCaptures.a.sha256,
       b: compactCaptures.b.sha256,
-    });
+      },
+    );
     const report = {
       tool: 'visual-lab-audit-v1',
-      ...visualCaptureDriverReportFields(options.captureDriver),
+      ...options.executionPlan.compiled.reportFields,
       result,
       url: url.href,
       domain: options.domain,
       target: options.target,
       fixture: options.fixture,
       fixtureScene: options.fixtureAdapter.scene,
-      fixturePreparation: visualLabFixturePreparationLabel(options.fixtureAdapter),
+      fixturePreparation: options.executionPlan.inspection.fixture.preparation.reportLabel,
       targetKind: options.domainAdapter.targetKind,
       domainCapability: {
         targetKind: options.domainAdapter.targetKind,
@@ -452,7 +460,7 @@ async function main() {
       warnings,
     };
     const encodedReport = `${JSON.stringify(report)}\n`;
-    const reportPath = path.join(options.outputDir, 'report.json');
+    const reportPath = options.executionPlan.runtime.artifacts.report;
     await writeFile(reportPath, encodedReport);
     process.stdout.write(JSON.stringify({ ...report, report: reportPath }));
     process.stdout.write('\n');
@@ -563,23 +571,20 @@ function collectBrowserErrors(cdp) {
 }
 
 async function stageVariantDuringStartup(cdp, options) {
-  const expression = buildVisualLabStartupExpression(
-    options.fixtureAdapter, 2, options.captureDriver.name,
-  );
   return waitFor(
-    () => evaluate(cdp, expression),
+    () => evaluate(cdp, options.executionPlan.compiled.startupExpression),
     PAGE_STARTUP_TIMEOUT_MS,
     `${options.fixture} startup audit bridge`,
   );
 }
 
 async function waitForPage(cdp, options, expectedVariant) {
-  const expectedDriverState = visualCaptureDriverDatasetExpectation(
-    options.captureDriver, options, expectedVariant,
+  const compiledVariant = options.executionPlan.compiled.variants.find(
+    ({ value }) => value === expectedVariant,
   );
-  const observedDriverState = buildVisualCaptureDatasetProjectionExpression(
-    options.captureDriver,
-  );
+  assert(compiledVariant, `execution plan is missing capture variant ${expectedVariant}`);
+  const expectedDriverState = compiledVariant.expectedDataset;
+  const observedDriverState = options.executionPlan.compiled.datasetProjectionExpression;
   const readinessExpression = `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     const canvas = document.querySelector('.semantic-field-canvas');
@@ -644,15 +649,13 @@ async function waitForPage(cdp, options, expectedVariant) {
 async function captureVariant(cdp, options, variant) {
   const settleTimeoutMs = options.gpu === 'swiftshader'
     ? SWIFTSHADER_VARIANT_SETTLE_TIMEOUT_MS : VARIANT_SETTLE_TIMEOUT_MS;
-  const selectionExpression = buildVisualCaptureSelectionExpression(
-    options.captureDriver, variant.value,
+  const compiledVariant = options.executionPlan.compiled.variants.find(
+    ({ name }) => name === variant.name,
   );
-  const expectedDriverState = visualCaptureDriverDatasetExpectation(
-    options.captureDriver, options, variant.value,
-  );
-  const observedDriverState = buildVisualCaptureDatasetProjectionExpression(
-    options.captureDriver,
-  );
+  assert(compiledVariant, `execution plan is missing capture variant ${variant.name}`);
+  const selectionExpression = compiledVariant.selectionExpression;
+  const expectedDriverState = compiledVariant.expectedDataset;
+  const observedDriverState = options.executionPlan.compiled.datasetProjectionExpression;
   await evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     const selection = ${selectionExpression};
@@ -681,9 +684,7 @@ async function captureVariant(cdp, options, variant) {
 
   let previousState;
   const state = await waitFor(async () => {
-    const current = await snapshotState(
-      cdp, options.domainAdapter.evidence.plane, options.captureDriver.name,
-    );
+    const current = await snapshotState(cdp, options.executionPlan);
     const stable = previousState
       && sameDigest(previousState.semantic, current.semantic)
       && sameDigest(previousState.fieldAlpha, current.fieldAlpha)
@@ -711,7 +712,7 @@ async function captureVariant(cdp, options, variant) {
   assert(Math.abs(dimensions.width - clip.width) <= 1
     && Math.abs(dimensions.height - clip.height) <= 1,
   `${variant.name} PNG dimensions do not match its scale-1 CSS canvas clip`);
-  const png = path.join(options.outputDir, `${variant.name}.png`);
+  const png = options.executionPlan.runtime.artifacts.captures[variant.name];
   await writeFile(png, bytes);
   return {
     state,
@@ -758,9 +759,10 @@ function assertVariantState(state, options, variant) {
   );
   assert(state.dataset.backingSize === expectedBacking,
     `${variant.name} backing is ${state.dataset.backingSize}, expected ${expectedBacking}`);
-  const expectedDriverState = visualCaptureDriverDatasetExpectation(
-    options.captureDriver, options, variant.value,
-  );
+  const expectedDriverState = options.executionPlan.compiled.variants.find(
+    ({ name }) => name === variant.name,
+  )?.expectedDataset;
+  assert(expectedDriverState, `execution plan is missing capture variant ${variant.name}`);
   for (const [name, value] of Object.entries(expectedDriverState)) {
     assert(state.dataset[name] === value,
       `${variant.name} capture-driver dataset ${name} is wrong`);
@@ -770,9 +772,10 @@ function assertVariantState(state, options, variant) {
   assert(state.framebufferAlpha.nonzero > 0, `${variant.name} WebGL framebuffer alpha is empty`);
 }
 
-async function snapshotState(cdp, evidencePlane, captureDriver = 'normal-hdr') {
-  const evidenceReaderExpression = buildVisualCaptureEvidenceReaderExpression(evidencePlane);
-  const observedDriverState = buildVisualCaptureDatasetProjectionExpression(captureDriver);
+async function snapshotState(cdp, executionPlan) {
+  const { evidenceReaderExpression, datasetProjectionExpression: observedDriverState } = (
+    executionPlan.compiled
+  );
   return evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     const canvas = document.querySelector('.semantic-field-canvas');

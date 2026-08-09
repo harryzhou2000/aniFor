@@ -6,7 +6,7 @@ import {
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 
 import {
@@ -14,21 +14,23 @@ import {
   visualLabCaptureRecipeNames,
 } from './visual-lab-recipes.mjs';
 import {
-  createVisualLabRecipeSet,
-  normalizeVisualLabRecipeSet,
   readVisualLabRecipeSet,
 } from './visual-lab-recipe-set.mjs';
 import {
   resolveVisualCaptureRequest,
   VISUAL_LAB_CAPTURE_PROTOCOL,
-  visualLabFixturePreparationLabel,
 } from './visual-lab-fixtures.mjs';
 import {
   assertVisualCaptureDriverReportDescriptor,
-  visualCaptureDriverDatasetExpectation,
-  visualCaptureDriverStartupFields,
   visualCaptureVariantLabel,
 } from './visual-capture-drivers.mjs';
+import {
+  createVisualLabExecutionPlan,
+  VISUAL_LAB_CANDIDATE_GENERATED_FILES,
+  visualLabFailedArtifacts,
+  visualLabPassedArtifacts,
+  visualLabRequestForRecipe,
+} from './visual-lab-execution-plan.mjs';
 import { createVisualLabResultRecord } from './visual-lab-result.mjs';
 import {
   isDetachedProcessGroupAlive,
@@ -59,9 +61,6 @@ const BATCH_LOCK_FILE_NAME = '.visual-lab-batch.lock';
 const BATCH_LOCK_SCHEMA = 'anifor.visual-lab.batch-lock/v1';
 const LIFECYCLE_CLOCK_SKEW_MS = 60_000;
 const MIN_LIFECYCLE_RECOVERY_WINDOW_MS = 30 * 60_000;
-const CANDIDATE_GENERATED_FILES = Object.freeze([
-  'off.png', 'a.png', 'b.png', 'report.json', 'stdout.log', 'stderr.log',
-]);
 const FAILURE_CODES = new Set([
   'capture-failed', 'report-missing', 'report-invalid', 'artifact-invalid',
 ]);
@@ -78,9 +77,11 @@ Options (use --name=value):
   --gpu=auto|swiftshader                 Forwarded to the generic capture runner
   --candidate-timeout-ms=300000          Per-candidate timeout before TERM/KILL cleanup
   --index-only=0|1                       Aggregate existing candidate reports without capture
+  --plan-only=0|1                        Inspect the exact plan without writes or Chrome
   --help
 
-Outputs: recipe-set.json, index.json, index.html, and candidates/<name>/ capture artifacts.`;
+Capture outputs: recipe-set.json, index.json, index.html, and candidates/<name>/ artifacts.
+Plan-only writes one JSON record to stdout and does not create the output tree.`;
 
 class CandidateArtifactError extends Error {
   constructor(code, message, options = {}) {
@@ -103,13 +104,15 @@ const displayError = (error, ancestors = new Set()) => {
   return `${primary}\nNested errors:\n${nested.join('\n')}`;
 };
 
-const requestForRecipe = (recipe) => ({
-  domain: recipe.domain,
-  target: recipe.target,
-  fixture: recipe.fixture,
-  gain: recipe.gain,
-  renderScale: recipe.renderScale,
-});
+const displayCliError = (error, ancestors = new Set()) => {
+  if (!(error instanceof Error)) return String(error);
+  if (!(error instanceof AggregateError) || ancestors.has(error)) return error.message;
+  const nestedAncestors = new Set(ancestors).add(error);
+  const nested = [...error.errors].map((entry, index) => (
+    `[${index + 1}] ${displayCliError(entry, nestedAncestors)}`
+  ));
+  return `${error.message}\nNested errors:\n${nested.join('\n')}`;
+};
 
 const lifecycleOwnerFor = (outputDirectory, candidate) => createHash('sha256')
   .update(`${outputDirectory}\0${candidate}`, 'utf8').digest('hex');
@@ -213,6 +216,42 @@ const ensureRealDirectory = async (directory, label) => {
   if (!after.isDirectory()) throw new Error(`${label} must be a directory`);
   await assertRealAncestors(directory, label);
   return realpath(directory);
+};
+
+const inspectPlannedOutputPaths = async (outputDirectory, executionPlan) => {
+  await assertRealAncestors(outputDirectory, 'Visual Lab planned output directory');
+  const output = await pathDetails(outputDirectory);
+  if (output?.isSymbolicLink()) {
+    throw new Error('Visual Lab planned output directory must not be a symbolic link');
+  }
+  if (output && !output.isDirectory()) {
+    throw new Error('Visual Lab planned output directory must be a directory');
+  }
+  if (!output) return;
+
+  const candidateRoot = path.join(outputDirectory, 'candidates');
+  const root = await pathDetails(candidateRoot);
+  if (root?.isSymbolicLink()) {
+    throw new Error('Visual Lab planned candidate root must not be a symbolic link');
+  }
+  if (root && !root.isDirectory()) {
+    throw new Error('Visual Lab planned candidate root must be a directory');
+  }
+  if (!root) return;
+  for (const entry of executionPlan.entries) {
+    const candidateDirectory = path.join(candidateRoot, entry.candidate);
+    const details = await pathDetails(candidateDirectory);
+    if (details?.isSymbolicLink()) {
+      throw new Error(
+        `Visual Lab planned candidate directory ${entry.candidate} must not be a symbolic link`,
+      );
+    }
+    if (details && !details.isDirectory()) {
+      throw new Error(
+        `Visual Lab planned candidate directory ${entry.candidate} must be a directory`,
+      );
+    }
+  }
 };
 
 const processExists = (pid) => {
@@ -321,22 +360,6 @@ const ensureCandidateDirectory = async (
   );
 };
 
-const relativeCandidateRoot = (candidate) => `candidates/${candidate}`;
-
-const passedArtifacts = (candidate) => {
-  const root = relativeCandidateRoot(candidate);
-  return Object.freeze({
-    report: `${root}/report.json`,
-    off: `${root}/off.png`,
-    a: `${root}/a.png`,
-    b: `${root}/b.png`,
-  });
-};
-
-const failedArtifacts = (candidate) => Object.freeze({
-  diagnostic: `${relativeCandidateRoot(candidate)}/failure.log`,
-});
-
 const deepFreeze = (value) => {
   if (value === null || typeof value !== 'object' || Object.isFrozen(value)) return value;
   for (const nested of Object.values(value)) deepFreeze(nested);
@@ -348,7 +371,7 @@ const normalizeResult = (recipe, result) => {
   try {
     expected = createVisualLabResultRecord(
       recipe.name,
-      requestForRecipe(recipe),
+      visualLabRequestForRecipe(recipe),
       result?.captureSha256,
     );
   } catch (error) {
@@ -385,7 +408,7 @@ export function createVisualLabBatchIndex(entries) {
         candidate: recipe.name,
         status: 'passed',
         result: normalizeResult(recipe, entry.result),
-        artifacts: passedArtifacts(recipe.name),
+        artifacts: visualLabPassedArtifacts(recipe.name),
         warnings: Object.freeze([...entry.warnings]),
       };
     }
@@ -395,7 +418,7 @@ export function createVisualLabBatchIndex(entries) {
         candidate: recipe.name,
         status: 'failed',
         failure: entry.failure,
-        artifacts: failedArtifacts(recipe.name),
+        artifacts: visualLabFailedArtifacts(recipe.name),
       };
     }
     throw new TypeError(`Batch entry for ${recipe.name} has an invalid status or failure code`);
@@ -520,14 +543,12 @@ export function renderVisualLabContactSheet(index) {
 `;
 }
 
-const assertCurrentCaptureContract = (report, recipe, hashes) => {
-  const request = requestForRecipe(recipe);
+const assertCurrentCaptureContract = (report, executionPlan, hashes) => {
   const {
-    domainAdapter: domain,
-    fixtureAdapter: fixture,
-    captureDriver: driver,
-  } = resolveVisualCaptureRequest(request);
-  const expectedPreparation = visualLabFixturePreparationLabel(fixture);
+    recipe, request, domainAdapter: domain, fixtureAdapter: fixture,
+    captureDriver: driver, compiled,
+  } = executionPlan;
+  const expectedPreparation = executionPlan.inspection.fixture.preparation.reportLabel;
   const expectedBacking = `${WORLD_WIDTH * recipe.renderScale}x${WORLD_HEIGHT * recipe.renderScale}`;
   const expectedCapability = {
     targetKind: domain.targetKind,
@@ -550,6 +571,13 @@ const assertCurrentCaptureContract = (report, recipe, hashes) => {
   if (!isDeepStrictEqual(report.captureProtocol, VISUAL_LAB_CAPTURE_PROTOCOL)) {
     throw new Error('capture protocol does not match the current protocol');
   }
+  let captureUrl;
+  try { captureUrl = new URL(report.url); }
+  catch { throw new Error('capture URL must be an absolute HTTP(S) or file URL'); }
+  if (!['http:', 'https:', 'file:'].includes(captureUrl.protocol)
+    || captureUrl.searchParams.toString() !== executionPlan.inspection.canonicalQuery) {
+    throw new Error('capture URL query does not match the hermetic execution plan');
+  }
   assertVisualCaptureDriverReportDescriptor(driver, report.captureDriver);
   if (report.backend !== domain.executionProfile.backend
     || report.hdrPipeline !== VISUAL_LAB_CAPTURE_PROTOCOL.datasetRequirements.hdrPipeline) {
@@ -560,7 +588,7 @@ const assertCurrentCaptureContract = (report, recipe, hashes) => {
   }
 
   const startup = report.startupSelection;
-  const expectedStartupDriverFields = visualCaptureDriverStartupFields(driver, 2);
+  const expectedStartupDriverFields = compiled.startupFields;
   const actualStartupDriverFields = Object.fromEntries(
     ['captureDriver', 'selection']
       .filter((name) => Object.hasOwn(startup ?? {}, name))
@@ -582,9 +610,7 @@ const assertCurrentCaptureContract = (report, recipe, hashes) => {
     const variant = VARIANTS[index];
     const capture = report.captures?.[variant];
     const dataset = capture?.dataset;
-    const expectedDriverState = visualCaptureDriverDatasetExpectation(
-      driver, request, index,
-    );
+    const expectedDriverState = compiled.variants[index].expectedDataset;
     if (!Number.isSafeInteger(capture?.bytes) || capture.bytes <= 0) {
       throw new Error(`${variant} capture byte count must be positive`);
     }
@@ -653,6 +679,7 @@ const readFailureTombstone = async (candidateDirectory, recipe, {
 
 const readCandidateReport = async (candidateDirectory, recipe, {
   strictFailureTombstone = false,
+  executionPlan,
 } = {}) => {
   await readFailureTombstone(candidateDirectory, recipe, {
     rejectSymlink: strictFailureTombstone,
@@ -684,7 +711,9 @@ const readCandidateReport = async (candidateDirectory, recipe, {
     const hashes = Object.fromEntries(VARIANTS.map((variant) => [
       variant, report?.captures?.[variant]?.sha256,
     ]));
-    expected = createVisualLabResultRecord(recipe.name, requestForRecipe(recipe), hashes);
+    expected = createVisualLabResultRecord(
+      recipe.name, visualLabRequestForRecipe(recipe), hashes,
+    );
     if (!isDeepStrictEqual(report.result, expected)) {
       throw new Error('content-addressed result does not match recipe and declared captures');
     }
@@ -700,7 +729,20 @@ const readCandidateReport = async (candidateDirectory, recipe, {
     if (report.browserErrors !== 0) {
       throw new Error('browserErrors must be exactly zero');
     }
-    assertCurrentCaptureContract(report, recipe, hashes);
+    if (typeof report.url !== 'string') throw new Error('capture URL must be a string');
+    let reportBaseUrl;
+    try {
+      reportBaseUrl = new URL(report.url);
+      reportBaseUrl.search = '';
+      reportBaseUrl.hash = '';
+    } catch {
+      throw new Error('capture URL must be an absolute HTTP(S) or file URL');
+    }
+    const resolvedExecutionPlan = executionPlan ?? createVisualLabExecutionPlan({
+      candidates: [recipe.name],
+      baseUrl: reportBaseUrl,
+    }).entries[0];
+    assertCurrentCaptureContract(report, resolvedExecutionPlan, hashes);
   } catch (error) {
     throw new CandidateArtifactError(
       'report-invalid', `${recipe.name} report validation failed: ${error.message}`, { cause: error },
@@ -847,7 +889,7 @@ export async function verifyVisualLabBatchPackage(options = {}) {
   if (recipeSet) {
     const captured = canonical.candidates.map(({ candidate }) => {
       const recipe = resolveVisualLabCaptureRecipe(candidate);
-      return { name: candidate, ...requestForRecipe(recipe) };
+      return { name: candidate, ...visualLabRequestForRecipe(recipe) };
     });
     if (!isDeepStrictEqual(recipeSet.recipes, captured)) {
       throw new TypeError('Visual Lab batch package does not match its recipe-set request');
@@ -1087,35 +1129,11 @@ const defaultRunCandidate = async ({
   }
 };
 
-const resolveBatchRecipeSet = (options) => {
-  if (options.recipeSet !== undefined && options.candidates !== undefined) {
-    throw new TypeError('Visual Lab batch recipeSet and candidates are mutually exclusive');
-  }
-  if (options.recipeSet !== undefined) return normalizeVisualLabRecipeSet(options.recipeSet);
-  if (options.candidates !== undefined) {
-    const seen = new Set();
-    for (const candidate of options.candidates) {
-      const recipe = resolveVisualLabCaptureRecipe(candidate);
-      if (seen.has(recipe.name)) throw new Error(`Duplicate --candidates entry ${recipe.name}`);
-      seen.add(recipe.name);
-    }
-  }
-  return createVisualLabRecipeSet(
-    options.candidates === undefined ? 'full-catalog' : 'ad-hoc',
-    options.candidates,
-  );
-};
-
 /**
  * Runs generic named captures sequentially, then produces a deterministic index
  * and static contact sheet even when individual candidates fail.
  */
 export async function runVisualLabBatch(options = {}, dependencies = {}) {
-  // Resolve and validate the complete request before inspecting or mutating an
-  // output directory. A stale external set therefore cannot invalidate a
-  // previously useful batch package.
-  const recipeSet = resolveBatchRecipeSet(options);
-  const recipes = recipeSet.recipes.map(({ name }) => resolveVisualLabCaptureRecipe(name));
   const defaultOutputDirectory = path.join(
     await realpath(tmpdir()), 'anifor-visual-lab-batch',
   );
@@ -1135,6 +1153,10 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
     }
   }
   const indexOnly = options.indexOnly === true;
+  const planOnly = options.planOnly === true;
+  if (indexOnly && planOnly) {
+    throw new Error('Visual Lab batch indexOnly and planOnly are mutually exclusive');
+  }
   const bundle = path.resolve(options.bundle ?? path.join(REPOSITORY_ROOT, 'dist/index.html'));
   const gpu = options.gpu ?? 'auto';
   const candidateTimeoutMs = options.candidateTimeoutMs
@@ -1153,10 +1175,39 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
       } milliseconds`,
     );
   }
-  if (!indexOnly) {
+  // Compile every executable request before the first output-directory lookup,
+  // lock, publication, child process, or Chrome launch. The real batch and
+  // --plan-only therefore exercise one identical fixture/driver plan.
+  const executionPlan = createVisualLabExecutionPlan({
+    recipeSet: options.recipeSet,
+    candidates: options.candidates,
+    baseUrl: pathToFileURL(bundle),
+    outputDir: requestedOutputDirectory,
+    gpu,
+    candidateTimeoutMs,
+    chrome: options.chrome,
+  });
+  const { recipeSet } = executionPlan;
+  const recipes = executionPlan.entries.map(({ recipe }) => recipe);
+  const executionPlanByCandidate = new Map(
+    executionPlan.entries.map((entry) => [entry.candidate, entry]),
+  );
+  if (!indexOnly && !planOnly) {
     let details;
     try { details = await stat(bundle); } catch { /* handled below */ }
     if (!details?.isFile()) throw new Error(`Cannot read production bundle ${bundle}`);
+  }
+
+  if (planOnly) {
+    await inspectPlannedOutputPaths(requestedOutputDirectory, executionPlan);
+    return Object.freeze({
+      ok: true,
+      exitCode: 0,
+      planOnly: true,
+      plan: executionPlan.inspection,
+      runtime: executionPlan.runtime,
+      recipeSet,
+    });
   }
 
   const outputDirectory = await ensureRealDirectory(
@@ -1172,14 +1223,15 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   const candidateDirectories = new Map();
   const lifecycleOwners = new Map();
   for (const recipe of recipes) {
-    const candidateDirectory = path.join(candidateRoot, recipe.name);
+    const candidateExecutionPlan = executionPlanByCandidate.get(recipe.name);
+    const candidateDirectory = candidateExecutionPlan.runtime.artifactRoot;
     const lifecycleOwner = lifecycleOwnerFor(outputDirectory, recipe.name);
     await ensureCandidateDirectory(resolvedCandidateRoot, candidateDirectory, recipe.name);
     // A prior supervisor may have died after its audit published the exact
     // Chrome handoff. Recover that identity before deleting or replacing any
     // candidate-owned file, and before invalidating a previously useful index.
     await recoverRecordedChrome(
-      path.join(candidateDirectory, LIFECYCLE_FILE_NAME), candidateTimeoutMs, lifecycleOwner,
+      candidateExecutionPlan.runtime.lifecycleFile, candidateTimeoutMs, lifecycleOwner,
     );
     candidateDirectories.set(recipe.name, candidateDirectory);
     lifecycleOwners.set(recipe.name, lifecycleOwner);
@@ -1209,18 +1261,19 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
 
   for (const recipe of recipes) {
     if (options.signal?.aborted) throw abortError(options.signal);
+    const candidateExecutionPlan = executionPlanByCandidate.get(recipe.name);
     const candidateDirectory = candidateDirectories.get(recipe.name);
     const lifecycleOwner = lifecycleOwners.get(recipe.name);
     await ensureCandidateDirectory(resolvedCandidateRoot, candidateDirectory, recipe.name);
     if (!indexOnly) {
       // Clear only files owned by this tool. An explicit output directory may
       // contain a user's notes or comparison artifacts; never remove its tree.
-      await Promise.all(CANDIDATE_GENERATED_FILES.map((file) => (
+      await Promise.all(VISUAL_LAB_CANDIDATE_GENERATED_FILES.map((file) => (
         rm(path.join(candidateDirectory, file), { force: true })
       )));
-      const stdoutPath = path.join(candidateDirectory, 'stdout.log');
-      const stderrPath = path.join(candidateDirectory, 'stderr.log');
-      const lifecyclePath = path.join(candidateDirectory, LIFECYCLE_FILE_NAME);
+      const stdoutPath = candidateExecutionPlan.runtime.artifacts.stdout;
+      const stderrPath = candidateExecutionPlan.runtime.artifacts.stderr;
+      const lifecyclePath = candidateExecutionPlan.runtime.lifecycleFile;
       await Promise.all([writeFile(stdoutPath, ''), writeFile(stderrPath, '')]);
       const args = [
         auditScript,
@@ -1228,6 +1281,7 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
         `--candidate=${recipe.name}`,
         `--output-dir=${candidateDirectory}`,
         `--gpu=${gpu}`,
+        `--execution-plan-id=${candidateExecutionPlan.inspection.id}`,
         `--lifecycle-file=${lifecyclePath}`,
         `--lifecycle-owner=${lifecycleOwner}`,
       ];
@@ -1238,6 +1292,7 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
       try {
         outcome = await runCandidate({
           command, args, cwd, recipe, candidateDirectory,
+          executionPlan: candidateExecutionPlan,
           stdoutPath, stderrPath, lifecyclePath, signal: options.signal,
           timeoutMs: candidateTimeoutMs,
         });
@@ -1292,7 +1347,9 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
     }
 
     try {
-      entries.push(await readCandidateReport(candidateDirectory, recipe));
+      entries.push(await readCandidateReport(candidateDirectory, recipe, {
+        executionPlan: candidateExecutionPlan,
+      }));
     } catch (error) {
       const code = error instanceof CandidateArtifactError ? error.code : 'report-invalid';
       if (!(error instanceof CandidateArtifactError && error.preserveDiagnostic)) {
@@ -1322,6 +1379,7 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
     contactSheetPath,
     recipeSet,
     recipeSetPath,
+    plan: executionPlan.inspection,
   });
   };
   return executeLockedBatch().finally(releaseBatchLock);
@@ -1331,7 +1389,7 @@ export function parseVisualLabBatchArguments(argv) {
   if (argv.includes('--help')) return Object.freeze({ help: true });
   const known = new Set([
     'candidates', 'recipe-set', 'bundle', 'output-dir', 'chrome', 'gpu',
-    'candidate-timeout-ms', 'index-only',
+    'candidate-timeout-ms', 'index-only', 'plan-only',
   ]);
   const values = new Map();
   for (const argument of argv) {
@@ -1358,6 +1416,13 @@ export function parseVisualLabBatchArguments(argv) {
   const indexOnlyValue = values.get('index-only') ?? '0';
   if (indexOnlyValue !== '0' && indexOnlyValue !== '1') {
     throw new Error('--index-only must be 0 or 1');
+  }
+  const planOnlyValue = values.get('plan-only') ?? '0';
+  if (planOnlyValue !== '0' && planOnlyValue !== '1') {
+    throw new Error('--plan-only must be 0 or 1');
+  }
+  if (indexOnlyValue === '1' && planOnlyValue === '1') {
+    throw new Error('--index-only and --plan-only are mutually exclusive');
   }
   const gpu = values.get('gpu') ?? 'auto';
   if (gpu !== 'auto' && gpu !== 'swiftshader') throw new Error('--gpu must be auto or swiftshader');
@@ -1387,26 +1452,33 @@ export function parseVisualLabBatchArguments(argv) {
     gpu,
     candidateTimeoutMs,
     indexOnly: indexOnlyValue === '1',
+    planOnly: planOnlyValue === '1',
   });
 }
 
 const main = async () => {
-  const options = parseVisualLabBatchArguments(process.argv.slice(2));
-  if (options.help) {
-    process.stdout.write(`${HELP}\n`);
-    return;
-  }
-  const controller = new AbortController();
+  const argv = process.argv.slice(2);
+  const requestedPlanTool = argv.some((argument) => argument.startsWith('--plan-only='));
+  let options;
+  let controller;
   let interruptedExitCode;
-  const interrupt = (exitCode) => {
-    interruptedExitCode ??= exitCode;
-    controller.abort(new Error('Visual Lab batch interrupted'));
-  };
-  const onSigint = () => interrupt(130);
-  const onSigterm = () => interrupt(143);
-  process.once('SIGINT', onSigint);
-  process.once('SIGTERM', onSigterm);
+  let onSigint;
+  let onSigterm;
   try {
+    options = parseVisualLabBatchArguments(argv);
+    if (options.help) {
+      process.stdout.write(`${HELP}\n`);
+      return;
+    }
+    controller = new AbortController();
+    const interrupt = (exitCode) => {
+      interruptedExitCode ??= exitCode;
+      controller.abort(new Error('Visual Lab batch interrupted'));
+    };
+    onSigint = () => interrupt(130);
+    onSigterm = () => interrupt(143);
+    process.once('SIGINT', onSigint);
+    process.once('SIGTERM', onSigterm);
     const recipeSet = options.recipeSetPath === undefined
       ? undefined : await readVisualLabRecipeSet(options.recipeSetPath);
     const { recipeSetPath: _recipeSetPath, ...batchOptions } = options;
@@ -1418,7 +1490,12 @@ const main = async () => {
       }),
       signal: controller.signal,
     });
-    process.stdout.write(`${JSON.stringify({
+    const output = result.planOnly ? {
+      tool: 'visual-lab-plan-v1',
+      ok: true,
+      plan: result.plan,
+      runtime: result.runtime,
+    } : {
       tool: 'visual-lab-batch-v1',
       ok: result.ok,
       summary: result.index.summary,
@@ -1428,18 +1505,20 @@ const main = async () => {
       },
       index: result.indexPath,
       contactSheet: result.contactSheetPath,
-    })}\n`);
+    };
+    process.stdout.write(`${JSON.stringify(output)}\n`);
     process.exitCode = interruptedExitCode ?? result.exitCode;
   } catch (error) {
     process.stderr.write(`${JSON.stringify({
-      tool: 'visual-lab-batch-v1',
+      tool: options?.planOnly || requestedPlanTool
+        ? 'visual-lab-plan-v1' : 'visual-lab-batch-v1',
       ok: false,
-      error: displayError(error),
+      error: displayCliError(error),
     })}\n`);
     process.exitCode = interruptedExitCode ?? 1;
   } finally {
-    process.removeListener('SIGINT', onSigint);
-    process.removeListener('SIGTERM', onSigterm);
+    if (onSigint) process.removeListener('SIGINT', onSigint);
+    if (onSigterm) process.removeListener('SIGTERM', onSigterm);
   }
 };
 
