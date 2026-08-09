@@ -113,7 +113,8 @@ node scripts/visual-lab-verify.mjs \
   --require-complete=1 \
   --require-recipe-set=1 \
   --require-browser-host-plan=1 \
-  --require-execution-tuning-plan=1
+  --require-execution-tuning-plan=1 \
+  --require-capture-geometry=1
 ```
 
 For the fixed fresh/shared/shared/fresh release comparison, use a new empty
@@ -159,6 +160,7 @@ node scripts/visual-lab-verify.mjs \
   --require-recipe-set=1 \
   --require-browser-host-plan=1 \
   --require-execution-tuning-plan=1 \
+  --require-capture-geometry=1 \
   --require-origin-attestation=1
 ```
 
@@ -189,11 +191,52 @@ The post-deploy workflow produces one success-only evidence manifest capped at
 baseline, comparison, recipe-set, execution, tuning, host, and static-contract
 identities. Its allowed fields are the existing result record, deployed
 revision and resource count, Chrome product/version, capture/host/tuning plan
-IDs, backend/HDR/backing-size state, invariant and semantic/field/framebuffer
-signatures, and per-variant hash/byte/dimension/dataset summaries. It excludes
-raw packages, PNGs, paths, URLs, logs, timings, and receipt tickets. Successful
+IDs, backend/HDR/backing-size state, the canonical capture-geometry proof,
+invariant and semantic/field/framebuffer signatures, and per-variant
+hash/byte/dimension/dataset summaries. It excludes raw packages, PNGs, paths,
+URLs, logs, timings, and receipt tickets. Successful
 raw smoke output remains runner-local; the separate failure-only artifact still
 contains only the bounded tails described above.
+
+This manifest boundary is deployed at revision
+`95cab0b4e3f885c1b956875322e9e9e2caa4866f` by Actions run `31331716229`.
+The build, deployment, exact 19-resource closure, hosted receipt-v2 Water batch,
+and portable verifier passed, and the success artifact
+`anifortpt-live-visual-lab-evidence-1` retained the manifest. Comparing its
+field/backend evidence with independent local packages showed matching semantic,
+authoritative-field, framebuffer-alpha, WebGL, and HDR state while the PNG crop
+dimensions differed. Fixed browser device metrics alone therefore did not make
+the responsive application crop hermetic.
+
+### Hermetic capture profile
+
+The active framework checkpoint fixes capture geometry only for the existing
+Visual Lab audit tuple:
+
+```text
+inputAudit=1&auditStage=visual-lab&visualLabAudit=1
+```
+
+Under that tuple, CDP uses a 1280×600 viewport at DPR 1 and visual scale 1. The
+application fixes `.semantic-field-canvas` at `(181,12)` with a 918×576 CSS
+rectangle and captures it at clip scale 1. The logical world remains 612×384;
+a normal 2× recipe keeps a 1224×768 backing. The diagnostic status card is not
+part of the material crop because backend/HDR state is already machine-proven.
+Ordinary responsive desktop and mobile layout, input, camera, and production
+presentation do not use this profile.
+
+The audit records the viewport, scroll, layout marker, canvas rectangle, clip,
+and scale-dependent backing before the screenshot and rechecks the same proof
+afterward. Batch projection and the portable verifier validate the exact same
+record; current CI and post-deploy packages use
+`--require-capture-geometry=1` so missing, legacy, or drifting geometry cannot
+silently become new release evidence. Two independent local SwiftShader runs
+were byte-identical at OFF `5d2a196…`, A `25f21ee…`, and B `d262b25…`.
+This proves the local profile but is not a deployment claim. Commit the framework
+implementation before generating the complete release comparison; review and
+promote any geometry-driven baseline replacement separately, then compare the
+deployed manifest with the local package before starting reusable material
+experiments.
 
 The real-browser audit first captures and signature-checks this deterministic
 atlas, then clears it and exercises painting, wheel/pan, resizing, and mobile

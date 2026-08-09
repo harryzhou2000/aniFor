@@ -4,10 +4,25 @@ import {
   materialCandidateSurveyRequested, materialShowcaseRequested, renderLabRequested,
 } from './renderer/render-lab-scene';
 import { fitAspect } from './renderer/view-transform';
+import {
+  VISUAL_CAPTURE_GEOMETRY,
+  visualCaptureLayoutRequested,
+} from './shared/visual-capture-geometry.js';
 import { createSimulation } from './simulation';
 
 const root = document.querySelector<HTMLElement>('#app');
 if (!root) throw new Error('Missing app root');
+
+const query = new URLSearchParams(location.search);
+if (visualCaptureLayoutRequested(location.search)) {
+  root.dataset.visualCaptureLayout = VISUAL_CAPTURE_GEOMETRY.profile;
+  root.style.setProperty(
+    '--visual-capture-width', `${VISUAL_CAPTURE_GEOMETRY.captureBox.width}px`,
+  );
+  root.style.setProperty(
+    '--visual-capture-height', `${VISUAL_CAPTURE_GEOMETRY.captureBox.height}px`,
+  );
+}
 
 root.innerHTML = `
   <section class="shell">
@@ -28,7 +43,6 @@ root.innerHTML = `
     <footer class="footer"><p class="status">Deterministic simulation · saved on this device</p><a href="./NOTICE.txt" target="_blank" rel="license">GPLv3 · source notice</a></footer>
   </section>`;
 
-const query = new URLSearchParams(location.search);
 const nativeLab = query.get('simulation') === 'native';
 const simulation = await createSimulation({
   renderLab: (

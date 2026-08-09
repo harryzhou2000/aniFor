@@ -40,18 +40,32 @@ transient encoded-output outlier: no retained successful CI report/PNGs prove
 which variant changed, and it is neither a new baseline nor evidence of a
 source/origin mismatch.
 
-The next framework increment is a success-only evidence manifest, capped at
-16 KiB and deliberately outside result, batch, baseline, comparison, recipe-set,
-execution, tuning, host, and static-contract identities. It may contain only
-the existing result record; revision/resource count; Chrome product/version;
-capture/host/tuning plan IDs; backend/HDR/backing-size state; invariant plus
-semantic/field/framebuffer signatures; and per-variant hash/byte/dimension/
-dataset summaries. It must not contain raw package bytes, PNGs, paths, URLs,
-logs, timings, or receipt tickets. Successful smoke material remains
-runner-local and failure tails remain bounded. The current source implements
-this evidence-manifest stage; hosted publication and inspection are its
-acceptance gate. Do not exchange this reusable capture/deploy observability
-work for another isolated shader detail.
+The success-only evidence manifest is deployed at revision
+`95cab0b4e3f885c1b956875322e9e9e2caa4866f` by workflow run `31331716229`.
+The build, deploy, exact 19-resource closure, hosted receipt-v2 Water smoke, and
+portable verification passed; artifact
+`anifortpt-live-visual-lab-evidence-1` retained the bounded manifest while raw
+smoke material remained runner-local. The retained proof showed stable
+semantic, authoritative-field, framebuffer-alpha, execution/tuning/host,
+backend, and HDR state, but exposed a responsive local/hosted PNG-geometry
+difference. Preserve the manifest's 16 KiB cap and its exclusion from result,
+batch, baseline, comparison, recipe-set, execution, tuning, host, and static-
+contract identities.
+
+The active framework increment is hermetic Visual Lab capture geometry, not an
+isolated shader detail. Under only the exact audit tuple `inputAudit=1`,
+`auditStage=visual-lab`, and `visualLabAudit=1`, use a 1280×600 viewport at DPR 1
+and visual scale 1, fix the canvas at `(181,12)` with a 918×576 CSS crop, and
+retain the ordinary 2× backing at 1224×768. Ordinary responsive desktop/mobile
+layout, viewport input, and production presentation must remain untouched.
+Carry one exact geometry proof through audit reports, batch projection, portable
+verification, and post-deploy evidence; new framework/release packages must fail
+closed when that required proof is absent or drifts. Two independent local
+SwiftShader captures already matched byte-for-byte at OFF `5d2a196…`, A
+`25f21ee…`, and B `d262b25…`, but this geometry implementation is not deployed
+yet. Checkpoint it cleanly before regenerating captures; then review and migrate
+accepted baselines as a separate commit, prove the deployed bytes against local
+evidence, and only then resume reusable powder/liquid/gas/material experiments.
 
 The typed fixture-preparation boundary is also complete and deployed at revision
 `83894aa6fe98fc5a537cd4c23c9b2400dc37081f` by release-set workflow run
@@ -218,8 +232,8 @@ generation teardown. Recycle the entire host after any timeout, context loss,
 backend fallback, browser error, capture/report error, renderer-disposal
 failure, or context/target teardown failure. Shared lifecycle recovery is
 root-bound and initially Linux-only; true 8× and recovery gates remain
-fresh-browser-only. Apply one explicit 1280×600 CSS device-metrics viewport to
-both fresh and shared capture targets so the historical fresh capture geometry
+fresh-browser-only. Apply the shared hermetic audit-only capture profile to both
+fresh and shared targets so their 1280×600 device metrics, 918×576 CSS crop,
 and mode parity stay exact; backing scale never enters that CSS decision.
 Portable verification with `--require-browser-host-plan=1` must reconstruct the
 capture execution plan from packaged recipes plus report GPU/base-URL evidence,

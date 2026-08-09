@@ -76,6 +76,7 @@ import {
   createVisualLabOriginAttestation,
   normalizeVisualLabOriginAttestation,
 } from './visual-lab-origin-attestation.mjs';
+import { createVisualCaptureGeometryProof } from '../src/shared/visual-capture-geometry.js';
 
 export { inspectVisualLabPng } from './visual-lab-png.mjs';
 
@@ -545,6 +546,9 @@ const createVerifiedCaptureDiagnostic = (
     hdrPipeline: report.hdrPipeline,
     backingSize: report.backingSize,
   },
+  ...(report.captureGeometry === undefined ? {} : {
+    captureGeometry: report.captureGeometry,
+  }),
   invariants: {
     semantic: true,
     fieldAlpha: true,
@@ -803,6 +807,22 @@ const assertCurrentCaptureContract = (report, executionPlan, hashes) => {
     throw new Error(`backingSize must be ${expectedBacking}`);
   }
 
+  // This proof is additive so historical portable packages remain readable.
+  // When present it must bind the report to the canonical audit frame, rather
+  // than merely proving that each PNG agrees with its own sampled clip.
+  const captureGeometry = report.captureGeometry;
+  if (captureGeometry !== undefined) {
+    const expectedGeometry = createVisualCaptureGeometryProof(recipe.renderScale);
+    if (!isDeepStrictEqual(captureGeometry, expectedGeometry)) {
+      throw new Error('captureGeometry does not match the canonical proof');
+    }
+    const expectedGeometryBacking = `${expectedGeometry.canvas.backingWidth}x${
+      expectedGeometry.canvas.backingHeight}`;
+    if (report.backingSize !== expectedGeometryBacking) {
+      throw new Error('backingSize does not match captureGeometry');
+    }
+  }
+
   const startup = report.startupSelection;
   const expectedStartupDriverFields = compiled.startupFields;
   const actualStartupDriverFields = Object.fromEntries(
@@ -839,6 +859,16 @@ const assertCurrentCaptureContract = (report, executionPlan, hashes) => {
       || Math.abs(capture.width - capture.cssWidth) > 1
       || Math.abs(capture.height - capture.cssHeight) > 1) {
       throw new Error(`${variant} capture pixels do not match the scale-1 CSS canvas clip`);
+    }
+    if (captureGeometry !== undefined) {
+      const { canvas } = captureGeometry;
+      if (capture.width !== canvas.width
+        || capture.height !== canvas.height
+        || capture.cssWidth !== canvas.width
+        || capture.cssHeight !== canvas.height
+        || capture.clipScale !== canvas.clipScale) {
+        throw new Error(`${variant} capture does not match captureGeometry`);
+      }
     }
     if (capture.distinctFromOff !== (hashes[variant] !== hashes.off)) {
       throw new Error(`${variant} distinctFromOff does not match its capture hash`);
@@ -1403,7 +1433,7 @@ export async function verifyVisualLabBatchPackage(options = {}) {
   }
   const allowed = new Set([
     'batchRoot', 'requireBrowserHostPlan', 'requireExecutionTuningPlan',
-    'requireComplete', 'requireOriginAttestation', 'requireRecipeSet',
+    'requireCaptureGeometry', 'requireComplete', 'requireOriginAttestation', 'requireRecipeSet',
     'recipeSetSourcePath',
   ]);
   const unexpected = Reflect.ownKeys(options).filter((key) => !allowed.has(key));
@@ -1416,11 +1446,13 @@ export async function verifyVisualLabBatchPackage(options = {}) {
   const requireComplete = options.requireComplete ?? true;
   const requireBrowserHostPlan = options.requireBrowserHostPlan ?? false;
   const requireExecutionTuningPlan = options.requireExecutionTuningPlan ?? false;
+  const requireCaptureGeometry = options.requireCaptureGeometry ?? false;
   const requireOriginAttestation = options.requireOriginAttestation ?? false;
   const requireRecipeSet = options.requireRecipeSet ?? false;
   if (typeof requireComplete !== 'boolean'
     || typeof requireBrowserHostPlan !== 'boolean'
     || typeof requireExecutionTuningPlan !== 'boolean'
+    || typeof requireCaptureGeometry !== 'boolean'
     || typeof requireOriginAttestation !== 'boolean'
     || typeof requireRecipeSet !== 'boolean') {
     throw new TypeError('Visual Lab batch verification requirement flags must be booleans');
@@ -1463,6 +1495,18 @@ export async function verifyVisualLabBatchPackage(options = {}) {
   }
   if (requireComplete && !canonical.complete) {
     throw new TypeError('Visual Lab batch package is incomplete');
+  }
+  if (requireCaptureGeometry) {
+    const missing = entries.filter((entry) => (
+      entry.status === 'passed' && entry.captureDiagnostic.captureGeometry === undefined
+    ));
+    if (missing.length > 0) {
+      throw new TypeError(
+        `Visual Lab batch package is missing canonical captureGeometry proof for ${
+          missing.map(({ candidate }) => candidate).join(', ')
+        }`,
+      );
+    }
   }
 
   const recipeSetPath = path.join(batchRoot, 'recipe-set.json');

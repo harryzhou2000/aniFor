@@ -58,6 +58,10 @@ import {
   resolveVisualLabExecutionTuningPlanV2Entry,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
 } from './visual-lab-execution-tuning-plan.mjs';
+import {
+  createVisualCaptureGeometryProof,
+  VISUAL_CAPTURE_GEOMETRY,
+} from '../src/shared/visual-capture-geometry.js';
 
 export { removeVisualLabHostArtifacts } from './visual-lab-chrome-host.mjs';
 
@@ -65,12 +69,6 @@ const MODULE_PATH = fileURLToPath(import.meta.url);
 const CDP_COMMAND_TIMEOUT_MS = 20_000;
 const PAGE_STARTUP_TIMEOUT_MS = 60_000;
 const RENDERER_DISPOSAL_TIMEOUT_MS = 5_000;
-const CAPTURE_VIEWPORT_WIDTH = 1280;
-// Preserve the historical fresh-target content viewport. Chrome's
-// `--window-size=1280,720` includes headless window chrome for the initial
-// target, whose stable layout viewport is 1280x600; incognito targets otherwise
-// inherit a different content height and produce incomparable capture clips.
-const CAPTURE_VIEWPORT_HEIGHT = 600;
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const COMPLETED_FRAME_RECEIPT_SCHEMA = 'anifor.renderer.completed-frame-receipt/v1';
 const COMPLETED_FRAME_RECEIPT_DESCRIPTOR = Object.freeze({
@@ -114,6 +112,102 @@ const resolveExecutionTuningPlanEntry = (
     ? resolveVisualLabExecutionTuningPlanV2Entry(plan, entryId, expectedCaptureEntryId)
     : resolveVisualLabExecutionTuningPlanEntry(plan, entryId, expectedCaptureEntryId)
 );
+
+const VISUAL_CAPTURE_GEOMETRY_TOLERANCE = 0.001;
+
+const finiteGeometryNumber = (value, name) => {
+  if (!Number.isFinite(value)) {
+    throw new TypeError(`Visual capture geometry ${name} must be finite`);
+  }
+  return value;
+};
+
+const assertGeometryClose = (actual, expected, name) => {
+  const value = finiteGeometryNumber(actual, name);
+  if (Math.abs(value - expected) > VISUAL_CAPTURE_GEOMETRY_TOLERANCE) {
+    throw new Error(`Visual capture geometry ${name} is ${value}, expected ${expected}`);
+  }
+};
+
+/**
+ * Validates a page-side layout observation, but returns the shared canonical
+ * proof rather than preserving browser float noise in portable audit output.
+ */
+export function normalizeVisualCaptureGeometryObservation(observation, renderScale) {
+  if (observation === null || typeof observation !== 'object' || Array.isArray(observation)) {
+    throw new TypeError('Visual capture geometry observation must be an object');
+  }
+  const expected = createVisualCaptureGeometryProof(renderScale);
+  if (observation.rootMarker !== expected.canvas.layoutMarker) {
+    throw new Error('Visual capture geometry root marker is not active');
+  }
+  const viewport = observation.viewport;
+  const canvas = observation.canvas;
+  if (viewport === null || typeof viewport !== 'object' || Array.isArray(viewport)) {
+    throw new TypeError('Visual capture geometry viewport observation must be an object');
+  }
+  if (canvas === null || typeof canvas !== 'object' || Array.isArray(canvas)) {
+    throw new TypeError('Visual capture geometry canvas observation must be an object');
+  }
+  for (const [name, value] of Object.entries(expected.viewport)) {
+    assertGeometryClose(viewport[name], value, `viewport.${name}`);
+  }
+  for (const name of ['left', 'top', 'width', 'height']) {
+    assertGeometryClose(canvas[name], expected.canvas[name], `canvas.${name}`);
+  }
+  for (const name of ['backingWidth', 'backingHeight']) {
+    if (!Number.isSafeInteger(canvas[name]) || canvas[name] !== expected.canvas[name]) {
+      throw new Error(
+        `Visual capture geometry canvas.${name} is ${String(canvas[name])},`
+          + ` expected ${expected.canvas[name]}`,
+      );
+    }
+  }
+  return expected;
+}
+
+/** Both reads must normalize to the same frozen contract before publication. */
+export function assertVisualCaptureGeometryUnchanged(before, after) {
+  if (!sameDigest(before, after)) {
+    throw new Error('Visual capture geometry drifted during screenshot capture');
+  }
+  return before;
+}
+
+async function observeVisualCaptureGeometry(cdp) {
+  const { selector } = VISUAL_CAPTURE_GEOMETRY.captureBox;
+  return evaluate(cdp, `(() => {
+    const root = document.querySelector('#app');
+    const canvas = document.querySelector(${JSON.stringify(selector)});
+    const rect = canvas?.getBoundingClientRect();
+    const visualViewport = window.visualViewport;
+    return {
+      rootMarker: root?.dataset.visualCaptureLayout ?? null,
+      viewport: {
+        width: visualViewport?.width,
+        height: visualViewport?.height,
+        visualScale: visualViewport?.scale,
+        devicePixelRatio: window.devicePixelRatio,
+        scrollX: window.scrollX,
+        scrollY: window.scrollY,
+      },
+      canvas: canvas && rect ? {
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+        backingWidth: canvas.width,
+        backingHeight: canvas.height,
+      } : null,
+    };
+  })()`);
+}
+
+async function readVisualCaptureGeometryProof(cdp, renderScale) {
+  return normalizeVisualCaptureGeometryObservation(
+    await observeVisualCaptureGeometry(cdp), renderScale,
+  );
+}
 
 /** Exact historical alpha digest over a tightly packed RGBA framebuffer. */
 export function digestVisualLabFramebufferAlpha(rgba) {
@@ -467,6 +561,9 @@ async function captureVisualLabCandidateEvidence({
 
   return measure('finalize', async () => {
     const reference = captures.off.state;
+    const captureGeometry = captures.off.captureGeometry;
+    assert(VARIANTS.every(({ name }) => sameDigest(captureGeometry, captures[name].captureGeometry)),
+      'visual variants used different capture geometries');
     const exactFramebufferAlpha = VARIANTS.every(({ name }) => sameDigest(
       reference.framebufferAlpha, captures[name].state.framebufferAlpha,
     ));
@@ -567,6 +664,7 @@ async function captureVisualLabCandidateEvidence({
       semantic: reference.semantic,
       fieldAlpha: reference.fieldAlpha,
       framebufferAlpha: reference.framebufferAlpha,
+      captureGeometry,
       captures: compactCaptures,
       browserErrors: browserErrors.length,
       warnings,
@@ -626,14 +724,7 @@ export async function captureVisualLabCandidatePage({
         pageCdp.send('Page.enable'),
         pageCdp.send('Runtime.enable'),
         pageCdp.send('Log.enable'),
-        pageCdp.send('Emulation.setDeviceMetricsOverride', {
-          width: CAPTURE_VIEWPORT_WIDTH,
-          height: CAPTURE_VIEWPORT_HEIGHT,
-          deviceScaleFactor: 1,
-          mobile: false,
-          screenWidth: CAPTURE_VIEWPORT_WIDTH,
-          screenHeight: CAPTURE_VIEWPORT_HEIGHT,
-        }),
+        pageCdp.send('Emulation.setDeviceMetricsOverride', VISUAL_CAPTURE_GEOMETRY.deviceMetrics),
       ]);
     });
     if (navigatePage) {
@@ -1218,17 +1309,14 @@ async function captureVariant(cdp, options, variant, captureSubphases) {
     profile.stability.pollIntervalMs);
   }
   assertVariantState(state, options, variant);
-  const clip = await evaluate(cdp, `(() => {
-    const rect = document.querySelector('.semantic-field-canvas').getBoundingClientRect();
-    return {
-      x: rect.left + scrollX,
-      y: rect.top + scrollY,
-      width: rect.width,
-      height: rect.height,
-      scale: 1,
-    };
-  })()`);
-  assert(clip.width > 0 && clip.height > 0, `${variant.name} canvas has an empty visual rect`);
+  const captureGeometry = await readVisualCaptureGeometryProof(cdp, options.renderScale);
+  const clip = {
+    x: captureGeometry.canvas.left,
+    y: captureGeometry.canvas.top,
+    width: captureGeometry.canvas.width,
+    height: captureGeometry.canvas.height,
+    scale: captureGeometry.canvas.clipScale,
+  };
   const screenshot = await captureSubphases.measureCapture(
     variant.name,
     'screenshotMs',
@@ -1236,11 +1324,15 @@ async function captureVariant(cdp, options, variant, captureSubphases) {
       format: 'png', fromSurface: true, captureBeyondViewport: true, clip,
     }, CDP_COMMAND_TIMEOUT_MS),
   );
+  assertVisualCaptureGeometryUnchanged(
+    captureGeometry,
+    await readVisualCaptureGeometryProof(cdp, options.renderScale),
+  );
   const bytes = Buffer.from(screenshot.data, 'base64');
   const dimensions = capturePngDimensions(bytes, variant.name);
-  assert(Math.abs(dimensions.width - clip.width) <= 1
-    && Math.abs(dimensions.height - clip.height) <= 1,
-  `${variant.name} PNG dimensions do not match its scale-1 CSS canvas clip`);
+  assert(dimensions.width === captureGeometry.canvas.width
+    && dimensions.height === captureGeometry.canvas.height,
+  `${variant.name} PNG dimensions do not match the canonical scale-1 CSS canvas clip`);
   const png = options.executionPlan.runtime.artifacts.captures[variant.name];
   await captureSubphases.measureCapture(
     variant.name, 'writeMs', () => writeFile(png, bytes),
@@ -1250,9 +1342,10 @@ async function captureVariant(cdp, options, variant, captureSubphases) {
     png,
     bytes: bytes.byteLength,
     ...dimensions,
-    cssWidth: clip.width,
-    cssHeight: clip.height,
-    clipScale: clip.scale,
+    cssWidth: captureGeometry.canvas.width,
+    cssHeight: captureGeometry.canvas.height,
+    clipScale: captureGeometry.canvas.clipScale,
+    captureGeometry,
     sha256: createHash('sha256').update(bytes).digest('hex'),
     ...(completedFrameReceipt === undefined ? {} : { completedFrameReceipt }),
   };

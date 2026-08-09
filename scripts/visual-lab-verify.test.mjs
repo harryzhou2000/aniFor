@@ -65,6 +65,7 @@ describe('Visual Lab portable package verifier', () => {
       comparisonRoot: undefined,
       recipeSetSourcePath: undefined,
       requireBrowserHostPlan: false,
+      requireCaptureGeometry: false,
       requireExecutionTuningPlan: false,
       requireOriginAttestation: false,
       requireComplete: true,
@@ -77,6 +78,7 @@ describe('Visual Lab portable package verifier', () => {
       '--require-complete=0',
       '--require-recipe-set=1',
       '--require-browser-host-plan=1',
+      '--require-capture-geometry=1',
       '--require-execution-tuning-plan=1',
       '--require-origin-attestation=1',
     ])).toEqual({
@@ -86,6 +88,7 @@ describe('Visual Lab portable package verifier', () => {
       comparisonRoot: 'artifacts/review/comparison',
       recipeSetSourcePath: 'visual-lab/recipe-sets/release.json',
       requireBrowserHostPlan: true,
+      requireCaptureGeometry: true,
       requireExecutionTuningPlan: true,
       requireOriginAttestation: true,
       requireComplete: false,
@@ -115,6 +118,7 @@ describe('Visual Lab portable package verifier', () => {
       comparisonRoot: 'downloaded-review/comparison',
       recipeSetSourcePath: 'release.json',
       requireBrowserHostPlan: true,
+      requireCaptureGeometry: true,
       requireExecutionTuningPlan: true,
       requireOriginAttestation: true,
       requireComplete: true,
@@ -131,6 +135,7 @@ describe('Visual Lab portable package verifier', () => {
       ['batch', {
         batchRoot: 'downloaded-review',
         requireBrowserHostPlan: true,
+        requireCaptureGeometry: true,
         requireExecutionTuningPlan: true,
         requireOriginAttestation: true,
         requireComplete: true,
@@ -223,6 +228,7 @@ describe('Visual Lab portable package verifier', () => {
     expect(workflow).toContain('--require-complete=1');
     expect(workflow).toContain('--require-recipe-set=1');
     expect(workflow).toContain('--require-browser-host-plan=1');
+    expect(workflow).toContain('--require-capture-geometry=1');
     expect(workflow).toContain('--require-execution-tuning-plan=1');
     expect(deployVerification).toBeGreaterThan(verify);
     expect(deploySuccessGuard).toBeGreaterThan(deployVerification);

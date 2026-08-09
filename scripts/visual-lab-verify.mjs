@@ -14,7 +14,7 @@ const HELP = `Usage:
     [--recipe-set-source=<checked-recipe-set>] \\
     [--require-complete=0|1] [--require-recipe-set=0|1] \
     [--require-browser-host-plan=0|1] [--require-execution-tuning-plan=0|1] \
-    [--require-origin-attestation=0|1]
+    [--require-origin-attestation=0|1] [--require-capture-geometry=0|1]
 
 The verifier is read-only. It reconstructs the batch from reports and PNGs,
 checks the deterministic contact sheet and optional recipe-set sidecar, and can
@@ -23,7 +23,8 @@ baseline is supplied, comparison-root defaults to <batch-root>/comparison.`;
 
 const BOOLEAN_OPTIONS = new Set([
   'require-browser-host-plan', 'require-execution-tuning-plan',
-  'require-complete', 'require-origin-attestation', 'require-recipe-set',
+  'require-capture-geometry', 'require-complete', 'require-origin-attestation',
+  'require-recipe-set',
 ]);
 const PATH_OPTIONS = new Set([
   'batch-root', 'baseline-root', 'comparison-root', 'recipe-set-source',
@@ -73,6 +74,7 @@ export function parseVisualLabVerifyArguments(argv) {
     requireExecutionTuningPlan: parseBoolean(
       values, 'require-execution-tuning-plan', false,
     ),
+    requireCaptureGeometry: parseBoolean(values, 'require-capture-geometry', false),
     requireOriginAttestation: parseBoolean(
       values, 'require-origin-attestation', false,
     ),
@@ -94,7 +96,7 @@ export async function runVisualLabPackageVerification(options, dependencies = {}
   const allowed = new Set([
     'batchRoot', 'baselineRoot', 'comparisonRoot', 'recipeSetSourcePath',
     'requireBrowserHostPlan', 'requireExecutionTuningPlan',
-    'requireComplete', 'requireOriginAttestation', 'requireRecipeSet',
+    'requireCaptureGeometry', 'requireComplete', 'requireOriginAttestation', 'requireRecipeSet',
   ]);
   const unexpected = Reflect.ownKeys(options).filter((key) => !allowed.has(key));
   if (unexpected.length > 0) {
@@ -114,6 +116,7 @@ export async function runVisualLabPackageVerification(options, dependencies = {}
     batchRoot: options.batchRoot,
     requireBrowserHostPlan: options.requireBrowserHostPlan ?? false,
     requireExecutionTuningPlan: options.requireExecutionTuningPlan ?? false,
+    requireCaptureGeometry: options.requireCaptureGeometry ?? false,
     requireOriginAttestation: options.requireOriginAttestation ?? false,
     requireComplete: options.requireComplete ?? true,
     requireRecipeSet: options.requireRecipeSet ?? false,

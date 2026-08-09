@@ -360,6 +360,7 @@ export async function runVisualLabPerformanceCohorts(options = {}, dependencies 
       requireComplete: true,
       requireRecipeSet: true,
       requireBrowserHostPlan: true,
+      requireCaptureGeometry: true,
       requireExecutionTuningPlan: true,
     });
     if (!isDeepStrictEqual(batch.timings, verified?.timings)

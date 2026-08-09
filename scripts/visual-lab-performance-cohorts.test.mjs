@@ -124,6 +124,7 @@ describe('Visual Lab performance cohort orchestration', () => {
     for (const [, options] of calls.filter(([kind]) => kind === 'verify')) {
       expect(options).toMatchObject({
         requireComplete: true, requireRecipeSet: true, requireBrowserHostPlan: true,
+        requireCaptureGeometry: true,
         requireExecutionTuningPlan: true,
       });
     }

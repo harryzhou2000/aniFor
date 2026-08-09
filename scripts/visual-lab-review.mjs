@@ -212,6 +212,7 @@ export async function runVisualLabReviewCycle(options = {}, dependencies = {}) {
     comparisonRoot,
     ...(recipeSetSourcePath === undefined ? {} : { recipeSetSourcePath }),
     requireBrowserHostPlan: true,
+    requireCaptureGeometry: true,
     requireExecutionTuningPlan: true,
     requireOriginAttestation: options.baseUrl !== undefined,
     requireComplete: true,

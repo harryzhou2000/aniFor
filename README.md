@@ -52,7 +52,8 @@ node scripts/visual-lab-verify.mjs \
   --batch-root=/tmp/anifor-visual-review \
   --require-complete=1 --require-recipe-set=1 \
   --require-browser-host-plan=1 \
-  --require-execution-tuning-plan=1
+  --require-execution-tuning-plan=1 \
+  --require-capture-geometry=1
 ```
 
 For a larger normal-scale cohort on Linux, opt into sequential Chrome-host
@@ -94,8 +95,9 @@ content-addressed `browser-host-plan/v1`, and keeps each audit child as the hard
 per-candidate timeout boundary. Shared reports are staged until their host
 generation closes cleanly; any capture, backend, browser, health, target,
 context, or teardown fault recycles the whole host. Fresh and shared targets
-use one explicit 1280×600 CSS viewport, preserving the historical fresh capture
-geometry. A built Gas+Powder fresh/shared pair matched all six PNGs and both
+use one explicit 1280×600 CSS viewport. That fixed the browser metrics, but the
+responsive application layout could still move and resize the canvas across
+environments. A built Gas+Powder fresh/shared pair matched all six PNGs and both
 result IDs byte-for-byte. Shared mode used one host for two fresh contexts with
 no restart, reduced sampled candidate time from about 58.2 to 53.1 seconds, and
 left no Chrome residue. True 8× and recovery remain fresh-browser-only.
@@ -103,6 +105,30 @@ The portable verifier's `--require-browser-host-plan=1` gate reconstructs and
 checks the exact capture-plan/entry identities, GPU/base URL, and timing-derived
 host mode. `--index-only=1` preserves that sidecar unchanged and does not invent
 one for a legacy package.
+
+### Hermetic Visual Lab capture geometry
+
+The bounded success-evidence checkpoint is deployed at revision
+`95cab0b4e3f885c1b956875322e9e9e2caa4866f` by Actions run `31331716229`.
+Its build, deploy, exact 19-resource closure, hosted receipt-v2 Water smoke, and
+portable verification passed, and the workflow uploaded the success-only
+manifest as `anifortpt-live-visual-lab-evidence-1`. Comparing that retained
+proof with local evidence isolated the remaining variance to the responsive
+screenshot crop rather than semantic, field, framebuffer-alpha, backend, or
+HDR state.
+
+The current framework checkpoint therefore gives Visual Lab an audit-only
+capture profile: a 1280×600 viewport at DPR 1 and visual scale 1, with the
+canvas fixed at `(181,12)` and 918×576 CSS pixels. A normal 2× recipe still has
+the ordinary 1224×768 backing. The profile activates only for
+`inputAudit=1&auditStage=visual-lab&visualLabAudit=1`; normal responsive desktop
+and mobile layout is unchanged. Reports carry this geometry proof through the
+batch and portable verifier, and new release evidence requires it explicitly.
+Two independent local SwiftShader captures matched byte-for-byte (OFF
+`5d2a196…`, A `25f21ee…`, B `d262b25…`). This geometry implementation is not
+deployed yet: checkpoint it before regenerating and explicitly reviewing a
+baseline migration, then use the reproducible loop for reusable material
+experiments.
 
 Readiness and settle behavior is independently bound by
 `execution-tuning-plan.json`. Its content-addressed entries come from one

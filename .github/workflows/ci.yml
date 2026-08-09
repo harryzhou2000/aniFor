@@ -315,6 +315,7 @@ jobs:
             --require-complete=1
             --require-recipe-set=1
             --require-browser-host-plan=1
+            --require-capture-geometry=1
             --require-execution-tuning-plan=1
           )
           if [[ -n "${VISUAL_LAB_RECIPE_SET//[[:space:]]/}" ]]; then
@@ -402,6 +403,7 @@ jobs:
             --require-complete=1 \
             --require-recipe-set=1 \
             --require-browser-host-plan=1 \
+            --require-capture-geometry=1 \
             --require-execution-tuning-plan=1 \
             --require-origin-attestation=1 \
             2>&1 | tail -c 65536 | tee "${DIAGNOSTIC_DIR}/verify.log"

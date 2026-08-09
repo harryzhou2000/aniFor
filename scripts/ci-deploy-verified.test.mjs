@@ -156,6 +156,7 @@ describe('deploy-verified CI workflow contract', () => {
     expect(review).toContain('--require-complete=1');
     expect(review).toContain('--require-recipe-set=1');
     expect(review).toContain('--require-browser-host-plan=1');
+    expect(review).toContain('--require-capture-geometry=1');
 
     const live = indentedEntry(workflow, 'verify-deployment', 2);
     expect(live).toContain("if: always() && needs.deploy.result == 'success'");
@@ -178,6 +179,7 @@ describe('deploy-verified CI workflow contract', () => {
     expect(live).toContain('--gpu=swiftshader');
     expect(live).toContain('--capture-proof=completed-frame-receipt');
     expect(live).toContain('node scripts/visual-lab-verify.mjs');
+    expect(live).toContain('--require-capture-geometry=1');
     expect(live).toContain('--require-origin-attestation=1');
     expect(live).toContain('timeout --foreground --kill-after=15s 240s');
     expect(live).toContain('DIAGNOSTIC_DIR: ${{ runner.temp }}/anifortpt-live-visual-lab-diagnostics');

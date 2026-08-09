@@ -140,16 +140,32 @@ Active priority order:
    as an unresolved encoded-output review item, not a visual regression or a
    new accepted baseline.
 
-9. The next milestone is reusable capture/deploy evidence, not another isolated
-   visual treatment. The current source adds one success-only evidence manifest
-   of at most 16 KiB outside every frozen identity. It summarizes the existing
-   result record, deployed revision/resource count, Chrome product/version,
-   capture/host/tuning plan IDs, backend/HDR/backing-size state, invariant and
-   semantic/field/framebuffer signatures, and per-variant hash/byte/dimension/
-   dataset summaries. It excludes raw packages, PNGs, paths, URLs, logs,
-   timings, and receipt tickets. Successful raw smoke output remains
-   runner-local; failure tails remain bounded. Hosted publication and inspection
-   remain the acceptance gate for this framework checkpoint.
+9. Treat reusable capture/deploy evidence as deployed framework infrastructure.
+   Revision `95cab0b4e3f885c1b956875322e9e9e2caa4866f` was built and deployed by
+   workflow run `31331716229`; the build, deploy, exact 19-resource closure, and
+   hosted receipt-v2 Water smoke all passed. The success-only artifact
+   `anifortpt-live-visual-lab-evidence-1` retained the bounded manifest while raw
+   smoke material stayed runner-local. Inspection showed that semantic,
+   authoritative-field, framebuffer-alpha, plan, backend, and HDR evidence was
+   stable even though local and hosted PNG geometry differed. That makes capture
+   geometry—not another shader treatment—the next reusable framework boundary.
+10. Finish the hermetic Visual Lab capture-geometry checkpoint before migrating
+   any accepted baseline. Its audit-only profile uses a 1280×600 CSS viewport at
+   DPR 1 and visual scale 1, with the canvas fixed at `(181,12)` and 918×576 CSS
+   pixels; the ordinary 2× recipe therefore keeps a 1224×768 backing. The exact
+   activation tuple is `inputAudit=1`, `auditStage=visual-lab`, and
+   `visualLabAudit=1`; ordinary desktop, mobile, and responsive UI geometry must
+   remain untouched. Audit, batch, portable verification, and post-deploy smoke
+   must all carry and require the same geometry proof. Two independent local
+   SwiftShader captures under this profile were byte-identical: OFF
+   `5d2a196…`, A `25f21ee…`, and B `d262b25…`. This implementation is locally
+   proven, not yet deployed.
+11. Commit the geometry implementation as a clean framework checkpoint before
+   regenerating evidence. Then capture the complete release recipe set, inspect
+   the review board, migrate the accepted baseline as a separate explicit
+   decision, and compare the deployed manifest with the local package. Only
+   after local/hosted capture geometry and bytes are reproducible should the
+   loop be used for reusable powder, liquid, gas, and material experiments.
 
 Continue improving the registration and evidence loop before spending the
 milestone on isolated shader detail. Visual preference may later accept a

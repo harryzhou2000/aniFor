@@ -49,6 +49,7 @@ import {
   VISUAL_LAB_TIMING_SCHEMA,
 } from './visual-lab-timing.mjs';
 import { isDetachedProcessGroupAlive } from './detached-process.mjs';
+import { createVisualCaptureGeometryProof } from '../src/shared/visual-capture-geometry.js';
 
 const temporaryDirectories = [];
 const REMOTE_REVISION = '1234567890abcdef1234567890abcdef12345678';
@@ -255,6 +256,20 @@ const minimalPng = (width, height, seed) => {
   ]);
 };
 
+const solidPng = (width, height) => {
+  const signature = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr.set([8, 6, 0, 0, 0], 8);
+  return Buffer.concat([
+    signature,
+    pngChunk('IHDR', ihdr),
+    pngChunk('IDAT', deflateSync(Buffer.alloc((width * 4 + 1) * height))),
+    pngChunk('IEND', Buffer.alloc(0)),
+  ]);
+};
+
 const invalidCompressedPng = (width, height) => {
   const signature = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
   const ihdr = Buffer.alloc(13);
@@ -295,12 +310,23 @@ const writeValidCapture = async (directory, candidate, options = {}) => {
   } = resolveVisualCaptureRequest(requestFor(candidate));
   const seed = createHash('sha256')
     .update(`${candidate}:${options.salt ?? 'default'}`).digest()[0];
+  const captureGeometry = options.captureGeometry === true
+    ? createVisualCaptureGeometryProof(recipe.renderScale)
+    : options.captureGeometry;
+  const defaultDimensions = captureGeometry === undefined
+    ? { width: 2, height: 1 }
+    : {
+      width: captureGeometry.canvas.width,
+      height: captureGeometry.canvas.height,
+    };
   const buffers = Object.fromEntries(['off', 'a', 'b'].map((variant, index) => {
-    const dimensions = options.dimensions?.[variant] ?? { width: 2, height: 1 };
+    const dimensions = options.dimensions?.[variant] ?? defaultDimensions;
     return [
       variant,
       options.imageBytes?.[variant]
-        ?? minimalPng(dimensions.width, dimensions.height, seed + index * 31),
+        ?? (captureGeometry === undefined
+          ? minimalPng(dimensions.width, dimensions.height, seed + index * 31)
+          : solidPng(dimensions.width, dimensions.height)),
     ];
   }));
   const hashes = Object.fromEntries(Object.entries(buffers).map(([variant, bytes]) => [
@@ -371,13 +397,14 @@ const writeValidCapture = async (directory, candidate, options = {}) => {
     backend: domain.executionProfile.backend,
     hdrPipeline: VISUAL_LAB_CAPTURE_PROTOCOL.datasetRequirements.hdrPipeline,
     backingSize,
+    ...(captureGeometry === undefined ? {} : { captureGeometry }),
     captures: Object.fromEntries(['off', 'a', 'b'].map((variant, index) => [variant, {
       png: `/unrelated/absolute/machine/path/${candidate}/${variant}.png`,
       bytes: buffers[variant].byteLength,
-      width: options.dimensions?.[variant]?.width ?? 2,
-      height: options.dimensions?.[variant]?.height ?? 1,
-      cssWidth: Math.max(1, options.dimensions?.[variant]?.width ?? 2),
-      cssHeight: Math.max(1, options.dimensions?.[variant]?.height ?? 1),
+      width: options.dimensions?.[variant]?.width ?? defaultDimensions.width,
+      height: options.dimensions?.[variant]?.height ?? defaultDimensions.height,
+      cssWidth: Math.max(1, options.dimensions?.[variant]?.width ?? defaultDimensions.width),
+      cssHeight: Math.max(1, options.dimensions?.[variant]?.height ?? defaultDimensions.height),
       clipScale: 1,
       sha256: hashes[variant],
       distinctFromOff: hashes[variant] !== hashes.off,
@@ -1470,6 +1497,78 @@ describe('Visual Lab batch runner', () => {
     expect(await readFile(
       path.join(candidateDirectory, 'failure.log'), 'utf8',
     )).toContain('Visual Lab capture subphases must contain exactly');
+  });
+
+  it('accepts and projects the additive canonical capture geometry proof', async () => {
+    const root = await makeTemporaryDirectory();
+    const outputDirectory = path.join(root, 'batch');
+    const candidateDirectory = path.join(
+      outputDirectory, 'candidates', 'gas-showcase',
+    );
+    const written = await writeValidCapture(candidateDirectory, 'gas-showcase', {
+      captureGeometry: true,
+    });
+    const canonical = createVisualCaptureGeometryProof(
+      resolveVisualLabCaptureRecipe('gas-showcase').renderScale,
+    );
+
+    const accepted = await runVisualLabBatch({
+      candidates: ['gas-showcase'], outputDir: outputDirectory, indexOnly: true,
+    });
+    expect(accepted.index.candidates[0].status).toBe('passed');
+    const verified = await verifyVisualLabBatchPackage({
+      batchRoot: outputDirectory, requireComplete: true,
+    });
+    expect(verified.captureDiagnostics[0].captureGeometry).toEqual(canonical);
+    expect(JSON.stringify(verified.captureDiagnostics[0])).not.toMatch(/path|tmp|report\.json/);
+
+    const legacy = structuredClone(written.report);
+    delete legacy.captureGeometry;
+    await writeFile(
+      path.join(candidateDirectory, 'report.json'), `${JSON.stringify(legacy)}\n`,
+    );
+    const legacyAccepted = await runVisualLabBatch({
+      candidates: ['gas-showcase'], outputDir: outputDirectory, indexOnly: true,
+    });
+    expect(legacyAccepted.index.candidates[0].status).toBe('passed');
+    expect(legacyAccepted.index.candidates[0].result).toEqual(written.result);
+    await expect(verifyVisualLabBatchPackage({
+      batchRoot: outputDirectory,
+      requireCaptureGeometry: true,
+    })).rejects.toThrow('missing canonical captureGeometry proof for gas-showcase');
+
+    const mutations = [
+      ['marker', (report) => { report.captureGeometry.canvas.layoutMarker = 'wrong'; },
+        'captureGeometry does not match the canonical proof'],
+      ['viewport', (report) => { report.captureGeometry.viewport.width += 1; },
+        'captureGeometry does not match the canonical proof'],
+      ['rect', (report) => { report.captureGeometry.canvas.left += 1; },
+        'captureGeometry does not match the canonical proof'],
+      ['backing', (report) => { report.captureGeometry.canvas.backingWidth += 1; },
+        'captureGeometry does not match the canonical proof'],
+      ['reported backing', (report) => { report.backingSize = '1x1'; },
+        'backingSize must be 1224x768'],
+      ['capture CSS clip', (report) => { report.captures.a.cssWidth -= 1; },
+        'a capture does not match captureGeometry'],
+      ['capture pixel width', (report) => { report.captures.a.width -= 1; },
+        'a capture does not match captureGeometry'],
+    ];
+    for (const [name, mutate, expectedError] of mutations) {
+      const tampered = structuredClone(written.report);
+      mutate(tampered);
+      await writeFile(
+        path.join(candidateDirectory, 'report.json'), `${JSON.stringify(tampered)}\n`,
+      );
+      await rm(path.join(candidateDirectory, 'failure.log'), { force: true });
+      const rejected = await runVisualLabBatch({
+        candidates: ['gas-showcase'], outputDir: outputDirectory, indexOnly: true,
+      });
+      expect(rejected.index.candidates[0], name).toMatchObject({
+        candidate: 'gas-showcase', status: 'failed', failure: 'report-invalid',
+      });
+      expect(await readFile(path.join(candidateDirectory, 'failure.log'), 'utf8'))
+        .toContain(expectedError);
+    }
   });
 
   it('revalidates a complete portable package without changing any evidence', async () => {

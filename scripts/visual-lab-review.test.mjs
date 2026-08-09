@@ -153,6 +153,7 @@ describe('Visual Lab review-cycle orchestration', () => {
         baselineRoot,
         comparisonRoot,
         requireBrowserHostPlan: true,
+        requireCaptureGeometry: true,
         requireExecutionTuningPlan: true,
         requireOriginAttestation: false,
         requireComplete: true,
@@ -229,6 +230,7 @@ describe('Visual Lab review-cycle orchestration', () => {
       outputDir,
     }]);
     expect(calls[2][1]).toMatchObject({
+      requireCaptureGeometry: true,
       requireExecutionTuningPlan: true,
       requireOriginAttestation: true,
     });

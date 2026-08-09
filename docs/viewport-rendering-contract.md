@@ -25,6 +25,40 @@ translate3d(cameraX, cameraY, 0) scale(uniformCameraScale)
 
 Pointer mapping uses the transformed canvas `getBoundingClientRect()` to recover a 0–612, 0–384 world point. Do not combine that mapping with another DPR or presentation-scale correction.
 
+## Audit-only Visual Lab capture geometry
+
+A fixed CDP viewport is not by itself a fixed screenshot crop: responsive grid,
+font, and scrollbar differences can still move or resize the application canvas.
+Visual Lab therefore has one hermetic, audit-only layout profile. It activates
+only when all three query values are exact:
+
+```text
+inputAudit=1&auditStage=visual-lab&visualLabAudit=1
+```
+
+The profile uses a 1280×600 CSS viewport, DPR 1, visual scale 1, zero scroll,
+and a `.semantic-field-canvas` rectangle at `(181,12)` sized 918×576 CSS pixels.
+The crop scale is 1. The logical world remains 612×384 and the backing remains
+recipe-owned: at the ordinary 2× Detail it is 1224×768. Do not put the capture
+rectangle, its CSS variables, or its hidden diagnostic chrome into ordinary
+desktop, compact, mobile, input, or camera geometry. Normal UI remains
+responsive under the coordinate contract above.
+
+Capture audit must prove the exact viewport, DPR/visual scale, scroll position,
+layout marker, canvas rectangle, clip scale, and backing dimensions before the
+PNG and recheck them after it. Batch and portable verification must carry the
+same proof; new framework/release evidence requires it rather than accepting a
+legacy omission. Two independent local SwiftShader captures under this profile
+were byte-identical (OFF `5d2a196…`, A `25f21ee…`, B `d262b25…`). The profile is
+locally proven but is not deployed yet. Its implementation must be checkpointed
+before a separately reviewed baseline migration.
+
+The bounded manifest that exposed this need is deployed at revision
+`95cab0b4e3f885c1b956875322e9e9e2caa4866f` by workflow run `31331716229` as
+`anifortpt-live-visual-lab-evidence-1`; the exact 19-resource closure and hosted
+receipt-v2 Water smoke passed. Preserve that provenance distinction: the
+manifest checkpoint is live, while the hermetic-geometry checkpoint is not.
+
 ## The proportional cursor bug
 
 The visible stroke once matched the cursor near the upper-left corner but diverged progressively toward the other edges. Native placement was initially suspected, but `_powder_set(x, y)` and `ExtractFields()` were confirmed to write and read the same `pmap[y][x]` coordinate.

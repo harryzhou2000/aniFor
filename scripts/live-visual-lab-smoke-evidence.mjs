@@ -15,6 +15,7 @@ import {
 import {
   VISUAL_LAB_ORIGIN_ATTESTATION_SCHEMA,
 } from './visual-lab-origin-attestation.mjs';
+import { createVisualCaptureGeometryProof } from '../src/shared/visual-capture-geometry.js';
 
 export const LIVE_VISUAL_LAB_SMOKE_EVIDENCE_SCHEMA =
   'anifor.live-visual-lab-smoke-evidence/v1';
@@ -174,6 +175,14 @@ const normalizeCapture = (capture, variant, expectedHash) => {
   };
 };
 
+const normalizeCaptureGeometry = (value, renderScale) => {
+  const expected = createVisualCaptureGeometryProof(renderScale);
+  if (!isDeepStrictEqual(value, expected)) {
+    throw new TypeError('live smoke captureGeometry is not the canonical proof');
+  }
+  return expected;
+};
+
 export function createLiveVisualLabSmokeEvidence(verification, options) {
   const expectedRevision = normalizeLivePagesRevision(options?.expectedRevision);
   const browserVersion = normalizeBrowserVersion(options?.browserVersion);
@@ -221,12 +230,29 @@ export function createLiveVisualLabSmokeEvidence(verification, options) {
     || diagnostic.render.backingSize !== '1224x768') {
     throw new TypeError('live smoke did not use canonical 2x WebGL HDR rendering');
   }
+  const captureGeometry = normalizeCaptureGeometry(
+    diagnostic.captureGeometry, result.request.renderScale,
+  );
+  if (diagnostic.render.backingSize !== `${captureGeometry.canvas.backingWidth}x${
+    captureGeometry.canvas.backingHeight}`) {
+    throw new TypeError('live smoke render backingSize does not match captureGeometry');
+  }
   if (!isDeepStrictEqual(diagnostic.invariants, {
     semantic: true, fieldAlpha: true, framebufferAlpha: true,
   })) {
     throw new TypeError('live smoke renderer invariants are incomplete');
   }
   const captures = exactObject(diagnostic.captures, VARIANTS, 'captures');
+  for (const variant of VARIANTS) {
+    const capture = captures[variant];
+    if (capture?.width !== captureGeometry.canvas.width
+      || capture?.height !== captureGeometry.canvas.height
+      || capture?.cssWidth !== captureGeometry.canvas.width
+      || capture?.cssHeight !== captureGeometry.canvas.height
+      || capture?.clipScale !== captureGeometry.canvas.clipScale) {
+      throw new TypeError(`live smoke captures.${variant} does not match captureGeometry`);
+    }
+  }
 
   return deepFreeze({
     schema: LIVE_VISUAL_LAB_SMOKE_EVIDENCE_SCHEMA,
@@ -259,6 +285,7 @@ export function createLiveVisualLabSmokeEvidence(verification, options) {
       backend: diagnostic.render.backend,
       hdrPipeline: diagnostic.render.hdrPipeline,
       backingSize: diagnostic.render.backingSize,
+      captureGeometry,
       invariants: { semantic: true, fieldAlpha: true, framebufferAlpha: true },
       semantic: normalizeSemantic(diagnostic.semantic),
       fieldAlpha: normalizeAlpha(diagnostic.fieldAlpha, 'fieldAlpha'),
@@ -294,6 +321,7 @@ export async function generateLiveVisualLabSmokeEvidence(options, dependencies =
   const verification = await verify({
     batchRoot: options.batchRoot,
     requireBrowserHostPlan: true,
+    requireCaptureGeometry: true,
     requireExecutionTuningPlan: true,
     requireOriginAttestation: true,
     requireComplete: true,

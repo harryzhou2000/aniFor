@@ -9,6 +9,7 @@ import {
   serializeLiveVisualLabSmokeEvidence,
 } from './live-visual-lab-smoke-evidence.mjs';
 import { createVisualLabResultRecord } from './visual-lab-result.mjs';
+import { createVisualCaptureGeometryProof } from '../src/shared/visual-capture-geometry.js';
 
 const REVISION = '1234567890abcdef1234567890abcdef12345678';
 const HASHES = Object.freeze({
@@ -18,6 +19,7 @@ const HASHES = Object.freeze({
 });
 const SHA = (character) => `sha256:${character.repeat(64)}`;
 const VARIANTS = Object.freeze(['off', 'a', 'b']);
+const CAPTURE_GEOMETRY = createVisualCaptureGeometryProof(2);
 
 const selectionFor = (variant) => ({
   visualLab: variant === 'off' ? 'inactive' : 'active',
@@ -79,6 +81,7 @@ const validVerification = () => {
         },
       },
       render: { backend: 'webgl', hdrPipeline: 'active', backingSize: '1224x768' },
+      captureGeometry: CAPTURE_GEOMETRY,
       invariants: { semantic: true, fieldAlpha: true, framebufferAlpha: true },
       semantic: { hash: 1, occupied: 2, countHash: 3 },
       fieldAlpha: { hash: 4, supportHash: 5, alphaSum: 6, nonzero: 7 },
@@ -86,10 +89,10 @@ const validVerification = () => {
       captures: Object.fromEntries(VARIANTS.map((variant) => [variant, {
         sha256: HASHES[variant],
         bytes: 123,
-        width: 612,
-        height: 384,
-        cssWidth: 612,
-        cssHeight: 384,
+        width: CAPTURE_GEOMETRY.canvas.width,
+        height: CAPTURE_GEOMETRY.canvas.height,
+        cssWidth: CAPTURE_GEOMETRY.canvas.width,
+        cssHeight: CAPTURE_GEOMETRY.canvas.height,
         clipScale: 1,
         selection: selectionFor(variant),
         completedFrameReceipt: receipt,
@@ -115,6 +118,7 @@ describe('live Visual Lab smoke evidence', () => {
       result: verification.index.candidates[0].result,
       render: {
         backend: 'webgl', hdrPipeline: 'active', backingSize: '1224x768',
+        captureGeometry: CAPTURE_GEOMETRY,
         captures: {
           off: { sha256: HASHES.off, completedFrameReceipt: { state: 'completed' } },
           a: { sha256: HASHES.a, completedFrameReceipt: { state: 'completed' } },
@@ -151,6 +155,7 @@ describe('live Visual Lab smoke evidence', () => {
     expect(verificationOptions).toEqual({
       batchRoot: '/safe/verified-batch',
       requireBrowserHostPlan: true,
+      requireCaptureGeometry: true,
       requireExecutionTuningPlan: true,
       requireOriginAttestation: true,
       requireComplete: true,
@@ -162,6 +167,12 @@ describe('live Visual Lab smoke evidence', () => {
       ['result/hash mismatch', (value) => { value.captureDiagnostics[0].captures.a.sha256 = 'd'.repeat(64); }],
       ['receipt not completed', (value) => { value.captureDiagnostics[0].captures.b.completedFrameReceipt.state = 'pending'; }],
       ['forbidden capture field', (value) => { value.captureDiagnostics[0].captures.off.path = '/private/raw.png'; }],
+      ['missing capture geometry', (value) => { delete value.captureDiagnostics[0].captureGeometry; }],
+      ['geometry marker drift', (value) => { value.captureDiagnostics[0].captureGeometry.canvas.layoutMarker = 'wrong'; }],
+      ['geometry viewport drift', (value) => { value.captureDiagnostics[0].captureGeometry.viewport.width += 1; }],
+      ['geometry rect drift', (value) => { value.captureDiagnostics[0].captureGeometry.canvas.left += 1; }],
+      ['geometry backing drift', (value) => { value.captureDiagnostics[0].captureGeometry.canvas.backingWidth += 1; }],
+      ['capture pixel geometry drift', (value) => { value.captureDiagnostics[0].captures.a.width -= 1; }],
     ];
     for (const [name, mutate] of cases) {
       const invalid = structuredClone(verification);
