@@ -17,16 +17,24 @@ shared read-only verifier proved the fresh same-run downloaded release artifact,
 its recipe-set sidecar, accepted-baseline comparison, 36 PNG copies, and all 19
 runtime resources without another browser or build.
 
-The active checkpoint is a typed generic fixture-preparation boundary. The CDP
+The typed generic fixture-preparation boundary is deployed at revision
+`83894aa6fe98fc5a537cd4c23c9b2400dc37081f` by release-set workflow run
+`31293472696`. The CDP
 startup transaction may pass one stable fixture ID only; one fixed browser API
 dispatches through an app-owned closed registry that owns concrete builders and
 arguments. Keep historical Oil/Water preparation strings solely as v1 report
 labels so already-downloaded packages remain verifiable. Adding a prepared
 fixture must not require another `BrowserInputAuditApi` method, Game wrapper,
-reflective method lookup, free-form argument array, or harness branch. Once this
-bridge is hosted, the next framework-first increment is an additive deterministic
-review brief derived from already-validated batch/comparison records and kept
-outside every frozen identity. A normal-scale
+reflective method lookup, free-form argument array, or harness branch.
+
+The active framework-first increment is additive deterministic
+`review-brief.html`, derived from the already-validated comparison/v1 record and
+kept outside every frozen identity. It queues changed, added, and unsampled
+candidates with portable accepted/current off/A/B links, and relegates
+encoded-identical candidates to a compact no-action list. Generate it before
+the final comparison marker and validate it through the shared verifier when
+present; legacy packages may omit it. Add no browser, image decoder, score,
+schema, workflow branch, or second verifier path. A normal-scale
 A/B experiment should touch one domain module and one catalog
 entry—not presenter setup, app lifecycle, package/workflow duplication, or CDP
 branching.
@@ -36,11 +44,12 @@ declarative fixture startup, and production-bundle off/A/B route already form
 the base. E62 Oxygen, E69 Oil motion, and E65 Water motion have been folded into
 their accepted parent baselines and their one-off selector/telemetry/verifier
 plumbing removed. The batch/index, CI review, promotion, and recipe-set framework
-checkpoints are complete and deployed. `main_codex` and Pages serve portable-
-verifier revision `76e82301f9824126814653a400a10895f675e81a` after gated workflow
-run `31292298196`: the named four-recipe release set, comparison, fresh artifact
-download and verification, deploy, live revision, 36 PNG copies, and 19-resource
-closure all passed. The accepted visual manifest remains
+checkpoints are complete and deployed. `main_codex` and Pages serve typed
+fixture-bridge revision `83894aa6fe98fc5a537cd4c23c9b2400dc37081f` after gated
+workflow run `31293472696`: ccache hit 269/270 compile calls; the named
+four-recipe release set, comparison, fresh artifact download and verification,
+deploy, live revision, 36 PNG copies, and first-attempt 19-resource closure all
+passed. The accepted visual manifest remains
 `sha256:b95e09ecb1df93c2b9ae718d205159b17dc56379723f2d1ad904458e16c5653c`.
 
 That deployed checkpoint adds a separate
@@ -3678,12 +3687,13 @@ contact sheet are complete and deployed at revision
 `e06d11398a37dcf1558411a350af631452c4953e` by workflow run `31283340387`.
 Operational CI review, accepted-baseline comparison, candidate-scoped promotion,
 recipe sets, gated deployment, and the shared portable verifier's same-run
-upload/download proof are now complete. The current milestone is the typed
-generic fixture-preparation bridge: one closed app registry owns preparation
-arguments and one browser method receives the stable fixture ID. Historical
-preparation strings remain diagnostic compatibility labels only. After that
-bridge is hosted, prioritize an optional additive review brief; neither change
-may widen the frozen v1 records. Defer E66 and Powder until
+upload/download proof are now complete. The typed generic fixture-preparation
+bridge is deployed at `83894aa6fe98fc5a537cd4c23c9b2400dc37081f` by run
+`31293472696`: one closed app registry owns preparation arguments and one
+browser method receives the stable fixture ID, while historical preparation
+strings remain diagnostic compatibility labels only. The current milestone is
+the additive deterministic review brief described above; it may not widen the
+frozen v1 records or fork verification. Defer E66 and Powder until
 their extra samples or source-stage stability proof fit the existing budgeted
 facade without creating a second experiment framework.
 
@@ -3859,10 +3869,12 @@ sidecar are deployed at `294f8e09226c39fc09b56c8270c9b8a6a3edfc59` by run
 workflow dispatch history. The read-only portable batch/comparison verifier and
 exact same-run artifact round trip are deployed at
 `76e82301f9824126814653a400a10895f675e81a` by run `31292298196`. The active
-extension is the typed fixture-preparation bridge described above, followed by
-an additive deterministic review brief. Defer a bounded PNG decoder and RGB
-metrics to v2, and extend the shared verifier rather than cloning it or the
-workflow. Defer E66 and
+typed fixture-preparation bridge is deployed at
+`83894aa6fe98fc5a537cd4c23c9b2400dc37081f` by run `31293472696`, with the
+release set and portable verification again passing before first-attempt live
+closure. The active extension is the additive deterministic review brief.
+Defer a bounded PNG decoder and RGB metrics to v2, and extend the shared
+verifier rather than cloning it or the workflow. Defer E66 and
 Powder until the fixed HDR
 seam can receive their stability/body proof without a second experiment
 framework.

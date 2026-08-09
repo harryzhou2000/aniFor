@@ -44,6 +44,15 @@ npm run audit:visual-lab:baseline:compare -- \
   --output-dir=/path/to/new-empty-comparison
 ```
 
+New comparison packages contain two deterministic relative-path views over the
+same validated `comparison/v1` record. `index.html` remains the exhaustive
+accepted/current contact sheet. `review-brief.html` is the compact human
+decision queue: it shows `review`, `added`, and `not-sampled` candidates first,
+with their off/A/B pairs and pinned identities, and lists encoded-identical
+candidates as no-action. The brief changes no comparison field or identity,
+adds no image scoring, and is checked by the same portable verifier when
+present. Older comparison packages without the additive brief remain valid.
+
 Verify a downloaded review package and its comparison without rewriting either:
 
 ```sh

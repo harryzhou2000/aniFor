@@ -14,6 +14,7 @@ import {
   normalizeVisualLabBaseline,
   parseVisualLabBaselineArguments,
   promoteVisualLabBaseline,
+  renderVisualLabReviewBrief,
   runVisualLabBaseline,
   verifyVisualLabComparisonPackage,
 } from './visual-lab-baseline.mjs';
@@ -313,6 +314,102 @@ describe('Visual Lab accepted baseline packages', () => {
       resultRoot: `${currentRoot}/../current`,
       comparisonRoot,
     })).rejects.toThrow('canonical without dot segments');
+  });
+
+  it('renders a deterministic portable review brief that queues decisions ahead of identical captures', async () => {
+    const accepted = createVisualLabBaseline(batchForCandidates([
+      { candidate: 'gas-showcase', salt: 'accepted' },
+      { candidate: 'oil-motion', salt: 'accepted' },
+      { candidate: 'water-motion', salt: 'accepted' },
+    ]));
+    const current = batchForCandidates([
+      { candidate: 'gas-showcase', salt: 'accepted' },
+      { candidate: 'oxygen-showcase', salt: 'added' },
+      { candidate: 'oil-motion', salt: 'changed' },
+    ]);
+    const comparison = compareVisualLabBaseline(accepted, current);
+    const first = renderVisualLabReviewBrief(comparison);
+    const second = renderVisualLabReviewBrief(JSON.parse(JSON.stringify(comparison)));
+
+    expect(first).toBe(second);
+    expect(first).toContain('Visual review brief');
+    expect(first).toContain('status-review');
+    expect(first).toContain('status-added');
+    expect(first).toContain('status-not-sampled');
+    expect(first).toContain('Encoded-identical · no action');
+    const main = first.slice(first.indexOf('<main>'), first.indexOf('</main>'));
+    const unchanged = first.slice(first.indexOf('<aside>'), first.indexOf('</aside>'));
+    expect(main).toContain('oxygen-showcase');
+    expect(main).toContain('oil-motion');
+    expect(main).toContain('water-motion');
+    expect(main).not.toContain('gas-showcase');
+    expect(unchanged).toContain('gas-showcase');
+
+    const hostile = JSON.parse(JSON.stringify(comparison));
+    const hostileEntry = hostile.candidates.find(({ candidate }) => candidate === 'oil-motion');
+    hostileEntry.status = 'review"><script>unsafe()</script>';
+    hostileEntry.currentResult.request.gain = '"><img src=x onerror=unsafe()>';
+    hostileEntry.artifacts.current.off = 'capture.png" onerror="unsafe()';
+    hostileEntry.variants.off.status = 'review<script>unsafe()</script>';
+    const escaped = renderVisualLabReviewBrief(hostile);
+    expect(escaped).not.toContain('<script>unsafe()</script>');
+    expect(escaped).not.toContain('src="./capture.png" onerror="unsafe()"');
+    expect(escaped).toContain('&lt;script&gt;unsafe()&lt;/script&gt;');
+
+    const root = await temporaryDirectory();
+    const batchRoot = path.join(root, 'batch');
+    const baselineRoot = path.join(root, 'baseline');
+    const currentRoot = path.join(root, 'current');
+    const comparisonRoot = path.join(root, 'comparison');
+    await writeBatchPackage(batchRoot, 'gas-showcase', 'accepted');
+    await writeBatchPackage(currentRoot, 'gas-showcase', 'accepted');
+    await runVisualLabBaseline({ mode: 'accept', batchRoot, outputDir: baselineRoot });
+    const output = await runVisualLabBaseline({
+      mode: 'compare', baselineRoot, resultRoot: currentRoot, outputDir: comparisonRoot,
+    });
+    const storedComparison = JSON.parse(await readFile(output.json, 'utf8'));
+    const storedBrief = await readFile(output.brief, 'utf8');
+    expect(storedComparison).toEqual(output.comparison);
+    expect(storedComparison.id).toBe(compareVisualLabBaseline(
+      createVisualLabBaseline(batchFor('gas-showcase', 'accepted')),
+      batchFor('gas-showcase', 'accepted'),
+    ).id);
+    expect(storedBrief).toBe(renderVisualLabReviewBrief(output.comparison));
+    await assertPortableRefs(comparisonRoot, storedBrief);
+  });
+
+  it('rejects tampered or symlinked review briefs while accepting legacy packages without one', async () => {
+    const root = await temporaryDirectory();
+    const batchRoot = path.join(root, 'batch');
+    const baselineRoot = path.join(root, 'baseline');
+    const currentRoot = path.join(root, 'current');
+    const comparisonRoot = path.join(root, 'comparison');
+    await writeBatchPackage(batchRoot, 'gas-showcase', 'accepted');
+    await writeBatchPackage(currentRoot, 'gas-showcase', 'changed');
+    await runVisualLabBaseline({ mode: 'accept', batchRoot, outputDir: baselineRoot });
+    const output = await runVisualLabBaseline({
+      mode: 'compare', baselineRoot, resultRoot: currentRoot, outputDir: comparisonRoot,
+    });
+    const originalBrief = await readFile(output.brief);
+
+    await writeFile(output.brief, `${originalBrief.toString('utf8')}\n<!-- tampered -->\n`);
+    await expect(verifyVisualLabComparisonPackage({
+      baselineRoot, resultRoot: currentRoot, comparisonRoot,
+    })).rejects.toThrow('comparison review brief');
+    await writeFile(output.brief, originalBrief);
+
+    const externalBrief = path.join(root, 'external-review-brief.html');
+    await writeFile(externalBrief, originalBrief);
+    await unlink(output.brief);
+    await symlink(externalBrief, output.brief);
+    await expect(verifyVisualLabComparisonPackage({
+      baselineRoot, resultRoot: currentRoot, comparisonRoot,
+    })).rejects.toThrow('must use only real contained files');
+    await unlink(output.brief);
+
+    await expect(verifyVisualLabComparisonPackage({
+      baselineRoot, resultRoot: currentRoot, comparisonRoot,
+    })).resolves.toMatchObject({ comparison: output.comparison });
   });
 
   it('rejects symlinked and replaced portable comparison verification inputs', async () => {

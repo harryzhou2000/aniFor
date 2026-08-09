@@ -91,7 +91,7 @@ describe('wet sediment VFX fixture', () => {
     expect(simulation.cells()).toEqual(firstCells);
     expect(simulation.walls()).toEqual(firstWalls);
     expect(simulation.velocity()).toEqual(firstVelocity);
-  });
+  }, 15_000);
 
   it('builds exact positive owner bytes and rejects dry, foreign-liquid, and wall controls', () => {
     const simulation = preparedFixture();

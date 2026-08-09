@@ -19,7 +19,9 @@ by workflow run `31292298196`; the fresh downloaded release package verified
 all four candidates, 36 PNG copies, comparison, recipe set, and 19-resource
 closure before Pages deployment.
 
-The active checkpoint is the typed fixture-preparation boundary. A prepared
+The typed fixture-preparation boundary is also complete and deployed at revision
+`83894aa6fe98fc5a537cd4c23c9b2400dc37081f` by release-set workflow run
+`31293472696`. A prepared
 Visual Lab fixture crosses CDP as one stable fixture ID and calls exactly one
 `prepareVisualLabFixture(id)` browser API. The app owns a closed typed registry
 that binds each ID to its concrete builder and arguments; never execute a
@@ -29,9 +31,17 @@ future Visual Lab fixtures must add a registry entry and declarative adapter,
 not another browser-API method, Game wrapper, or harness branch. Existing v1
 reports keep the historical Oil/Water preparation labels so downloaded packages
 remain verifiable; those labels are diagnostics only and must not regain
-execution authority. After this bridge is hosted, prefer an additive
-deterministic review brief generated from validated batch/comparison records,
-outside every frozen v1 identity, before migrating another visual leaf.
+execution authority.
+
+The active checkpoint is an additive deterministic `review-brief.html` generated
+from the already-validated comparison/v1 record. It must queue only `review`,
+`added`, and `not-sampled` candidates with relative accepted/current off/A/B
+links, while listing encoded-identical candidates as no-action. Keep it outside
+every frozen v1 object and identity, write it before the existing final
+`comparison.json` marker, and validate present briefs through the existing
+comparison/package verifier. Historical packages without the additive file must
+remain valid. Add no browser, image decoder, score, schema, workflow branch, or
+second verifier path for this convenience page.
 Do not widen the frozen result, batch, baseline, or comparison v1 schemas. A normal A/B idea
 should touch one domain module plus one catalog entry—not presenter setup, HDR
 lifecycle, app boot, package-script duplication, workflow duplication, or CDP
@@ -45,12 +55,12 @@ motion is an accepted E08 baseline and uses the moving-Oil fixture with liquid
 target `8`; E65 Water surface motion is an accepted E08 baseline and uses the
 retained moving-Water fixture with liquid target `2`. Their legacy resolvers,
 uniforms, queries, datasets, and bespoke verifier paths are removed. E65 is also
-deployed. `main_codex` and Pages currently serve portable-verifier framework
-revision `76e82301f9824126814653a400a10895f675e81a` after release-set gated
-workflow run `31292298196`: all four named recipes and comparisons passed in
-canonical order, deployment ran only afterward, the freshly downloaded 36-PNG
-artifact validated, and both hosted and independent checks closed all 19
-runtime resources.
+deployed. `main_codex` and Pages currently serve typed fixture-bridge revision
+`83894aa6fe98fc5a537cd4c23c9b2400dc37081f` after release-set gated workflow
+run `31293472696`: ccache hit 269/270 compile calls, all four named recipes and
+comparisons passed in canonical order, deployment ran only after the freshly
+downloaded 36-PNG artifact verified, and live closure passed all 19 resources
+on its first attempt.
 
 `anifor.visual-lab.accepted-baseline/v1` contains only
 catalog-ordered candidate names and their existing content-addressed result
@@ -63,6 +73,10 @@ Only incomplete, missing, tampered, unsafe, or request-incompatible evidence is
 blocking. Seed provenance belongs in this guidance and CI logs: accepted-v1 is
 from revision `34c8a3d`, workflow `31284862276`, and manifest
 `sha256:b95e09ecb1df93c2b9ae718d205159b17dc56379723f2d1ad904458e16c5653c`.
+A newly generated comparison also contains deterministic `review-brief.html` as
+an additive human decision queue. Its bytes are derived from comparison/v1 and
+verified when present, but the file is excluded from comparison identity and
+legacy packages may omit it. The exhaustive `index.html` remains authoritative.
 Promotion must require the exact complete comparison package plus an explicit
 nonempty candidate list, write only to a new disjoint empty directory, copy
 unselected bytes from the old baseline and selected bytes from the current

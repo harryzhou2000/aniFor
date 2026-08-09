@@ -456,16 +456,16 @@ const shortHash = (value) => value ? value.slice(0, 12) : '—';
 const renderVariant = (entry, variant) => {
   const state = entry.variants[variant];
   const accepted = entry.baselineResult
-    ? `<figure><img src="./${entry.artifacts.baseline[variant]}"
+    ? `<figure><img src="./${escapeHtml(entry.artifacts.baseline[variant])}"
         alt="${escapeHtml(entry.candidate)} ${variant} accepted capture">
-       <figcaption>accepted · ${shortHash(state.baselineSha256)}</figcaption></figure>`
+       <figcaption>accepted · ${escapeHtml(shortHash(state.baselineSha256))}</figcaption></figure>`
     : '<div class="empty">no accepted capture</div>';
   const current = entry.currentResult
-    ? `<figure><img src="./${entry.artifacts.current[variant]}"
+    ? `<figure><img src="./${escapeHtml(entry.artifacts.current[variant])}"
         alt="${escapeHtml(entry.candidate)} ${variant} current capture">
-       <figcaption>current · ${shortHash(state.currentSha256)}</figcaption></figure>`
+       <figcaption>current · ${escapeHtml(shortHash(state.currentSha256))}</figcaption></figure>`
     : '<div class="empty">not sampled in this run</div>';
-  return `<section class="variant"><h3>${variant.toUpperCase()} · ${state.status}</h3>
+  return `<section class="variant"><h3>${variant.toUpperCase()} · ${escapeHtml(state.status)}</h3>
     <div class="pair">${accepted}${current}</div></section>`;
 };
 
@@ -475,7 +475,7 @@ export function renderVisualLabComparison(comparison) {
     throw new TypeError(`comparison sheet requires ${VISUAL_LAB_COMPARISON_SCHEMA}`);
   }
   const cards = comparison.candidates.map((entry) => (
-    `<article class="candidate status-${entry.status}">
+    `<article class="candidate status-${escapeHtml(entry.status)}">
       <header><h2>${escapeHtml(entry.candidate)}</h2>
         <span class="status">${escapeHtml(entry.status)}</span></header>
       <div class="variants">${VARIANTS.map((variant) => renderVariant(entry, variant)).join('')}</div>
@@ -514,12 +514,104 @@ export function renderVisualLabComparison(comparison) {
 <body>
   <header>
     <h1>Accepted-baseline comparison</h1>
-    <p>Baseline ${comparison.baseline.id}</p>
-    <p>${summary.compared} compared · ${summary.identical} encoded-identical · ${
-  summary.review} review · ${summary.added} added · ${summary.notSampled} not sampled</p>
+    <p>Baseline ${escapeHtml(comparison.baseline.id)}</p>
+    <p>${escapeHtml(summary.compared)} compared · ${escapeHtml(summary.identical)} encoded-identical · ${
+  escapeHtml(summary.review)} review · ${escapeHtml(summary.added)} added · ${
+  escapeHtml(summary.notSampled)} not sampled</p>
   </header>
   <main>${cards}
   </main>
+</body>
+</html>
+`;
+}
+
+const renderReviewCandidate = (entry) => {
+  const request = entry.currentResult?.request ?? entry.baselineResult?.request;
+  if (!request) throw new TypeError(`review candidate ${entry.candidate} has no request`);
+  const resultLine = [
+    entry.baselineResult ? `accepted ${shortHash(entry.baselineResult.id)}` : 'no accepted result',
+    entry.currentResult ? `current ${shortHash(entry.currentResult.id)}` : 'not sampled',
+  ].join(' · ');
+  return `<article class="candidate status-${escapeHtml(entry.status)}">
+      <header><div><h2>${escapeHtml(entry.candidate)}</h2>
+        <p class="request">${escapeHtml(request.domain)} · target ${escapeHtml(request.target)} · fixture ${
+  escapeHtml(request.fixture)} · gain ${escapeHtml(request.gain)} · Detail ${
+  escapeHtml(request.renderScale)}×</p>
+        <p class="hashes">${escapeHtml(resultLine)}</p></div>
+        <span class="status">${escapeHtml(entry.status)}</span></header>
+      <div class="variants">${VARIANTS.map((variant) => renderVariant(entry, variant)).join('')}</div>
+    </article>`;
+};
+
+/**
+ * Additive human decision queue derived only from comparison/v1. It is kept
+ * outside the comparison identity; the exhaustive index remains authoritative.
+ */
+export function renderVisualLabReviewBrief(comparison) {
+  if (comparison?.schema !== VISUAL_LAB_COMPARISON_SCHEMA
+    || comparison.complete !== true || !Array.isArray(comparison.candidates)) {
+    throw new TypeError(`review brief requires ${VISUAL_LAB_COMPARISON_SCHEMA}`);
+  }
+  const decisions = comparison.candidates.filter(
+    ({ status }) => status !== 'encoded-identical',
+  );
+  const unchanged = comparison.candidates.filter(
+    ({ status }) => status === 'encoded-identical',
+  );
+  const queue = decisions.length > 0
+    ? decisions.map(renderReviewCandidate).join('')
+    : '<p class="empty-queue">No visual decisions are required for this comparison.</p>';
+  const unchangedList = unchanged.length > 0
+    ? `<ul>${unchanged.map(({ candidate }) => `<li>${escapeHtml(candidate)}</li>`).join('')}</ul>`
+    : '<p>None.</p>';
+  const summary = comparison.summary;
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AniforTPT visual review brief</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #10141a; color: #edf3fa; }
+    body { margin: 0 auto; max-width: 2100px; padding: 24px; }
+    h1, h2, h3, p { margin: 0; }
+    body > header { display: grid; gap: 7px; margin-bottom: 20px; }
+    a { color: #9fd0ff; }
+    main { display: grid; gap: 18px; }
+    .candidate { background: #1b222c; border: 1px solid #3d4b5d; border-radius: 12px; padding: 16px; }
+    .candidate > header { display: flex; justify-content: space-between; gap: 14px; margin-bottom: 12px; }
+    .request, .hashes { margin-top: 5px; color: #b9c7d6; overflow-wrap: anywhere; }
+    .status { align-self: start; border-radius: 999px; padding: 3px 9px; background: #66501e; color: #ffe4a1; }
+    .status-not-sampled .status { background: #4a3c5e; color: #e2ccff; }
+    .variants { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .variant { min-width: 0; }
+    .variant h3 { margin-bottom: 6px; font-size: .9rem; color: #b8c5d2; }
+    .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+    figure { margin: 0; min-width: 0; }
+    img { display: block; width: 100%; height: auto; border-radius: 7px; background: #080b0f; }
+    figcaption, .empty { margin-top: 4px; color: #b8c5d2; overflow-wrap: anywhere; }
+    .empty { min-height: 72px; display: grid; place-items: center; border: 1px dashed #405065; border-radius: 7px; }
+    .empty-queue, aside { background: #192720; border: 1px solid #315541; border-radius: 10px; padding: 14px; }
+    aside { margin-top: 20px; }
+    aside h2 { font-size: 1rem; margin-bottom: 6px; }
+    aside ul { margin: 0; columns: 2; }
+    @media (max-width: 960px) { .variants { grid-template-columns: 1fr; } }
+    @media (max-width: 620px) { body { padding: 12px; } .pair { grid-template-columns: 1fr; } aside ul { columns: 1; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Visual review brief</h1>
+    <p>Comparison ${escapeHtml(comparison.id)}</p>
+    <p>Baseline ${escapeHtml(comparison.baseline.id)}</p>
+    <p>${escapeHtml(summary.review)} review · ${escapeHtml(summary.added)} added · ${
+  escapeHtml(summary.notSampled)} not sampled · ${escapeHtml(summary.identical)} encoded-identical</p>
+    <p><a href="./index.html">Open the exhaustive comparison sheet</a></p>
+  </header>
+  <main>${queue}
+  </main>
+  <aside><h2>Encoded-identical · no action</h2>${unchangedList}</aside>
 </body>
 </html>
 `;
@@ -770,6 +862,16 @@ const comparisonCandidatesFor = (comparison, side) => comparison.candidates
   .filter((entry) => entry[`${side}Result`] !== null)
   .map((entry) => ({ candidate: entry.candidate, result: entry[`${side}Result`] }));
 
+const readOptionalComparisonFile = async (root, relative, label) => {
+  let file;
+  try { file = await ensureContainedFile(root, relative, label); }
+  catch (error) {
+    if (error?.code === 'ENOENT') return undefined;
+    throw error;
+  }
+  return readStableRegularFile(file, label, 'utf8');
+};
+
 const validateComparisonPackage = async (root, expected) => {
   const [jsonPath, htmlPath] = await Promise.all([
     ensureContainedFile(root, 'comparison.json', 'comparison index'),
@@ -784,6 +886,12 @@ const validateComparisonPackage = async (root, expected) => {
   }
   if (html !== renderVisualLabComparison(expected)) {
     throw new TypeError('comparison sheet does not match its complete comparison index');
+  }
+  const brief = await readOptionalComparisonFile(
+    root, 'review-brief.html', 'comparison review brief',
+  );
+  if (brief !== undefined && brief !== renderVisualLabReviewBrief(expected)) {
+    throw new TypeError('comparison review brief does not match its complete comparison index');
   }
   await Promise.all([
     validateCapturePackage(
@@ -934,10 +1042,12 @@ export async function runVisualLabBaseline(options, dependencies = {}) {
       ),
     ]);
     const html = path.join(outputDirectory, 'index.html');
+    const brief = path.join(outputDirectory, 'review-brief.html');
     const json = path.join(outputDirectory, 'comparison.json');
     await writeAtomic(html, renderVisualLabComparison(comparison));
+    await writeAtomic(brief, renderVisualLabReviewBrief(comparison));
     await writeAtomic(json, `${JSON.stringify(comparison, null, 2)}\n`);
-    return { mode: 'compare', comparison, html, json };
+    return { mode: 'compare', comparison, html, brief, json };
   }
   if (options.mode === 'promote') {
     const baselineRoot = path.resolve(options.baselineRoot);
@@ -1033,6 +1143,7 @@ async function main() {
       id: result.comparison.id,
       summary: result.comparison.summary,
       html: result.html,
+      brief: result.brief,
       json: result.json,
     };
   } else {

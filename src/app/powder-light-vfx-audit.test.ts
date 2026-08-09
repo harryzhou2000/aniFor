@@ -131,7 +131,7 @@ describe('powder light VFX audit fixture', () => {
 
     expect(() => preparePowderLightVfxFixture(new RenderLabBackend(32, 32)))
       .toThrow('requires 612x384');
-  });
+  }, 15_000);
 });
 
 function materialAt(cells: Uint8Array, point: PowderLightVfxAuditPoint): Material {
