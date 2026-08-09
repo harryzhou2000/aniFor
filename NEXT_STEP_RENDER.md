@@ -58,14 +58,17 @@ Active priority order:
    `sha256:2acec1e8b41ed7f499e230a59db2816850979c4668dbb82053de56aa326e2889`
    and all three prior PNG hashes exactly, and every package passed portable
    verification with no Chrome residue.
-5. Treat all-fixture control convergence as the current stable local framework
-   checkpoint. Exact resolver-owned fixture IDs now flow through selection
-   compilation; `showcase` activates through the existing preparation bridge as
-   a validated no-op; Oil, Water, and Powder report whether they actually
-   mutate; and Game reconciles only those authored scenes. Normal-HDR and Powder
-   share the same fixture-owned numeric set/readback ABI, while private plan IDs
-   rotate intentionally. The frozen full execution-plan ID is now
-   `sha256:846378d9998da05c2bfbeb11f8bd367fcf1f1239ecf374b360246a90dee31972`.
+5. Treat all-fixture control convergence as deployed framework infrastructure.
+   Revision `977424bb4c91233a6e8cb93ffcb9592a2d062af3` was built and deployed
+   by workflow run `31325622320`; ccache restored 269/270 hits, and both CI and
+   an independent verifier passed the exact live revision plus 19-resource
+   closure on their first attempts. Exact resolver-owned fixture IDs now flow
+   through selection compilation; `showcase` activates through the existing
+   preparation bridge as a validated no-op; Oil, Water, and Powder report
+   whether they actually mutate; and Game reconciles only those authored scenes.
+   Normal-HDR and Powder share the same fixture-owned numeric set/readback ABI,
+   while private plan IDs rotate intentionally. The frozen full execution-plan
+   ID is now `sha256:846378d9998da05c2bfbeb11f8bd367fcf1f1239ecf374b360246a90dee31972`.
    A built shared SwiftShader v2 batch drove showcase Gas, prepared Water, and
    Powder through one host and nine completed-frame captures with zero failures;
    semantic, authoritative-field, framebuffer-alpha, lifecycle, and portable
@@ -74,11 +77,26 @@ Active priority order:
    its difference from the older accepted baseline therefore predates this
    control migration. A separate fresh-host default-v1 Water batch reproduced
    the same result and all three PNG hashes through the two-snapshot path.
-   Continue improving the registration and evidence
-   loop before spending the milestone on isolated shader detail. Visual
-   preference may later accept a candidate without broad unit-test expansion,
-   but topology, renderer lifecycle, portable evidence, and deployment remain
-   protected.
+6. Make functional hosted verification the current framework checkpoint. A
+   slow HTTP(S) target can finish its short Canvas staging window before a
+   directly launched DevTools client attaches. Remote captures now create an
+   `about:blank` incognito target, attach Page/Runtime/Log plus fixed device
+   metrics first, then begin one readiness-bounded navigation concurrently with
+   startup polling and await it before renderer disposal. The historical
+   `file://` production-bundle route stays direct-launch and reproduced the
+   established Gas result and all three PNG hashes. A Chrome capture relaying
+   the exact live Pages bytes reproduced Powder result
+   `sha256:2acec1e8b41ed7f499e230a59db2816850979c4668dbb82053de56aa326e2889`
+   and all Smooth/Local/Grains hashes with zero browser errors. Extend the
+   post-deploy job now follows revision/resource closure with a bounded live
+   Water WebGL fixture-control smoke, so every release must prove real
+   module/Wasm boot, normal-HDR selection/readback, evidence capture, and
+   teardown. Its first deployed run is the acceptance gate for this checkpoint.
+
+Continue improving the registration and evidence loop before spending the
+milestone on isolated shader detail. Visual preference may later accept a
+candidate without broad unit-test expansion, but topology, renderer lifecycle,
+portable evidence, and deployment remain protected.
 
 Do not spend the active milestone on another isolated highlight, texture, or
 material-specific shader branch. The intended leverage is a faster, observable,

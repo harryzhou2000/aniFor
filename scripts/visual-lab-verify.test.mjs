@@ -204,6 +204,9 @@ describe('Visual Lab portable package verifier', () => {
       'node scripts/verify-live-pages.mjs "${PAGE_URL}" "${GITHUB_SHA}"',
       deployVerification,
     );
+    const liveFunctionalSmoke = workflow.indexOf(
+      'node scripts/visual-lab-audit.mjs', liveVerification,
+    );
     expect(upload).toBeGreaterThan(0);
     expect(download).toBeGreaterThan(upload);
     expect(verify).toBeGreaterThan(download);
@@ -217,5 +220,7 @@ describe('Visual Lab portable package verifier', () => {
     expect(deployVerification).toBeGreaterThan(verify);
     expect(deploySuccessGuard).toBeGreaterThan(deployVerification);
     expect(liveVerification).toBeGreaterThan(deploySuccessGuard);
+    expect(liveFunctionalSmoke).toBeGreaterThan(liveVerification);
+    expect(workflow.slice(deployVerification)).toContain('--candidate=water-motion');
   });
 });

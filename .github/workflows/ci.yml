@@ -363,12 +363,30 @@ jobs:
     if: always() && needs.deploy.result == 'success'
     needs: deploy
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@v7
 
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
       - name: Verify deployed revision and runtime asset closure
         env:
           PAGE_URL: ${{ needs.deploy.outputs.page_url }}
         run: node scripts/verify-live-pages.mjs "${PAGE_URL}" "${GITHUB_SHA}"
+
+      - name: Smoke deployed Visual Lab WebGL fixture control
+        env:
+          PAGE_URL: ${{ needs.deploy.outputs.page_url }}
+          SMOKE_DIR: ${{ runner.temp }}/anifortpt-live-visual-lab-smoke
+        run: |
+          google-chrome --version
+          timeout --foreground --kill-after=15s 240s \
+            node scripts/visual-lab-audit.mjs \
+            --base-url="${PAGE_URL}" \
+            --candidate=water-motion \
+            --gpu=swiftshader \
+            --output-dir="${SMOKE_DIR}"

@@ -81,6 +81,32 @@ const COMPLETED_FRAME_RECEIPT_DESCRIPTOR = Object.freeze({
   verifyAfterSnapshot: true,
 });
 
+/**
+ * A local production bundle has historically launched its target directly and
+ * must retain that exact route. Remote targets are different: attaching CDP to
+ * a direct Pages navigation can miss the short Canvas `webgl-starting` stage
+ * before the capture bridge is ready. Those targets start blank, receive their
+ * protocol/device setup, then navigate while the startup bridge polls.
+ */
+export function shouldStageVisualLabNavigation(url) {
+  const protocol = (url instanceof URL ? url : new URL(url)).protocol;
+  return protocol === 'http:' || protocol === 'https:';
+}
+
+/** Starts (but deliberately does not await) one bounded HTTP(S) navigation. */
+export function beginStagedVisualLabNavigation(pageCdp, url, timeoutMs) {
+  const targetUrl = url instanceof URL ? url : new URL(url);
+  if (!shouldStageVisualLabNavigation(targetUrl)) {
+    throw new TypeError('Staged Visual Lab navigation requires an HTTP(S) URL');
+  }
+  return pageCdp.send('Page.navigate', { url: targetUrl.href }, timeoutMs).then((result) => {
+    if (typeof result?.errorText === 'string' && result.errorText.length > 0) {
+      throw new Error(`Chrome Page.navigate failed: ${result.errorText}`);
+    }
+    return result;
+  });
+}
+
 const resolveExecutionTuningPlanEntry = (
   plan, entryId, expectedCaptureEntryId,
 ) => (
@@ -376,9 +402,9 @@ async function captureVisualLabCandidateEvidence({
   });
   const cdp = pageCdp;
   const startupSelection = await measure('startup', async () => {
-    // Launch directly at the fixture URL. Navigating an already attached blank
-    // target over CDP can withhold its acknowledgement while SwiftShader is
-    // compiling, making a healthy load indistinguishable from a protocol hang.
+    // file:// keeps its historical direct launch. HTTP(S) has already begun
+    // its bounded staged navigation after protocol setup; do not wait for its
+    // acknowledgement before polling this short Canvas/WebGL handoff.
     const selection = await stageVariantDuringStartup(cdp, options);
     const startupDriverFields = options.executionPlan.compiled.startupFields;
     assert(selection.backendBeforeSelection === 'canvas2d'
@@ -571,11 +597,15 @@ export async function captureVisualLabCandidatePage({
   executionTuningEntry,
   executionTuningProof,
   connectPage,
+  navigatePage,
   gpuMode,
   measure = async (_phase, operation) => operation(),
 }) {
   if (typeof connectPage !== 'function') {
     throw new TypeError('Visual Lab candidate transaction requires a page connector');
+  }
+  if (navigatePage !== undefined && typeof navigatePage !== 'function') {
+    throw new TypeError('Visual Lab candidate transaction navigation must be a function');
   }
   const resolvedExecutionTuningEntry = executionTuningEntry
     ?? localExecutionTuningEntry(entry, gpuMode);
@@ -584,6 +614,7 @@ export async function captureVisualLabCandidatePage({
   let browserErrors = [];
   let report;
   let captureError;
+  let navigation;
   try {
     await measure('targetSetup', async () => {
       pageCdp = await connectPage();
@@ -605,6 +636,20 @@ export async function captureVisualLabCandidatePage({
         }),
       ]);
     });
+    if (navigatePage) {
+      // Do not await this acknowledgement before startup polling. On a remote
+      // target the page may already expose the bounded Canvas staging bridge
+      // while Chrome is still completing Page.navigate. Keep the rejection
+      // observed immediately, then await it before renderer disposal.
+      navigation = navigatePage(
+        pageCdp,
+        resolvedExecutionTuningEntry.effectiveTimeouts.readinessMs,
+      );
+      if (!navigation || typeof navigation.then !== 'function') {
+        throw new TypeError('Visual Lab staged navigation must return a promise');
+      }
+      void navigation.catch(() => {});
+    }
     report = await captureVisualLabCandidateEvidence({
       entry,
       executionTuningEntry: resolvedExecutionTuningEntry,
@@ -618,6 +663,13 @@ export async function captureVisualLabCandidatePage({
   } catch (error) {
     captureError = error instanceof Error ? error : new Error(String(error));
   }
+  let navigationError;
+  if (navigation) {
+    try { await navigation; }
+    catch (error) {
+      navigationError = error instanceof Error ? error : new Error(String(error));
+    }
+  }
   let disposalError;
   try {
     await measure('rendererDispose', () => disposeVisualLabCandidatePage({
@@ -629,8 +681,10 @@ export async function captureVisualLabCandidatePage({
     disposalError = error instanceof Error ? error : new Error(String(error));
   }
   throwCollectedErrors(
-    [captureError, disposalError].filter(Boolean),
-    'Visual Lab capture and renderer disposal both failed',
+    [captureError, navigationError, disposalError].filter(Boolean),
+    navigation
+      ? 'Visual Lab capture, staged navigation, and renderer disposal failed'
+      : 'Visual Lab capture and renderer disposal both failed',
   );
   return report;
 }
@@ -742,6 +796,8 @@ async function main() {
   timings.record('plan', performance.now() - planStarted);
 
   const url = new URL(options.executionPlan.compiled.url);
+  const stagedNavigation = shouldStageVisualLabNavigation(url);
+  const blankTargetUrl = new URL('about:blank');
   let chromePath;
   let browserHostPlanEntry;
   let executionTuningPlanEntry = localExecutionTuningEntry(
@@ -861,13 +917,13 @@ async function main() {
         chromeHost = await startVisualLabChromeHost({
           chromePath,
           gpuMode: options.gpu,
-          initialUrl: url,
+          initialUrl: stagedNavigation ? blankTargetUrl : url,
           allowFileAccess: url.protocol === 'file:',
           lifecycleFile: options.lifecycleFile,
           lifecycleOwner: options.lifecycleOwner,
         });
         const ready = await chromeHost.ready();
-        return ready.initialPage;
+        return stagedNavigation ? undefined : ready.initialPage;
       });
     } else {
       timings.record('hostLaunch', 0);
@@ -877,10 +933,11 @@ async function main() {
       executionTuningEntry: executionTuningPlanEntry,
       executionTuningProof,
       connectPage: async () => {
-        if (options.browserHost === 'shared') {
+        if (options.browserHost === 'shared' || stagedNavigation) {
           incognitoPage = await connectVisualLabIncognitoPage({
-            browserWebSocketDebuggerUrl: options.browserWebSocket,
-            url,
+            browserWebSocketDebuggerUrl: options.browserHost === 'shared'
+              ? options.browserWebSocket : chromeHost.browserWebSocketDebuggerUrl,
+            url: stagedNavigation ? blankTargetUrl : url,
           });
           pageCdp = incognitoPage.pageCdp;
         } else {
@@ -888,6 +945,9 @@ async function main() {
         }
         return pageCdp;
       },
+      ...(stagedNavigation ? {
+        navigatePage: (cdp, timeoutMs) => beginStagedVisualLabNavigation(cdp, url, timeoutMs),
+      } : {}),
       gpuMode: options.gpu,
       measure: timings.measure,
     });

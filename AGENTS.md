@@ -220,6 +220,17 @@ resolver-owned fixture ID as closed private context; never hardcode one fixture
 inside a reusable driver. Public result/report shapes remain exact even though
 the private content-addressed execution/tuning plan rotates with a new expression.
 
+HTTP(S) Visual Lab capture must attach before navigation. Create an
+`about:blank` incognito target, enable Page/Runtime/Log and fixed device metrics,
+then begin one readiness-bounded `Page.navigate` concurrently with Canvas
+startup polling; observe rejection immediately and await the navigation before
+renderer disposal. This prevents slow hosted pages from losing the short
+`canvas2d`/`webgl-starting` control-staging window. Keep the historical
+`file://` production-bundle route on direct launch so its capture bytes and
+timing contract remain unchanged. Post-deploy CI must first prove exact live
+revision/resource closure, then run one bounded live normal-HDR fixture-control
+smoke with strict Chrome/target/renderer teardown.
+
 The tuning-plan increment is now the protected capture contract. The exhaustive
 scripts-side driver capability registry feeds disjoint content-addressed
 execution-tuning plans; do not put this data into the static browser contract or

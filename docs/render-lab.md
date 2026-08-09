@@ -123,6 +123,23 @@ This opt-in path publishes `performance-cohorts/v2` only after all four portable
 packages pass and their result identities match. The default performance-cohort
 command and summary remain v1 with strict two-snapshot tuning.
 
+### Hosted-page functional verification
+
+HTTP(S) capture uses a staged target so DevTools cannot miss the short startup
+control window on a slow hosted page. The runner creates `about:blank`, attaches
+Page/Runtime/Log collection and fixed device metrics, then starts one navigation
+to the exact compiled URL without waiting before it polls the Canvas
+`webgl-starting` bridge. Navigation keeps the existing readiness deadline,
+rejects `Page.navigate` errors, is rejection-observed immediately, and is
+awaited before renderer disposal. Local `file://` production bundles retain
+their established direct-launch path and capture identities.
+
+The Pages workflow first verifies exact revision and all runtime resources,
+then runs a bounded SwiftShader `water-motion` capture against the live URL.
+That smoke proves deployed module/Wasm boot, WebGL 2× promotion, authored fixture
+activation, normal-HDR `0|1|2` set/readback, semantic/field/framebuffer evidence,
+screenshots, browser-error checks, and strict renderer/target/Chrome teardown.
+
 The real-browser audit first captures and signature-checks this deterministic
 atlas, then clears it and exercises painting, wheel/pan, resizing, and mobile
 touch. It navigates separately to the native backend for configured-source and

@@ -279,6 +279,7 @@ describe('typed visual capture drivers', () => {
     expect(typeof audit.captureVisualLabCandidatePage).toBe('function');
     expect(typeof audit.disposeVisualLabCandidatePage).toBe('function');
     expect(typeof audit.digestVisualLabFramebufferAlpha).toBe('function');
+    expect(typeof audit.beginStagedVisualLabNavigation).toBe('function');
     const source = readFileSync(new URL('./visual-lab-audit.mjs', import.meta.url), 'utf8');
     expect(source).toContain('entry: options.executionPlan');
     expect(source).toContain('createVisualLabCaptureSubphaseTimingRecorder');
@@ -286,8 +287,45 @@ describe('typed visual capture drivers', () => {
     expect(source).toContain("measureSnapshot(\n        'readiness'");
     expect(source).toContain("pageCdp.send('Page.enable')");
     expect(source).toContain('browserErrors = collectBrowserErrors(pageCdp)');
+    expect(source).toContain('initialUrl: stagedNavigation ? blankTargetUrl : url');
+    expect(source).toContain('url: stagedNavigation ? blankTargetUrl : url');
+    expect(source.indexOf("pageCdp.send('Page.enable')"))
+      .toBeLessThan(source.indexOf('navigation = navigatePage('));
+    expect(source.indexOf('navigation = navigatePage('))
+      .toBeLessThan(source.lastIndexOf('captureVisualLabCandidateEvidence({'));
     expect(source).toContain('realpathSync(process.argv[1]) === realpathSync(MODULE_PATH)');
     expect(source).not.toMatch(/export async function captureVisualLabCandidatePage\(cdp, options/);
+  });
+
+  it('uses bounded post-attachment navigation only for HTTP(S) capture targets', async () => {
+    const {
+      beginStagedVisualLabNavigation,
+      shouldStageVisualLabNavigation,
+    } = await import('./visual-lab-audit.mjs');
+    expect(shouldStageVisualLabNavigation('https://example.test/visual-lab?fixture=showcase'))
+      .toBe(true);
+    expect(shouldStageVisualLabNavigation('http://127.0.0.1:5173/')).toBe(true);
+    expect(shouldStageVisualLabNavigation('file:///tmp/anifor/dist/index.html')).toBe(false);
+
+    const calls = [];
+    const result = await beginStagedVisualLabNavigation({
+      send: (method, params, timeoutMs) => {
+        calls.push({ method, params, timeoutMs });
+        return Promise.resolve({ frameId: 'frame-1' });
+      },
+    }, 'https://example.test/visual-lab?fixture=showcase', 12_345);
+    expect(result).toEqual({ frameId: 'frame-1' });
+    expect(calls).toEqual([{
+      method: 'Page.navigate',
+      params: { url: 'https://example.test/visual-lab?fixture=showcase' },
+      timeoutMs: 12_345,
+    }]);
+    await expect(beginStagedVisualLabNavigation({
+      send: async () => ({ errorText: 'net::ERR_FAILED' }),
+    }, 'https://example.test/', 100)).rejects.toThrow('net::ERR_FAILED');
+    expect(() => beginStagedVisualLabNavigation({ send: () => Promise.resolve({}) },
+      'file:///tmp/anifor/dist/index.html', 100))
+      .toThrow('requires an HTTP(S) URL');
   });
 
   it('keeps the direct framebuffer-alpha digest byte-identical to the legacy grid walk', async () => {

@@ -160,10 +160,22 @@ describe('deploy-verified CI workflow contract', () => {
     const live = indentedEntry(workflow, 'verify-deployment', 2);
     expect(live).toContain("if: always() && needs.deploy.result == 'success'");
     expect(live).toContain('needs: deploy');
+    expect(live).toContain('timeout-minutes: 10');
+    expect(live).toContain('uses: actions/setup-node@v7');
+    expect(live).toContain('node-version: 22');
     expect(live).toContain('PAGE_URL: ${{ needs.deploy.outputs.page_url }}');
-    expect(live).toContain(
+    const staticClosure = live.indexOf(
       'node scripts/verify-live-pages.mjs "${PAGE_URL}" "${GITHUB_SHA}"',
     );
+    const functionalSmoke = live.indexOf(
+      'node scripts/visual-lab-audit.mjs', staticClosure,
+    );
+    expect(staticClosure).toBeGreaterThan(0);
+    expect(functionalSmoke).toBeGreaterThan(staticClosure);
+    expect(live).toContain('--base-url="${PAGE_URL}"');
+    expect(live).toContain('--candidate=water-motion');
+    expect(live).toContain('--gpu=swiftshader');
+    expect(live).toContain('timeout --foreground --kill-after=15s 240s');
     expect(workflow.indexOf('  verify-deployment:')).toBeGreaterThan(
       workflow.indexOf('  deploy:'),
     );
