@@ -10,9 +10,15 @@ import { readVisualLabRecipeSet } from './visual-lab-recipe-set.mjs';
 import {
   runVisualLabBatch,
   verifyVisualLabBatchPackage,
+  VISUAL_LAB_CAPTURE_PROOF_MODES,
 } from './visual-lab-batch.mjs';
+import {
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
+} from './visual-lab-execution-tuning-plan.mjs';
 
 export const VISUAL_LAB_PERFORMANCE_COHORT_SCHEMA = 'anifor.visual-lab.performance-cohorts/v1';
+export const VISUAL_LAB_PERFORMANCE_COHORT_RECEIPT_SCHEMA = 'anifor.visual-lab.performance-cohorts/v2';
 export const VISUAL_LAB_PERFORMANCE_COHORT_ORDER = Object.freeze([
   'fresh', 'shared', 'shared', 'fresh',
 ]);
@@ -25,6 +31,12 @@ const MAX_HOST_DURATION_MS = 3_600_000;
 const MAX_HOST_EVENTS = 1_000_000;
 const SHA256_ID = /^sha256:[0-9a-f]{64}$/;
 const NORMAL_DETAIL_SCALES = Object.freeze([1, 2, 4]);
+const STABLE_SNAPSHOTS_CAPTURE_PROOF = 'stable-snapshots';
+const COMPLETED_FRAME_RECEIPT_CAPTURE_PROOF = 'completed-frame-receipt';
+const EXECUTION_TUNING_SCHEMAS_BY_CAPTURE_PROOF = Object.freeze({
+  [STABLE_SNAPSHOTS_CAPTURE_PROOF]: VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
+  [COMPLETED_FRAME_RECEIPT_CAPTURE_PROOF]: VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
+});
 const RECYCLE_REASONS = Object.freeze([
   'launch-fault',
   'fresh-only-entry',
@@ -38,7 +50,8 @@ const HELP = `Usage:
   node scripts/visual-lab-performance-cohorts.mjs \\
     --recipe-set=<tracked-recipe-set.json> \\
     [--bundle=dist/index.html] [--output-dir=/tmp/anifor-visual-lab-performance-cohorts] \\
-    [--gpu=auto|swiftshader] [--chrome=/path/to/chrome]
+    [--gpu=auto|swiftshader] [--capture-proof=stable-snapshots|completed-frame-receipt] \\
+    [--chrome=/path/to/chrome]
 
 Runs the fixed fresh/shared/shared/fresh Visual Lab cohort order. Each cohort is
 captured into a distinct directory and then portable-verified before the next
@@ -60,7 +73,7 @@ const assertOptions = (options) => {
   if (options === null || typeof options !== 'object' || Array.isArray(options)) {
     throw new TypeError('Visual Lab performance cohort options must be an object');
   }
-  const allowed = new Set(['recipeSetPath', 'bundle', 'outputDir', 'gpu', 'chrome']);
+  const allowed = new Set(['recipeSetPath', 'bundle', 'outputDir', 'gpu', 'captureProof', 'chrome']);
   const extra = Reflect.ownKeys(options).find((key) => !allowed.has(key));
   if (extra !== undefined) throw new TypeError(`Unknown Visual Lab performance cohort option ${String(extra)}`);
   if (typeof options.recipeSetPath !== 'string' || options.recipeSetPath.length === 0) {
@@ -79,12 +92,35 @@ const assertOptions = (options) => {
   if (gpu !== 'auto' && gpu !== 'swiftshader') {
     throw new TypeError('Visual Lab performance cohort gpu must be auto or swiftshader');
   }
+  const captureProof = options.captureProof ?? STABLE_SNAPSHOTS_CAPTURE_PROOF;
+  if (!VISUAL_LAB_CAPTURE_PROOF_MODES.includes(captureProof)) {
+    throw new TypeError('Visual Lab performance cohort captureProof must be stable-snapshots or completed-frame-receipt');
+  }
   return Object.freeze({
     recipeSetPath: path.resolve(options.recipeSetPath),
     bundle: options.bundle === undefined ? undefined : path.resolve(options.bundle),
     outputDir: path.resolve(options.outputDir ?? path.join('/tmp', 'anifor-visual-lab-performance-cohorts')),
     gpu,
+    captureProof,
     ...(options.chrome === undefined ? {} : { chrome: options.chrome }),
+  });
+};
+
+const assertExecutionTuningSchema = (ordinal, mode, captureProof, portablePlan) => {
+  const expectedSchema = EXECUTION_TUNING_SCHEMAS_BY_CAPTURE_PROOF[captureProof];
+  if (portablePlan?.schema !== expectedSchema) {
+    throw new Error(
+      `Visual Lab performance cohort ${ordinal} (${mode}) requires portable ${expectedSchema} for ${captureProof}`,
+    );
+  }
+};
+
+const summaryCaptureProof = (captureProof) => {
+  if (captureProof === STABLE_SNAPSHOTS_CAPTURE_PROOF) return undefined;
+  return deepFreeze({
+    mode: COMPLETED_FRAME_RECEIPT_CAPTURE_PROOF,
+    tuningSchema: EXECUTION_TUNING_SCHEMAS_BY_CAPTURE_PROOF[COMPLETED_FRAME_RECEIPT_CAPTURE_PROOF],
+    receiptSchema: 'anifor.renderer.completed-frame-receipt/v1',
   });
 };
 
@@ -314,6 +350,7 @@ export async function runVisualLabPerformanceCohorts(options = {}, dependencies 
       outputDir: cohortDirectory,
       gpu: requested.gpu,
       browserHost: mode,
+      captureProof: requested.captureProof,
       ...(requested.bundle === undefined ? {} : { bundle: requested.bundle }),
       ...(requested.chrome === undefined ? {} : { chrome: requested.chrome }),
     });
@@ -333,6 +370,7 @@ export async function runVisualLabPerformanceCohorts(options = {}, dependencies 
       );
     }
     assertCompleteDiagnostics(ordinal, mode, expectedCandidates, verified);
+    assertExecutionTuningSchema(ordinal, mode, requested.captureProof, verified.executionTuningPlan);
     assertEffectiveHostMode(
       ordinal, mode, expectedCandidateOrder, batch.browserHostRuntime, verified.browserHostPlan,
     );
@@ -351,12 +389,16 @@ export async function runVisualLabPerformanceCohorts(options = {}, dependencies 
       captureSubphases: verified.captureSubphases,
     }));
   }
+  const captureProof = summaryCaptureProof(requested.captureProof);
   const summary = deepFreeze({
-    schema: VISUAL_LAB_PERFORMANCE_COHORT_SCHEMA,
+    schema: captureProof === undefined
+      ? VISUAL_LAB_PERFORMANCE_COHORT_SCHEMA
+      : VISUAL_LAB_PERFORMANCE_COHORT_RECEIPT_SCHEMA,
     recipeSet: { schema: recipeSet.schema, id: recipeSet.id },
     gpuMode: requested.gpu,
     order: VISUAL_LAB_PERFORMANCE_COHORT_ORDER,
     cohorts,
+    ...(captureProof === undefined ? {} : { captureProof }),
   });
   const summaryPath = await publishSummary(requested.outputDir, summary);
   return deepFreeze({ ok: true, summary, summaryPath });
@@ -365,7 +407,7 @@ export async function runVisualLabPerformanceCohorts(options = {}, dependencies 
 export function parseVisualLabPerformanceCohortArguments(argv) {
   if (!Array.isArray(argv)) throw new TypeError('arguments must be an array');
   if (argv.includes('--help') || argv.includes('-h')) return Object.freeze({ help: true });
-  const known = new Set(['recipe-set', 'bundle', 'output-dir', 'gpu', 'chrome']);
+  const known = new Set(['recipe-set', 'bundle', 'output-dir', 'gpu', 'capture-proof', 'chrome']);
   const values = new Map();
   for (const argument of argv) {
     if (!argument.startsWith('--') || !argument.includes('=')) {
@@ -382,12 +424,17 @@ export function parseVisualLabPerformanceCohortArguments(argv) {
   if (!values.has('recipe-set')) throw new Error('--recipe-set is required');
   const gpu = values.get('gpu') ?? 'auto';
   if (gpu !== 'auto' && gpu !== 'swiftshader') throw new Error('--gpu must be auto or swiftshader');
+  const captureProof = values.get('capture-proof') ?? STABLE_SNAPSHOTS_CAPTURE_PROOF;
+  if (!VISUAL_LAB_CAPTURE_PROOF_MODES.includes(captureProof)) {
+    throw new Error('--capture-proof must be stable-snapshots or completed-frame-receipt');
+  }
   return Object.freeze({
     help: false,
     recipeSetPath: values.get('recipe-set'),
     bundle: values.get('bundle'),
     outputDir: values.get('output-dir'),
     gpu,
+    captureProof,
     chrome: values.get('chrome'),
   });
 }
@@ -401,7 +448,10 @@ const main = async () => {
     }
     const { help: _help, ...options } = parsed;
     const result = await runVisualLabPerformanceCohorts(options);
-    process.stdout.write(`${JSON.stringify({ tool: 'visual-lab-performance-cohorts-v1', ok: true, summary: result.summary })}\n`);
+    const tool = result.summary.schema === VISUAL_LAB_PERFORMANCE_COHORT_RECEIPT_SCHEMA
+      ? 'visual-lab-performance-cohorts-v2'
+      : 'visual-lab-performance-cohorts-v1';
+    process.stdout.write(`${JSON.stringify({ tool, ok: true, summary: result.summary })}\n`);
   } catch (error) {
     process.stderr.write(`${JSON.stringify({
       tool: 'visual-lab-performance-cohorts-v1', ok: false, error: error?.stack ?? String(error),

@@ -40,6 +40,7 @@ import {
 } from './visual-capture-execution-capabilities.mjs';
 import {
   createVisualLabExecutionTuningPlan,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
 } from './visual-lab-execution-tuning-plan.mjs';
 import {
   VISUAL_LAB_CAPTURE_SUBPHASE_TIMING_SCHEMA,
@@ -284,6 +285,7 @@ const writeValidCapture = async (directory, candidate, options = {}) => {
   }
   const result = createVisualLabResultRecord(candidate, requestFor(candidate), hashes);
   let executionTuning;
+  let completedFrameReceiptProof = false;
   let gpu = 'auto';
   try {
     const tuningPlan = JSON.parse(await readFile(
@@ -291,6 +293,8 @@ const writeValidCapture = async (directory, candidate, options = {}) => {
     ));
     const tuningEntry = tuningPlan.entries.find((entry) => entry.candidate === candidate);
     gpu = tuningPlan.gpuMode;
+    completedFrameReceiptProof = tuningPlan.schema
+      === VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA;
     if (tuningEntry) {
       executionTuning = {
         schema: tuningPlan.schema,
@@ -351,6 +355,14 @@ const writeValidCapture = async (directory, candidate, options = {}) => {
       clipScale: 1,
       sha256: hashes[variant],
       distinctFromOff: hashes[variant] !== hashes.off,
+      ...(completedFrameReceiptProof ? {
+        completedFrameReceipt: {
+          schema: 'anifor.renderer.completed-frame-receipt/v1',
+          ticket: index + 1,
+          submission: index + 10,
+          state: 'completed',
+        },
+      } : {}),
       dataset: {
         renderer: VISUAL_LAB_CAPTURE_PROTOCOL.datasetRequirements.renderer,
         hdrPipeline: VISUAL_LAB_CAPTURE_PROTOCOL.datasetRequirements.hdrPipeline,
@@ -1053,6 +1065,62 @@ describe('Visual Lab batch runner', () => {
       indexOnly: true,
     })).rejects.toThrow('source must be outside');
     expect(await readFile(result.indexPath, 'utf8')).toBe(sentinel);
+  });
+
+  it('opts into receipt-bound v2 capture proof without changing result identity', async () => {
+    const root = await makeTemporaryDirectory();
+    const bundle = path.join(root, 'index.html');
+    const outputDirectory = path.join(root, 'receipt-proof');
+    await writeFile(bundle, '<!doctype html>');
+    let expectedResult;
+
+    const captured = await runVisualLabBatch({
+      candidates: ['gas-showcase'],
+      bundle,
+      outputDir: outputDirectory,
+      captureProof: 'completed-frame-receipt',
+    }, {
+      runCandidate: async (call) => {
+        ({ result: expectedResult } = await writeValidCapture(
+          call.candidateDirectory, call.recipe.name, { timings: timingRecord() },
+        ));
+        return { code: 0, signal: null, timedOut: false };
+      },
+    });
+
+    expect(captured.executionTuningPlan).toMatchObject({
+      schema: VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
+      entries: [{
+        profile: {
+          stability: { consecutiveSnapshots: 1 },
+          completion: {
+            capability: 'renderer-completed-frame-receipt/v1',
+            receiptSchema: 'anifor.renderer.completed-frame-receipt/v1',
+            requiredState: 'completed',
+            bind: 'selected-presentation',
+            verifyAfterSnapshot: true,
+          },
+        },
+      }],
+    });
+    expect(captured.index.candidates[0].result)
+      .toEqual(expectedResult);
+    await expect(verifyVisualLabBatchPackage({
+      batchRoot: outputDirectory,
+      requireExecutionTuningPlan: true,
+      requireComplete: true,
+    })).resolves.toMatchObject({ executionTuningPlan: captured.executionTuningPlan });
+
+    const reportPath = path.join(
+      outputDirectory, 'candidates', 'gas-showcase', 'report.json',
+    );
+    const report = JSON.parse(await readFile(reportPath, 'utf8'));
+    report.captures.a.completedFrameReceipt.state = 'superseded';
+    await writeFile(reportPath, `${JSON.stringify(report)}\n`);
+    await expect(verifyVisualLabBatchPackage({
+      batchRoot: outputDirectory,
+      requireExecutionTuningPlan: true,
+    })).rejects.toThrow(/completed-frame receipt proof/);
   });
 
   it('aggregates optional phase and capture-subphase telemetry outside frozen batch identity', async () => {
@@ -2083,6 +2151,9 @@ describe('Visual Lab batch CLI', () => {
     });
     expect(parseVisualLabBatchArguments(['--browser-host=shared']).browserHost)
       .toBe('shared');
+    expect(parseVisualLabBatchArguments([
+      '--capture-proof=completed-frame-receipt',
+    ]).captureProof).toBe('completed-frame-receipt');
     expect(parseVisualLabBatchArguments(['--help'])).toEqual({ help: true });
     expect(parseVisualLabBatchArguments([]).candidateTimeoutMs).toBe(300_000);
   });
@@ -2098,6 +2169,8 @@ describe('Visual Lab batch CLI', () => {
       .toThrow('mutually exclusive');
     expect(() => parseVisualLabBatchArguments(['--browser-host=reuse']))
       .toThrow('--browser-host must be fresh or shared');
+    expect(() => parseVisualLabBatchArguments(['--capture-proof=timer-query']))
+      .toThrow('--capture-proof must be stable-snapshots or completed-frame-receipt');
     for (const value of ['0', '-1', '1.5', '2147483648', 'not-a-number']) {
       expect(() => parseVisualLabBatchArguments([`--candidate-timeout-ms=${value}`]))
         .toThrow('--candidate-timeout-ms must be a positive integer');
@@ -2113,5 +2186,8 @@ describe('Visual Lab batch CLI', () => {
     await expect(runVisualLabBatch({
       candidates: ['gas-showcase'], candidateTimeoutMs: 0, indexOnly: true,
     })).rejects.toThrow('candidate timeout must be a positive integer');
+    await expect(runVisualLabBatch({
+      candidates: ['gas-showcase'], captureProof: 'timer-query', indexOnly: true,
+    })).rejects.toThrow('captureProof must be stable-snapshots or completed-frame-receipt');
   });
 });

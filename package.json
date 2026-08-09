@@ -17,6 +17,8 @@
     "audit:visual-lab:plan": "node scripts/visual-lab-batch.mjs --bundle=dist/index.html --plan-only=1",
     "audit:visual-lab:batch": "npm run build && npm run audit:visual-lab:batch:capture --",
     "audit:visual-lab:performance-cohorts": "npm run build && node scripts/visual-lab-performance-cohorts.mjs",
+    "audit:visual-lab:receipt-proof-cohorts:capture": "node scripts/visual-lab-performance-cohorts.mjs --capture-proof=completed-frame-receipt --bundle=dist/index.html",
+    "audit:visual-lab:receipt-proof-cohorts": "npm run build && npm run audit:visual-lab:receipt-proof-cohorts:capture --",
     "audit:webgl-completed-frame-receipt:capture": "node scripts/webgl-completed-frame-receipt-audit.mjs --bundle=dist/index.html",
     "audit:webgl-completed-frame-receipt": "npm run build && npm run audit:webgl-completed-frame-receipt:capture -- --render-scale=2",
     "audit:webgl-completed-frame-receipt:8x": "npm run build && npm run audit:webgl-completed-frame-receipt:capture -- --render-scale=8",

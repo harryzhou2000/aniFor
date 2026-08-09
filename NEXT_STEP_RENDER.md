@@ -24,18 +24,26 @@ Active priority order:
    subphase telemetry, fixed fresh/shared/shared/fresh cohorts, portable
    verification after every cohort, and a publish-last path-free summary;
    workflow run `31318817673` passed live 19-resource closure.
-2. Treat the renderer-owned completed-frame receipt as the next protected
-   framework seam. It exposes versioned pending/completed/superseded/failed
-   tickets bound to exact presentation submissions, keeps four bounded audit
-   records, fences only after the final HDR/default-framebuffer presentation,
-   and reuses the sole true-8× render fence. Real built SwiftShader gates passed
-   at 2× and true 4896×3072 8× with zero browser errors; normal-scale settling
-   honestly superseded five stale requests before one exact frame completed.
-3. Now version any proof reduction as an opt-in execution capability, retain the
-   current two-snapshot convergence profile as the default, and prove the new
-   policy path across fresh/shared normal WebGL before it can affect capture
-   policy. The receipt alone is GPU completion, not compositor/screenshot proof.
-4. Use this framework to compare and checkpoint material experiments. Visual
+2. Treat the renderer-owned completed-frame receipt as protected deployed
+   infrastructure. Revision `6a8ececf400433a07b4851026d427cd94eb7694f`
+   was built and deployed by workflow run `31320984401`; live Pages passed its
+   exact revision and 19-resource closure. The seam exposes versioned
+   pending/completed/superseded/failed tickets, fences only after the final
+   presentation, and reuses the sole true-8× render fence.
+3. Treat the opt-in completed-frame capture proof as the current framework
+   checkpoint. `execution-tuning-plan/v2` keeps v1 and its frozen IDs as the
+   default, retains exact dataset/two-RAF/three-plane/screenshot proof, and
+   replaces only the second matching snapshot with a receipt read before and
+   after the remaining snapshot. Real built fresh and shared SwiftShader Gas
+   captures used the same v2 plan ID
+   `sha256:4d58911d0425962f2b5f57530d7984621014be74640e71e47400eb59d35375bd`,
+   reproduced the strict-v1 result ID and all three PNG hashes exactly, passed
+   portable verification, and left no Chrome residue. The tracked atmosphere
+   recipe set then passed the complete fresh/shared/shared/fresh v2 cohort:
+   Gas and Oxygen preserved their strict-v1 result IDs and all PNG hashes,
+   every candidate/variant took exactly one evidence snapshot, and both shared
+   legs used one host with zero restart.
+4. Use this framework next to compare and checkpoint material experiments. Visual
    preference may accept a candidate without broad unit-test expansion, but it
    must retain topology, renderer lifecycle, portable evidence, and deployment
    contracts.
@@ -45,8 +53,9 @@ material-specific shader branch. The intended leverage is a faster, observable,
 reusable experiment loop that makes later powder/liquid/gas work cheaper to
 author, compare, recover, and deploy.
 
-The receipt implementation is audit-only and does not alter renderer output,
-capture identities, execution/tuning plans, or the current two-snapshot proof.
+The receipt implementation is audit-only and does not alter renderer output or
+capture identities. V1 tuning remains the two-snapshot default; v2 is selected
+only through `--capture-proof=completed-frame-receipt`.
 Run `npm run audit:webgl-completed-frame-receipt` for built normal WebGL and
 `npm run audit:webgl-completed-frame-receipt:8x` for the shared-fence path. The
 gate waits for finite paused-field hydration, accepts observable supersession,
@@ -310,15 +319,14 @@ directional evidence, not a stable machine-independent benchmark.
 The runner also requires every portable result identity to remain equal across
 all four legs while keeping candidate names and result IDs out of its summary.
 
-The next active framework work is renderer completion signaling, not a new
-material effect. Only a renderer-owned completed-frame receipt, bound to a
-submission generation and reported superseded after any later render, may
-justify a future one-snapshot profile. At normal scale it must fence immediately
-after the complete HDR presentation; at true 8× it must reuse the sole existing
-render-fence owner. Two RAFs, dataset acknowledgement, timer queries, CPU
-submission time, or `gl.finish()` fallback alone are not that proof, and current
-two-snapshot digest convergence remains the default until a versioned capability
-and real WebGL gate prove its replacement.
+Renderer completion signaling and its opt-in v2 capture policy are implemented.
+The default remains v1 two-snapshot convergence. In v2, a superseded receipt may
+be retried only before snapshot readback; the accepted ticket must still name the
+same completed submission immediately after the one full semantic/field/
+framebuffer snapshot, before screenshot. Missing, failed, post-snapshot-
+superseded, malformed, or Canvas receipt paths fail closed. The receipt stays
+outside result identities and true 8× Visual Lab proof reduction. Use the now-
+repeatable fresh/shared gate to move active effort to material experiments.
 
 ### Cross-runtime static-contract acceptance
 

@@ -11,6 +11,8 @@ import {
  */
 export const VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA =
   'anifor.visual-lab.execution-tuning-plan/v1';
+export const VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA =
+  'anifor.visual-lab.execution-tuning-plan/v2';
 
 const SHA256_ID = /^sha256:[0-9a-f]{64}$/;
 const SAFE_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -39,6 +41,9 @@ const ENTRY_FIELDS = Object.freeze([
 const PROFILE_FIELDS = Object.freeze([
   'startup', 'readiness', 'selection', 'stability', 'screenshot',
 ]);
+const V2_PROFILE_FIELDS = Object.freeze([
+  'startup', 'readiness', 'selection', 'stability', 'completion', 'screenshot',
+]);
 const STARTUP_FIELDS = Object.freeze(['variant', 'fieldRefresh', 'rafs']);
 const READINESS_FIELDS = Object.freeze(['planes', 'pollIntervalMs', 'timeoutMsByGpu']);
 const SELECTION_FIELDS = Object.freeze(['rafs', 'exactDataset']);
@@ -46,6 +51,9 @@ const STABILITY_FIELDS = Object.freeze([
   'planes', 'consecutiveSnapshots', 'pollIntervalMs', 'timeoutMsByGpu',
 ]);
 const SCREENSHOT_FIELDS = Object.freeze(['after']);
+const COMPLETION_FIELDS = Object.freeze([
+  'capability', 'receiptSchema', 'requiredState', 'bind', 'verifyAfterSnapshot',
+]);
 const GPU_TIMEOUT_FIELDS = Object.freeze([...GPU_MODES]);
 const EFFECTIVE_TIMEOUT_FIELDS = Object.freeze(['readinessMs', 'stabilityMs']);
 
@@ -262,9 +270,10 @@ const normalizeTimeouts = (value, label, minimumPollMs) => {
  * A profile deliberately names proof mechanics rather than executable browser
  * expressions. The host/driver owns how these descriptors are performed.
  */
-const normalizeProfile = (input, label) => {
+const normalizeProfile = (input, label, schema) => {
   assertJsonSafe(input, label);
-  assertExactFields(input, PROFILE_FIELDS, label);
+  const isV2 = schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA;
+  assertExactFields(input, isV2 ? V2_PROFILE_FIELDS : PROFILE_FIELDS, label);
   assertExactFields(input.startup, STARTUP_FIELDS, `${label}.startup`);
   if (input.startup.variant !== 'b' || input.startup.fieldRefresh !== 'explicit'
     || input.startup.rafs !== 2) {
@@ -284,7 +293,19 @@ const normalizeProfile = (input, label) => {
   }
   assertExactFields(input.stability, STABILITY_FIELDS, `${label}.stability`);
   assertExactArray(input.stability.planes, EVIDENCE_PLANES, `${label}.stability.planes`);
-  if (input.stability.consecutiveSnapshots !== 2) {
+  if (isV2) {
+    assertExactFields(input.completion, COMPLETION_FIELDS, `${label}.completion`);
+    if (input.completion.capability !== 'renderer-completed-frame-receipt/v1'
+      || input.completion.receiptSchema !== 'anifor.renderer.completed-frame-receipt/v1'
+      || input.completion.requiredState !== 'completed'
+      || input.completion.bind !== 'selected-presentation'
+      || input.completion.verifyAfterSnapshot !== true) {
+      throw new TypeError(`${label}.completion must be the exact completed-frame receipt proof`);
+    }
+    if (input.stability.consecutiveSnapshots !== 1) {
+      throw new TypeError(`${label}.stability must require exactly 1 snapshot with the completed-frame receipt proof`);
+    }
+  } else if (input.stability.consecutiveSnapshots !== 2) {
     throw new TypeError(`${label}.stability must require exactly 2 consecutive snapshots`);
   }
   assertBoundedMilliseconds(input.stability.pollIntervalMs, `${label}.stability.pollIntervalMs`);
@@ -297,7 +318,7 @@ const normalizeProfile = (input, label) => {
   if (input.screenshot.after !== 'stability-proof') {
     throw new TypeError(`${label}.screenshot must occur only after stability-proof`);
   }
-  return deepFreeze({
+  const normalized = {
     startup: {
       variant: input.startup.variant,
       fieldRefresh: input.startup.fieldRefresh,
@@ -315,11 +336,21 @@ const normalizeProfile = (input, label) => {
       pollIntervalMs: input.stability.pollIntervalMs,
       timeoutMsByGpu: stabilityTimeoutMsByGpu,
     },
-    screenshot: { after: input.screenshot.after },
-  });
+  };
+  if (isV2) {
+    normalized.completion = {
+      capability: input.completion.capability,
+      receiptSchema: input.completion.receiptSchema,
+      requiredState: input.completion.requiredState,
+      bind: input.completion.bind,
+      verifyAfterSnapshot: input.completion.verifyAfterSnapshot,
+    };
+  }
+  normalized.screenshot = { after: input.screenshot.after };
+  return deepFreeze(normalized);
 };
 
-const normalizeDriverProfiles = (driverProfiles, bindings) => {
+const normalizeDriverProfiles = (driverProfiles, bindings, schema) => {
   assertJsonSafe(driverProfiles, 'Visual Lab execution tuning driver profiles');
   assertPlainRecord(driverProfiles, 'Visual Lab execution tuning driver profiles');
   const drivers = [];
@@ -332,7 +363,7 @@ const normalizeDriverProfiles = (driverProfiles, bindings) => {
   }
   return deepFreeze(Object.fromEntries(drivers.map((driver) => [
     driver,
-    normalizeProfile(driverProfiles[driver], `Visual Lab execution tuning profile ${driver}`),
+    normalizeProfile(driverProfiles[driver], `Visual Lab execution tuning profile ${driver}`, schema),
   ])));
 };
 
@@ -341,8 +372,8 @@ const effectiveTimeoutsFor = (profile, gpuMode) => deepFreeze({
   stabilityMs: profile.stability.timeoutMsByGpu[gpuMode],
 });
 
-const entryIdentity = (capturePlan, entry) => ({
-  schema: VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
+const entryIdentity = (schema, capturePlan, entry) => ({
+  schema,
   kind: 'entry',
   capturePlan,
   sequence: entry.sequence,
@@ -353,7 +384,7 @@ const entryIdentity = (capturePlan, entry) => ({
   effectiveTimeouts: entry.effectiveTimeouts,
 });
 
-const createEntry = (capturePlan, binding, profile, gpuMode, sequence) => {
+const createEntry = (schema, capturePlan, binding, profile, gpuMode, sequence) => {
   const entry = {
     sequence,
     captureEntryId: binding.captureEntryId,
@@ -362,16 +393,16 @@ const createEntry = (capturePlan, binding, profile, gpuMode, sequence) => {
     profile,
     effectiveTimeouts: effectiveTimeoutsFor(profile, gpuMode),
   };
-  return deepFreeze({ id: digest(entryIdentity(capturePlan, entry)), ...entry });
+  return deepFreeze({ id: digest(entryIdentity(schema, capturePlan, entry)), ...entry });
 };
 
-const createFromBindings = (bindings, driverProfiles) => {
-  const profiles = normalizeDriverProfiles(driverProfiles, bindings);
+const createFromBindings = (schema, bindings, driverProfiles) => {
+  const profiles = normalizeDriverProfiles(driverProfiles, bindings, schema);
   const entries = Object.freeze(bindings.entries.map((binding, sequence) => (
-    createEntry(bindings.capturePlan, binding, profiles[binding.driver], bindings.gpuMode, sequence)
+    createEntry(schema, bindings.capturePlan, binding, profiles[binding.driver], bindings.gpuMode, sequence)
   )));
   const identity = deepFreeze({
-    schema: VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
+    schema,
     capturePlan: bindings.capturePlan,
     gpuMode: bindings.gpuMode,
     entries,
@@ -391,14 +422,27 @@ const createFromBindings = (bindings, driverProfiles) => {
  * accepted or serialized here.
  */
 export function createVisualLabExecutionTuningPlan(captureExecutionPlan, driverProfiles) {
-  return createFromBindings(captureBindings(captureExecutionPlan), driverProfiles);
+  return createFromBindings(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
+    captureBindings(captureExecutionPlan),
+    driverProfiles,
+  );
 }
 
-const normalizeEmbeddedPlan = (input) => {
+/** Creates the opt-in completed-frame-receipt v2 sibling plan. */
+export function createVisualLabExecutionTuningPlanV2(captureExecutionPlan, driverProfiles) {
+  return createFromBindings(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
+    captureBindings(captureExecutionPlan),
+    driverProfiles,
+  );
+}
+
+const normalizeEmbeddedPlan = (input, schema) => {
   assertJsonSafe(input, 'Visual Lab execution tuning plan');
   assertExactFields(input, PLAN_FIELDS, 'Visual Lab execution tuning plan');
-  if (input.schema !== VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA) {
-    throw new TypeError(`Visual Lab execution tuning plan schema must be ${VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA}`);
+  if (input.schema !== schema) {
+    throw new TypeError(`Visual Lab execution tuning plan schema must be ${schema}`);
   }
   assertSha256Id(input.id, 'Visual Lab execution tuning plan id');
   assertExactFields(input.capturePlan, PLAN_REFERENCE_FIELDS, 'Visual Lab capture plan reference');
@@ -428,7 +472,7 @@ const normalizeEmbeddedPlan = (input) => {
       throw new TypeError(`Duplicate Visual Lab execution tuning capture entry ${entry.captureEntryId}`);
     }
     if (seenIds.has(entry.id)) throw new TypeError(`Duplicate Visual Lab execution tuning entry id ${entry.id}`);
-    const profile = normalizeProfile(entry.profile, `${label} profile`);
+    const profile = normalizeProfile(entry.profile, `${label} profile`, schema);
     assertExactFields(entry.effectiveTimeouts, EFFECTIVE_TIMEOUT_FIELDS, `${label} effectiveTimeouts`);
     const effectiveTimeouts = effectiveTimeoutsFor(profile, gpuMode);
     if (!isDeepStrictEqual(entry.effectiveTimeouts, effectiveTimeouts)) {
@@ -442,7 +486,7 @@ const normalizeEmbeddedPlan = (input) => {
       profile,
       effectiveTimeouts,
     };
-    if (entry.id !== digest(entryIdentity(input.capturePlan, canonicalEntry))) {
+    if (entry.id !== digest(entryIdentity(schema, input.capturePlan, canonicalEntry))) {
       throw new TypeError(`${label} identity mismatch`);
     }
     seenCandidates.add(entry.candidate);
@@ -466,8 +510,8 @@ const normalizeEmbeddedPlan = (input) => {
 };
 
 /** Validates untrusted JSON and returns a detached canonical frozen sibling plan. */
-export function normalizeVisualLabExecutionTuningPlan(input, captureExecutionPlan) {
-  const embedded = normalizeEmbeddedPlan(input);
+const normalizePlan = (input, captureExecutionPlan, schema) => {
+  const embedded = normalizeEmbeddedPlan(input, schema);
   if (captureExecutionPlan !== undefined) {
     const authoritative = captureBindings(captureExecutionPlan);
     const authoritativeEntries = authoritative.entries.map(({ captureEntryId, candidate, driver }) => ({
@@ -483,7 +527,7 @@ export function normalizeVisualLabExecutionTuningPlan(input, captureExecutionPla
     }
   }
   const identity = {
-    schema: VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
+    schema,
     capturePlan: embedded.capturePlan,
     gpuMode: embedded.gpuMode,
     entries: embedded.entries,
@@ -499,6 +543,16 @@ export function normalizeVisualLabExecutionTuningPlan(input, captureExecutionPla
     throw new TypeError(`Visual Lab execution tuning plan is not canonical or has an identity mismatch; expected ${expected.id}`);
   }
   return expected;
+};
+
+/** Validates untrusted v1 JSON and returns a detached canonical frozen sibling plan. */
+export function normalizeVisualLabExecutionTuningPlan(input, captureExecutionPlan) {
+  return normalizePlan(input, captureExecutionPlan, VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA);
+}
+
+/** Validates untrusted v2 completed-frame-receipt JSON and returns a frozen sibling plan. */
+export function normalizeVisualLabExecutionTuningPlanV2(input, captureExecutionPlan) {
+  return normalizePlan(input, captureExecutionPlan, VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA);
 }
 
 /** Resolves one fully validated tuning entry, optionally bound to capture entry ID. */
@@ -513,6 +567,26 @@ export function resolveVisualLabExecutionTuningPlanEntry(
     assertSha256Id(expectedCaptureEntryId, 'Expected Visual Lab capture entry id');
   }
   const plan = normalizeVisualLabExecutionTuningPlan(input, captureExecutionPlan);
+  const entry = plan.entries.find(({ id }) => id === entryId);
+  if (entry === undefined) throw new Error(`Unknown Visual Lab execution tuning entry id ${entryId}`);
+  if (expectedCaptureEntryId !== undefined && entry.captureEntryId !== expectedCaptureEntryId) {
+    throw new Error(`Visual Lab execution tuning entry ${entryId} does not bind capture entry ${expectedCaptureEntryId}`);
+  }
+  return entry;
+}
+
+/** Resolves one fully validated v2 tuning entry, optionally bound to capture entry ID. */
+export function resolveVisualLabExecutionTuningPlanV2Entry(
+  input,
+  entryId,
+  expectedCaptureEntryId,
+  captureExecutionPlan,
+) {
+  assertSha256Id(entryId, 'Visual Lab execution tuning entry id');
+  if (expectedCaptureEntryId !== undefined) {
+    assertSha256Id(expectedCaptureEntryId, 'Expected Visual Lab capture entry id');
+  }
+  const plan = normalizeVisualLabExecutionTuningPlanV2(input, captureExecutionPlan);
   const entry = plan.entries.find(({ id }) => id === entryId);
   if (entry === undefined) throw new Error(`Unknown Visual Lab execution tuning entry id ${entryId}`);
   if (expectedCaptureEntryId !== undefined && entry.captureEntryId !== expectedCaptureEntryId) {

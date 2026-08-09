@@ -71,6 +71,58 @@ field hydration, then requires a completed successor, verifies that a newer
 submission leaves the earlier ticket observably superseded, checks browser
 errors, strictly disposes the renderer, and tears down its owned Chrome profile.
 
+### Opt-in receipt-bound capture proof
+
+Visual Lab keeps `execution-tuning-plan/v1` and its two matching snapshots as
+the default. Normal 1×/2×/4× WebGL experiments may explicitly select
+`--capture-proof=completed-frame-receipt`; this creates a separately
+content-addressed `execution-tuning-plan/v2`. V2 retains exact driver dataset
+selection, two RAFs, the semantic/authoritative-field/framebuffer evidence
+planes, and screenshot-after-proof. It replaces only the second matching
+snapshot: the runner requests a completed-frame receipt, takes one full snapshot,
+then rereads the same ticket and submission before taking the screenshot.
+
+A superseded ticket is never accepted. Finite field-refresh supersession may be
+retried before the snapshot, but missing, failed, malformed, post-snapshot-
+superseded, Canvas, or timeout paths fail closed. Candidate reports carry the
+accepted completed receipt as diagnostic evidence; portable verification
+requires exact schema/state and monotonically increasing tickets/submissions.
+Receipt evidence never enters result, batch, recipe-set, baseline, or comparison
+identities. True 8× retains its independent full release proof.
+
+For a one-off production-bundle batch and portable verification:
+
+```sh
+npm run build
+node scripts/visual-lab-batch.mjs \
+  --recipe-set=visual-lab/recipe-sets/atmosphere.json \
+  --bundle=dist/index.html \
+  --output-dir=/tmp/anifor-receipt-proof \
+  --gpu=swiftshader \
+  --browser-host=shared \
+  --capture-proof=completed-frame-receipt
+node scripts/visual-lab-verify.mjs \
+  --batch-root=/tmp/anifor-receipt-proof \
+  --require-complete=1 \
+  --require-recipe-set=1 \
+  --require-browser-host-plan=1 \
+  --require-execution-tuning-plan=1
+```
+
+For the fixed fresh/shared/shared/fresh release comparison, use a new empty
+output directory:
+
+```sh
+npm run audit:visual-lab:receipt-proof-cohorts -- \
+  --recipe-set=visual-lab/recipe-sets/atmosphere.json \
+  --output-dir=/tmp/anifor-receipt-proof-cohorts \
+  --gpu=swiftshader
+```
+
+This opt-in path publishes `performance-cohorts/v2` only after all four portable
+packages pass and their result identities match. The default performance-cohort
+command and summary remain v1 with strict two-snapshot tuning.
+
 The real-browser audit first captures and signature-checks this deterministic
 atlas, then clears it and exercises painting, wheel/pan, resizing, and mobile
 touch. It navigates separately to the native backend for configured-source and

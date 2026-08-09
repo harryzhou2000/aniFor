@@ -203,16 +203,19 @@ Preserve `anifor.visual-lab.static-contract/v1`, every result/batch/baseline/
 comparison/recipe-set identity, and the generic WebGL capture path throughout.
 
 The tuning-plan increment is now the protected capture contract. The exhaustive
-scripts-side driver capability registry feeds a disjoint content-addressed
-`execution-tuning-plan/v1`; do not put this data into the static browser contract
-or executable adapter ABI. Each entry must bind the exact capture entry and keep
-variant-B startup, explicit field refresh, two RAFs, exact dataset state, the
-three semantic/authoritative-field/framebuffer digests, two consecutive stable
-snapshots, and screenshot-after-proof until a versioned renderer-completion
-capability is proven. Batch children receive a plan path plus entry ID, reports
-carry the plan/entry proof, portable verification reconstructs capabilities, CI
-requires the sidecar, and index-only preserves existing bytes without inventing
-legacy provenance. The accepted SwiftShader Gas+Powder plan ID is
+scripts-side driver capability registry feeds disjoint content-addressed
+execution-tuning plans; do not put this data into the static browser contract or
+executable adapter ABI. V1 remains the default and must preserve variant-B
+startup, explicit field refresh, two RAFs, exact dataset state, the three
+semantic/authoritative-field/framebuffer digests, two consecutive stable
+snapshots, and screenshot-after-proof byte-for-byte. V2 is an explicit normal-
+WebGL opt-in: it retains those contracts but replaces only the second matching
+snapshot with the exact `renderer-completed-frame-receipt/v1` capability, one
+full post-completion snapshot, and a same-ticket/submission completed-state read
+after that snapshot. Batch children receive a plan path plus entry ID, reports
+carry the plan/entry proof, portable verification reconstructs the matching v1
+or v2 capabilities, CI requires the sidecar, and index-only preserves existing
+bytes without inventing legacy provenance. The accepted SwiftShader Gas+Powder v1 plan ID is
 `sha256:07e0444cb11c5d363758dab8d601eb1e4d2a8c6c203d8f129830c6c66333f136`.
 
 Keep the WebGL Powder style selector single-owner: the presenter submits its
@@ -223,8 +226,10 @@ local evidence preserves all six fresh/shared PNGs and both result IDs, cuts the
 sampled Powder A+B pair from roughly 6.46/5.79 seconds to 4.49/3.77 seconds, and
 leaves no Chrome process. Use the non-identity subphase timing below to repeat
 alternating-order cohorts; never replace two full snapshots with RAFs or dataset
-state alone. A future one-snapshot mode requires an explicit renderer-owned GPU
-completion/fence proof and a versioned capability grammar.
+state alone. The opt-in v2 one-snapshot mode must fail closed unless its
+renderer-owned receipt reaches `completed`; a superseded ticket may be retried
+only before any snapshot is taken, while supersession after the snapshot
+invalidates the capture.
 
 The capture-subphase timing increment is now a protected additive diagnostic.
 Keep `timings/v1` unchanged and emit the separate optional
@@ -267,9 +272,14 @@ receipt fence. Timing samples and receipts are mutually exclusive while either
 owns a request. Never substitute timer-query readiness, two RAFs, dataset state,
 CPU submission time, or `gl.finish()` for this receipt. The real built
 `audit:webgl-completed-frame-receipt` and `:8x` SwiftShader gates must pass and
-leave no Chrome residue. Do not reduce the current two-snapshot proof until a
-separate versioned tuning schema and fresh/shared browser gates explicitly opt
-in; GPU completion alone is not compositor or screenshot completion.
+leave no Chrome residue. The separate `execution-tuning-plan/v2` may reduce
+only the second convergence snapshot after its exact descriptor is validated.
+Keep v1 as the default, keep all three evidence planes in the remaining
+snapshot, reread the receipt after that snapshot, and retain the two selection
+RAFs plus screenshot-after-proof; GPU completion alone is not compositor or
+screenshot completion. V2 receipt records are diagnostic report evidence and
+must never enter result, batch, recipe-set, baseline, or comparison identities.
+True 8× Visual Lab capture remains outside this normal-WebGL proof reduction.
 
 The typed Visual Lab state, fixed normal-HDR composition seam, promotion-safe
 same-page off/A/B selection, declarative fixtures, and production-bundle capture

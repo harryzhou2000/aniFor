@@ -54,12 +54,17 @@ import {
 } from './visual-lab-browser-host-plan.mjs';
 import {
   visualCaptureExecutionCapabilitiesForCaptureOrder,
+  visualCaptureExecutionV2CapabilitiesForCaptureOrder,
 } from './visual-capture-execution-capabilities.mjs';
 import {
   createVisualLabExecutionTuningPlan,
+  createVisualLabExecutionTuningPlanV2,
   normalizeVisualLabExecutionTuningPlan,
+  normalizeVisualLabExecutionTuningPlanV2,
   resolveVisualLabExecutionTuningPlanEntry,
+  resolveVisualLabExecutionTuningPlanV2Entry,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
 } from './visual-lab-execution-tuning-plan.mjs';
 import { startVisualLabChromeHost } from './visual-lab-chrome-host.mjs';
 
@@ -67,6 +72,9 @@ export { inspectVisualLabPng } from './visual-lab-png.mjs';
 
 export const VISUAL_LAB_BATCH_SCHEMA = 'anifor.visual-lab.batch/v1';
 export const VISUAL_LAB_DEFAULT_CANDIDATE_TIMEOUT_MS = 300_000;
+export const VISUAL_LAB_CAPTURE_PROOF_MODES = Object.freeze([
+  'stable-snapshots', 'completed-frame-receipt',
+]);
 
 const MODULE_PATH = fileURLToPath(import.meta.url);
 const SCRIPT_DIRECTORY = path.dirname(MODULE_PATH);
@@ -91,6 +99,44 @@ const FAILURE_CODES = new Set([
   'capture-failed', 'report-missing', 'report-invalid', 'artifact-invalid',
 ]);
 
+const captureProofForTuningSchema = (schema) => {
+  if (schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA) return 'stable-snapshots';
+  if (schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA) {
+    return 'completed-frame-receipt';
+  }
+  throw new TypeError(`Unsupported Visual Lab execution-tuning schema ${String(schema)}`);
+};
+
+const normalizeExecutionTuningPlan = (input, captureExecutionPlan) => (
+  input?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA
+    ? normalizeVisualLabExecutionTuningPlanV2(input, captureExecutionPlan)
+    : normalizeVisualLabExecutionTuningPlan(input, captureExecutionPlan)
+);
+
+const createExecutionTuningPlan = (captureExecutionPlan, driverOrder, captureProof) => (
+  captureProof === 'completed-frame-receipt'
+    ? createVisualLabExecutionTuningPlanV2(
+      captureExecutionPlan,
+      visualCaptureExecutionV2CapabilitiesForCaptureOrder(driverOrder),
+    )
+    : createVisualLabExecutionTuningPlan(
+      captureExecutionPlan,
+      visualCaptureExecutionCapabilitiesForCaptureOrder(driverOrder),
+    )
+);
+
+const resolveExecutionTuningPlanEntry = (
+  plan, entryId, expectedCaptureEntryId, captureExecutionPlan,
+) => (
+  plan.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA
+    ? resolveVisualLabExecutionTuningPlanV2Entry(
+      plan, entryId, expectedCaptureEntryId, captureExecutionPlan,
+    )
+    : resolveVisualLabExecutionTuningPlanEntry(
+      plan, entryId, expectedCaptureEntryId, captureExecutionPlan,
+    )
+);
+
 const HELP = `Usage:
   node scripts/visual-lab-batch.mjs [options]
 
@@ -102,6 +148,8 @@ Options (use --name=value):
   --chrome=/path/to/chrome               Forwarded to the generic capture runner
   --gpu=auto|swiftshader                 Forwarded to the generic capture runner
   --browser-host=fresh|shared            Opt-in sequential Chrome-host reuse (Linux only)
+  --capture-proof=stable-snapshots|completed-frame-receipt
+                                         Default keeps the v1 two-snapshot proof
   --candidate-timeout-ms=300000          Per-candidate timeout before TERM/KILL cleanup
   --index-only=0|1                       Aggregate existing candidate reports without capture
   --plan-only=0|1                        Inspect the exact plan without writes or Chrome
@@ -805,7 +853,10 @@ const readCandidateReport = async (candidateDirectory, recipe, {
         ? Reflect.ownKeys(proof) : [];
       if (fields.length !== 3
         || !['schema', 'planId', 'entryId'].every((field) => fields.includes(field))
-        || proof.schema !== VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA
+        || ![
+          VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
+          VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
+        ].includes(proof.schema)
         || !/^sha256:[a-f0-9]{64}$/.test(proof.planId)
         || !/^sha256:[a-f0-9]{64}$/.test(proof.entryId)) {
         throw new Error('execution-tuning proof is malformed');
@@ -815,13 +866,14 @@ const readCandidateReport = async (candidateDirectory, recipe, {
         planId: proof.planId,
         entryId: proof.entryId,
       });
+      assertCompletedFrameReceiptReportProof(report, proof.schema);
     }
     if (executionTuningPlan !== undefined || executionTuningEntry !== undefined) {
       if (!executionTuningPlan || !executionTuningEntry) {
         throw new Error('execution-tuning validation requires its plan and entry together');
       }
       const expectedTuningProof = {
-        schema: VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
+        schema: executionTuningPlan.schema,
         planId: executionTuningPlan.id,
         entryId: executionTuningEntry.id,
       };
@@ -934,9 +986,39 @@ const readOptionalBrowserHostPlan = async (file) => {
 const readOptionalExecutionTuningPlan = async (file) => {
   if (await pathDetails(file) === undefined) return null;
   const source = await readStableRegularFile(file, 'Visual Lab execution-tuning plan', 'utf8');
-  return normalizeVisualLabExecutionTuningPlan(
+  return normalizeExecutionTuningPlan(
     parsePortableJson(source, 'Visual Lab execution-tuning plan'),
   );
+};
+
+const assertCompletedFrameReceiptReportProof = (report, tuningSchema) => {
+  const receiptRequired = tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA;
+  let previousTicket = 0;
+  let previousSubmission = 0;
+  for (const variant of VARIANTS) {
+    const receipt = report?.captures?.[variant]?.completedFrameReceipt;
+    if (!receiptRequired) {
+      if (receipt !== undefined) {
+        throw new Error('v1 stable-snapshot capture must not claim completed-frame receipt proof');
+      }
+      continue;
+    }
+    const fields = receipt !== null && typeof receipt === 'object' && !Array.isArray(receipt)
+      ? Reflect.ownKeys(receipt) : [];
+    if (fields.length !== 4
+      || !['schema', 'ticket', 'submission', 'state'].every((field) => fields.includes(field))
+      || receipt.schema !== 'anifor.renderer.completed-frame-receipt/v1'
+      || receipt.state !== 'completed'
+      || !Number.isSafeInteger(receipt.ticket) || receipt.ticket <= previousTicket
+      || !Number.isSafeInteger(receipt.submission)
+      || receipt.submission <= previousSubmission) {
+      throw new Error(
+        `${variant} completed-frame receipt proof is malformed or not monotonically bound`,
+      );
+    }
+    previousTicket = receipt.ticket;
+    previousSubmission = receipt.submission;
+  }
 };
 
 const assertBrowserHostPlanMatchesEntries = (
@@ -1049,7 +1131,7 @@ const assertExecutionTuningPlanMatchesEntries = (
     const captured = entries[index];
     if (captured?.status !== 'passed') continue;
     const expectedProof = {
-      schema: VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
+      schema: executionTuningPlan.schema,
       planId: executionTuningPlan.id,
       entryId: planEntry.id,
     };
@@ -1108,9 +1190,8 @@ const assertExecutionTuningPlanCaptureIdentity = (
   const driverOrder = [...new Set(
     reconstructed.entries.map(({ captureDriver }) => captureDriver.name),
   )];
-  const expected = createVisualLabExecutionTuningPlan(
-    reconstructed,
-    visualCaptureExecutionCapabilitiesForCaptureOrder(driverOrder),
+  const expected = createExecutionTuningPlan(
+    reconstructed, driverOrder, captureProofForTuningSchema(executionTuningPlan.schema),
   );
   if (!isDeepStrictEqual(executionTuningPlan, expected)) {
     throw new TypeError(
@@ -1526,6 +1607,7 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   const bundle = path.resolve(options.bundle ?? path.join(REPOSITORY_ROOT, 'dist/index.html'));
   const gpu = options.gpu ?? 'auto';
   const browserHost = options.browserHost ?? 'fresh';
+  const captureProof = options.captureProof ?? 'stable-snapshots';
   const candidateTimeoutMs = options.candidateTimeoutMs
     ?? VISUAL_LAB_DEFAULT_CANDIDATE_TIMEOUT_MS;
   if (gpu !== 'auto' && gpu !== 'swiftshader') {
@@ -1533,6 +1615,11 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   }
   if (browserHost !== 'fresh' && browserHost !== 'shared') {
     throw new Error('Visual Lab batch browserHost must be fresh or shared');
+  }
+  if (!VISUAL_LAB_CAPTURE_PROOF_MODES.includes(captureProof)) {
+    throw new Error(
+      'Visual Lab batch captureProof must be stable-snapshots or completed-frame-receipt',
+    );
   }
   if (browserHost === 'shared' && process.platform !== 'linux') {
     throw new Error('Shared Visual Lab browser hosts are currently supported on Linux only');
@@ -1565,9 +1652,8 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   const captureDriverOrder = [...new Set(
     executionPlan.entries.map(({ captureDriver }) => captureDriver.name),
   )];
-  const executionTuningPlan = createVisualLabExecutionTuningPlan(
-    executionPlan,
-    visualCaptureExecutionCapabilitiesForCaptureOrder(captureDriverOrder),
+  const executionTuningPlan = createExecutionTuningPlan(
+    executionPlan, captureDriverOrder, captureProof,
   );
   const browserHostEntryByCandidate = new Map(browserHostPlan.entries.map((entry) => [
     entry.candidate,
@@ -1580,7 +1666,7 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   const executionTuningEntryByCandidate = new Map(
     executionTuningPlan.entries.map((entry) => [
       entry.candidate,
-      resolveVisualLabExecutionTuningPlanEntry(
+      resolveExecutionTuningPlanEntry(
         executionTuningPlan,
         entry.id,
         executionPlan.entries[entry.sequence].inspection.id,
@@ -2092,7 +2178,7 @@ export function parseVisualLabBatchArguments(argv) {
   if (argv.includes('--help')) return Object.freeze({ help: true });
   const known = new Set([
     'candidates', 'recipe-set', 'bundle', 'output-dir', 'chrome', 'gpu',
-    'browser-host', 'candidate-timeout-ms', 'index-only', 'plan-only',
+    'browser-host', 'capture-proof', 'candidate-timeout-ms', 'index-only', 'plan-only',
   ]);
   const values = new Map();
   for (const argument of argv) {
@@ -2133,6 +2219,10 @@ export function parseVisualLabBatchArguments(argv) {
   if (browserHost !== 'fresh' && browserHost !== 'shared') {
     throw new Error('--browser-host must be fresh or shared');
   }
+  const captureProof = values.get('capture-proof') ?? 'stable-snapshots';
+  if (!VISUAL_LAB_CAPTURE_PROOF_MODES.includes(captureProof)) {
+    throw new Error('--capture-proof must be stable-snapshots or completed-frame-receipt');
+  }
   const candidateTimeoutMs = Number(
     values.get('candidate-timeout-ms') ?? VISUAL_LAB_DEFAULT_CANDIDATE_TIMEOUT_MS,
   );
@@ -2158,6 +2248,7 @@ export function parseVisualLabBatchArguments(argv) {
     chrome: values.get('chrome'),
     gpu,
     browserHost,
+    ...(values.has('capture-proof') ? { captureProof } : {}),
     candidateTimeoutMs,
     indexOnly: indexOnlyValue === '1',
     planOnly: planOnlyValue === '1',

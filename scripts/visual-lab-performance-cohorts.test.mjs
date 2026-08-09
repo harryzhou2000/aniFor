@@ -8,6 +8,7 @@ import {
   parseVisualLabPerformanceCohortArguments,
   runVisualLabPerformanceCohorts,
   VISUAL_LAB_PERFORMANCE_COHORT_ORDER,
+  VISUAL_LAB_PERFORMANCE_COHORT_RECEIPT_SCHEMA,
   VISUAL_LAB_PERFORMANCE_COHORT_SCHEMA,
 } from './visual-lab-performance-cohorts.mjs';
 
@@ -49,6 +50,7 @@ const hostPlan = (mode) => ({
     effectiveMode: mode,
   }],
 });
+const tuningPlan = (schema = 'anifor.visual-lab.execution-tuning-plan/v1') => ({ schema });
 const completeBatch = (mode) => ({
   ok: true,
   index: batchIndex(),
@@ -72,6 +74,7 @@ const verifiedBatch = (options, overrides = {}) => {
     timings: timing,
     captureSubphases: subphases,
     browserHostPlan: hostPlan(mode),
+    executionTuningPlan: tuningPlan(),
     ...overrides,
   };
 };
@@ -80,15 +83,19 @@ describe('Visual Lab performance cohort CLI', () => {
   it('requires one tracked recipe-set path and accepts only its narrow batch forwarding options', () => {
     expect(parseVisualLabPerformanceCohortArguments([
       '--recipe-set=visual-lab/recipe-sets/release.json', '--bundle=dist/index.html',
-      '--output-dir=/tmp/cohorts', '--gpu=swiftshader', '--chrome=/usr/bin/chrome',
+      '--output-dir=/tmp/cohorts', '--gpu=swiftshader', '--capture-proof=completed-frame-receipt', '--chrome=/usr/bin/chrome',
     ])).toMatchObject({
       help: false, recipeSetPath: 'visual-lab/recipe-sets/release.json', gpu: 'swiftshader',
+      captureProof: 'completed-frame-receipt',
     });
     expect(parseVisualLabPerformanceCohortArguments(['--help'])).toEqual({ help: true });
     expect(() => parseVisualLabPerformanceCohortArguments([])).toThrow('--recipe-set is required');
     expect(() => parseVisualLabPerformanceCohortArguments([
       '--recipe-set=set.json', '--browser-host=fresh',
     ])).toThrow('Unknown option');
+    expect(() => parseVisualLabPerformanceCohortArguments([
+      '--recipe-set=set.json', '--capture-proof=raf-only',
+    ])).toThrow('--capture-proof must be stable-snapshots or completed-frame-receipt');
     expect(() => assertVisualLabPerformanceCohortPlatform('darwin')).toThrow('require Linux');
     expect(() => assertVisualLabPerformanceCohortPlatform('linux')).not.toThrow();
   });
@@ -111,6 +118,8 @@ describe('Visual Lab performance cohort orchestration', () => {
     });
     expect(calls.filter(([kind]) => kind === 'batch').map(([, options]) => options.browserHost))
       .toEqual(VISUAL_LAB_PERFORMANCE_COHORT_ORDER);
+    expect(calls.filter(([kind]) => kind === 'batch').map(([, options]) => options.captureProof))
+      .toEqual(['stable-snapshots', 'stable-snapshots', 'stable-snapshots', 'stable-snapshots']);
     expect(calls.filter(([kind]) => kind === 'verify')).toHaveLength(4);
     for (const [, options] of calls.filter(([kind]) => kind === 'verify')) {
       expect(options).toMatchObject({
@@ -123,11 +132,75 @@ describe('Visual Lab performance cohort orchestration', () => {
       recipeSet: { schema: 'anifor.visual-lab.recipe-set/v1', id: recipeSetId },
       gpuMode: 'swiftshader', order: VISUAL_LAB_PERFORMANCE_COHORT_ORDER,
     });
-    const written = JSON.parse(await readFile(result.summaryPath, 'utf8'));
+    const bytes = await readFile(result.summaryPath, 'utf8');
+    const written = JSON.parse(bytes);
     expect(written.cohorts.map(({ ordinal, mode }) => [ordinal, mode]))
       .toEqual([[1, 'fresh'], [2, 'shared'], [3, 'shared'], [4, 'fresh']]);
     expect(JSON.stringify(written))
       .not.toMatch(/gas-showcase|index\.json|dist\/|chrome|png|result/i);
+    expect(written).not.toHaveProperty('captureProof');
+    expect(bytes).toBe(`${JSON.stringify({
+      schema: VISUAL_LAB_PERFORMANCE_COHORT_SCHEMA,
+      recipeSet: { schema: 'anifor.visual-lab.recipe-set/v1', id: recipeSetId },
+      gpuMode: 'swiftshader',
+      order: VISUAL_LAB_PERFORMANCE_COHORT_ORDER,
+      cohorts: written.cohorts,
+    }, null, 2)}\n`);
+  });
+
+  it('forwards receipt proof, requires tuning v2, and publishes a self-describing v2 summary', async () => {
+    const root = await temporaryRoot();
+    const batchCalls = [];
+    const result = await runVisualLabPerformanceCohorts({
+      recipeSetPath: 'set.json', outputDir: root, captureProof: 'completed-frame-receipt',
+    }, {
+      assertTrackedRecipeSet: async () => {},
+      readRecipeSet: async () => recipeSet(),
+      runBatch: async (options) => {
+        batchCalls.push(options);
+        return completeBatch(options.browserHost);
+      },
+      verifyBatch: async (options) => verifiedBatch(options, {
+        executionTuningPlan: tuningPlan('anifor.visual-lab.execution-tuning-plan/v2'),
+      }),
+    });
+    expect(batchCalls.map(({ captureProof }) => captureProof))
+      .toEqual(['completed-frame-receipt', 'completed-frame-receipt', 'completed-frame-receipt', 'completed-frame-receipt']);
+    expect(result.summary).toMatchObject({
+      schema: VISUAL_LAB_PERFORMANCE_COHORT_RECEIPT_SCHEMA,
+      captureProof: {
+        mode: 'completed-frame-receipt',
+        tuningSchema: 'anifor.visual-lab.execution-tuning-plan/v2',
+        receiptSchema: 'anifor.renderer.completed-frame-receipt/v1',
+      },
+    });
+    expect(JSON.stringify(result.summary.captureProof)).not.toMatch(/path|result|ticket|sample/i);
+  });
+
+  it('rejects mismatched portable tuning schemas before publishing', async () => {
+    const stableRoot = await temporaryRoot();
+    await expect(runVisualLabPerformanceCohorts({ recipeSetPath: 'set.json', outputDir: stableRoot }, {
+      assertTrackedRecipeSet: async () => {},
+      readRecipeSet: async () => recipeSet(),
+      runBatch: async (options) => completeBatch(options.browserHost),
+      verifyBatch: async (options) => verifiedBatch(options, {
+        executionTuningPlan: tuningPlan('anifor.visual-lab.execution-tuning-plan/v2'),
+      }),
+    })).rejects.toThrow('requires portable anifor.visual-lab.execution-tuning-plan/v1 for stable-snapshots');
+    await expect(readFile(path.join(stableRoot, 'performance-summary.json'), 'utf8'))
+      .rejects.toMatchObject({ code: 'ENOENT' });
+
+    const receiptRoot = await temporaryRoot();
+    await expect(runVisualLabPerformanceCohorts({
+      recipeSetPath: 'set.json', outputDir: receiptRoot, captureProof: 'completed-frame-receipt',
+    }, {
+      assertTrackedRecipeSet: async () => {},
+      readRecipeSet: async () => recipeSet(),
+      runBatch: async (options) => completeBatch(options.browserHost),
+      verifyBatch: async (options) => verifiedBatch(options),
+    })).rejects.toThrow('requires portable anifor.visual-lab.execution-tuning-plan/v2 for completed-frame-receipt');
+    await expect(readFile(path.join(receiptRoot, 'performance-summary.json'), 'utf8'))
+      .rejects.toMatchObject({ code: 'ENOENT' });
   });
 
   it('preserves completed cohort output and does not publish a summary after a later failure', async () => {
@@ -190,6 +263,7 @@ describe('Visual Lab performance cohort orchestration', () => {
         timings: timing,
         captureSubphases: subphases,
         browserHostPlan: hostPlan('shared'),
+        executionTuningPlan: tuningPlan(),
       }),
     })).rejects.toThrow('mismatched portable host plan');
   });
