@@ -40,7 +40,7 @@ describe('Visual Lab execution plan', () => {
     ]);
     expect(plan.inspection).toMatchObject({
       schema: VISUAL_LAB_EXECUTION_PLAN_SCHEMA,
-      id: 'sha256:bdefd4b9f44ce1062b388e7fb61985441e90df6cfe539d3bc52d0dab83c432bf',
+      id: 'sha256:92e4319e76b336206e06dcf0b036a12f8ff2dff13793529990d93f607ff7cd50',
       summary: { selected: 5 },
       variants: ['off', 'a', 'b'],
       executionPolicy: {

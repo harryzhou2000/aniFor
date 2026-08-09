@@ -202,6 +202,18 @@ require edits to audit, batch, baseline, review, CI, or sheet dispatch.
 Preserve `anifor.visual-lab.static-contract/v1`, every result/batch/baseline/
 comparison/recipe-set identity, and the generic WebGL capture path throughout.
 
+Same-page capture controls are fixture-owned app authority. Add a closed
+descriptor to `VisualCaptureControlRegistry`, prepare and mark the exact fixture,
+then cross the browser boundary only through
+`setPreparedVisualCaptureVariant(fixture, 0|1|2)` and the matching readback.
+Unknown, unprepared, unsupported, mismatched, invalid, or misapplied controls
+must fail before evidence capture. Driver adapters may translate that numeric
+variant back to their stable public selection label, but must not add another
+browser method name, free-form argument list, audit/batch branch, or serialized
+executable hook. The Powder migration is the reference: Smooth/Local/Grains,
+datasets, pixels, and result identity remain exact even though the private
+content-addressed execution/tuning plan rotates with its new expression.
+
 The tuning-plan increment is now the protected capture contract. The exhaustive
 scripts-side driver capability registry feeds disjoint content-addressed
 execution-tuning plans; do not put this data into the static browser contract or
@@ -215,8 +227,9 @@ full post-completion snapshot, and a same-ticket/submission completed-state read
 after that snapshot. Batch children receive a plan path plus entry ID, reports
 carry the plan/entry proof, portable verification reconstructs the matching v1
 or v2 capabilities, CI requires the sidecar, and index-only preserves existing
-bytes without inventing legacy provenance. The accepted SwiftShader Gas+Powder v1 plan ID is
-`sha256:07e0444cb11c5d363758dab8d601eb1e4d2a8c6c203d8f129830c6c66333f136`.
+bytes without inventing legacy provenance. The accepted generic-control
+SwiftShader Gas+Powder v1 plan ID is
+`sha256:0af69b62b866a004a0b52390082b66f555a99083d22c26811112dadebdeadd32`.
 
 Keep the WebGL Powder style selector single-owner: the presenter submits its
 uniform-only frame, while Canvas/no-presenter retains contour invalidation and

@@ -1007,6 +1007,18 @@ support exact. Framebuffer alpha is explicitly style-owned but must remain
 nonempty at fixed geometry, because Smooth and Grains deliberately make
 different presentation-only silhouette decisions.
 
+Same-page controls now use an app-owned, fixture-scoped registry. Preparation
+marks the exact active fixture; the generic browser bridge accepts only that
+fixture plus variant `0|1|2` and requires matching readback. The Powder driver
+maps the numeric readback back to its stable Smooth/Local/Grains dataset and
+report values. Unknown, unprepared, unsupported, mismatched, invalid, or
+misapplied controls fail before evidence capture. Future material controls add
+one typed registry descriptor without adding another browser method or branch
+to the audit, batch, baseline, review, or CI layers. The migration intentionally
+changes its private content-addressed execution/tuning plans, while built fresh
+and shared captures under both stable-snapshot and completed-receipt proof retain
+the exact established Powder result ID and all three PNG hashes.
+
 Capture the canonical 2× recipe from a production bundle with:
 
 ```sh

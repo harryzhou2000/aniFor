@@ -29,14 +29,26 @@ describe('typed visual capture drivers', () => {
     expect(resolveVisualCaptureVariant(driver, 1).name).toBe('a');
     expect(resolveVisualCaptureVariant(driver, 2).selection).toBe('grains');
 
-    let style = 'smooth';
+    let selectedVariant = 0;
+    const calls = [];
     const audit = {
-      setPowderRenderStyle: (next) => { style = next; },
-      powderRenderStyle: () => style,
+      setPreparedVisualCaptureVariant: (fixture, variant) => {
+        calls.push(['set', fixture, variant]);
+        selectedVariant = variant;
+      },
+      preparedVisualCaptureVariant: (fixture) => {
+        calls.push(['read', fixture]);
+        return selectedVariant;
+      },
     };
     expect(runSelection(driver, 0, audit)).toEqual({ ok: true, selection: 'smooth' });
     expect(runSelection(driver, 1, audit)).toEqual({ ok: true, selection: 'local' });
     expect(runSelection(driver, 2, audit)).toEqual({ ok: true, selection: 'grains' });
+    expect(calls).toEqual([
+      ['set', 'powder-style-atlas', 0], ['read', 'powder-style-atlas'],
+      ['set', 'powder-style-atlas', 1], ['read', 'powder-style-atlas'],
+      ['set', 'powder-style-atlas', 2], ['read', 'powder-style-atlas'],
+    ]);
   });
 
   it('keeps normal HDR selection and URL state byte-compatible', () => {
@@ -82,7 +94,12 @@ describe('typed visual capture drivers', () => {
     )({});
     const powderObserved = Function(
       'audit', `return ${buildVisualCaptureDatasetProjectionExpression('powder-render-style')};`,
-    )({ powderRenderStyle: () => 'grains' });
+    )({
+      preparedVisualCaptureVariant: (fixture) => {
+        expect(fixture).toBe('powder-style-atlas');
+        return 2;
+      },
+    });
 
     expect(normalObserved).toEqual({});
     expect(powderObserved).toEqual({ powderRenderStyle: 'grains' });
@@ -98,6 +115,43 @@ describe('typed visual capture drivers', () => {
     expect(['off', 'a', 'b'].map((variant) => (
       visualCaptureVariantLabel('powder-render-style', variant)
     ))).toEqual(['Smooth', 'Local', 'Grains']);
+  });
+
+  it('fails the fixture-owned Powder selector closed for unknown, unprepared, or mismatched state', () => {
+    const unknownFixture = {
+      setPreparedVisualCaptureVariant: (fixture) => {
+        throw new Error(`Unknown prepared Visual Lab fixture ${fixture}`);
+      },
+      preparedVisualCaptureVariant: () => 0,
+    };
+    expect(runSelection('powder-render-style', 0, unknownFixture))
+      .toEqual({ ok: false, failure: 'selector-threw' });
+
+    const unpreparedFixture = {
+      setPreparedVisualCaptureVariant: () => {},
+      preparedVisualCaptureVariant: () => {
+        throw new Error('Prepared Visual Lab fixture is not active');
+      },
+    };
+    expect(runSelection('powder-render-style', 1, unpreparedFixture))
+      .toEqual({ ok: false, failure: 'selector-threw' });
+
+    const mismatchedFixture = {
+      setPreparedVisualCaptureVariant: () => {},
+      preparedVisualCaptureVariant: () => 2,
+    };
+    expect(runSelection('powder-render-style', 1, mismatchedFixture)).toEqual({
+      ok: false, failure: 'selection-mismatch', selection: 'grains',
+    });
+
+    const project = (audit) => Function(
+      'audit', `return ${buildVisualCaptureDatasetProjectionExpression('powder-render-style')};`,
+    )(audit);
+    expect(project({})).toEqual({ powderRenderStyle: undefined });
+    expect(project({ preparedVisualCaptureVariant: () => { throw new Error('unprepared'); } }))
+      .toEqual({ powderRenderStyle: undefined });
+    expect(project({ preparedVisualCaptureVariant: () => 9 }))
+      .toEqual({ powderRenderStyle: undefined });
   });
 
   it('fails module-style registry construction on missing, orphan, reordered, or invalid adapters', () => {

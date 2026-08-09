@@ -30,9 +30,13 @@ Active priority order:
    exact revision and 19-resource closure. The seam exposes versioned
    pending/completed/superseded/failed tickets, fences only after the final
    presentation, and reuses the sole true-8× render fence.
-3. Treat the opt-in completed-frame capture proof as the current framework
-   checkpoint. `execution-tuning-plan/v2` keeps v1 and its frozen IDs as the
-   default, retains exact dataset/two-RAF/three-plane/screenshot proof, and
+3. Treat the opt-in completed-frame capture proof as deployed framework
+   infrastructure. Revision `90845ce9e84c8ef5f2faaef161a1779d8d4843ba`
+   was built and deployed by workflow run `31322800408`; live Pages passed its
+   exact revision and 19-resource closure, while the native build restored its
+   exact ccache key with 269/270 hits. `execution-tuning-plan/v2` keeps v1 and
+   its frozen IDs as the default, retains exact dataset/two-RAF/three-plane/
+   screenshot proof, and
    replaces only the second matching snapshot with a receipt read before and
    after the remaining snapshot. Real built fresh and shared SwiftShader Gas
    captures used the same v2 plan ID
@@ -43,7 +47,18 @@ Active priority order:
    Gas and Oxygen preserved their strict-v1 result IDs and all PNG hashes,
    every candidate/variant took exactly one evidence snapshot, and both shared
    legs used one host with zero restart.
-4. Use this framework next to compare and checkpoint material experiments. Visual
+4. Treat the fixture-owned same-page A/B control registry as the current local
+   framework checkpoint. Powder now prepares and marks its exact fixture, then
+   selects `0|1|2` through one generic browser bridge; its driver translates the
+   readback to stable Smooth/Local/Grains report data. Real built fresh/shared
+   captures under both v1 and v2 proof reproduced result
+   `sha256:2acec1e8b41ed7f499e230a59db2816850979c4668dbb82053de56aa326e2889`
+   and all three prior PNG hashes exactly, and every package passed portable
+   verification with no Chrome residue.
+5. Extend that registry to the next powder, liquid, gas, and solid experiments
+   through one typed controller descriptor plus fixture/recipe data, not another
+   browser method or harness branch. Use the framework to compare and checkpoint
+   material experiments. Visual
    preference may accept a candidate without broad unit-test expansion, but it
    must retain topology, renderer lifecycle, portable evidence, and deployment
    contracts.
@@ -280,8 +295,10 @@ screenshot-after-proof. Batch children receive only the sidecar path and exact
 entry ID; reports prove both IDs. Portable verification reconstructs the
 capture plan plus current capability registry, and CI now requires the sidecar.
 Index-only aggregation preserves an existing sidecar byte-for-byte and never
-invents one for legacy output. The frozen two-candidate SwiftShader tuning ID is
-`sha256:07e0444cb11c5d363758dab8d601eb1e4d2a8c6c203d8f129830c6c66333f136`.
+invents one for legacy output. The generic Powder-control bridge intentionally
+rotates the private content-addressed driver plan while retaining public capture
+results. The accepted two-candidate SwiftShader tuning ID is now
+`sha256:0af69b62b866a004a0b52390082b66f555a99083d22c26811112dadebdeadd32`.
 
 The first profile-preserving efficiency changes are accepted locally. WebGL
 Powder style selection now owns exactly one causal presenter frame; Canvas

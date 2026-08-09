@@ -262,14 +262,24 @@ describe('Visual Lab fixture adapters', () => {
     });
 
     const calls = [];
-    let style = 'smooth';
+    let variant = 0;
     const result = runStartupExpression(adapter, {
       backend: () => ({ backend: 'canvas2d', reason: 'webgl-starting' }),
       prepareVisualLabFixture: (fixture) => calls.push(`prepare:${fixture}`),
-      setPowderRenderStyle: (next) => { style = next; calls.push(`style:${next}`); },
-      powderRenderStyle: () => style,
+      setPreparedVisualCaptureVariant: (fixture, next) => {
+        variant = next;
+        calls.push(`select:${fixture}:${next}`);
+      },
+      preparedVisualCaptureVariant: (fixture) => {
+        calls.push(`observe:${fixture}`);
+        return variant;
+      },
     }, 'showcase');
-    expect(calls).toEqual(['prepare:powder-style-atlas', 'style:grains']);
+    expect(calls).toEqual([
+      'prepare:powder-style-atlas',
+      'select:powder-style-atlas:2',
+      'observe:powder-style-atlas',
+    ]);
     expect(result).toMatchObject({
       captureDriver: 'powder-render-style', selection: 'grains',
       fixturePrepared: true, stagedBeforeWebGL: true,

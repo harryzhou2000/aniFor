@@ -53,6 +53,7 @@ import {
 import {
   OIL_MOTION_VFX_AUDIT, prepareOilMotionVfxFixture,
 } from './oil-motion-vfx-audit';
+import { VisualCaptureControlRegistry } from './visual-capture-control-registry';
 import { prepareVisualLabFixture } from './visual-lab-fixture-preparation';
 import {
   WATER_CURVATURE_VFX_AUDIT, prepareWaterCurvatureVfxFixture,
@@ -526,6 +527,10 @@ export class Game {
     this.renderer.enablePresentationRefreshAudit();
     this.renderer.enableWebGLPresentationTiming();
     this.root.dataset.inputAudit = 'ready';
+    const visualCaptureControls = new VisualCaptureControlRegistry({
+      setPowderRenderStyle: (style) => this.renderer.setPowderRenderStyle(style),
+      getPowderRenderStyle: () => this.renderer.getPowderRenderStyle(),
+    });
     window.__ANIFOR_INPUT_AUDIT__ = {
       version: 1,
       width: this.simulation.width,
@@ -917,7 +922,12 @@ export class Game {
         // The registry owns all fixture arguments. Reconcile the authored
         // material plane once; this also invalidates retained dynamic fields.
         this.renderer.synchronizeFixtureMaterialPlane();
+        visualCaptureControls.markFixturePrepared(fixture);
       },
+      setPreparedVisualCaptureVariant: (fixture, variant) => {
+        visualCaptureControls.setVariant(fixture, variant);
+      },
+      preparedVisualCaptureVariant: (fixture) => visualCaptureControls.getVariant(fixture),
       waterCurvatureVfxFixture: () => WATER_CURVATURE_VFX_AUDIT,
       prepareWaterCurvatureVfxFixture: (mode) => {
         prepareWaterCurvatureVfxFixture(this.simulation, mode);

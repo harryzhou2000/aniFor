@@ -119,6 +119,7 @@ import type { AcidBodyVfxAuditSnapshot } from './acid-body-vfx-audit';
 import type { SootyPowderBodyVfxAuditSnapshot } from './sooty-powder-body-vfx-audit';
 import type { LiquidSolidMeniscusVfxAuditSnapshot } from './liquid-solid-meniscus-vfx-audit';
 import type { WetSedimentVfxAuditSnapshot } from './wet-sediment-vfx-audit';
+import type { VisualCaptureControlVariant } from './visual-capture-control-registry';
 import type { VisualLabPreparedFixtureId } from './visual-lab-fixture-preparation';
 import type {
   MaterialCandidateSurveyAuditSnapshot, MaterialShowcaseAuditSnapshot,
@@ -296,6 +297,12 @@ export interface BrowserInputAuditApi {
   prepareOilMotionVfxFixture(mode: OilMotionVfxFixtureMode): void;
   /** Generic, closed preparation boundary used by every authored Visual Lab fixture. */
   prepareVisualLabFixture(fixture: VisualLabPreparedFixtureId): void;
+  /** Generic, fixture-owned same-page capture control; no browser method names cross the ABI. */
+  setPreparedVisualCaptureVariant(
+    fixture: VisualLabPreparedFixtureId, variant: VisualCaptureControlVariant,
+  ): void;
+  /** Reads back the exact active fixture control for fail-closed capture selection. */
+  preparedVisualCaptureVariant(fixture: VisualLabPreparedFixtureId): VisualCaptureControlVariant;
   /** E66 uses the same exact material topology in still/moving forms. */
   waterCurvatureVfxFixture(): WaterCurvatureVfxAuditSnapshot;
   prepareWaterCurvatureVfxFixture(mode: WaterCurvatureVfxFixtureMode): void;

@@ -24,6 +24,14 @@ const normalHdrVariantValue = (variant) => {
   return descriptor.value;
 };
 
+const POWDER_STYLE_FIXTURE = 'powder-style-atlas';
+const POWDER_STYLE_BY_CAPTURE_VARIANT = Object.freeze(['smooth', 'local', 'grains']);
+const powderStyleCaptureVariantValue = (variant) => {
+  const descriptor = VISUAL_LAB_CAPTURE_VARIANTS.find(({ name }) => name === variant.name);
+  if (!descriptor) throw new TypeError(`Powder variant ${variant.name} is outside the capture ABI`);
+  return descriptor.value;
+};
+
 const EXECUTABLE_DRIVER_ADAPTERS = Object.freeze({
   'normal-hdr': Object.freeze({
     urlValues: (request) => Object.freeze({
@@ -72,21 +80,40 @@ const EXECUTABLE_DRIVER_ADAPTERS = Object.freeze({
       powderRenderStyle: variant.selection,
     }),
     selectionExpression: (variant, auditIdentifier) => {
+      const fixture = JSON.stringify(POWDER_STYLE_FIXTURE);
+      const value = JSON.stringify(powderStyleCaptureVariantValue(variant));
       const style = JSON.stringify(variant.selection);
+      const styles = JSON.stringify(POWDER_STYLE_BY_CAPTURE_VARIANT);
       return `(() => {
-      if (typeof ${auditIdentifier}.setPowderRenderStyle !== 'function'
-        || typeof ${auditIdentifier}.powderRenderStyle !== 'function') {
+      if (typeof ${auditIdentifier}.setPreparedVisualCaptureVariant !== 'function'
+        || typeof ${auditIdentifier}.preparedVisualCaptureVariant !== 'function') {
         return { ok: false, failure: 'missing-selector' };
       }
-      ${auditIdentifier}.setPowderRenderStyle(${style});
-      const observed = ${auditIdentifier}.powderRenderStyle();
-      return observed === ${style}
-        ? { ok: true, selection: observed }
-        : { ok: false, failure: 'selection-mismatch', selection: observed };
+      let observed;
+      try {
+        ${auditIdentifier}.setPreparedVisualCaptureVariant(${fixture}, ${value});
+        observed = ${auditIdentifier}.preparedVisualCaptureVariant(${fixture});
+      } catch {
+        return { ok: false, failure: 'selector-threw' };
+      }
+      const selection = ${styles}[observed];
+      return observed === ${value} && selection === ${style}
+        ? { ok: true, selection }
+        : { ok: false, failure: 'selection-mismatch', selection };
     })()`;
     },
     datasetProjectionExpression: (auditIdentifier) => (
-      `({ powderRenderStyle: ${auditIdentifier}.powderRenderStyle?.() })`
+      `(() => {
+      if (typeof ${auditIdentifier}.preparedVisualCaptureVariant !== 'function') {
+        return { powderRenderStyle: undefined };
+      }
+      try {
+        const observed = ${auditIdentifier}.preparedVisualCaptureVariant(${JSON.stringify(POWDER_STYLE_FIXTURE)});
+        return { powderRenderStyle: ${JSON.stringify(POWDER_STYLE_BY_CAPTURE_VARIANT)}[observed] };
+      } catch {
+        return { powderRenderStyle: undefined };
+      }
+    })()`
     ),
     publishesReportDescriptor: true,
     reportMismatch: 'capture-driver descriptor does not match the current typed driver',
