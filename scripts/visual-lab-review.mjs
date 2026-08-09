@@ -21,11 +21,13 @@ const HELP = `Usage:
     --output-dir=<new-review-root> \\
     [--baseline-root=<accepted-baseline>] \\
     [--candidates=<name[,name...]> | --recipe-set=<recipe-set.json>] \\
-    [--bundle=<dist/index.html>] [--chrome=<path>] \\
-    [--gpu=auto|swiftshader] [--browser-host=fresh|shared] \\
+    [--bundle=<dist/index.html> | --base-url=<http(s)-origin>] \\
+    [--expected-revision=<40-hex-commit>] \\
+    [--chrome=<path>] [--gpu=auto|swiftshader] [--browser-host=fresh|shared] \\
+    [--capture-proof=stable-snapshots|completed-frame-receipt] \\
     [--candidate-timeout-ms=<milliseconds>]
 
-Runs one trusted local review cycle against an existing production bundle:
+Runs one trusted review cycle against one existing production bundle or hosted origin:
 capture the selected recipes, compare them with the accepted baseline, then
 verify the exact portable package. The comparison is written beneath
 <new-review-root>/comparison. This command never promotes a baseline, records a
@@ -136,8 +138,8 @@ export async function runVisualLabReviewCycle(options = {}, dependencies = {}) {
     throw new TypeError('Visual Lab review cycle options must be an object');
   }
   const allowed = new Set([
-    'baselineRoot', 'browserHost', 'bundle', 'candidateTimeoutMs', 'candidates',
-    'chrome', 'gpu', 'outputDir', 'recipeSetPath', 'signal',
+    'baseUrl', 'baselineRoot', 'browserHost', 'bundle', 'candidateTimeoutMs', 'candidates',
+    'captureProof', 'chrome', 'expectedRevision', 'gpu', 'outputDir', 'recipeSetPath', 'signal',
   ]);
   const unexpected = Reflect.ownKeys(options).filter((key) => !allowed.has(key));
   if (unexpected.length > 0) {
@@ -175,8 +177,12 @@ export async function runVisualLabReviewCycle(options = {}, dependencies = {}) {
 
   const batch = await runBatch({
     outputDir: outputDirectory,
+    ...(options.baseUrl === undefined ? {} : { baseUrl: options.baseUrl }),
     ...(options.bundle === undefined ? {} : { bundle: options.bundle }),
+    ...(options.captureProof === undefined ? {} : { captureProof: options.captureProof }),
     ...(options.chrome === undefined ? {} : { chrome: options.chrome }),
+    ...(options.expectedRevision === undefined
+      ? {} : { expectedRevision: options.expectedRevision }),
     ...(options.gpu === undefined ? {} : { gpu: options.gpu }),
     ...(options.browserHost === undefined ? {} : { browserHost: options.browserHost }),
     ...(options.candidateTimeoutMs === undefined
@@ -206,6 +212,8 @@ export async function runVisualLabReviewCycle(options = {}, dependencies = {}) {
     comparisonRoot,
     ...(recipeSetSourcePath === undefined ? {} : { recipeSetSourcePath }),
     requireBrowserHostPlan: true,
+    requireExecutionTuningPlan: true,
+    requireOriginAttestation: options.baseUrl !== undefined,
     requireComplete: true,
     requireRecipeSet: true,
   });

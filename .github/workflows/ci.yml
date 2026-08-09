@@ -378,15 +378,25 @@ jobs:
           PAGE_URL: ${{ needs.deploy.outputs.page_url }}
         run: node scripts/verify-live-pages.mjs "${PAGE_URL}" "${GITHUB_SHA}"
 
-      - name: Smoke deployed Visual Lab WebGL fixture control
+      - name: Capture and verify deployed Visual Lab fixture package
         env:
           PAGE_URL: ${{ needs.deploy.outputs.page_url }}
           SMOKE_DIR: ${{ runner.temp }}/anifortpt-live-visual-lab-smoke
         run: |
           google-chrome --version
           timeout --foreground --kill-after=15s 240s \
-            node scripts/visual-lab-audit.mjs \
+            node scripts/visual-lab-batch.mjs \
             --base-url="${PAGE_URL}" \
-            --candidate=water-motion \
+            --expected-revision="${GITHUB_SHA}" \
+            --candidates=water-motion \
             --gpu=swiftshader \
+            --capture-proof=completed-frame-receipt \
+            --candidate-timeout-ms=180000 \
             --output-dir="${SMOKE_DIR}"
+          node scripts/visual-lab-verify.mjs \
+            --batch-root="${SMOKE_DIR}" \
+            --require-complete=1 \
+            --require-recipe-set=1 \
+            --require-browser-host-plan=1 \
+            --require-execution-tuning-plan=1 \
+            --require-origin-attestation=1

@@ -168,13 +168,17 @@ describe('deploy-verified CI workflow contract', () => {
       'node scripts/verify-live-pages.mjs "${PAGE_URL}" "${GITHUB_SHA}"',
     );
     const functionalSmoke = live.indexOf(
-      'node scripts/visual-lab-audit.mjs', staticClosure,
+      'node scripts/visual-lab-batch.mjs', staticClosure,
     );
     expect(staticClosure).toBeGreaterThan(0);
     expect(functionalSmoke).toBeGreaterThan(staticClosure);
     expect(live).toContain('--base-url="${PAGE_URL}"');
-    expect(live).toContain('--candidate=water-motion');
+    expect(live).toContain('--expected-revision="${GITHUB_SHA}"');
+    expect(live).toContain('--candidates=water-motion');
     expect(live).toContain('--gpu=swiftshader');
+    expect(live).toContain('--capture-proof=completed-frame-receipt');
+    expect(live).toContain('node scripts/visual-lab-verify.mjs');
+    expect(live).toContain('--require-origin-attestation=1');
     expect(live).toContain('timeout --foreground --kill-after=15s 240s');
     expect(workflow.indexOf('  verify-deployment:')).toBeGreaterThan(
       workflow.indexOf('  deploy:'),

@@ -231,6 +231,21 @@ timing contract remain unchanged. Post-deploy CI must first prove exact live
 revision/resource closure, then run one bounded live normal-HDR fixture-control
 smoke with strict Chrome/target/renderer teardown.
 
+Remote Visual Lab work must use the same portable batch/review path as local
+production bundles. `--base-url` and `--bundle` are mutually exclusive; a
+remote app root requires one exact lowercase commit through
+`--expected-revision`. Before any output mutation, crawl its no-store
+same-origin runtime closure and require the five canonical app/Wasm resources;
+after acquiring the output lock and recovering stale browser ownership, repeat
+that full closure check before invalidating evidence or launching a candidate;
+after every candidate and Chrome teardown, recheck the revision before
+publishing `origin-attestation.json`, the contact sheet, or the batch completion
+marker. The runtime-only attestation is not part of result, batch, baseline, or
+comparison identity, but the portable verifier must bind its canonical base URL
+to every passed report and may require it explicitly. Post-deploy CI uses a
+one-candidate receipt-v2 remote batch plus the ordinary portable verifier, not a
+special direct-audit acceptance path.
+
 The tuning-plan increment is now the protected capture contract. The exhaustive
 scripts-side driver capability registry feeds disjoint content-addressed
 execution-tuning plans; do not put this data into the static browser contract or

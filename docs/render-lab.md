@@ -134,11 +134,40 @@ rejects `Page.navigate` errors, is rejection-observed immediately, and is
 awaited before renderer disposal. Local `file://` production bundles retain
 their established direct-launch path and capture identities.
 
-The Pages workflow first verifies exact revision and all runtime resources,
-then runs a bounded SwiftShader `water-motion` capture against the live URL.
-That smoke proves deployed module/Wasm boot, WebGL 2× promotion, authored fixture
-activation, normal-HDR `0|1|2` set/readback, semantic/field/framebuffer evidence,
-screenshots, browser-error checks, and strict renderer/target/Chrome teardown.
+Hosted origins use the ordinary portable batch and review machinery. Supply an
+HTTP(S) application root and its exact deployed commit instead of a local
+bundle; the two source forms are mutually exclusive:
+
+```sh
+node scripts/visual-lab-batch.mjs \
+  --base-url=https://example.github.io/AniforTPT/ \
+  --expected-revision=<lowercase-40-hex-commit> \
+  --candidates=water-motion \
+  --gpu=swiftshader \
+  --capture-proof=completed-frame-receipt \
+  --output-dir=/tmp/anifor-hosted-water
+node scripts/visual-lab-verify.mjs \
+  --batch-root=/tmp/anifor-hosted-water \
+  --require-complete=1 \
+  --require-recipe-set=1 \
+  --require-browser-host-plan=1 \
+  --require-execution-tuning-plan=1 \
+  --require-origin-attestation=1
+```
+
+Before creating the output tree, the batch checks the exact revision and crawls
+the no-store same-origin runtime closure. Once it owns the output lock and has
+recovered stale browser ownership, it repeats that closure check before
+invalidating evidence or launching Chrome. After capture and strict teardown it
+rechecks the revision, then publishes `origin-attestation.json` before the
+contact sheet and final batch marker. This sidecar is runtime provenance, not a
+result/batch/baseline/comparison identity input; portable verification binds its
+canonical URL to every passed report. The Pages workflow first verifies exact
+revision/resources, then runs this bounded receipt-v2 Water batch and verifier.
+Together they prove deployed module/Wasm boot, WebGL 2× promotion, authored
+fixture activation, normal-HDR `0|1|2` set/readback, semantic/field/framebuffer
+evidence, completed GPU presentation, screenshots, browser-error checks, and
+strict renderer/target/Chrome teardown.
 
 The real-browser audit first captures and signature-checks this deterministic
 atlas, then clears it and exercises painting, wheel/pan, resizing, and mobile

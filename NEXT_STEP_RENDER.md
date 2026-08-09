@@ -77,8 +77,15 @@ Active priority order:
    its difference from the older accepted baseline therefore predates this
    control migration. A separate fresh-host default-v1 Water batch reproduced
    the same result and all three PNG hashes through the two-snapshot path.
-6. Make functional hosted verification the current framework checkpoint. A
-   slow HTTP(S) target can finish its short Canvas staging window before a
+6. Treat navigation-safe functional hosted verification as deployed framework
+   infrastructure. Revision `d4fdc0ef09cf6a1488d124499ad3f5f3df14cca8`
+   was built and deployed by workflow run `31327167547`; exact live revision
+   plus 19-resource closure passed on attempt one, then the hosted Water fixture
+   promoted through Canvas staging to WebGL 2× active HDR with all three
+   evidence invariants, three captures, zero browser errors, and strict teardown.
+   The exact ccache key restored 269/270 compilation hits and correctly skipped
+   a duplicate cache save. A slow HTTP(S) target can finish its short Canvas
+   staging window before a
    directly launched DevTools client attaches. Remote captures now create an
    `about:blank` incognito target, attach Page/Runtime/Log plus fixed device
    metrics first, then begin one readiness-bounded navigation concurrently with
@@ -87,11 +94,24 @@ Active priority order:
    established Gas result and all three PNG hashes. A Chrome capture relaying
    the exact live Pages bytes reproduced Powder result
    `sha256:2acec1e8b41ed7f499e230a59db2816850979c4668dbb82053de56aa326e2889`
-   and all Smooth/Local/Grains hashes with zero browser errors. Extend the
-   post-deploy job now follows revision/resource closure with a bounded live
-   Water WebGL fixture-control smoke, so every release must prove real
-   module/Wasm boot, normal-HDR selection/readback, evidence capture, and
-   teardown. Its first deployed run is the acceptance gate for this checkpoint.
+   and all Smooth/Local/Grains hashes with zero browser errors. The post-deploy
+   job follows revision/resource closure with a bounded live Water WebGL
+   fixture-control smoke, so every release proves real module/Wasm boot,
+   normal-HDR selection/readback, evidence capture, and teardown.
+7. Make deployed origins first-class portable experiment inputs. The current
+   increment adds `--base-url` XOR `--bundle` to batch and review, requires an
+   exact deployed commit, verifies the no-store same-origin runtime closure
+   before output mutation, repeats that closure while holding the output lock
+   after stale-process recovery, rechecks revision stability after capture/teardown,
+   and publishes a runtime-only `origin-attestation.json` outside every frozen
+   visual identity. The ordinary portable verifier binds that canonical origin
+   to every passed report. A real HTTP production-bundle Water run used receipt
+   v2, passed the 19-resource attestation and portable verifier, reproduced
+   result `sha256:b107a9841f693139043fd2705eb658c6c3ff8a50f403032a3d79217cd92ea9fd`
+   plus all three established PNG hashes, completed three GPU receipts, and
+   finished in 30.8 seconds with zero browser errors or process residue. The
+   post-deploy release gate now uses this one-candidate remote batch plus the
+   portable verifier; deploy it as the next framework checkpoint.
 
 Continue improving the registration and evidence loop before spending the
 milestone on isolated shader detail. Visual preference may later accept a

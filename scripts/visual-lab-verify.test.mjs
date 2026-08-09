@@ -66,6 +66,7 @@ describe('Visual Lab portable package verifier', () => {
       recipeSetSourcePath: undefined,
       requireBrowserHostPlan: false,
       requireExecutionTuningPlan: false,
+      requireOriginAttestation: false,
       requireComplete: true,
       requireRecipeSet: false,
     });
@@ -77,6 +78,7 @@ describe('Visual Lab portable package verifier', () => {
       '--require-recipe-set=1',
       '--require-browser-host-plan=1',
       '--require-execution-tuning-plan=1',
+      '--require-origin-attestation=1',
     ])).toEqual({
       help: false,
       batchRoot: 'artifacts/review',
@@ -85,6 +87,7 @@ describe('Visual Lab portable package verifier', () => {
       recipeSetSourcePath: 'visual-lab/recipe-sets/release.json',
       requireBrowserHostPlan: true,
       requireExecutionTuningPlan: true,
+      requireOriginAttestation: true,
       requireComplete: false,
       requireRecipeSet: true,
     });
@@ -113,6 +116,7 @@ describe('Visual Lab portable package verifier', () => {
       recipeSetSourcePath: 'release.json',
       requireBrowserHostPlan: true,
       requireExecutionTuningPlan: true,
+      requireOriginAttestation: true,
       requireComplete: true,
       requireRecipeSet: true,
     }, {
@@ -128,6 +132,7 @@ describe('Visual Lab portable package verifier', () => {
         batchRoot: 'downloaded-review',
         requireBrowserHostPlan: true,
         requireExecutionTuningPlan: true,
+        requireOriginAttestation: true,
         requireComplete: true,
         requireRecipeSet: true,
         recipeSetSourcePath: 'release.json',
@@ -154,6 +159,7 @@ describe('Visual Lab portable package verifier', () => {
       },
       browserHostPlan: batchEvidence.browserHostPlan,
       executionTuningPlan: batchEvidence.executionTuningPlan,
+      originAttestation: null,
       captureSubphases: batchEvidence.captureSubphases,
       comparison: comparisonEvidence.comparison,
     });
@@ -171,6 +177,7 @@ describe('Visual Lab portable package verifier', () => {
     expect(batchOnly.recipeSet).toBeNull();
     expect(batchOnly.browserHostPlan).toBeNull();
     expect(batchOnly.executionTuningPlan).toBeNull();
+    expect(batchOnly.originAttestation).toBeNull();
     expect(batchOnly.comparison).toBeNull();
   });
 
@@ -205,7 +212,7 @@ describe('Visual Lab portable package verifier', () => {
       deployVerification,
     );
     const liveFunctionalSmoke = workflow.indexOf(
-      'node scripts/visual-lab-audit.mjs', liveVerification,
+      'node scripts/visual-lab-batch.mjs', liveVerification,
     );
     expect(upload).toBeGreaterThan(0);
     expect(download).toBeGreaterThan(upload);
@@ -221,6 +228,10 @@ describe('Visual Lab portable package verifier', () => {
     expect(deploySuccessGuard).toBeGreaterThan(deployVerification);
     expect(liveVerification).toBeGreaterThan(deploySuccessGuard);
     expect(liveFunctionalSmoke).toBeGreaterThan(liveVerification);
-    expect(workflow.slice(deployVerification)).toContain('--candidate=water-motion');
+    expect(workflow.slice(deployVerification)).toContain('--candidates=water-motion');
+    expect(workflow.slice(liveFunctionalSmoke)).toContain(
+      '--capture-proof=completed-frame-receipt',
+    );
+    expect(workflow.slice(liveFunctionalSmoke)).toContain('--require-origin-attestation=1');
   });
 });

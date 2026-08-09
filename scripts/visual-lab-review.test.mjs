@@ -46,6 +46,7 @@ describe('Visual Lab review-cycle CLI', () => {
     const parsed = parseVisualLabReviewArguments([
       '--candidates=oxygen-showcase,water-motion',
       '--bundle=dist/index.html',
+      '--capture-proof=completed-frame-receipt',
       '--output-dir=artifacts/review',
       '--chrome=/usr/bin/chrome',
       '--gpu=swiftshader',
@@ -62,8 +63,18 @@ describe('Visual Lab review-cycle CLI', () => {
       gpu: 'swiftshader',
       browserHost: 'shared',
       candidateTimeoutMs: 123456,
+      captureProof: 'completed-frame-receipt',
     });
     expect(parsed.baselineRoot).toBe(path.resolve('visual-baselines/accepted-v1'));
+
+    expect(parseVisualLabReviewArguments([
+      '--output-dir=hosted-review',
+      '--base-url=https://example.invalid/anifortpt',
+      '--expected-revision=1234567890abcdef1234567890abcdef12345678',
+    ])).toMatchObject({
+      baseUrl: 'https://example.invalid/anifortpt/',
+      expectedRevision: '1234567890abcdef1234567890abcdef12345678',
+    });
 
     expect(parseVisualLabReviewArguments([
       '--recipe-set=visual-lab/recipe-sets/release.json',
@@ -85,6 +96,9 @@ describe('Visual Lab review-cycle CLI', () => {
       .toThrow('--plan-only is not supported');
     expect(() => parseVisualLabReviewArguments([
       '--output-dir=review', '--candidates=gas-showcase', '--recipe-set=set.json',
+    ])).toThrow('mutually exclusive');
+    expect(() => parseVisualLabReviewArguments([
+      '--output-dir=review', '--bundle=dist/index.html', '--base-url=https://example.invalid/game/',
     ])).toThrow('mutually exclusive');
   });
 });
@@ -139,6 +153,8 @@ describe('Visual Lab review-cycle orchestration', () => {
         baselineRoot,
         comparisonRoot,
         requireBrowserHostPlan: true,
+        requireExecutionTuningPlan: true,
+        requireOriginAttestation: false,
         requireComplete: true,
         requireRecipeSet: true,
       }],
@@ -179,6 +195,43 @@ describe('Visual Lab review-cycle orchestration', () => {
     expect(calls[1][0]).toBe('batch');
     expect(calls[1][1]).toMatchObject({ recipeSet, recipeSetSourcePath: recipeSetPath, outputDir });
     expect(calls[1][1]).not.toHaveProperty('candidates');
+  });
+
+  it('forwards a hosted base URL and receipt proof unchanged to the shared batch runner', async () => {
+    const root = await temporaryDirectory();
+    const outputDir = path.join(root, 'batch');
+    const calls = [];
+
+    await runVisualLabReviewCycle({
+      candidates: ['water-motion'],
+      baseUrl: 'https://example.invalid/anifortpt/',
+      expectedRevision: '1234567890abcdef1234567890abcdef12345678',
+      captureProof: 'completed-frame-receipt',
+      outputDir,
+      baselineRoot: path.join(root, 'accepted'),
+    }, {
+      runBatch: async (options) => { calls.push(['batch', options]); return completeBatch(outputDir); },
+      runBaseline: async (options) => {
+        calls.push(['baseline', options]);
+        return completeComparison(options.outputDir);
+      },
+      verifyPackage: async (options) => {
+        calls.push(['verify', options]);
+        return { ok: true, comparison: { id: 'sha256:comparison' } };
+      },
+    });
+
+    expect(calls[0]).toEqual(['batch', {
+      candidates: ['water-motion'],
+      baseUrl: 'https://example.invalid/anifortpt/',
+      expectedRevision: '1234567890abcdef1234567890abcdef12345678',
+      captureProof: 'completed-frame-receipt',
+      outputDir,
+    }]);
+    expect(calls[2][1]).toMatchObject({
+      requireExecutionTuningPlan: true,
+      requireOriginAttestation: true,
+    });
   });
 
   it('stops before comparison and verification when capture reports an incomplete batch or throws', async () => {

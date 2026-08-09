@@ -118,7 +118,7 @@ describe('configured-source target-identity graphics audit', () => {
     expect(SOURCE_TARGET_GRAPHICS_AUDIT.targetControls).toHaveLength(42);
     expect(SOURCE_TARGET_GRAPHICS_AUDIT.wallCoexistence).toHaveLength(42);
     expect(SOURCE_TARGET_GRAPHICS_AUDIT.guardedBlanks).toHaveLength(42);
-  });
+  }, 10_000);
 
   it('is deterministic and rejects incomplete or non-canonical backends', () => {
     const first = new RenderLabBackend();

@@ -67,6 +67,15 @@ import {
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
 } from './visual-lab-execution-tuning-plan.mjs';
 import { startVisualLabChromeHost } from './visual-lab-chrome-host.mjs';
+import {
+  normalizeLivePagesRevision,
+  verifyLivePagesDeployment,
+  verifyLivePagesRevision,
+} from './live-pages-attestation.mjs';
+import {
+  createVisualLabOriginAttestation,
+  normalizeVisualLabOriginAttestation,
+} from './visual-lab-origin-attestation.mjs';
 
 export { inspectVisualLabPng } from './visual-lab-png.mjs';
 
@@ -91,6 +100,7 @@ const BATCH_LOCK_FILE_NAME = '.visual-lab-batch.lock';
 const BATCH_LOCK_SCHEMA = 'anifor.visual-lab.batch-lock/v1';
 const BROWSER_HOST_PLAN_FILE_NAME = 'browser-host-plan.json';
 const EXECUTION_TUNING_PLAN_FILE_NAME = 'execution-tuning-plan.json';
+const ORIGIN_ATTESTATION_FILE_NAME = 'origin-attestation.json';
 const SHARED_CHROME_LIFECYCLE_FILE_NAME = '.shared-chrome-lifecycle.json';
 const DEFERRED_REPORT_FILE_NAME = 'report.pending.json';
 const LIFECYCLE_CLOCK_SKEW_MS = 60_000;
@@ -144,6 +154,8 @@ Options (use --name=value):
   --candidates=<name,name>               Named recipes (default: all catalog entries)
   --recipe-set=<recipe-set.json>         Exact recipe-set/v1 (exclusive with --candidates)
   --bundle=dist/index.html               One existing production bundle for every capture
+  --base-url=https://host/app/           Remote HTTP(S) app root (exclusive with --bundle)
+  --expected-revision=<40-hex-commit>    Required exact revision for remote capture
   --output-dir=/tmp/anifor-visual-lab-batch
   --chrome=/path/to/chrome               Forwarded to the generic capture runner
   --gpu=auto|swiftshader                 Forwarded to the generic capture runner
@@ -156,9 +168,34 @@ Options (use --name=value):
   --help
 
 Capture outputs: recipe-set.json, browser-host-plan.json, execution-tuning-plan.json,
+optional origin-attestation.json,
 index.json, index.html,
 and candidates/<name>/ artifacts.
 Plan-only writes one JSON record to stdout and does not create the output tree.`;
+
+/**
+ * Normalizes a remote app root before it can enter the executable plan. Keep
+ * this deliberately narrower than the execution-plan URL parser: batch remote
+ * captures cannot inherit credentials, query state, or a fragment from a
+ * caller, and always resolve recipe URLs beneath one explicit app-root slash.
+ */
+export function normalizeVisualLabBatchBaseUrl(value) {
+  if (typeof value !== 'string' || value.length === 0) {
+    throw new TypeError('Visual Lab batch baseUrl must be a non-empty absolute HTTP(S) URL');
+  }
+  if (value.trim() !== value || !/^https?:\/\//i.test(value) || /[?#]/.test(value)) {
+    throw new TypeError('Visual Lab batch baseUrl must be an unambiguous HTTP(S) app root');
+  }
+  let url;
+  try { url = new URL(value); }
+  catch { throw new TypeError('Visual Lab batch baseUrl must be an absolute HTTP(S) URL'); }
+  if ((url.protocol !== 'http:' && url.protocol !== 'https:')
+    || url.username !== '' || url.password !== '' || url.search !== '' || url.hash !== '') {
+    throw new TypeError('Visual Lab batch baseUrl must be an uncredentialed HTTP(S) app root');
+  }
+  if (!url.pathname.endsWith('/')) url.pathname = `${url.pathname}/`;
+  return url;
+}
 
 class CandidateArtifactError extends Error {
   constructor(code, message, options = {}) {
@@ -991,6 +1028,41 @@ const readOptionalExecutionTuningPlan = async (file) => {
   );
 };
 
+const readOptionalOriginAttestation = async (file) => {
+  if (await pathDetails(file) === undefined) return null;
+  const source = await readStableRegularFile(
+    file, 'Visual Lab deployed-origin attestation', 'utf8',
+  );
+  return normalizeVisualLabOriginAttestation(
+    parsePortableJson(source, 'Visual Lab deployed-origin attestation'),
+  );
+};
+
+const assertOriginAttestationCaptureIdentity = (
+  originAttestation, entries, { required = false } = {},
+) => {
+  const passed = entries.filter((entry) => entry.status === 'passed');
+  if (originAttestation === null) {
+    if (required) {
+      throw new TypeError('Visual Lab batch package is missing origin-attestation.json');
+    }
+    return;
+  }
+  if (passed.length === 0) {
+    if (required) {
+      throw new TypeError('Visual Lab origin attestation lacks passed capture identity proof');
+    }
+    return;
+  }
+  for (const entry of passed) {
+    if (entry.executionProof?.baseUrl !== originAttestation.baseUrl) {
+      throw new TypeError(
+        `Visual Lab deployed origin does not match ${entry.candidate} capture base URL`,
+      );
+    }
+  }
+};
+
 const assertCompletedFrameReceiptReportProof = (report, tuningSchema) => {
   const receiptRequired = tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA;
   let previousTicket = 0;
@@ -1222,7 +1294,7 @@ export async function verifyVisualLabBatchPackage(options = {}) {
   }
   const allowed = new Set([
     'batchRoot', 'requireBrowserHostPlan', 'requireExecutionTuningPlan',
-    'requireComplete', 'requireRecipeSet',
+    'requireComplete', 'requireOriginAttestation', 'requireRecipeSet',
     'recipeSetSourcePath',
   ]);
   const unexpected = Reflect.ownKeys(options).filter((key) => !allowed.has(key));
@@ -1235,10 +1307,12 @@ export async function verifyVisualLabBatchPackage(options = {}) {
   const requireComplete = options.requireComplete ?? true;
   const requireBrowserHostPlan = options.requireBrowserHostPlan ?? false;
   const requireExecutionTuningPlan = options.requireExecutionTuningPlan ?? false;
+  const requireOriginAttestation = options.requireOriginAttestation ?? false;
   const requireRecipeSet = options.requireRecipeSet ?? false;
   if (typeof requireComplete !== 'boolean'
     || typeof requireBrowserHostPlan !== 'boolean'
     || typeof requireExecutionTuningPlan !== 'boolean'
+    || typeof requireOriginAttestation !== 'boolean'
     || typeof requireRecipeSet !== 'boolean') {
     throw new TypeError('Visual Lab batch verification requirement flags must be booleans');
   }
@@ -1339,6 +1413,13 @@ export async function verifyVisualLabBatchPackage(options = {}) {
     );
   }
 
+  const originAttestation = await readOptionalOriginAttestation(
+    path.join(batchRoot, ORIGIN_ATTESTATION_FILE_NAME),
+  );
+  assertOriginAttestationCaptureIdentity(originAttestation, entries, {
+    required: requireOriginAttestation,
+  });
+
   let sourceRecipeSet;
   if (options.recipeSetSourcePath !== undefined) {
     sourceRecipeSet = await readVisualLabRecipeSet(options.recipeSetSourcePath);
@@ -1353,6 +1434,7 @@ export async function verifyVisualLabBatchPackage(options = {}) {
     recipeSet: recipeSet ?? null,
     browserHostPlan,
     executionTuningPlan,
+    originAttestation,
     timings: summarizeEntryTimings(entries),
     captureSubphases: summarizeEntryCaptureSubphases(entries),
   });
@@ -1604,7 +1686,29 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   if (indexOnly && planOnly) {
     throw new Error('Visual Lab batch indexOnly and planOnly are mutually exclusive');
   }
-  const bundle = path.resolve(options.bundle ?? path.join(REPOSITORY_ROOT, 'dist/index.html'));
+  if (options.bundle !== undefined && options.baseUrl !== undefined) {
+    throw new Error('Visual Lab batch bundle and baseUrl are mutually exclusive');
+  }
+  if (options.bundle !== undefined
+    && (typeof options.bundle !== 'string' || options.bundle.length === 0)) {
+    throw new TypeError('Visual Lab batch bundle must be a non-empty string');
+  }
+  const remoteBaseUrl = options.baseUrl === undefined
+    ? null : normalizeVisualLabBatchBaseUrl(options.baseUrl);
+  if (remoteBaseUrl === null && options.expectedRevision !== undefined) {
+    throw new Error('Visual Lab batch expectedRevision is valid only with baseUrl');
+  }
+  if (remoteBaseUrl !== null && options.expectedRevision === undefined) {
+    throw new Error('Visual Lab batch remote capture requires expectedRevision');
+  }
+  const expectedRevision = remoteBaseUrl === null
+    ? undefined : normalizeLivePagesRevision(options.expectedRevision);
+  // Preserve the historical file URL, including its execution-plan identity,
+  // whenever no remote source was selected.
+  const bundle = remoteBaseUrl === null
+    ? path.resolve(options.bundle ?? path.join(REPOSITORY_ROOT, 'dist/index.html'))
+    : null;
+  const selectedBaseUrl = remoteBaseUrl ?? pathToFileURL(bundle);
   const gpu = options.gpu ?? 'auto';
   const browserHost = options.browserHost ?? 'fresh';
   const captureProof = options.captureProof ?? 'stable-snapshots';
@@ -1641,7 +1745,7 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   const executionPlan = createVisualLabExecutionPlan({
     recipeSet: options.recipeSet,
     candidates: options.candidates,
-    baseUrl: pathToFileURL(bundle),
+    baseUrl: selectedBaseUrl,
     outputDir: requestedOutputDirectory,
     gpu,
     candidateTimeoutMs,
@@ -1678,7 +1782,7 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   const executionPlanByCandidate = new Map(
     executionPlan.entries.map((entry) => [entry.candidate, entry]),
   );
-  if (!indexOnly && !planOnly) {
+  if (bundle !== null && !indexOnly && !planOnly) {
     let details;
     try { details = await stat(bundle); } catch { /* handled below */ }
     if (!details?.isFile()) throw new Error(`Cannot read production bundle ${bundle}`);
@@ -1698,6 +1802,11 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
     });
   }
 
+  const verifyDeployment = dependencies.verifyDeployment ?? verifyLivePagesDeployment;
+  const verifyRevision = dependencies.verifyRevision ?? verifyLivePagesRevision;
+  const initialOriginPreflight = remoteBaseUrl === null || indexOnly
+    ? null : await verifyDeployment(selectedBaseUrl.href, expectedRevision);
+
   const outputDirectory = await ensureRealDirectory(
     requestedOutputDirectory, 'Visual Lab output directory',
   );
@@ -1711,12 +1820,16 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   const executionTuningPlanPath = path.join(
     outputDirectory, EXECUTION_TUNING_PLAN_FILE_NAME,
   );
+  const originAttestationPath = path.join(outputDirectory, ORIGIN_ATTESTATION_FILE_NAME);
   const publishedBrowserHostPlan = indexOnly
     ? await readOptionalBrowserHostPlan(browserHostPlanPath)
     : browserHostPlan;
   const publishedExecutionTuningPlan = indexOnly
     ? await readOptionalExecutionTuningPlan(executionTuningPlanPath)
     : executionTuningPlan;
+  let publishedOriginAttestation = indexOnly
+    ? await readOptionalOriginAttestation(originAttestationPath)
+    : null;
   if (publishedBrowserHostPlan !== null) {
     assertBrowserHostPlanMatchesEntries(publishedBrowserHostPlan, recipes);
   }
@@ -1749,6 +1862,12 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
     candidateDirectories.set(recipe.name, candidateDirectory);
     lifecycleOwners.set(recipe.name, lifecycleOwner);
   }
+  // The first check fails before even creating an output tree. Repeat the full
+  // closure check while holding the batch lock, after stale-process recovery,
+  // so a competing batch cannot leave this capture queued behind a preflight
+  // for a deployment that is no longer live.
+  const originPreflight = initialOriginPreflight === null
+    ? null : await verifyDeployment(selectedBaseUrl.href, expectedRevision);
   // A prior successful sheet must never survive a rerun that is interrupted
   // before new evidence can be aggregated. Remove only root files owned by
   // this tool; candidate logs remain available for diagnosis.
@@ -1758,6 +1877,7 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
     ...(!indexOnly ? [
       browserHostPlanPath, `${browserHostPlanPath}.tmp`,
       executionTuningPlanPath, `${executionTuningPlanPath}.tmp`,
+      originAttestationPath, `${originAttestationPath}.tmp`,
     ] : []),
   ].map((file) => rm(file, { force: true })));
   const runCandidate = dependencies.runCandidate ?? defaultRunCandidate;
@@ -1831,7 +1951,7 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
         chromePath: options.chrome,
         gpuMode: gpu,
         initialUrl: new URL('about:blank'),
-        allowFileAccess: pathToFileURL(bundle).protocol === 'file:',
+        allowFileAccess: selectedBaseUrl.protocol === 'file:',
         lifecycleFile: sharedLifecyclePath,
         lifecycleOwner: sharedLifecycleOwner,
       });
@@ -1949,7 +2069,7 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
       await Promise.all([writeFile(stdoutPath, ''), writeFile(stderrPath, '')]);
       const args = [
         auditScript,
-        `--bundle=${bundle}`,
+        bundle === null ? `--base-url=${selectedBaseUrl.href}` : `--bundle=${bundle}`,
         `--candidate=${recipe.name}`,
         `--output-dir=${candidateDirectory}`,
         `--gpu=${gpu}`,
@@ -2142,6 +2262,25 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
       { required: index.complete },
     );
   }
+  if (originPreflight !== null) {
+    const postflight = await verifyRevision(selectedBaseUrl.href, expectedRevision);
+    publishedOriginAttestation = createVisualLabOriginAttestation(
+      originPreflight, postflight.revision,
+    );
+    await publishFile(
+      originAttestationPath, `${JSON.stringify(publishedOriginAttestation, null, 2)}\n`,
+    );
+  }
+  if (remoteBaseUrl !== null && publishedOriginAttestation !== null
+      && (publishedOriginAttestation.baseUrl !== selectedBaseUrl.href
+        || publishedOriginAttestation.revision !== expectedRevision)) {
+    throw new TypeError(
+      'Visual Lab deployed-origin attestation does not match its requested remote source',
+    );
+  }
+  assertOriginAttestationCaptureIdentity(publishedOriginAttestation, entries, {
+    required: remoteBaseUrl !== null && index.complete,
+  });
   const timingSummary = summarizeEntryTimings(entries);
   const captureSubphaseSummary = summarizeEntryCaptureSubphases(entries);
   // Publish the human sheet first and the machine-readable completion marker
@@ -2162,6 +2301,8 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
     browserHostPlanPath,
     executionTuningPlan: publishedExecutionTuningPlan,
     executionTuningPlanPath,
+    originAttestation: publishedOriginAttestation,
+    originAttestationPath,
     browserHostRuntime: Object.freeze({
       ...browserHostRuntime,
       assignments: Object.freeze([...browserHostRuntime.assignments]),
@@ -2177,7 +2318,8 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
 export function parseVisualLabBatchArguments(argv) {
   if (argv.includes('--help')) return Object.freeze({ help: true });
   const known = new Set([
-    'candidates', 'recipe-set', 'bundle', 'output-dir', 'chrome', 'gpu',
+    'candidates', 'recipe-set', 'bundle', 'base-url', 'expected-revision',
+    'output-dir', 'chrome', 'gpu',
     'browser-host', 'capture-proof', 'candidate-timeout-ms', 'index-only', 'plan-only',
   ]);
   const values = new Map();
@@ -2201,6 +2343,15 @@ export function parseVisualLabBatchArguments(argv) {
   }
   if (values.has('candidates') && values.has('recipe-set')) {
     throw new Error('--candidates and --recipe-set are mutually exclusive');
+  }
+  if (values.has('bundle') && values.has('base-url')) {
+    throw new Error('--bundle and --base-url are mutually exclusive');
+  }
+  if (values.has('expected-revision') && !values.has('base-url')) {
+    throw new Error('--expected-revision requires --base-url');
+  }
+  if (values.has('base-url') && !values.has('expected-revision')) {
+    throw new Error('--base-url requires --expected-revision');
   }
   const indexOnlyValue = values.get('index-only') ?? '0';
   if (indexOnlyValue !== '0' && indexOnlyValue !== '1') {
@@ -2233,17 +2384,25 @@ export function parseVisualLabBatchArguments(argv) {
       }`,
     );
   }
-  for (const name of ['recipe-set', 'bundle', 'output-dir', 'chrome']) {
+  for (const name of [
+    'recipe-set', 'bundle', 'base-url', 'expected-revision', 'output-dir', 'chrome',
+  ]) {
     if (values.has(name) && values.get(name).length === 0) {
       throw new Error(`--${name} must not be empty`);
     }
   }
+  const baseUrl = values.has('base-url')
+    ? normalizeVisualLabBatchBaseUrl(values.get('base-url')).href : undefined;
+  const expectedRevision = values.has('expected-revision')
+    ? normalizeLivePagesRevision(values.get('expected-revision')) : undefined;
 
   return Object.freeze({
     help: false,
     candidates,
     ...(values.has('recipe-set') ? { recipeSetPath: values.get('recipe-set') } : {}),
     bundle: values.get('bundle'),
+    ...(baseUrl === undefined ? {} : { baseUrl }),
+    ...(expectedRevision === undefined ? {} : { expectedRevision }),
     outputDir: values.get('output-dir'),
     chrome: values.get('chrome'),
     gpu,
@@ -2312,6 +2471,12 @@ const main = async () => {
       executionTuning: result.executionTuningPlan === null ? null : {
         id: result.executionTuningPlan.id,
         path: result.executionTuningPlanPath,
+      },
+      originAttestation: result.originAttestation === null ? null : {
+        baseUrl: result.originAttestation.baseUrl,
+        revision: result.originAttestation.revision,
+        checkedResources: result.originAttestation.checkedResources,
+        path: result.originAttestationPath,
       },
       index: result.indexPath,
       contactSheet: result.contactSheetPath,

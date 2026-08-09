@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   createVisualLabBatchIndex,
+  normalizeVisualLabBatchBaseUrl,
   parseVisualLabBatchArguments,
   renderVisualLabContactSheet,
   runVisualLabBatch,
@@ -49,6 +50,30 @@ import {
 import { isDetachedProcessGroupAlive } from './detached-process.mjs';
 
 const temporaryDirectories = [];
+const REMOTE_REVISION = '1234567890abcdef1234567890abcdef12345678';
+
+const remoteAttestationDependencies = {
+  verifyDeployment: async (baseUrl, revision) => {
+    const root = new URL(baseUrl);
+    const resourcePaths = [
+      root.pathname,
+      ...[
+        'assets/app.js',
+        'assets/style.css',
+        'wasm/powder_core.wasm',
+        'wasm/stillroom_core.js',
+        'wasm/stillroom_core.wasm',
+      ].map((relative) => new URL(relative, root).pathname),
+    ];
+    return Object.freeze({
+      baseUrl: root.href,
+      revision,
+      resourcePaths: Object.freeze(resourcePaths),
+      resourceCount: resourcePaths.length,
+    });
+  },
+  verifyRevision: async (baseUrl, revision) => Object.freeze({ baseUrl, revision }),
+};
 
 afterEach(async () => {
   await Promise.all(temporaryDirectories.splice(0).map((directory) => (
@@ -312,7 +337,7 @@ const writeValidCapture = async (directory, candidate, options = {}) => {
     ...visualCaptureDriverReportFields(driver),
     result,
     url: buildVisualLabCaptureUrl(
-      'http://127.0.0.1:5173/', requestFor(candidate),
+      options.baseUrl ?? 'http://127.0.0.1:5173/', requestFor(candidate),
     ).href,
     domain: recipe.domain,
     target: recipe.target,
@@ -594,6 +619,186 @@ describe('Visual Lab batch runner', () => {
     expect(await readFile(result.contactSheetPath, 'utf8'))
       .toContain('<strong>Incomplete</strong> · 2/4 passed');
   });
+
+  it('treats a normalized HTTP(S) app root as a first-class capture source', async () => {
+    const root = await makeTemporaryDirectory();
+    const outputDirectory = path.join(root, 'remote-batch');
+    const baseUrl = 'https://example.test/anifor';
+    const canonicalBaseUrl = 'https://example.test/anifor/';
+    const calls = [];
+    const result = await runVisualLabBatch({
+      candidates: ['gas-showcase'], baseUrl, expectedRevision: REMOTE_REVISION,
+      outputDir: outputDirectory,
+    }, {
+      ...remoteAttestationDependencies,
+      runCandidate: async (call) => {
+        calls.push(call);
+        await writeValidCapture(call.candidateDirectory, call.recipe.name, {
+          baseUrl: canonicalBaseUrl,
+          timings: timingRecord(),
+        });
+        return { code: 0, signal: null, timedOut: false };
+      },
+    });
+
+    expect(result).toMatchObject({ ok: true, exitCode: 0 });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].args).toContain(`--base-url=${canonicalBaseUrl}`);
+    expect(calls[0].args.some((argument) => argument.startsWith('--bundle='))).toBe(false);
+    expect(calls[0].executionPlan.compiled.url).toMatch(/^https:\/\/example\.test\/anifor\//);
+    expect(result.originAttestation).toMatchObject({
+      baseUrl: canonicalBaseUrl,
+      revision: REMOTE_REVISION,
+      postCaptureRevision: REMOTE_REVISION,
+      checkedResources: 6,
+    });
+    await expect(verifyVisualLabBatchPackage({
+      batchRoot: outputDirectory,
+      requireBrowserHostPlan: true,
+      requireExecutionTuningPlan: true,
+      requireOriginAttestation: true,
+      requireRecipeSet: true,
+    })).resolves.toMatchObject({
+      originAttestation: { baseUrl: canonicalBaseUrl, revision: REMOTE_REVISION },
+    });
+
+    const wrongOriginAttestation = {
+      ...result.originAttestation,
+      baseUrl: 'https://other.example.test/anifor/',
+    };
+    await writeFile(
+      result.originAttestationPath,
+      `${JSON.stringify(wrongOriginAttestation, null, 2)}\n`,
+    );
+    await expect(verifyVisualLabBatchPackage({
+      batchRoot: outputDirectory,
+      requireOriginAttestation: true,
+    })).rejects.toThrow('does not match gas-showcase capture base URL');
+    await rm(result.originAttestationPath);
+    await expect(verifyVisualLabBatchPackage({
+      batchRoot: outputDirectory,
+      requireOriginAttestation: true,
+    })).rejects.toThrow('missing origin-attestation.json');
+
+    const planWithoutSlash = await runVisualLabBatch({
+      candidates: ['gas-showcase'], baseUrl, expectedRevision: REMOTE_REVISION,
+      outputDir: path.join(root, 'remote-plan'), planOnly: true,
+    });
+    const planWithSlash = await runVisualLabBatch({
+      candidates: ['gas-showcase'], baseUrl: canonicalBaseUrl,
+      expectedRevision: REMOTE_REVISION,
+      outputDir: path.join(root, 'remote-plan'), planOnly: true,
+    });
+    expect(planWithoutSlash.plan.id).toBe(planWithSlash.plan.id);
+    expect(planWithoutSlash.runtime.baseUrl).toBe(canonicalBaseUrl);
+
+    const defaultBundlePlan = await runVisualLabBatch({
+      candidates: ['gas-showcase'], outputDir: path.join(root, 'local-plan'), planOnly: true,
+    });
+    const explicitBundlePlan = await runVisualLabBatch({
+      candidates: ['gas-showcase'], bundle: path.resolve('dist/index.html'),
+      outputDir: path.join(root, 'local-plan'), planOnly: true,
+    });
+    expect(defaultBundlePlan.plan.id).toBe(explicitBundlePlan.plan.id);
+  });
+
+  it('attests a remote revision before output mutation and again before completion', async () => {
+    const root = await makeTemporaryDirectory();
+    const rejectedOutput = path.join(root, 'preflight-rejected');
+    await expect(runVisualLabBatch({
+      candidates: ['gas-showcase'],
+      baseUrl: 'https://example.test/anifor/',
+      expectedRevision: REMOTE_REVISION,
+      outputDir: rejectedOutput,
+    }, {
+      verifyDeployment: async () => { throw new Error('wrong deployed revision'); },
+    })).rejects.toThrow('wrong deployed revision');
+    await expect(access(rejectedOutput)).rejects.toThrow();
+
+    const lockedPreflightOutput = path.join(root, 'locked-preflight-rejected');
+    let deploymentChecks = 0;
+    let runnerCalls = 0;
+    await expect(runVisualLabBatch({
+      candidates: ['gas-showcase'],
+      baseUrl: 'https://example.test/anifor/',
+      expectedRevision: REMOTE_REVISION,
+      outputDir: lockedPreflightOutput,
+    }, {
+      ...remoteAttestationDependencies,
+      verifyDeployment: async (...arguments_) => {
+        deploymentChecks += 1;
+        if (deploymentChecks === 2) throw new Error('deployment changed behind batch lock');
+        return remoteAttestationDependencies.verifyDeployment(...arguments_);
+      },
+      runCandidate: async () => { runnerCalls += 1; return { code: 0 }; },
+    })).rejects.toThrow('deployment changed behind batch lock');
+    expect(deploymentChecks).toBe(2);
+    expect(runnerCalls).toBe(0);
+    await expect(access(path.join(lockedPreflightOutput, 'index.json'))).rejects.toThrow();
+
+    const changedOutput = path.join(root, 'postflight-changed');
+    await expect(runVisualLabBatch({
+      candidates: ['gas-showcase'],
+      baseUrl: 'https://example.test/anifor/',
+      expectedRevision: REMOTE_REVISION,
+      outputDir: changedOutput,
+    }, {
+      ...remoteAttestationDependencies,
+      verifyRevision: async (baseUrl) => ({ baseUrl, revision: 'a'.repeat(40) }),
+      runCandidate: async (call) => {
+        await writeValidCapture(call.candidateDirectory, call.recipe.name, {
+          baseUrl: 'https://example.test/anifor/',
+        });
+        return { code: 0, signal: null, timedOut: false };
+      },
+    })).rejects.toThrow('changed revision');
+    await expect(access(path.join(changedOutput, 'index.json'))).rejects.toThrow();
+  });
+
+  it.skipIf(process.platform !== 'linux')(
+    'uses the selected remote protocol when starting a shared host',
+    async () => {
+      const root = await makeTemporaryDirectory();
+      const outputDirectory = path.join(root, 'shared-remote');
+      const hostStarts = [];
+      const result = await runVisualLabBatch({
+        candidates: ['gas-showcase'],
+        baseUrl: 'https://example.test/anifor',
+        expectedRevision: REMOTE_REVISION,
+        outputDir: outputDirectory,
+        browserHost: 'shared',
+      }, {
+        ...remoteAttestationDependencies,
+        startSharedHost: async (options) => {
+          hostStarts.push(options);
+          return {
+            ready: async () => ({ browserWebSocketDebuggerUrl: 'ws://127.0.0.1:9222/remote' }),
+            assertHealthy: async () => {},
+            teardown: async () => {},
+          };
+        },
+        runCandidate: async (call) => {
+          const timings = timingRecord();
+          timings.phases.total -= timings.phases.hostLaunch + timings.phases.hostTeardown;
+          timings.phases.hostLaunch = 0;
+          timings.phases.hostTeardown = 0;
+          timings.counters.browserHosts = 0;
+          await writeValidCapture(call.candidateDirectory, call.recipe.name, {
+            baseUrl: 'https://example.test/anifor/',
+            reportFileName: 'report.pending.json',
+            timings,
+          });
+          return { code: 0, signal: null, timedOut: false };
+        },
+      });
+      expect(result).toMatchObject({ ok: true, exitCode: 0 });
+      expect(hostStarts).toHaveLength(1);
+      expect(hostStarts[0]).toMatchObject({
+        initialUrl: new URL('about:blank'),
+        allowFileAccess: false,
+      });
+    },
+  );
 
   it.skipIf(process.platform !== 'linux')(
     'reuses one injected host while keeping entry bindings, deferred publication, and identities exact',
@@ -2154,6 +2359,12 @@ describe('Visual Lab batch CLI', () => {
     expect(parseVisualLabBatchArguments([
       '--capture-proof=completed-frame-receipt',
     ]).captureProof).toBe('completed-frame-receipt');
+    expect(parseVisualLabBatchArguments([
+      '--base-url=https://example.test/anifor',
+      `--expected-revision=${REMOTE_REVISION}`,
+    ]).baseUrl).toBe('https://example.test/anifor/');
+    expect(normalizeVisualLabBatchBaseUrl('http://127.0.0.1:4173').href)
+      .toBe('http://127.0.0.1:4173/');
     expect(parseVisualLabBatchArguments(['--help'])).toEqual({ help: true });
     expect(parseVisualLabBatchArguments([]).candidateTimeoutMs).toBe(300_000);
   });
@@ -2171,6 +2382,26 @@ describe('Visual Lab batch CLI', () => {
       .toThrow('--browser-host must be fresh or shared');
     expect(() => parseVisualLabBatchArguments(['--capture-proof=timer-query']))
       .toThrow('--capture-proof must be stable-snapshots or completed-frame-receipt');
+    expect(() => parseVisualLabBatchArguments(['--bundle=dist/index.html',
+      '--base-url=https://example.test/']))
+      .toThrow('--bundle and --base-url are mutually exclusive');
+    expect(() => parseVisualLabBatchArguments(['--base-url=https://example.test/']))
+      .toThrow('--base-url requires --expected-revision');
+    expect(() => parseVisualLabBatchArguments([`--expected-revision=${REMOTE_REVISION}`]))
+      .toThrow('--expected-revision requires --base-url');
+    expect(() => parseVisualLabBatchArguments([
+      '--base-url=https://example.test/', `--expected-revision=${REMOTE_REVISION.toUpperCase()}`,
+    ])).toThrow('lowercase 40-hex');
+    for (const value of [
+      '', ' https://example.test/', 'https://user@example.test/',
+      'https://example.test/?query=1', 'https://example.test/#fragment',
+      'file:///tmp/anifor/index.html', 'ftp://example.test/', 'https:example.test',
+    ]) {
+      expect(() => parseVisualLabBatchArguments([
+        `--base-url=${value}`, `--expected-revision=${REMOTE_REVISION}`,
+      ]))
+        .toThrow(/base-url|baseUrl/);
+    }
     for (const value of ['0', '-1', '1.5', '2147483648', 'not-a-number']) {
       expect(() => parseVisualLabBatchArguments([`--candidate-timeout-ms=${value}`]))
         .toThrow('--candidate-timeout-ms must be a positive integer');
