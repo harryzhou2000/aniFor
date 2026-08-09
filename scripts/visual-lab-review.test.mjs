@@ -66,6 +66,8 @@ describe('Visual Lab review-cycle CLI', () => {
       captureProof: 'completed-frame-receipt',
     });
     expect(parsed.baselineRoot).toBe(path.resolve('visual-baselines/accepted-v1'));
+    expect(parsed).not.toHaveProperty('indexOnly');
+    expect(parsed).not.toHaveProperty('planOnly');
 
     expect(parseVisualLabReviewArguments([
       '--output-dir=hosted-review',

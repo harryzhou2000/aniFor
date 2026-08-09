@@ -122,7 +122,11 @@ export function parseVisualLabReviewArguments(argv) {
   if (parsedBatch.help) return Object.freeze({ help: true });
   if (parsedBatch.outputDir === undefined) throw new Error('--output-dir is required');
   if (parsedBatch.indexOnly) throw new Error('--index-only is not supported');
-  const { indexOnly: _indexOnly, ...batchOptions } = parsedBatch;
+  const {
+    indexOnly: _indexOnly,
+    planOnly: _planOnly,
+    ...batchOptions
+  } = parsedBatch;
   return Object.freeze({
     ...batchOptions,
     baselineRoot: baselineRoot ?? DEFAULT_BASELINE_ROOT,
