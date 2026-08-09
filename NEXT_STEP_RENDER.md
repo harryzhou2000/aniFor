@@ -27,14 +27,25 @@ labels so already-downloaded packages remain verifiable. Adding a prepared
 fixture must not require another `BrowserInputAuditApi` method, Game wrapper,
 reflective method lookup, free-form argument array, or harness branch.
 
-The active framework-first increment is additive deterministic
-`review-brief.html`, derived from the already-validated comparison/v1 record and
-kept outside every frozen identity. It queues changed, added, and unsampled
-candidates with portable accepted/current off/A/B links, and relegates
-encoded-identical candidates to a compact no-action list. Generate it before
-the final comparison marker and validate it through the shared verifier when
-present; legacy packages may omit it. Add no browser, image decoder, score,
-schema, workflow branch, or second verifier path. A normal-scale
+The additive deterministic `review-brief.html` increment is complete and
+deployed at revision `3400a5db92d587d9b68e0abcd0052839702dc678` by workflow run
+`31294286484` attempt 2. It derives a portable decision queue from comparison/v1,
+stays outside every frozen identity, writes before the final comparison marker,
+and uses the shared verifier while preserving legacy omission. The four-recipe
+release comparison stayed encoded-identical at
+`sha256:2e39261d5e713170c9988ea369209a9f6b0eb1752882bb2f4e54bb98409f1071`.
+
+The active framework-first increment is declarative normal-HDR shader assembly
+by hook. One frozen canonical tuple must drive the complete domain map, source
+order, and generated `liquid-surface`/`volume-field` dispatch wrappers. The host
+owns both fixed call ABIs; leaf descriptors own arithmetic and typed metadata,
+not call snippets. Fail closed on incomplete/reordered/duplicate domains or
+codes, unsupported hooks, unsafe/duplicate entry points, source escaping the
+leaf seam, or a missing function declaration. Dispatch one exact owner and
+return; only explicit volume domains may pay the existing shared wall sample.
+Keep the default compositor free of all lab source, preserve the existing
+five/eight-input split and resource budgets, and compile both hook families in a
+real WebGL browser gate after assembly edits. A normal-scale
 A/B experiment should touch one domain module and one catalog
 entry—not presenter setup, app lifecycle, package/workflow duplication, or CDP
 branching.
@@ -44,12 +55,13 @@ declarative fixture startup, and production-bundle off/A/B route already form
 the base. E62 Oxygen, E69 Oil motion, and E65 Water motion have been folded into
 their accepted parent baselines and their one-off selector/telemetry/verifier
 plumbing removed. The batch/index, CI review, promotion, and recipe-set framework
-checkpoints are complete and deployed. `main_codex` and Pages serve typed
-fixture-bridge revision `83894aa6fe98fc5a537cd4c23c9b2400dc37081f` after gated
-workflow run `31293472696`: ccache hit 269/270 compile calls; the named
-four-recipe release set, comparison, fresh artifact download and verification,
-deploy, live revision, 36 PNG copies, and first-attempt 19-resource closure all
-passed. The accepted visual manifest remains
+checkpoints are complete and deployed. `main_codex` and Pages serve review-brief
+revision `3400a5db92d587d9b68e0abcd0052839702dc678` after gated workflow run
+`31294286484` attempt 2: the build passed with 269/270 ccache hits; the named
+four-recipe release set and new brief passed the fresh artifact download and
+shared verifier; deploy, exact live revision, 36 PNG copies, and first-attempt
+19-resource closure all passed. The failed-job retry reused the original build
+instead of compiling C++/WASM again. The accepted visual manifest remains
 `sha256:b95e09ecb1df93c2b9ae718d205159b17dc56379723f2d1ad904458e16c5653c`.
 
 That deployed checkpoint adds a separate
@@ -3691,9 +3703,11 @@ upload/download proof are now complete. The typed generic fixture-preparation
 bridge is deployed at `83894aa6fe98fc5a537cd4c23c9b2400dc37081f` by run
 `31293472696`: one closed app registry owns preparation arguments and one
 browser method receives the stable fixture ID, while historical preparation
-strings remain diagnostic compatibility labels only. The current milestone is
-the additive deterministic review brief described above; it may not widen the
-frozen v1 records or fork verification. Defer E66 and Powder until
+strings remain diagnostic compatibility labels only. The additive review brief
+is deployed at `3400a5db92d587d9b68e0abcd0052839702dc678` by run `31294286484`.
+The current milestone is declarative shader assembly by hook as described above;
+it may not widen the frozen v1 records, add compositor inputs, or fork
+verification. Defer E66 and Powder until
 their extra samples or source-stage stability proof fit the existing budgeted
 facade without creating a second experiment framework.
 
@@ -3872,7 +3886,10 @@ exact same-run artifact round trip are deployed at
 typed fixture-preparation bridge is deployed at
 `83894aa6fe98fc5a537cd4c23c9b2400dc37081f` by run `31293472696`, with the
 release set and portable verification again passing before first-attempt live
-closure. The active extension is the additive deterministic review brief.
+closure. The additive deterministic review brief is deployed at
+`3400a5db92d587d9b68e0abcd0052839702dc678` by run `31294286484`; its successful
+failed-job retry reused the passing build and closed all 19 live resources. The
+active extension is declarative normal-HDR shader assembly by hook.
 Defer a bounded PNG decoder and RGB metrics to v2, and extend the shared
 verifier rather than cloning it or the workflow. Defer E66 and
 Powder until the fixed HDR

@@ -33,15 +33,32 @@ reports keep the historical Oil/Water preparation labels so downloaded packages
 remain verifiable; those labels are diagnostics only and must not regain
 execution authority.
 
-The active checkpoint is an additive deterministic `review-brief.html` generated
-from the already-validated comparison/v1 record. It must queue only `review`,
-`added`, and `not-sampled` candidates with relative accepted/current off/A/B
-links, while listing encoded-identical candidates as no-action. Keep it outside
-every frozen v1 object and identity, write it before the existing final
-`comparison.json` marker, and validate present briefs through the existing
-comparison/package verifier. Historical packages without the additive file must
-remain valid. Add no browser, image decoder, score, schema, workflow branch, or
-second verifier path for this convenience page.
+The additive deterministic `review-brief.html` checkpoint is complete and
+deployed at revision `3400a5db92d587d9b68e0abcd0052839702dc678` by workflow run
+`31294286484` (successful failed-job retry attempt 2 reused the original passing
+build). It is derived from comparison/v1, queues only `review`, `added`, and
+`not-sampled`, uses portable relative off/A/B links, and keeps
+encoded-identical candidates in a compact no-action list. Its bytes are outside
+every frozen identity, written before `comparison.json`, and checked by the
+shared verifier when present; legacy packages may omit it. The deployed release
+set remained four-for-four encoded-identical with comparison ID
+`sha256:2e39261d5e713170c9988ea369209a9f6b0eb1752882bb2f4e54bb98409f1071`.
+
+The active checkpoint is declarative normal-HDR shader assembly by hook. One
+frozen canonical adapter tuple must own complete domain order, the public domain
+map, source inclusion, and generated dispatch. The host owns the fixed
+`liquid-surface` and `volume-field` call ABIs; descriptors may supply only their
+typed domain/code/hook/entry-point/source/budget data, never invocation snippets.
+Validate all-and-only implemented domains, exact stable order and codes, unique
+safe GLSL entry points, recognized hooks, restricted leaf source, and a matching
+function declaration before assembling. Dispatch one exact owner and return.
+Only explicit volume-field domains may reach their one shared native-wall
+sample; never restore a numeric domain-range shortcut. The default five-input
+compositor must compile neither wrapper, and the normal-HDR Visual Lab path must
+retain its existing eight inputs, support/alpha ownership, and zero-resource
+contract. Keep Liquid on its established E08-local ABI while Gas and Emission
+share the generated volume-field ABI. Every shader assembly edit still requires
+a real WebGL compile/capture for both hook families.
 Do not widen the frozen result, batch, baseline, or comparison v1 schemas. A normal A/B idea
 should touch one domain module plus one catalog entry—not presenter setup, HDR
 lifecycle, app boot, package-script duplication, workflow duplication, or CDP
@@ -55,12 +72,14 @@ motion is an accepted E08 baseline and uses the moving-Oil fixture with liquid
 target `8`; E65 Water surface motion is an accepted E08 baseline and uses the
 retained moving-Water fixture with liquid target `2`. Their legacy resolvers,
 uniforms, queries, datasets, and bespoke verifier paths are removed. E65 is also
-deployed. `main_codex` and Pages currently serve typed fixture-bridge revision
-`83894aa6fe98fc5a537cd4c23c9b2400dc37081f` after release-set gated workflow
-run `31293472696`: ccache hit 269/270 compile calls, all four named recipes and
-comparisons passed in canonical order, deployment ran only after the freshly
-downloaded 36-PNG artifact verified, and live closure passed all 19 resources
-on its first attempt.
+deployed. `main_codex` and Pages currently serve review-brief revision
+`3400a5db92d587d9b68e0abcd0052839702dc678` after release-set gated workflow run
+`31294286484`: the build passed with 269/270 ccache hits, all four named recipes
+were encoded-identical, the freshly downloaded package verified the new brief,
+and live closure passed all 19 resources on its first attempt. The first review
+attempt retained one transient Gas stability tombstone and correctly blocked
+deployment; the failed-job retry reused the passing build and deployed only
+after the full review passed.
 
 `anifor.visual-lab.accepted-baseline/v1` contains only
 catalog-ordered candidate names and their existing content-addressed result
