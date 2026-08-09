@@ -179,17 +179,29 @@ Active priority order:
    19-resource origin attestation. The next increment must improve reusable
    experiment authoring or measurement throughput rather than add a leaf shader
    detail.
-13. Complete fixture-bound experiment authoring as the next framework
-   checkpoint. Selection and dataset projection must share one validated
+13. Treat fixture-bound experiment authoring and resource-bounded hosted review
+   as deployed framework infrastructure. Selection and dataset projection share one validated
    fixture/driver binding and reject mismatches during plan compilation, before
    browser launch or output mutation. App controls belong to drivers rather
    than individual fixtures, while optional scene preparation stays a typed
    fixture concern. Adding another fixture for an existing driver must not add
    a browser method, app control descriptor, harness branch, or hidden fixture
    constant. Keep stable snapshots as the CI review default and expose the
-   proven completed-frame receipt as an explicit manual choice. Once deployed,
-   use the same pattern to retain content-addressed capture-geometry provenance
-   with accepted baselines without rotating frozen v1 identities.
+   proven completed-frame receipt as an explicit manual choice. Revision
+   `460e04f2e2ae24bcd2b1b869d5b97c6504df8702` deployed through workflow run
+   `31336165579`: ccache hit 269/270 compilations, the build took 3m14s, the
+   shared-host release review passed all four candidates four-for-four encoded-
+   identical in 4m17s, deployment took 9s, and exact 19-resource plus live Water
+   verification passed in 1m26s. Keep release reviews on one shared browser so
+   fresh SwiftShader candidates do not compete for the same hosted runner.
+14. Preserve accepted capture geometry as content-addressed baseline provenance
+   without rotating any frozen v1 identity. `accept` and `promote` must read
+   stable contained source reports, bind exact result/request/hash/backing/crop
+   evidence, and validate PNG IHDR dimensions. A present sidecar is always
+   authoritative; legacy omission stays compatible only when the explicit
+   required gate is off. Bootstrap the current sidecar only from the original
+   reviewed four-recipe source, prove its baseline index and twelve PNGs remain
+   byte-identical, then require it in portable CI verification.
 
 Continue improving the registration and evidence loop before spending the
 milestone on isolated shader detail. Visual preference may later accept a

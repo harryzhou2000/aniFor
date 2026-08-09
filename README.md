@@ -136,6 +136,14 @@ while the retained live Water manifest matched the same hashes and exact
 geometry proof after a 19-resource origin check. This reproducible local/hosted
 loop is now the default route for reusable material experiments.
 
+Accepted packages also carry an additive, content-addressed
+`capture-provenance.json`. It binds the unchanged accepted-baseline ID and each
+catalog-ordered result ID to the exact canonical capture-geometry proof recovered
+from its reviewed source report. New acceptance/promotion operations require
+those reports and matching PNG dimensions; portable release verification uses
+`--require-baseline-capture-provenance=1`, while legacy packages remain readable
+when that explicit gate is omitted.
+
 Readiness and settle behavior is independently bound by
 `execution-tuning-plan.json`. Its content-addressed entries come from one
 exhaustive driver-capability registry and declare the startup variant, field

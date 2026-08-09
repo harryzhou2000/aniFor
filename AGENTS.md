@@ -79,18 +79,26 @@ hermetic local/hosted loop as complete. Keep the next increment on reusable
 experiment-authoring or measurement leverage, not another isolated material
 detail.
 
-The active framework increment is fixture-bound experiment authoring. Selection
-and observed-dataset projection must resolve through the same validated fixture
-and driver before Chrome starts; never hide a fixture constant inside a driver.
-Define executable same-page controls once per driver and derive fixture coverage
-from the static contracts. A new fixture using an existing driver should need a
-catalog entry and, only when it authors a scene, one typed preparer—not another
-browser API, app control descriptor, harness branch, or projection special case.
-Keep stable-snapshot capture as the default release proof while exposing the
-already-proven completed-frame receipt as an explicit manual CI experiment.
-After this closure, preserve accepted capture geometry in content-addressed
-baseline provenance so promotion does not discard the proof carried by its
-source reports.
+Fixture-bound experiment authoring is deployed at revision
+`460e04f2e2ae24bcd2b1b869d5b97c6504df8702` by workflow run `31336165579`.
+Selection and observed-dataset projection resolve through the same validated
+fixture/driver binding before Chrome starts, executable same-page controls are
+defined once per driver, and fixture coverage is derived from static contracts.
+The manual review control keeps stable snapshots as its default and exposes the
+completed-frame receipt explicitly. Two fresh-host attempts exposed software-
+GPU contention; the release review now routes its catalog sequentially through
+one shared browser. The successful run built in 3m14s, captured and verified all
+four recipes four-for-four encoded-identical in 4m17s, deployed in 9s, and
+passed exact 19-resource closure plus the live Water receipt smoke in 1m26s.
+
+The active framework increment is accepted-baseline capture provenance. Preserve
+the geometry proof carried by reviewed source reports in a separate content-
+addressed sidecar bound to the unchanged baseline ID and ordered result IDs.
+Accept and promotion must require canonical source reports and PNG dimensions;
+legacy verification may omit the sidecar only when the explicit release gate is
+off. New CI review packages must require it fail-closed. Never rotate result,
+batch, baseline, comparison, promotion, or recipe-set v1 identities for this
+additive provenance.
 
 The typed fixture-preparation boundary is also complete and deployed at revision
 `83894aa6fe98fc5a537cd4c23c9b2400dc37081f` by release-set workflow run
@@ -244,7 +252,7 @@ recipe-set identity. A real built Gas strict-disposal gate passed with roughly
 `hostLaunch=0.234s`, `startup=1.285s`, `readiness=16.749s`, and
 `total=29.978s`, leaving no Chrome process behind.
 
-The active framework increment is an opt-in `--browser-host=shared` supervisor
+The deployed shared-host framework is an opt-in `--browser-host=shared` supervisor
 for compatible normal-scale candidates. The capture execution plan and all
 historical IDs remain byte-identical; a separate content-addressed
 `browser-host-plan/v1` binds the requested/effective routing. Reuse only the
@@ -276,9 +284,10 @@ require edits to audit, batch, baseline, review, CI, or sheet dispatch.
 Preserve `anifor.visual-lab.static-contract/v1`, every result/batch/baseline/
 comparison/recipe-set identity, and the generic WebGL capture path throughout.
 
-Same-page capture controls are fixture-owned app authority. Every static capture
-fixture must have exactly one closed descriptor in `VisualCaptureControlRegistry`.
-Activate and mark the exact fixture through the existing
+Same-page capture controls are fixture-scoped app authority implemented once per
+capture driver. Every static driver has exactly one closed descriptor in
+`VisualCaptureControlRegistry`; fixture-to-driver coverage is derived from the
+static contracts. Activate and mark the exact fixture through the existing
 `prepareVisualLabFixture` bridge first: `showcase` is an explicit typed no-op,
 while authored Oil, Water, and Powder fixtures return that they mutated so Game
 alone reconciles the material plane. Then cross the browser boundary only through

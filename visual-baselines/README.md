@@ -18,6 +18,14 @@ Workflow run `31333870677` subsequently captured the exact deployed
 result IDs plus all twelve accepted PNG hashes byte-for-byte before Pages and
 live-origin verification completed.
 
+The additive `accepted-v1/capture-provenance.json` was regenerated from that
+original reviewed source. Regeneration produced the exact existing baseline ID
+and byte-identical `index.json` plus twelve PNGs; the sidecar is the only added
+file. Provenance ID
+`sha256:0a7dfe433b4b878c67812e116513c0647affff53c97a7e7905505d271af067f8`
+binds the baseline and ordered result IDs to `hermetic-918x576-v1`. Release
+verification must use `--require-baseline-capture-provenance=1`.
+
 ## Reusable capture cohorts
 
 Checked-in `anifor.visual-lab.recipe-set/v1` files live under

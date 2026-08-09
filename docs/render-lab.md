@@ -252,6 +252,15 @@ the retained live Water manifest matched the local OFF/A/B hashes plus exact
 geometry after the 19-resource origin check. The hermetic loop is therefore the
 default evidence path for subsequent reusable material experiments.
 
+The accepted package preserves that proof in
+`capture-provenance.json` under schema
+`anifor.visual-lab.accepted-baseline-capture-provenance/v1`. Its identity binds
+the unchanged baseline ID, catalog-ordered result IDs, and canonical geometry.
+Acceptance and promotion require stable contained source reports and matching
+PNG dimensions. Add `--require-baseline-capture-provenance=1` to the portable
+verifier for release-grade fail-closed validation; omission remains compatible
+only for legacy packages.
+
 The real-browser audit first captures and signature-checks this deterministic
 atlas, then clears it and exercises painting, wheel/pan, resizing, and mobile
 touch. It navigates separately to the native backend for configured-source and
