@@ -1,23 +1,22 @@
 import type { FieldOutputScale } from './render-resolution';
 import type { RenderLook } from './render-look';
+import { VISUAL_LAB_STATIC_CONTRACT } from '../shared/visual-lab-static-contract.js';
 
 /** Stable shader-facing codes; do not reorder once visual-lab captures exist. */
-export const VISUAL_LAB_DOMAIN_CODE = Object.freeze({
-  off: 0,
-  powder: 1,
-  liquid: 2,
-  gas: 3,
-  emission: 4,
-} as const);
+export const VISUAL_LAB_DOMAIN_CODE = VISUAL_LAB_STATIC_CONTRACT.domainCodes;
 
 export type VisualLabDomain = keyof typeof VISUAL_LAB_DOMAIN_CODE;
 export type VisualLabVariant = 0 | 1 | 2;
-export type VisualLabTargetKind =
-  | 'none'
-  | 'semantic-material-id'
-  | 'propagated-atmosphere-style-byte';
+type StaticVisualLabDomain = (typeof VISUAL_LAB_STATIC_CONTRACT.domains)[number];
+type StaticVisualLabDomainFor<Domain extends VisualLabDomain> = Extract<
+  StaticVisualLabDomain,
+  { readonly name: Domain }
+>;
+export type VisualLabTargetKind = StaticVisualLabDomain['targetKind'];
 
-export type VisualLabDetailScale = Exclude<FieldOutputScale, 8>;
+export type VisualLabDetailScale = (
+  typeof VISUAL_LAB_STATIC_CONTRACT.normalHdrExecutionProfile.detailScales
+)[number];
 export type VisualLabExecutionFallback = 'disabled-preserve-baseline';
 
 /**
@@ -38,18 +37,9 @@ export interface VisualLabExecutionProfile {
   }>;
 }
 
-export const VISUAL_LAB_NORMAL_HDR_EXECUTION_PROFILE = Object.freeze({
-  detailScales: Object.freeze([1, 2, 4] as const),
-  backend: 'webgl',
-  pipeline: 'normal-hdr',
-  variantZero: 'pixel-preserving-baseline',
-  fallbacks: Object.freeze({
-    classic: 'disabled-preserve-baseline',
-    canvas2d: 'disabled-preserve-baseline',
-    hdrUnavailable: 'disabled-preserve-baseline',
-    detail8x: 'disabled-preserve-baseline',
-  }),
-} as const satisfies VisualLabExecutionProfile);
+export const VISUAL_LAB_NORMAL_HDR_EXECUTION_PROFILE = (
+  VISUAL_LAB_STATIC_CONTRACT.normalHdrExecutionProfile
+) satisfies VisualLabExecutionProfile;
 
 /** Existing fixed-compositor samplers that a lab adapter may read. */
 export type VisualLabSampler =
@@ -93,19 +83,19 @@ export const VISUAL_LAB_ZERO_RESOURCE_ADDITIONS = Object.freeze({
  * keeps its reserved shader code, but cannot request the expanded compositor
  * until its conservative hook exists.
  */
-export const VISUAL_LAB_DOMAIN_CAPABILITY = Object.freeze({
-  off: Object.freeze({ implemented: false, targetKind: 'none' }),
-  powder: Object.freeze({ implemented: false, targetKind: 'semantic-material-id' }),
-  liquid: Object.freeze({ implemented: true, targetKind: 'semantic-material-id' }),
-  gas: Object.freeze({
-    implemented: true,
-    targetKind: 'propagated-atmosphere-style-byte',
-  }),
-  emission: Object.freeze({ implemented: true, targetKind: 'semantic-material-id' }),
-} as const satisfies Record<VisualLabDomain, {
-  readonly implemented: boolean;
-  readonly targetKind: VisualLabTargetKind;
-}>);
+type VisualLabDomainCapabilityMap = {
+  readonly [Domain in VisualLabDomain]: Readonly<{
+    implemented: StaticVisualLabDomainFor<Domain>['implemented'];
+    targetKind: StaticVisualLabDomainFor<Domain>['targetKind'];
+  }>;
+};
+
+export const VISUAL_LAB_DOMAIN_CAPABILITY = Object.freeze(Object.fromEntries(
+  VISUAL_LAB_STATIC_CONTRACT.domains.map(({ name, implemented, targetKind }) => [
+    name,
+    Object.freeze({ implemented, targetKind }),
+  ]),
+)) as VisualLabDomainCapabilityMap;
 
 export type ImplementedVisualLabDomain = {
   [Domain in VisualLabDomain]:
@@ -141,23 +131,22 @@ type ImplementedVisualLabDomainDescriptorMap = {
  * comparison compositor. Shader adapters consume this table rather than
  * repeating domain codes or target semantics.
  */
-export const VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS = Object.freeze({
-  liquid: Object.freeze({
-    domainCode: VISUAL_LAB_DOMAIN_CODE.liquid,
-    targetKind: VISUAL_LAB_DOMAIN_CAPABILITY.liquid.targetKind,
-    executionProfile: VISUAL_LAB_NORMAL_HDR_EXECUTION_PROFILE,
-  }),
-  gas: Object.freeze({
-    domainCode: VISUAL_LAB_DOMAIN_CODE.gas,
-    targetKind: VISUAL_LAB_DOMAIN_CAPABILITY.gas.targetKind,
-    executionProfile: VISUAL_LAB_NORMAL_HDR_EXECUTION_PROFILE,
-  }),
-  emission: Object.freeze({
-    domainCode: VISUAL_LAB_DOMAIN_CODE.emission,
-    targetKind: VISUAL_LAB_DOMAIN_CAPABILITY.emission.targetKind,
-    executionProfile: VISUAL_LAB_NORMAL_HDR_EXECUTION_PROFILE,
-  }),
-} as const satisfies ImplementedVisualLabDomainDescriptorMap);
+const IMPLEMENTED_STATIC_VISUAL_LAB_DOMAINS = VISUAL_LAB_STATIC_CONTRACT.domains.filter(
+  (domain): domain is Extract<StaticVisualLabDomain, { readonly implemented: true }> => (
+    domain.implemented
+  ),
+);
+
+export const VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS = Object.freeze(Object.fromEntries(
+  IMPLEMENTED_STATIC_VISUAL_LAB_DOMAINS.map(({ name, code, targetKind }) => [
+    name,
+    Object.freeze({
+      domainCode: code,
+      targetKind,
+      executionProfile: VISUAL_LAB_NORMAL_HDR_EXECUTION_PROFILE,
+    }),
+  ]),
+)) as unknown as ImplementedVisualLabDomainDescriptorMap;
 
 export function isVisualLabDomainImplemented(
   domain: VisualLabDomain,

@@ -44,25 +44,35 @@ shared verifier when present; legacy packages may omit it. The deployed release
 set remained four-for-four encoded-identical with comparison ID
 `sha256:2e39261d5e713170c9988ea369209a9f6b0eb1752882bb2f4e54bb98409f1071`.
 
-The active checkpoint is declarative normal-HDR shader assembly by hook. One
-frozen canonical adapter tuple must own complete domain order, the public domain
-map, source inclusion, and generated dispatch. The host owns the fixed
-`liquid-surface` and `volume-field` call ABIs; descriptors may supply only their
-typed domain/code/hook/entry-point/source/budget data, never invocation snippets.
-Validate all-and-only implemented domains, exact stable order and codes, unique
-safe GLSL entry points, recognized hooks, restricted leaf source, and a matching
-function declaration before assembling. Dispatch one exact owner and return.
-Only explicit volume-field domains may reach their one shared native-wall
-sample; never restore a numeric domain-range shortcut. The default five-input
-compositor must compile neither wrapper, and the normal-HDR Visual Lab path must
-retain its existing eight inputs, support/alpha ownership, and zero-resource
-contract. Keep Liquid on its established E08-local ABI while Gas and Emission
-share the generated volume-field ABI. Every shader assembly edit still requires
-a real WebGL compile/capture for both hook families.
-Do not widen the frozen result, batch, baseline, or comparison v1 schemas. A normal A/B idea
-should touch one domain module plus one catalog entry—not presenter setup, HDR
-lifecycle, app boot, package-script duplication, workflow duplication, or CDP
-branching.
+Declarative normal-HDR shader assembly by hook is complete and deployed at
+revision `6abece4f43710a4547650bd93af4ca8834f77224` by workflow run
+`31294986555`. One frozen adapter tuple owns source order and generated
+`liquid-surface`/`volume-field` dispatch; descriptors contain metadata and leaf
+GLSL only. The host validates the closed domain set, stable codes, hooks, entry
+points, and source seam before compilation. Only explicit volume domains reach
+the shared wall sample, and the ordinary compositor still compiles no lab code.
+The release set stayed four-for-four encoded-identical and live closure passed
+all 19 resources. Every future shader assembly edit still requires a real WebGL
+compile/capture for the affected hook families.
+
+The active checkpoint is a universal static Visual Lab contract shared by Vite,
+TypeScript, and Node tooling. Keep pure, recursively frozen, JSON-safe metadata
+in `src/shared/visual-lab-static-contract.js`, paired with exact readonly literal
+types in its `.d.ts`; it must import no renderer, app, or script module. That one
+contract owns stable domain codes, implementation/target capability, the common
+normal-HDR execution/fallback profile, evidence and fixed URL metadata,
+independent capture order, fixture constraints, and historical diagnostic
+labels. Renderer maps, Node capture adapters, and prepared-fixture ID types must
+be derived projections. Executable preparers stay in the app-owned exhaustive
+registry and remain guarded before mutation. Preserve the existing public
+adapter shapes/orders and all frozen result, batch, baseline, and comparison v1
+identities. `hdr-volume-lab-adapters.ts` is the sole explicit renderer join
+point for leaf descriptors; the protected assembler imports that registry, not
+each leaf. Keep executable module paths and GLSL out of the shared static data.
+A normal A/B idea should touch one static catalog record, one domain module,
+one typed renderer-registry entry, and where needed one app preparer—not
+presenter setup, HDR lifecycle, app boot, package/workflow duplication,
+reflective preparation data, or harness branching.
 
 The typed Visual Lab state, fixed normal-HDR composition seam, promotion-safe
 same-page off/A/B selection, declarative fixtures, and production-bundle capture
@@ -72,14 +82,11 @@ motion is an accepted E08 baseline and uses the moving-Oil fixture with liquid
 target `8`; E65 Water surface motion is an accepted E08 baseline and uses the
 retained moving-Water fixture with liquid target `2`. Their legacy resolvers,
 uniforms, queries, datasets, and bespoke verifier paths are removed. E65 is also
-deployed. `main_codex` and Pages currently serve review-brief revision
-`3400a5db92d587d9b68e0abcd0052839702dc678` after release-set gated workflow run
-`31294286484`: the build passed with 269/270 ccache hits, all four named recipes
-were encoded-identical, the freshly downloaded package verified the new brief,
-and live closure passed all 19 resources on its first attempt. The first review
-attempt retained one transient Gas stability tombstone and correctly blocked
-deployment; the failed-job retry reused the passing build and deployed only
-after the full review passed.
+deployed. `main_codex` and Pages currently serve declarative-assembly revision
+`6abece4f43710a4547650bd93af4ca8834f77224` after release-set gated workflow run
+`31294986555`: the build passed with 269/270 ccache hits, all four named recipes
+were encoded-identical, the freshly downloaded package verified the review
+brief, and live closure passed all 19 resources on its first attempt.
 
 `anifor.visual-lab.accepted-baseline/v1` contains only
 catalog-ordered candidate names and their existing content-addressed result

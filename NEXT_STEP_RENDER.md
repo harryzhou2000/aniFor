@@ -35,33 +35,74 @@ and uses the shared verifier while preserving legacy omission. The four-recipe
 release comparison stayed encoded-identical at
 `sha256:2e39261d5e713170c9988ea369209a9f6b0eb1752882bb2f4e54bb98409f1071`.
 
-The active framework-first increment is declarative normal-HDR shader assembly
-by hook. One frozen canonical tuple must drive the complete domain map, source
-order, and generated `liquid-surface`/`volume-field` dispatch wrappers. The host
-owns both fixed call ABIs; leaf descriptors own arithmetic and typed metadata,
-not call snippets. Fail closed on incomplete/reordered/duplicate domains or
-codes, unsupported hooks, unsafe/duplicate entry points, source escaping the
-leaf seam, or a missing function declaration. Dispatch one exact owner and
-return; only explicit volume domains may pay the existing shared wall sample.
-Keep the default compositor free of all lab source, preserve the existing
-five/eight-input split and resource budgets, and compile both hook families in a
-real WebGL browser gate after assembly edits. A normal-scale
-A/B experiment should touch one domain module and one catalog
-entry—not presenter setup, app lifecycle, package/workflow duplication, or CDP
-branching.
+Declarative normal-HDR shader assembly by hook is complete and deployed at
+revision `6abece4f43710a4547650bd93af4ca8834f77224` by release-set workflow run
+`31294986555`. One canonical tuple drives source order, the domain map, and the
+generated `liquid-surface`/`volume-field` wrappers; the host owns both call ABIs
+and rejects incomplete, reordered, duplicated, unsafe, or seam-escaping leaf
+descriptors. The default compositor still contains no lab source, only explicit
+volume domains pay the existing shared wall sample, and the deployed four-recipe
+comparison stayed encoded-identical before first-attempt live closure.
+
+The active framework-first increment is one universal static Visual Lab
+contract usable without adapters by both browser and Node runtimes. A pure,
+recursively frozen, JSON-safe `.js` module plus exact `.d.ts` literal types owns
+domain codes, implemented/target capability, normal-HDR Detail and fallback
+semantics, capture evidence/fixed URL metadata, independent capture ordering,
+fixture constraints, and historical diagnostic labels. Renderer capability
+maps, Node domain/fixture adapters, and app prepared-fixture ID types derive
+from it while executable builders and arguments remain in the closed app-owned
+registry. Preserve all current public adapter shapes and orders, stable shader
+codes, generic startup behavior, recipe/result/batch/baseline/comparison v1
+identities, and browser/CDP/workflow interfaces. A separate typed renderer
+registry is the sole explicit join point for leaf shader descriptors; the
+protected assembler consumes it without importing each leaf. Keep module paths
+and GLSL out of the static cross-runtime data. Adding a normal-scale A/B
+experiment should reduce to one static catalog record, one leaf shader module,
+one renderer-registry entry, and—only for authored simulation state—one typed
+app preparer.
+
+### Cross-runtime static-contract acceptance
+
+`src/shared/visual-lab-static-contract.js` is the dependency-neutral source of
+truth and `visual-lab-static-contract.d.ts` is its exact readonly literal type
+surface. The module must remain importable directly by Node ESM and bundle
+without a renderer/app dependency cycle. Validate safe unique domain/fixture
+names, stable unique codes, exact implemented/capture-set equality, shared
+execution-profile identity, evidence for every captured domain, implemented
+fixture constraints, and byte-range targets before recursively freezing the
+export. The bounded read-only evidence reader label remains metadata; do not
+place executable fixture-preparation method names, argument arrays, builders,
+or preparers in the serialized contract.
+
+The compatibility gate is the shared-contract unit proof plus existing
+renderer-state, fixture-preparation, and Node-adapter tests; TypeScript and the
+production Vite build; and a real built-bundle batch spanning at least one
+volume-field fixture and one prepared liquid-surface fixture. The batch must be
+complete under WebGL/HDR with semantic, authoritative-field alpha, and
+framebuffer-alpha/support invariants preserved. Existing CLI help, URL
+construction, diagnostic report labels, catalog order, and content identities
+must remain byte-compatible.
+
+`src/renderer/hdr-volume-lab-adapters.ts` retains the canonical
+Liquid/Gas/Emission descriptor order and is recursively immutable through its
+already-frozen leaves. `hdr-volume-lab.ts` owns validation, ABI generation, and
+assembly only. Its unit gate must prove registry order and leaf identity,
+assembled tuple/map identity, complete-domain validation, and unchanged shader
+source ordering; never replace the closed typed imports with dynamic module
+paths from the static contract.
 
 The fixed `domain/variant/target/gain` state, promotion-safe same-page switching,
 declarative fixture startup, and production-bundle off/A/B route already form
 the base. E62 Oxygen, E69 Oil motion, and E65 Water motion have been folded into
 their accepted parent baselines and their one-off selector/telemetry/verifier
 plumbing removed. The batch/index, CI review, promotion, and recipe-set framework
-checkpoints are complete and deployed. `main_codex` and Pages serve review-brief
-revision `3400a5db92d587d9b68e0abcd0052839702dc678` after gated workflow run
-`31294286484` attempt 2: the build passed with 269/270 ccache hits; the named
-four-recipe release set and new brief passed the fresh artifact download and
-shared verifier; deploy, exact live revision, 36 PNG copies, and first-attempt
-19-resource closure all passed. The failed-job retry reused the original build
-instead of compiling C++/WASM again. The accepted visual manifest remains
+checkpoints are complete and deployed. `main_codex` and Pages serve declarative
+shader-assembly revision `6abece4f43710a4547650bd93af4ca8834f77224` after gated
+workflow run `31294986555`: the build passed with 269/270 ccache hits; the named
+four-recipe release set and brief passed the fresh artifact download and shared
+verifier; deploy, exact live revision, 36 PNG copies, and first-attempt
+19-resource closure all passed. The accepted visual manifest remains
 `sha256:b95e09ecb1df93c2b9ae718d205159b17dc56379723f2d1ad904458e16c5653c`.
 
 That deployed checkpoint adds a separate
@@ -3705,9 +3746,11 @@ bridge is deployed at `83894aa6fe98fc5a537cd4c23c9b2400dc37081f` by run
 browser method receives the stable fixture ID, while historical preparation
 strings remain diagnostic compatibility labels only. The additive review brief
 is deployed at `3400a5db92d587d9b68e0abcd0052839702dc678` by run `31294286484`.
-The current milestone is declarative shader assembly by hook as described above;
-it may not widen the frozen v1 records, add compositor inputs, or fork
-verification. Defer E66 and Powder until
+Declarative shader assembly is deployed at
+`6abece4f43710a4547650bd93af4ca8834f77224` by run `31294986555`. The current
+milestone is the shared static cross-runtime contract described above; it may
+not widen the frozen v1 records, alter public adapters, add compositor inputs,
+or fork verification. Defer E66 and Powder until
 their extra samples or source-stage stability proof fit the existing budgeted
 facade without creating a second experiment framework.
 
@@ -3888,8 +3931,13 @@ typed fixture-preparation bridge is deployed at
 release set and portable verification again passing before first-attempt live
 closure. The additive deterministic review brief is deployed at
 `3400a5db92d587d9b68e0abcd0052839702dc678` by run `31294286484`; its successful
-failed-job retry reused the passing build and closed all 19 live resources. The
-active extension is declarative normal-HDR shader assembly by hook.
+failed-job retry reused the passing build and closed all 19 live resources.
+Declarative normal-HDR shader assembly is deployed at
+`6abece4f43710a4547650bd93af4ca8834f77224` by run `31294986555`; all four
+release candidates stayed encoded-identical and the live 19-resource closure
+passed on its first attempt. The active extension is the shared static
+cross-runtime contract that removes domain/fixture/profile duplication without
+changing any frozen v1 evidence format.
 Defer a bounded PNG decoder and RGB metrics to v2, and extend the shared
 verifier rather than cloning it or the workflow. Defer E66 and
 Powder until the fixed HDR

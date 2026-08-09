@@ -4,20 +4,13 @@
  * harness must not grow another fixture-specific branch.
  */
 
+import { VISUAL_LAB_STATIC_CONTRACT } from '../src/shared/visual-lab-static-contract.js';
+
 const anyTarget = null;
 
-const VISUAL_LAB_CAPTURE_EXECUTION_PROFILE = Object.freeze({
-  detailScales: Object.freeze([1, 2, 4]),
-  backend: 'webgl',
-  pipeline: 'normal-hdr',
-  variantZero: 'pixel-preserving-baseline',
-  fallbacks: Object.freeze({
-    classic: 'disabled-preserve-baseline',
-    canvas2d: 'disabled-preserve-baseline',
-    hdrUnavailable: 'disabled-preserve-baseline',
-    detail8x: 'disabled-preserve-baseline',
-  }),
-});
+const VISUAL_LAB_CAPTURE_EXECUTION_PROFILE = (
+  VISUAL_LAB_STATIC_CONTRACT.normalHdrExecutionProfile
+);
 
 export const VISUAL_LAB_CAPTURE_PROTOCOL = Object.freeze({
   fixedUrlParameters: Object.freeze({
@@ -99,24 +92,24 @@ export const createVisualLabDomainCatalog = (domains) => Object.freeze(
   domains.map(freezeDomain),
 );
 
-export const VISUAL_LAB_DOMAIN_ADAPTERS = createVisualLabDomainCatalog([
-  {
-    name: 'gas',
-    targetKind: 'propagated-atmosphere-style-byte',
-    evidence: { readerMethod: 'atmosphereFieldAlpha', plane: 'atmosphere-alpha' },
-  },
-  {
-    name: 'liquid',
-    targetKind: 'semantic-material-id',
-    evidence: { readerMethod: 'liquidFieldAlpha', plane: 'liquid-alpha' },
-    fixedUrlParameters: { liquidBodyVfx: '1', liquidSurfaceVfx: '1' },
-  },
-  {
-    name: 'emission',
-    targetKind: 'semantic-material-id',
-    evidence: { readerMethod: 'emissionFieldAlpha', plane: 'emission-alpha' },
-  },
-]);
+const STATIC_DOMAIN_BY_NAME = new Map(
+  VISUAL_LAB_STATIC_CONTRACT.domains.map((domain) => [domain.name, domain]),
+);
+
+export const VISUAL_LAB_DOMAIN_ADAPTERS = createVisualLabDomainCatalog(
+  VISUAL_LAB_STATIC_CONTRACT.captureDomainOrder.map((name) => {
+    const domain = STATIC_DOMAIN_BY_NAME.get(name);
+    if (!domain?.implemented || domain.evidence === null) {
+      throw new TypeError(`Visual Lab capture domain ${name} is not implemented`);
+    }
+    return {
+      name: domain.name,
+      targetKind: domain.targetKind,
+      evidence: domain.evidence,
+      fixedUrlParameters: domain.fixedUrlParameters,
+    };
+  }),
+);
 
 /** Builds one deterministic capture URL without mutating the supplied base URL. */
 export function buildVisualLabCaptureUrl(baseUrl, request) {
@@ -156,31 +149,19 @@ export function buildVisualLabCaptureUrl(baseUrl, request) {
   return url;
 }
 
-export const VISUAL_LAB_FIXTURE_ADAPTERS = Object.freeze([
-  freezeAdapter({
-    name: 'showcase',
-    scene: 'showcase',
-    constraints: [
-      freezeConstraint('gas'),
-      freezeConstraint('liquid'),
-      freezeConstraint('emission'),
-    ],
-  }),
-  freezeAdapter({
-    name: 'oil-motion',
-    scene: 'showcase',
-    constraints: [freezeConstraint('liquid', [8])],
-    preparation: freezePreparation('prepareOilMotionVfxFixture'),
-    requirement: '--domain=liquid --target=8',
-  }),
-  freezeAdapter({
-    name: 'water-motion',
-    scene: 'showcase',
-    constraints: [freezeConstraint('liquid', [2])],
-    preparation: freezePreparation('prepareLiquidMotionVfxFixture'),
-    requirement: '--domain=liquid --target=2',
-  }),
-]);
+export const VISUAL_LAB_FIXTURE_ADAPTERS = Object.freeze(
+  VISUAL_LAB_STATIC_CONTRACT.fixtures.map((fixture) => freezeAdapter({
+    name: fixture.name,
+    scene: fixture.scene,
+    constraints: fixture.constraints.map(({ domain, targets }) => (
+      freezeConstraint(domain, targets)
+    )),
+    preparation: fixture.preparationReportLabel === null
+      ? null
+      : freezePreparation(fixture.preparationReportLabel),
+    requirement: fixture.requirement,
+  })),
+);
 
 const DOMAIN_BY_NAME = new Map(
   VISUAL_LAB_DOMAIN_ADAPTERS.map((adapter) => [adapter.name, adapter]),

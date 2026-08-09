@@ -5,6 +5,7 @@ import {
   HDR_VOLUME_LAB_DOMAIN_ADAPTERS,
   HDR_VOLUME_LAB_GLSL,
 } from './hdr-volume-lab';
+import { HDR_VOLUME_LAB_ADAPTER_REGISTRY } from './hdr-volume-lab-adapters';
 import { HDR_VOLUME_LAB_EMISSION_DESCRIPTOR } from './hdr-volume-lab-emission';
 import { HDR_VOLUME_LAB_GAS_DESCRIPTOR } from './hdr-volume-lab-gas';
 import { HDR_VOLUME_LAB_LIQUID_DESCRIPTOR } from './hdr-volume-lab-liquid';
@@ -23,6 +24,30 @@ const KNOWN_VISUAL_LAB_SAMPLERS = new Set<VisualLabSampler>([
 ]);
 
 describe('HDR Visual Lab domain adapters', () => {
+  it('projects the frozen leaf registry into the assembled public adapter tuple', () => {
+    expect(HDR_VOLUME_LAB_ADAPTER_REGISTRY).toEqual([
+      HDR_VOLUME_LAB_LIQUID_DESCRIPTOR,
+      HDR_VOLUME_LAB_GAS_DESCRIPTOR,
+      HDR_VOLUME_LAB_EMISSION_DESCRIPTOR,
+    ]);
+    expect(Object.isFrozen(HDR_VOLUME_LAB_ADAPTER_REGISTRY)).toBe(true);
+    for (const adapter of HDR_VOLUME_LAB_ADAPTER_REGISTRY) {
+      expect(Object.isFrozen(adapter)).toBe(true);
+      expect(Object.isFrozen(adapter.budget)).toBe(true);
+      expect(Object.isFrozen(adapter.budget.existingSamplerReads)).toBe(true);
+    }
+
+    expect(HDR_VOLUME_LAB_ADAPTERS).toStrictEqual(HDR_VOLUME_LAB_ADAPTER_REGISTRY);
+    HDR_VOLUME_LAB_ADAPTERS.forEach((adapter, index) => {
+      expect(adapter).toBe(HDR_VOLUME_LAB_ADAPTER_REGISTRY[index]);
+    });
+    expect(HDR_VOLUME_LAB_DOMAIN_ADAPTERS).toEqual({
+      liquid: HDR_VOLUME_LAB_ADAPTER_REGISTRY[0],
+      gas: HDR_VOLUME_LAB_ADAPTER_REGISTRY[1],
+      emission: HDR_VOLUME_LAB_ADAPTER_REGISTRY[2],
+    });
+  });
+
   it('assembles one frozen canonical tuple and complete adapter map in stable domain order', () => {
     expect(HDR_VOLUME_LAB_ADAPTERS).toEqual([
       HDR_VOLUME_LAB_LIQUID_DESCRIPTOR,

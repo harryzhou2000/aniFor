@@ -1,8 +1,4 @@
-import {
-  HDR_VOLUME_LAB_EMISSION_DESCRIPTOR,
-} from './hdr-volume-lab-emission';
-import { HDR_VOLUME_LAB_GAS_DESCRIPTOR } from './hdr-volume-lab-gas';
-import { HDR_VOLUME_LAB_LIQUID_DESCRIPTOR } from './hdr-volume-lab-liquid';
+import { HDR_VOLUME_LAB_ADAPTER_REGISTRY } from './hdr-volume-lab-adapters';
 import {
   VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS,
   type ImplementedVisualLabDomain,
@@ -185,11 +181,9 @@ export function assembleHdrVisualLabShader(
  * comparisons. The canonical tuple is the sole source of source/dispatch
  * ordering; the presenter remains authoritative for support and alpha.
  */
-const HDR_VISUAL_LAB_SHADER = assembleHdrVisualLabShader([
-  HDR_VOLUME_LAB_LIQUID_DESCRIPTOR,
-  HDR_VOLUME_LAB_GAS_DESCRIPTOR,
-  HDR_VOLUME_LAB_EMISSION_DESCRIPTOR,
-]);
+const HDR_VISUAL_LAB_SHADER = assembleHdrVisualLabShader(
+  HDR_VOLUME_LAB_ADAPTER_REGISTRY,
+);
 
 export const HDR_VOLUME_LAB_ADAPTERS = HDR_VISUAL_LAB_SHADER.adapters;
 export const HDR_VOLUME_LAB_DOMAIN_ADAPTERS = HDR_VISUAL_LAB_SHADER.domainAdapters;
