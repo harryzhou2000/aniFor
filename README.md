@@ -130,8 +130,11 @@ Two independent local SwiftShader captures matched byte-for-byte (OFF
 review passed and the explicitly reviewed geometry migration produced accepted
 baseline
 `sha256:b78ac28395d454a13889b2124fa4364119463756407877ab801608a783eba1aa`.
-The next acceptance boundary is hosted manifest/PNG equality, after which this
-reproducible loop becomes the default route for reusable material experiments.
+Workflow run `31333870677` deployed exact revision `3f8a423`; its downloaded
+four-recipe review matched all twelve accepted PNGs and all four result IDs,
+while the retained live Water manifest matched the same hashes and exact
+geometry proof after a 19-resource origin check. This reproducible local/hosted
+loop is now the default route for reusable material experiments.
 
 Readiness and settle behavior is independently bound by
 `execution-tuning-plan.json`. Its content-addressed entries come from one

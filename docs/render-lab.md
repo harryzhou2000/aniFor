@@ -97,6 +97,12 @@ requires exact schema/state and monotonically increasing tickets/submissions.
 Receipt evidence never enters result, batch, recipe-set, baseline, or comparison
 identities. True 8× retains its independent full release proof.
 
+The manual GitHub Actions control exposes the same bounded choice as
+`visual_lab_capture_proof`: `stable-snapshots` remains the default, while
+`completed-frame-receipt` opts the requested review batch into v2. The hosted
+post-deploy smoke stays pinned to the completed-frame receipt independently, so
+changing the review choice cannot weaken live renderer verification.
+
 For a one-off production-bundle batch and portable verification:
 
 ```sh
@@ -239,9 +245,12 @@ promotion
 `sha256:261fdf5d7b6b2ce358e193a30b55498b3c7597a5a0db11bf40309ad3f9d868f2`.
 Accepted baseline
 `sha256:b78ac28395d454a13889b2124fa4364119463756407877ab801608a783eba1aa`
-compares four-for-four encoded-identical to that source. The remaining
-acceptance boundary is deployed manifest/PNG equality before reusable material
-experiments begin.
+compares four-for-four encoded-identical to that source. Workflow run
+`31333870677` then deployed exact revision `3f8a423`; its downloaded hosted
+release package matched all four result IDs and all twelve accepted PNGs, and
+the retained live Water manifest matched the local OFF/A/B hashes plus exact
+geometry after the 19-resource origin check. The hermetic loop is therefore the
+default evidence path for subsequent reusable material experiments.
 
 The real-browser audit first captures and signature-checks this deterministic
 atlas, then clears it and exercises painting, wheel/pan, resizing, and mobile

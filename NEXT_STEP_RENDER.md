@@ -168,10 +168,28 @@ Active priority order:
    Baseline
    `sha256:b78ac28395d454a13889b2124fa4364119463756407877ab801608a783eba1aa`
    then compared four-for-four encoded-identical against the capture source.
-12. Deploy this framework/baseline checkpoint and compare the hosted success
-   manifest, geometry proof, and Water PNG hashes with the local evidence. Only
-   after that local/hosted closure should the loop move into reusable powder,
-   liquid, gas, and material experiments.
+12. Treat hermetic local/hosted closure as deployed framework infrastructure.
+   Workflow run `31333870677` deployed exact revision
+   `3f8a4235d220fd2d3ec62d04b1d84c10897ea67f`: build completed in 3m32s, the
+   four-recipe review in 4m43s, deploy in 9s, and live verification in 1m14s.
+   The downloaded hosted review matched all four local result IDs and all twelve
+   PNG hashes byte-for-byte, compared four-for-four encoded-identical to the new
+   baseline, and carried the exact 918×576 proof. The retained live Water
+   manifest matched OFF/A/B hashes, WebGL/HDR state, 1224×768 backing, and the
+   19-resource origin attestation. The next increment must improve reusable
+   experiment authoring or measurement throughput rather than add a leaf shader
+   detail.
+13. Complete fixture-bound experiment authoring as the next framework
+   checkpoint. Selection and dataset projection must share one validated
+   fixture/driver binding and reject mismatches during plan compilation, before
+   browser launch or output mutation. App controls belong to drivers rather
+   than individual fixtures, while optional scene preparation stays a typed
+   fixture concern. Adding another fixture for an existing driver must not add
+   a browser method, app control descriptor, harness branch, or hidden fixture
+   constant. Keep stable snapshots as the CI review default and expose the
+   proven completed-frame receipt as an explicit manual choice. Once deployed,
+   use the same pattern to retain content-addressed capture-geometry provenance
+   with accepted baselines without rotating frozen v1 identities.
 
 Continue improving the registration and evidence loop before spending the
 milestone on isolated shader detail. Visual preference may later accept a

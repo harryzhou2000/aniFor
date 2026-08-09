@@ -52,8 +52,8 @@ difference. Preserve the manifest's 16 KiB cap and its exclusion from result,
 batch, baseline, comparison, recipe-set, execution, tuning, host, and static-
 contract identities.
 
-The active framework increment is hermetic Visual Lab capture geometry, not an
-isolated shader detail. Under only the exact audit tuple `inputAudit=1`,
+The hermetic Visual Lab capture-geometry increment is complete. Under only the
+exact audit tuple `inputAudit=1`,
 `auditStage=visual-lab`, and `visualLabAudit=1`, use a 1280×600 viewport at DPR 1
 and visual scale 1, fix the canvas at `(181,12)` with a 918×576 CSS crop, and
 retain the ordinary 2× backing at 1224×768. Ordinary responsive desktop/mobile
@@ -68,10 +68,29 @@ accepted the geometry-only migration through promotion
 `sha256:261fdf5d7b6b2ce358e193a30b55498b3c7597a5a0db11bf40309ad3f9d868f2`;
 the new baseline is
 `sha256:b78ac28395d454a13889b2124fa4364119463756407877ab801608a783eba1aa`
-and compares four-for-four encoded-identical to its source. This checkpoint is
-not deployed yet. Next prove the deployed manifest and PNG bytes against this
-local evidence, then use the framework for reusable powder/liquid/gas/material
-experiments.
+and compares four-for-four encoded-identical to its source. Workflow run
+`31333870677` deployed exact revision
+`3f8a4235d220fd2d3ec62d04b1d84c10897ea67f`: build, four-recipe review,
+downloaded-package verification, Pages deployment, exact 19-resource closure,
+and live Water receipt-v2 smoke all passed. The hosted release artifact matched
+all four local result IDs and all twelve PNG hashes byte-for-byte; the retained
+manifest matched the local Water hashes and exact geometry proof. Treat this
+hermetic local/hosted loop as complete. Keep the next increment on reusable
+experiment-authoring or measurement leverage, not another isolated material
+detail.
+
+The active framework increment is fixture-bound experiment authoring. Selection
+and observed-dataset projection must resolve through the same validated fixture
+and driver before Chrome starts; never hide a fixture constant inside a driver.
+Define executable same-page controls once per driver and derive fixture coverage
+from the static contracts. A new fixture using an existing driver should need a
+catalog entry and, only when it authors a scene, one typed preparer—not another
+browser API, app control descriptor, harness branch, or projection special case.
+Keep stable-snapshot capture as the default release proof while exposing the
+already-proven completed-frame receipt as an explicit manual CI experiment.
+After this closure, preserve accepted capture geometry in content-addressed
+baseline provenance so promotion does not discard the proof carried by its
+source reports.
 
 The typed fixture-preparation boundary is also complete and deployed at revision
 `83894aa6fe98fc5a537cd4c23c9b2400dc37081f` by release-set workflow run
@@ -81,8 +100,9 @@ Visual Lab fixture crosses CDP as one stable fixture ID and calls exactly one
 that binds each ID to its concrete builder and arguments; never execute a
 catalog-supplied method string, argument array, reflective lookup, or `.apply`.
 Keep specialized audit preparers for their standalone still/reversed gates, but
-future Visual Lab fixtures must add a registry entry and declarative adapter,
-not another browser-API method, Game wrapper, or harness branch. Existing v1
+future authored Visual Lab fixtures must add one typed preparer and declarative
+fixture entry, not another browser-API method, Game wrapper, control descriptor,
+or harness branch. Existing v1
 reports keep the historical Oil/Water preparation labels so downloaded packages
 remain verifiable; those labels are diagnostics only and must not regain
 execution authority.

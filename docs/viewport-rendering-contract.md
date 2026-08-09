@@ -54,7 +54,10 @@ checkpointed at `1cd23cc`; after review-CLI repair `627ef50`, its complete
 four-recipe release evidence passed and the separately reviewed promotion
 produced accepted baseline
 `sha256:b78ac28395d454a13889b2124fa4364119463756407877ab801608a783eba1aa`.
-Deployment must still prove the hosted geometry and bytes against that source.
+Workflow run `31333870677` deployed exact revision `3f8a423`; the downloaded
+four-recipe release artifact matched every accepted PNG and result ID, and the
+live Water manifest proved the same 918×576 crop, DPR/scale/scroll state, and
+1224×768 backing after exact origin closure.
 
 The bounded manifest that exposed this need is deployed at revision
 `95cab0b4e3f885c1b956875322e9e9e2caa4866f` by workflow run `31331716229` as

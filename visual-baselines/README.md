@@ -13,6 +13,10 @@ expected dimension-mismatch review items; the reviewed promotion
 then compared four-for-four encoded-identical against its capture source. The
 accepted manifest ID is
 `sha256:b78ac28395d454a13889b2124fa4364119463756407877ab801608a783eba1aa`.
+Workflow run `31333870677` subsequently captured the exact deployed
+`3f8a4235d220fd2d3ec62d04b1d84c10897ea67f` artifact and matched all four
+result IDs plus all twelve accepted PNG hashes byte-for-byte before Pages and
+live-origin verification completed.
 
 ## Reusable capture cohorts
 
