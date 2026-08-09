@@ -22,7 +22,8 @@ const HELP = `Usage:
     [--baseline-root=<accepted-baseline>] \\
     [--candidates=<name[,name...]> | --recipe-set=<recipe-set.json>] \\
     [--bundle=<dist/index.html>] [--chrome=<path>] \\
-    [--gpu=auto|swiftshader] [--candidate-timeout-ms=<milliseconds>]
+    [--gpu=auto|swiftshader] [--browser-host=fresh|shared] \\
+    [--candidate-timeout-ms=<milliseconds>]
 
 Runs one trusted local review cycle against an existing production bundle:
 capture the selected recipes, compare them with the accepted baseline, then
@@ -95,8 +96,10 @@ const throwIfAborted = (signal) => {
 export function parseVisualLabReviewArguments(argv) {
   if (!Array.isArray(argv)) throw new TypeError('arguments must be an array');
   if (argv.includes('--help') || argv.includes('-h')) return Object.freeze({ help: true });
-  if (argv.some((argument) => argument.startsWith('--index-only='))) {
-    throw new Error('--index-only is not supported by a complete review cycle');
+  for (const unsupported of ['index-only', 'plan-only']) {
+    if (argv.some((argument) => argument.startsWith(`--${unsupported}=`))) {
+      throw new Error(`--${unsupported} is not supported by a complete review cycle`);
+    }
   }
 
   let baselineRoot;
@@ -133,8 +136,8 @@ export async function runVisualLabReviewCycle(options = {}, dependencies = {}) {
     throw new TypeError('Visual Lab review cycle options must be an object');
   }
   const allowed = new Set([
-    'baselineRoot', 'bundle', 'candidateTimeoutMs', 'candidates', 'chrome',
-    'gpu', 'outputDir', 'recipeSetPath', 'signal',
+    'baselineRoot', 'browserHost', 'bundle', 'candidateTimeoutMs', 'candidates',
+    'chrome', 'gpu', 'outputDir', 'recipeSetPath', 'signal',
   ]);
   const unexpected = Reflect.ownKeys(options).filter((key) => !allowed.has(key));
   if (unexpected.length > 0) {
@@ -175,6 +178,7 @@ export async function runVisualLabReviewCycle(options = {}, dependencies = {}) {
     ...(options.bundle === undefined ? {} : { bundle: options.bundle }),
     ...(options.chrome === undefined ? {} : { chrome: options.chrome }),
     ...(options.gpu === undefined ? {} : { gpu: options.gpu }),
+    ...(options.browserHost === undefined ? {} : { browserHost: options.browserHost }),
     ...(options.candidateTimeoutMs === undefined
       ? {} : { candidateTimeoutMs: options.candidateTimeoutMs }),
     ...(recipeSet === undefined ? { candidates: options.candidates } : {
@@ -201,6 +205,7 @@ export async function runVisualLabReviewCycle(options = {}, dependencies = {}) {
     baselineRoot,
     comparisonRoot,
     ...(recipeSetSourcePath === undefined ? {} : { recipeSetSourcePath }),
+    requireBrowserHostPlan: true,
     requireComplete: true,
     requireRecipeSet: true,
   });

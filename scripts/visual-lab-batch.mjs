@@ -6,6 +6,7 @@ import {
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { performance } from 'node:perf_hooks';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 
@@ -44,6 +45,12 @@ import {
   VISUAL_LAB_CAPTURE_VARIANT_NAMES as VARIANTS,
 } from './visual-lab-capture-abi.mjs';
 import { inspectVisualLabPng } from './visual-lab-png.mjs';
+import {
+  createVisualLabBrowserHostPlan,
+  normalizeVisualLabBrowserHostPlan,
+  resolveVisualLabBrowserHostPlanEntry,
+} from './visual-lab-browser-host-plan.mjs';
+import { startVisualLabChromeHost } from './visual-lab-chrome-host.mjs';
 
 export { inspectVisualLabPng } from './visual-lab-png.mjs';
 
@@ -63,6 +70,9 @@ const LIFECYCLE_FILE_NAME = 'chrome-lifecycle.json';
 const LIFECYCLE_SCHEMA = 'anifor.visual-lab.lifecycle/v1';
 const BATCH_LOCK_FILE_NAME = '.visual-lab-batch.lock';
 const BATCH_LOCK_SCHEMA = 'anifor.visual-lab.batch-lock/v1';
+const BROWSER_HOST_PLAN_FILE_NAME = 'browser-host-plan.json';
+const SHARED_CHROME_LIFECYCLE_FILE_NAME = '.shared-chrome-lifecycle.json';
+const DEFERRED_REPORT_FILE_NAME = 'report.pending.json';
 const LIFECYCLE_CLOCK_SKEW_MS = 60_000;
 const MIN_LIFECYCLE_RECOVERY_WINDOW_MS = 30 * 60_000;
 const FAILURE_CODES = new Set([
@@ -79,12 +89,14 @@ Options (use --name=value):
   --output-dir=/tmp/anifor-visual-lab-batch
   --chrome=/path/to/chrome               Forwarded to the generic capture runner
   --gpu=auto|swiftshader                 Forwarded to the generic capture runner
+  --browser-host=fresh|shared            Opt-in sequential Chrome-host reuse (Linux only)
   --candidate-timeout-ms=300000          Per-candidate timeout before TERM/KILL cleanup
   --index-only=0|1                       Aggregate existing candidate reports without capture
   --plan-only=0|1                        Inspect the exact plan without writes or Chrome
   --help
 
-Capture outputs: recipe-set.json, index.json, index.html, and candidates/<name>/ artifacts.
+Capture outputs: recipe-set.json, browser-host-plan.json, index.json, index.html,
+and candidates/<name>/ artifacts.
 Plan-only writes one JSON record to stdout and does not create the output tree.`;
 
 class CandidateArtifactError extends Error {
@@ -684,18 +696,25 @@ const readFailureTombstone = async (candidateDirectory, recipe, {
 const readCandidateReport = async (candidateDirectory, recipe, {
   strictFailureTombstone = false,
   executionPlan,
+  reportFileName = 'report.json',
+  skipFailureTombstone = false,
 } = {}) => {
-  await readFailureTombstone(candidateDirectory, recipe, {
-    rejectSymlink: strictFailureTombstone,
-  });
-  const reportPath = path.join(candidateDirectory, 'report.json');
+  if (!skipFailureTombstone) {
+    await readFailureTombstone(candidateDirectory, recipe, {
+      rejectSymlink: strictFailureTombstone,
+    });
+  }
+  if (reportFileName !== 'report.json' && reportFileName !== 'report.pending.json') {
+    throw new TypeError('Visual Lab candidate report file name is not owned by the batch');
+  }
+  const reportPath = path.join(candidateDirectory, reportFileName);
   let source;
   try {
-    source = await readStableRegularFile(reportPath, `${recipe.name} report.json`, 'utf8');
+    source = await readStableRegularFile(reportPath, `${recipe.name} ${reportFileName}`, 'utf8');
   } catch (error) {
     throw new CandidateArtifactError(
       error?.code === 'ENOENT' ? 'report-missing' : 'report-invalid',
-      `Cannot read ${recipe.name} report.json: ${error.message}`,
+      `Cannot read ${recipe.name} ${reportFileName}: ${error.message}`,
       { cause: error },
     );
   }
@@ -705,12 +724,13 @@ const readCandidateReport = async (candidateDirectory, recipe, {
     report = JSON.parse(source);
   } catch (error) {
     throw new CandidateArtifactError(
-      'report-invalid', `${recipe.name} report.json is not valid JSON`, { cause: error },
+      'report-invalid', `${recipe.name} ${reportFileName} is not valid JSON`, { cause: error },
     );
   }
 
   let expected;
   let timings = null;
+  let executionProof;
   try {
     if (report?.tool !== 'visual-lab-audit-v1') throw new Error('unexpected report tool');
     const hashes = Object.fromEntries(VARIANTS.map((variant) => [
@@ -749,8 +769,14 @@ const readCandidateReport = async (candidateDirectory, recipe, {
     const resolvedExecutionPlan = executionPlan ?? createVisualLabExecutionPlan({
       candidates: [recipe.name],
       baseUrl: reportBaseUrl,
+      gpu: report.gpu,
     }).entries[0];
     assertCurrentCaptureContract(report, resolvedExecutionPlan, hashes);
+    executionProof = Object.freeze({
+      entryId: resolvedExecutionPlan.inspection.id,
+      baseUrl: reportBaseUrl.href,
+      gpu: report.gpu,
+    });
   } catch (error) {
     throw new CandidateArtifactError(
       'report-invalid', `${recipe.name} report validation failed: ${error.message}`, { cause: error },
@@ -804,6 +830,7 @@ const readCandidateReport = async (candidateDirectory, recipe, {
     status: 'passed',
     result: expected,
     warnings: [...report.warnings],
+    executionProof,
     ...(timings === null ? {} : { timings }),
   };
 };
@@ -833,6 +860,104 @@ const parsePortableJson = (source, label) => {
   catch (error) { throw new TypeError(`${label} is not valid JSON`, { cause: error }); }
 };
 
+const readOptionalBrowserHostPlan = async (file) => {
+  if (await pathDetails(file) === undefined) return null;
+  const source = await readStableRegularFile(file, 'Visual Lab browser-host plan', 'utf8');
+  return normalizeVisualLabBrowserHostPlan(
+    parsePortableJson(source, 'Visual Lab browser-host plan'),
+  );
+};
+
+const assertBrowserHostPlanMatchesEntries = (
+  browserHostPlan,
+  recipes,
+  entries = [],
+  { requireTimingProof = false } = {},
+) => {
+  if (browserHostPlan.entries.length !== recipes.length) {
+    throw new TypeError('Visual Lab browser-host plan does not match batch candidate count');
+  }
+  for (let index = 0; index < recipes.length; index++) {
+    const recipe = recipes[index];
+    const planEntry = browserHostPlan.entries[index];
+    if (planEntry.candidate !== recipe.name || planEntry.renderScale !== recipe.renderScale) {
+      throw new TypeError(
+        `Visual Lab browser-host plan entry ${index} does not match ${recipe.name}`,
+      );
+    }
+    const captured = entries[index];
+    if (captured?.status !== 'passed') continue;
+    const browserHosts = captured.timings?.counters?.browserHosts;
+    if (browserHosts === undefined) {
+      if (requireTimingProof) {
+        throw new TypeError(
+          `Visual Lab browser-host plan for ${recipe.name} lacks capture timing proof`,
+        );
+      }
+      continue;
+    }
+    const capturedMode = browserHosts === 1 ? 'fresh'
+      : browserHosts === 0 ? 'shared' : null;
+    if (capturedMode === null || planEntry.effectiveMode !== capturedMode) {
+      throw new TypeError(
+        `Visual Lab browser-host plan mode for ${recipe.name} does not match its capture timing`,
+      );
+    }
+  }
+};
+
+const assertBrowserHostPlanCaptureIdentity = (
+  browserHostPlan,
+  recipes,
+  entries,
+  recipeSet,
+  outputDirectory,
+  { required = false } = {},
+) => {
+  const passed = entries.filter((entry) => entry.status === 'passed');
+  if (passed.length === 0) {
+    if (required) {
+      throw new TypeError('Visual Lab browser-host plan lacks passed capture identity proof');
+    }
+    return;
+  }
+  if (passed.some((entry) => entry.executionProof === undefined)) {
+    throw new TypeError('Visual Lab browser-host plan lacks capture execution-entry proof');
+  }
+  const baseUrls = new Set(passed.map(({ executionProof }) => executionProof.baseUrl));
+  const gpuModes = new Set(passed.map(({ executionProof }) => executionProof.gpu));
+  if (baseUrls.size !== 1 || gpuModes.size !== 1) {
+    throw new TypeError('Visual Lab browser-host plan capture policy is inconsistent across reports');
+  }
+  const reconstructed = createVisualLabExecutionPlan({
+    ...(recipeSet === null
+      ? { candidates: recipes.map(({ name }) => name) }
+      : { recipeSet }),
+    baseUrl: [...baseUrls][0],
+    gpu: [...gpuModes][0],
+    outputDir: outputDirectory,
+  });
+  if (browserHostPlan.capturePlan.id !== reconstructed.inspection.id) {
+    throw new TypeError(
+      'Visual Lab browser-host plan does not bind the captured execution plan identity',
+    );
+  }
+  for (let index = 0; index < reconstructed.entries.length; index++) {
+    const expectedEntryId = reconstructed.entries[index].inspection.id;
+    if (browserHostPlan.entries[index].captureEntryId !== expectedEntryId) {
+      throw new TypeError(
+        `Visual Lab browser-host plan does not bind capture entry ${recipes[index].name}`,
+      );
+    }
+    if (entries[index].status === 'passed'
+      && entries[index].executionProof.entryId !== expectedEntryId) {
+      throw new TypeError(
+        `Visual Lab report does not prove capture entry ${recipes[index].name}`,
+      );
+    }
+  }
+};
+
 /**
  * Revalidates a downloaded Visual Lab batch without creating, deleting, or
  * rewriting any package file. Legacy batches may omit recipe-set.json; every
@@ -843,7 +968,8 @@ export async function verifyVisualLabBatchPackage(options = {}) {
     throw new TypeError('Visual Lab batch verification options must be an object');
   }
   const allowed = new Set([
-    'batchRoot', 'requireComplete', 'requireRecipeSet', 'recipeSetSourcePath',
+    'batchRoot', 'requireBrowserHostPlan', 'requireComplete', 'requireRecipeSet',
+    'recipeSetSourcePath',
   ]);
   const unexpected = Reflect.ownKeys(options).filter((key) => !allowed.has(key));
   if (unexpected.length > 0) {
@@ -853,8 +979,11 @@ export async function verifyVisualLabBatchPackage(options = {}) {
     throw new TypeError('Visual Lab batch verification requires batchRoot');
   }
   const requireComplete = options.requireComplete ?? true;
+  const requireBrowserHostPlan = options.requireBrowserHostPlan ?? false;
   const requireRecipeSet = options.requireRecipeSet ?? false;
-  if (typeof requireComplete !== 'boolean' || typeof requireRecipeSet !== 'boolean') {
+  if (typeof requireComplete !== 'boolean'
+    || typeof requireBrowserHostPlan !== 'boolean'
+    || typeof requireRecipeSet !== 'boolean') {
     throw new TypeError('Visual Lab batch verification requirement flags must be booleans');
   }
 
@@ -871,8 +1000,10 @@ export async function verifyVisualLabBatchPackage(options = {}) {
   }
 
   const entries = [];
+  const recipes = [];
   for (const raw of index.candidates) {
     const recipe = resolveVisualLabCaptureRecipe(raw?.candidate);
+    recipes.push(recipe);
     const candidateDirectory = path.join(batchRoot, 'candidates', recipe.name);
     if (raw?.status === 'passed') {
       entries.push(await readCandidateReport(candidateDirectory, recipe, {
@@ -912,6 +1043,26 @@ export async function verifyVisualLabBatchPackage(options = {}) {
     }
   }
 
+  const browserHostPlan = await readOptionalBrowserHostPlan(
+    path.join(batchRoot, BROWSER_HOST_PLAN_FILE_NAME),
+  );
+  if (requireBrowserHostPlan && browserHostPlan === null) {
+    throw new TypeError('Visual Lab batch package is missing browser-host-plan.json');
+  }
+  if (browserHostPlan !== null) {
+    assertBrowserHostPlanMatchesEntries(browserHostPlan, recipes, entries, {
+      requireTimingProof: true,
+    });
+    assertBrowserHostPlanCaptureIdentity(
+      browserHostPlan,
+      recipes,
+      entries,
+      recipeSet ?? null,
+      batchRoot,
+      { required: requireBrowserHostPlan },
+    );
+  }
+
   let sourceRecipeSet;
   if (options.recipeSetSourcePath !== undefined) {
     sourceRecipeSet = await readVisualLabRecipeSet(options.recipeSetSourcePath);
@@ -924,6 +1075,7 @@ export async function verifyVisualLabBatchPackage(options = {}) {
     batchRoot,
     index: canonical,
     recipeSet: recipeSet ?? null,
+    browserHostPlan,
     timings: summarizeEntryTimings(entries),
   });
 }
@@ -1176,10 +1328,17 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   }
   const bundle = path.resolve(options.bundle ?? path.join(REPOSITORY_ROOT, 'dist/index.html'));
   const gpu = options.gpu ?? 'auto';
+  const browserHost = options.browserHost ?? 'fresh';
   const candidateTimeoutMs = options.candidateTimeoutMs
     ?? VISUAL_LAB_DEFAULT_CANDIDATE_TIMEOUT_MS;
   if (gpu !== 'auto' && gpu !== 'swiftshader') {
     throw new Error('Visual Lab batch gpu must be auto or swiftshader');
+  }
+  if (browserHost !== 'fresh' && browserHost !== 'shared') {
+    throw new Error('Visual Lab batch browserHost must be fresh or shared');
+  }
+  if (browserHost === 'shared' && process.platform !== 'linux') {
+    throw new Error('Shared Visual Lab browser hosts are currently supported on Linux only');
   }
   if (options.chrome !== undefined
     && (typeof options.chrome !== 'string' || options.chrome.length === 0)) {
@@ -1205,6 +1364,15 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
     chrome: options.chrome,
   });
   const { recipeSet } = executionPlan;
+  const browserHostPlan = createVisualLabBrowserHostPlan(executionPlan, browserHost);
+  const browserHostEntryByCandidate = new Map(browserHostPlan.entries.map((entry) => [
+    entry.candidate,
+    resolveVisualLabBrowserHostPlanEntry(
+      browserHostPlan,
+      entry.id,
+      executionPlan.entries[entry.sequence].inspection.id,
+    ),
+  ]));
   const recipes = executionPlan.entries.map(({ recipe }) => recipe);
   const executionPlanByCandidate = new Map(
     executionPlan.entries.map((entry) => [entry.candidate, entry]),
@@ -1222,6 +1390,7 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
       exitCode: 0,
       planOnly: true,
       plan: executionPlan.inspection,
+      browserHostPlan,
       runtime: executionPlan.runtime,
       recipeSet,
     });
@@ -1236,6 +1405,22 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   const indexPath = path.join(outputDirectory, 'index.json');
   const contactSheetPath = path.join(outputDirectory, 'index.html');
   const recipeSetPath = path.join(outputDirectory, 'recipe-set.json');
+  const browserHostPlanPath = path.join(outputDirectory, BROWSER_HOST_PLAN_FILE_NAME);
+  const publishedBrowserHostPlan = indexOnly
+    ? await readOptionalBrowserHostPlan(browserHostPlanPath)
+    : browserHostPlan;
+  if (publishedBrowserHostPlan !== null) {
+    assertBrowserHostPlanMatchesEntries(publishedBrowserHostPlan, recipes);
+  }
+  const sharedLifecyclePath = path.join(outputDirectory, SHARED_CHROME_LIFECYCLE_FILE_NAME);
+  const sharedLifecycleOwner = lifecycleOwnerFor(outputDirectory, 'shared-browser-host');
+  const sharedRecoveryTimeoutMs = Math.min(
+    MAX_CANDIDATE_TIMEOUT_MS,
+    candidateTimeoutMs * Math.max(1, recipes.length),
+  );
+  await recoverRecordedChrome(
+    sharedLifecyclePath, sharedRecoveryTimeoutMs, sharedLifecycleOwner,
+  );
   const resolvedCandidateRoot = await ensureCandidateRoot(outputDirectory, candidateRoot);
   const candidateDirectories = new Map();
   const lifecycleOwners = new Map();
@@ -1259,33 +1444,181 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   await Promise.all([
     indexPath, contactSheetPath, recipeSetPath,
     `${indexPath}.tmp`, `${contactSheetPath}.tmp`, `${recipeSetPath}.tmp`,
+    ...(!indexOnly ? [browserHostPlanPath, `${browserHostPlanPath}.tmp`] : []),
   ].map((file) => rm(file, { force: true })));
   const runCandidate = dependencies.runCandidate ?? defaultRunCandidate;
   const publishFile = dependencies.publishFile ?? writeAtomic;
   const auditScript = path.resolve(dependencies.auditScript ?? DEFAULT_AUDIT_SCRIPT);
   const command = dependencies.command ?? process.execPath;
   const cwd = path.resolve(dependencies.cwd ?? REPOSITORY_ROOT);
-  const entries = [];
+  const entriesByCandidate = new Map();
+  const startSharedHost = dependencies.startSharedHost ?? startVisualLabChromeHost;
+  let sharedHost;
+  let sharedHostReady;
+  let sharedHostOrdinal = 0;
+  let sharedHostBlocker;
+  let pendingSharedReports = [];
+  const browserHostRuntime = {
+    requestedMode: publishedBrowserHostPlan?.requestedMode ?? null,
+    hostsStarted: 0,
+    hostRestarts: 0,
+    launchMs: 0,
+    teardownMs: 0,
+    assignments: [],
+    recycleReasons: [],
+  };
+
+  const teardownSharedHost = async (reason) => {
+    if (!sharedHost) return;
+    const ownedHost = sharedHost;
+    sharedHost = undefined;
+    sharedHostReady = undefined;
+    const started = performance.now();
+    let teardownError;
+    try { await ownedHost.teardown(); }
+    catch (error) { teardownError = error; }
+    browserHostRuntime.teardownMs += performance.now() - started;
+    browserHostRuntime.recycleReasons.push(reason);
+    if (!teardownError) return;
+    let recovered = false;
+    let recoveryError;
+    try {
+      recovered = await recoverRecordedChrome(
+        sharedLifecyclePath, sharedRecoveryTimeoutMs, sharedLifecycleOwner,
+      );
+    } catch (error) { recoveryError = error; }
+    if (!recovered && !recoveryError) {
+      recoveryError = new Error(
+        'Shared Chrome teardown failed without a recoverable lifecycle handoff',
+      );
+    }
+    if (recoveryError) {
+      sharedHostBlocker = new AggregateError(
+        [teardownError, recoveryError],
+        'Shared Chrome teardown and lifecycle recovery both failed',
+      );
+      throw sharedHostBlocker;
+    }
+    throw teardownError;
+  };
+
+  const ensureSharedHost = async () => {
+    if (sharedHostBlocker) throw sharedHostBlocker;
+    if (sharedHost) {
+      await sharedHost.assertHealthy();
+      return sharedHostReady;
+    }
+    if (process.platform !== 'linux') {
+      throw new Error('Shared Visual Lab browser hosts are currently supported on Linux only');
+    }
+    const started = performance.now();
+    try {
+      sharedHost = await startSharedHost({
+        chromePath: options.chrome,
+        gpuMode: gpu,
+        initialUrl: new URL('about:blank'),
+        allowFileAccess: pathToFileURL(bundle).protocol === 'file:',
+        lifecycleFile: sharedLifecyclePath,
+        lifecycleOwner: sharedLifecycleOwner,
+      });
+      sharedHostReady = await sharedHost.ready();
+      await sharedHost.assertHealthy();
+      if (typeof sharedHostReady?.browserWebSocketDebuggerUrl !== 'string') {
+        throw new Error('Shared Chrome host did not publish a browser WebSocket endpoint');
+      }
+      sharedHostOrdinal += 1;
+      browserHostRuntime.hostsStarted += 1;
+      if (sharedHostOrdinal > 1) browserHostRuntime.hostRestarts += 1;
+      browserHostRuntime.launchMs += performance.now() - started;
+      return sharedHostReady;
+    } catch (error) {
+      browserHostRuntime.launchMs += performance.now() - started;
+      let cleanupError;
+      try { await teardownSharedHost('launch-fault'); }
+      catch (nested) { cleanupError = nested; }
+      if (cleanupError) {
+        throw new AggregateError(
+          [error, cleanupError], 'Shared Chrome launch and cleanup both failed',
+        );
+      }
+      throw error;
+    }
+  };
+
+  const promoteSharedReports = async () => {
+    const promoted = [];
+    for (const pending of pendingSharedReports) {
+      const deferredPath = path.join(pending.candidateDirectory, DEFERRED_REPORT_FILE_NAME);
+      const reportPath = pending.executionPlan.runtime.artifacts.report;
+      await rm(reportPath, { force: true });
+      await rename(deferredPath, reportPath);
+      await rm(path.join(pending.candidateDirectory, 'failure.log'), { force: true });
+      promoted.push(await readCandidateReport(
+        pending.candidateDirectory,
+        pending.recipe,
+        { executionPlan: pending.executionPlan },
+      ));
+    }
+    for (const entry of promoted) entriesByCandidate.set(entry.candidate, entry);
+    pendingSharedReports = [];
+  };
+
+  const finalizeSharedGeneration = async (reason) => {
+    if (sharedHostBlocker) throw sharedHostBlocker;
+    if (!sharedHost && pendingSharedReports.length === 0) return;
+    await teardownSharedHost(reason);
+    await promoteSharedReports();
+  };
 
   // This sidecar is a separate schema family; batch/v1 stays byte-compatible.
   // Publishing it before any completion marker makes the selected cohort
   // independently inspectable even when capture is interrupted.
   await publishFile(recipeSetPath, `${JSON.stringify(recipeSet, null, 2)}\n`);
+  if (!indexOnly) {
+    await publishFile(
+      browserHostPlanPath, `${JSON.stringify(browserHostPlan, null, 2)}\n`,
+    );
+  }
   const publishedRecipeSet = await readVisualLabRecipeSet(recipeSetPath);
   if (!isDeepStrictEqual(publishedRecipeSet, recipeSet)) {
     throw new Error('Published Visual Lab recipe set does not match the validated request');
   }
 
-  for (const recipe of recipes) {
-    if (options.signal?.aborted) throw abortError(options.signal);
-    const candidateExecutionPlan = executionPlanByCandidate.get(recipe.name);
-    const candidateDirectory = candidateDirectories.get(recipe.name);
-    const lifecycleOwner = lifecycleOwners.get(recipe.name);
-    await ensureCandidateDirectory(resolvedCandidateRoot, candidateDirectory, recipe.name);
-    if (!indexOnly) {
+  try {
+    for (const recipe of recipes) {
+      if (options.signal?.aborted) throw abortError(options.signal);
+      const candidateExecutionPlan = executionPlanByCandidate.get(recipe.name);
+      const browserHostEntry = browserHostEntryByCandidate.get(recipe.name);
+      const candidateDirectory = candidateDirectories.get(recipe.name);
+      const lifecycleOwner = lifecycleOwners.get(recipe.name);
+      await ensureCandidateDirectory(resolvedCandidateRoot, candidateDirectory, recipe.name);
+
+      if (indexOnly) {
+        try {
+          entriesByCandidate.set(recipe.name, await readCandidateReport(
+            candidateDirectory, recipe, { executionPlan: candidateExecutionPlan },
+          ));
+        } catch (error) {
+          const code = error instanceof CandidateArtifactError ? error.code : 'report-invalid';
+          if (!(error instanceof CandidateArtifactError && error.preserveDiagnostic)) {
+            await writeFailure(candidateDirectory, code, error);
+          }
+          entriesByCandidate.set(
+            recipe.name, { candidate: recipe.name, status: 'failed', failure: code },
+          );
+        }
+        continue;
+      }
+
+      if (browserHostEntry.effectiveMode === 'fresh') {
+        await finalizeSharedGeneration('fresh-only-entry');
+      }
       // Clear only files owned by this tool. An explicit output directory may
       // contain a user's notes or comparison artifacts; never remove its tree.
-      await Promise.all(VISUAL_LAB_CANDIDATE_GENERATED_FILES.map((file) => (
+      await Promise.all([
+        ...VISUAL_LAB_CANDIDATE_GENERATED_FILES,
+        DEFERRED_REPORT_FILE_NAME,
+      ].map((file) => (
         rm(path.join(candidateDirectory, file), { force: true })
       )));
       const stdoutPath = candidateExecutionPlan.runtime.artifacts.stdout;
@@ -1299,33 +1632,59 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
         `--output-dir=${candidateDirectory}`,
         `--gpu=${gpu}`,
         `--execution-plan-id=${candidateExecutionPlan.inspection.id}`,
-        `--lifecycle-file=${lifecyclePath}`,
-        `--lifecycle-owner=${lifecycleOwner}`,
       ];
-      if (options.chrome) args.push(`--chrome=${options.chrome}`);
+      let sharedReady;
+      let executionError;
+      if (browserHostEntry.effectiveMode === 'shared') {
+        try {
+          sharedReady = await ensureSharedHost();
+          browserHostRuntime.assignments.push(Object.freeze({
+            candidate: recipe.name,
+            host: sharedHostOrdinal,
+          }));
+          args.push(
+            '--browser-host=shared',
+            `--browser-websocket=${sharedReady.browserWebSocketDebuggerUrl}`,
+            `--browser-host-plan=${browserHostPlanPath}`,
+            `--browser-host-entry-id=${browserHostEntry.id}`,
+            '--defer-report=1',
+          );
+        } catch (error) { executionError = error; }
+      } else {
+        args.push(
+          '--browser-host=fresh',
+          `--lifecycle-file=${lifecyclePath}`,
+          `--lifecycle-owner=${lifecycleOwner}`,
+        );
+        if (options.chrome) args.push(`--chrome=${options.chrome}`);
+      }
 
       let outcome;
-      let executionError;
-      try {
-        outcome = await runCandidate({
-          command, args, cwd, recipe, candidateDirectory,
-          executionPlan: candidateExecutionPlan,
-          stdoutPath, stderrPath, lifecyclePath, signal: options.signal,
-          timeoutMs: candidateTimeoutMs,
-        });
-      } catch (error) {
-        executionError = error;
+      if (!executionError) {
+        try {
+          outcome = await runCandidate({
+            command, args, cwd, recipe, candidateDirectory,
+            executionPlan: candidateExecutionPlan,
+            browserHostPlanEntry: browserHostEntry,
+            stdoutPath, stderrPath, lifecyclePath, signal: options.signal,
+            timeoutMs: candidateTimeoutMs,
+          });
+        } catch (error) {
+          executionError = error;
+        }
       }
       let recoveredChrome = false;
-      try {
-        recoveredChrome = await recoverRecordedChrome(
-          lifecyclePath, candidateTimeoutMs, lifecycleOwner,
-        );
-      }
-      catch (error) {
-        executionError = executionError
-          ? new AggregateError([executionError, error], 'Audit child and Chrome recovery failed')
-          : error;
+      if (browserHostEntry.effectiveMode === 'fresh') {
+        try {
+          recoveredChrome = await recoverRecordedChrome(
+            lifecyclePath, candidateTimeoutMs, lifecycleOwner,
+          );
+        }
+        catch (error) {
+          executionError = executionError
+            ? new AggregateError([executionError, error], 'Audit child and Chrome recovery failed')
+            : error;
+        }
       }
       if (options.signal?.aborted) {
         const interruption = abortError(options.signal);
@@ -1333,7 +1692,8 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
           ? new AggregateError([interruption, executionError], interruption.message)
           : interruption;
       }
-      if (recoveredChrome && !executionError
+      if (browserHostEntry.effectiveMode === 'fresh'
+        && recoveredChrome && !executionError
         && outcome?.killUnsettled !== true
         && outcome?.timedOut !== true && outcome?.code === 0) {
         executionError = new Error(
@@ -1341,8 +1701,15 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
         );
       }
       if (executionError) {
+        await rm(path.join(candidateDirectory, DEFERRED_REPORT_FILE_NAME), { force: true });
+        if (browserHostEntry.effectiveMode === 'shared') {
+          if (sharedHostBlocker) throw executionError;
+          await finalizeSharedGeneration('candidate-execution-fault');
+        }
         await writeFailure(candidateDirectory, 'capture-failed', executionError);
-        entries.push({ candidate: recipe.name, status: 'failed', failure: 'capture-failed' });
+        entriesByCandidate.set(recipe.name, {
+          candidate: recipe.name, status: 'failed', failure: 'capture-failed',
+        });
         continue;
       }
       if (options.signal?.aborted) throw abortError(options.signal);
@@ -1354,26 +1721,72 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
             ? `Audit child timed out after ${candidateTimeoutMs} ms`
             : `Audit child exited with code ${String(outcome?.code)}`
               + (outcome?.signal ? ` after ${outcome.signal}` : ''));
+        await rm(path.join(candidateDirectory, DEFERRED_REPORT_FILE_NAME), { force: true });
+        if (browserHostEntry.effectiveMode === 'shared') {
+          await finalizeSharedGeneration('candidate-process-fault');
+        }
         await writeFailure(candidateDirectory, 'capture-failed', detail);
-        entries.push({ candidate: recipe.name, status: 'failed', failure: 'capture-failed' });
+        entriesByCandidate.set(recipe.name, {
+          candidate: recipe.name, status: 'failed', failure: 'capture-failed',
+        });
         continue;
       }
-      // A successful current capture supersedes an older diagnostic only after
+
+      if (browserHostEntry.effectiveMode === 'shared') {
+        try {
+          await readCandidateReport(candidateDirectory, recipe, {
+            executionPlan: candidateExecutionPlan,
+            reportFileName: DEFERRED_REPORT_FILE_NAME,
+            skipFailureTombstone: true,
+          });
+          await sharedHost.assertHealthy();
+          pendingSharedReports.push({
+            recipe,
+            candidateDirectory,
+            executionPlan: candidateExecutionPlan,
+          });
+        } catch (error) {
+          await rm(path.join(candidateDirectory, DEFERRED_REPORT_FILE_NAME), { force: true });
+          await finalizeSharedGeneration('candidate-report-fault');
+          const code = error instanceof CandidateArtifactError ? error.code : 'report-invalid';
+          await writeFailure(candidateDirectory, code, error);
+          entriesByCandidate.set(
+            recipe.name, { candidate: recipe.name, status: 'failed', failure: code },
+          );
+        }
+        continue;
+      }
+
+      // A successful fresh capture supersedes an older diagnostic only after
       // child and detached-Chrome cleanup both satisfy their contracts.
       await rm(path.join(candidateDirectory, 'failure.log'), { force: true });
-    }
-
-    try {
-      entries.push(await readCandidateReport(candidateDirectory, recipe, {
-        executionPlan: candidateExecutionPlan,
-      }));
-    } catch (error) {
-      const code = error instanceof CandidateArtifactError ? error.code : 'report-invalid';
-      if (!(error instanceof CandidateArtifactError && error.preserveDiagnostic)) {
-        await writeFailure(candidateDirectory, code, error);
+      try {
+        entriesByCandidate.set(recipe.name, await readCandidateReport(
+          candidateDirectory, recipe, { executionPlan: candidateExecutionPlan },
+        ));
+      } catch (error) {
+        const code = error instanceof CandidateArtifactError ? error.code : 'report-invalid';
+        if (!(error instanceof CandidateArtifactError && error.preserveDiagnostic)) {
+          await writeFailure(candidateDirectory, code, error);
+        }
+        entriesByCandidate.set(
+          recipe.name, { candidate: recipe.name, status: 'failed', failure: code },
+        );
       }
-      entries.push({ candidate: recipe.name, status: 'failed', failure: code });
     }
+    await finalizeSharedGeneration('cohort-complete');
+  } catch (error) {
+    let cleanupError;
+    try { await teardownSharedHost('batch-abort'); }
+    catch (nested) { cleanupError = nested; }
+    throw cleanupError
+      ? new AggregateError([error, cleanupError], 'Visual Lab batch and shared-host cleanup failed')
+      : error;
+  }
+
+  const entries = recipes.map((recipe) => entriesByCandidate.get(recipe.name));
+  if (entries.some((entry) => entry === undefined)) {
+    throw new Error('Visual Lab batch did not resolve every selected candidate');
   }
 
   await ensureCandidateRoot(outputDirectory, candidateRoot);
@@ -1398,6 +1811,13 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
     recipeSet,
     recipeSetPath,
     plan: executionPlan.inspection,
+    browserHostPlan: publishedBrowserHostPlan,
+    browserHostPlanPath,
+    browserHostRuntime: Object.freeze({
+      ...browserHostRuntime,
+      assignments: Object.freeze([...browserHostRuntime.assignments]),
+      recycleReasons: Object.freeze([...browserHostRuntime.recycleReasons]),
+    }),
     timings: timingSummary,
   });
   };
@@ -1408,7 +1828,7 @@ export function parseVisualLabBatchArguments(argv) {
   if (argv.includes('--help')) return Object.freeze({ help: true });
   const known = new Set([
     'candidates', 'recipe-set', 'bundle', 'output-dir', 'chrome', 'gpu',
-    'candidate-timeout-ms', 'index-only', 'plan-only',
+    'browser-host', 'candidate-timeout-ms', 'index-only', 'plan-only',
   ]);
   const values = new Map();
   for (const argument of argv) {
@@ -1445,6 +1865,10 @@ export function parseVisualLabBatchArguments(argv) {
   }
   const gpu = values.get('gpu') ?? 'auto';
   if (gpu !== 'auto' && gpu !== 'swiftshader') throw new Error('--gpu must be auto or swiftshader');
+  const browserHost = values.get('browser-host') ?? 'fresh';
+  if (browserHost !== 'fresh' && browserHost !== 'shared') {
+    throw new Error('--browser-host must be fresh or shared');
+  }
   const candidateTimeoutMs = Number(
     values.get('candidate-timeout-ms') ?? VISUAL_LAB_DEFAULT_CANDIDATE_TIMEOUT_MS,
   );
@@ -1469,6 +1893,7 @@ export function parseVisualLabBatchArguments(argv) {
     outputDir: values.get('output-dir'),
     chrome: values.get('chrome'),
     gpu,
+    browserHost,
     candidateTimeoutMs,
     indexOnly: indexOnlyValue === '1',
     planOnly: planOnlyValue === '1',
@@ -1513,6 +1938,7 @@ const main = async () => {
       tool: 'visual-lab-plan-v1',
       ok: true,
       plan: result.plan,
+      browserHostPlan: result.browserHostPlan,
       runtime: result.runtime,
     } : {
       tool: 'visual-lab-batch-v1',
@@ -1521,6 +1947,11 @@ const main = async () => {
       recipeSet: {
         id: result.recipeSet.id,
         path: result.recipeSetPath,
+      },
+      browserHost: result.browserHostPlan === null ? null : {
+        id: result.browserHostPlan.id,
+        path: result.browserHostPlanPath,
+        runtime: result.browserHostRuntime,
       },
       index: result.indexPath,
       contactSheet: result.contactSheetPath,

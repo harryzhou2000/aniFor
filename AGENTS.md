@@ -152,9 +152,8 @@ query. Historical preparation report labels remain diagnostics, and machine
 paths stay in the unhashed runtime envelope. Plan mode must not create
 directories, lock, publish, resolve Chrome, or spawn.
 
-The current framework increment is a page-scoped
-candidate capture transaction plus diagnostic monotonic timing. One transaction
-over a fresh page/target session owns CDP protocol setup and error collection,
+The page-scoped candidate capture transaction plus diagnostic monotonic timing
+is complete. One transaction over a fresh page/target session owns CDP protocol setup and error collection,
 fixture startup, WebGL/field readiness, ordered off/A/B capture, invariant
 validation, in-memory report construction, and strict renderer disposal.
 Chrome/profile lifecycle and browser-context/target ownership stay host-side:
@@ -171,15 +170,35 @@ recipe-set identity. A real built Gas strict-disposal gate passed with roughly
 `hostLaunch=0.234s`, `startup=1.285s`, `readiness=16.749s`, and
 `total=29.978s`, leaving no Chrome process behind.
 
-The next active objective is measured shared-host worker reuse for compatible
-normal-scale candidates. Reuse only a killable Chrome host, sequentially, while
-giving every candidate a fresh incognito browser context, direct-URL target,
-document, simulation, WebGL context, and error collector. Optimize the measured
-readiness and variant costs rather than process launch. Recycle the entire host
-after any timeout, context loss, backend fallback, browser error, renderer-
-disposal failure, or context/target teardown failure. Keep true 8× and recovery
-gates fresh-browser-only. Adding a control must not require edits to audit,
-batch, baseline, review, CI, or sheet dispatch.
+The active framework increment is an opt-in `--browser-host=shared` supervisor
+for compatible normal-scale candidates. The capture execution plan and all
+historical IDs remain byte-identical; a separate content-addressed
+`browser-host-plan/v1` binds the requested/effective routing. Reuse only the
+killable Chrome process, sequentially. Every candidate receives a fresh
+incognito browser context, direct-URL target, document, simulation, WebGL
+context, page CDP connection, and error collector. The audit child remains the
+hard per-candidate timeout boundary. It must stage `report.pending.json`; the
+batch may promote that marker only after strict renderer disposal, target close,
+context disposal/absence proof, responsive-host checks, and a clean host
+generation teardown. Recycle the entire host after any timeout, context loss,
+backend fallback, browser error, capture/report error, renderer-disposal
+failure, or context/target teardown failure. Shared lifecycle recovery is
+root-bound and initially Linux-only; true 8× and recovery gates remain
+fresh-browser-only. Apply one explicit 1280×600 CSS device-metrics viewport to
+both fresh and shared capture targets so the historical fresh capture geometry
+and mode parity stay exact; backing scale never enters that CSS decision.
+Portable verification with `--require-browser-host-plan=1` must reconstruct the
+capture execution plan from packaged recipes plus report GPU/base-URL evidence,
+bind every `captureEntryId`, and match fresh/shared timing counters. Index-only
+aggregation preserves an existing sidecar byte-for-byte and never invents or
+rewrites missing host provenance.
+
+After this reuse checkpoint is deployed, keep framework leverage ahead of new
+visual-detail work. Profile and shorten the dominant readiness/off/A/B phases
+without reducing semantic/field/framebuffer evidence: prefer a separate
+content-addressed execution-tuning plan and driver-owned declarative readiness/
+settle capabilities over new audit/batch branches. Adding a control must not
+require edits to audit, batch, baseline, review, CI, or sheet dispatch.
 Preserve `anifor.visual-lab.static-contract/v1`, every result/batch/baseline/
 comparison/recipe-set identity, and the generic WebGL capture path throughout.
 
@@ -2229,12 +2248,15 @@ Use `npm run audit:visual-lab:batch` to build once and run every recipe, or
 `npm run audit:visual-lab:batch:capture -- --candidates=gas-showcase,water-motion`
 to reuse `dist`. The batch adds no renderer selector, shader resource, fixture
 branch, or CDP domain branch; its contact sheet is human comparison evidence.
-Run recipes sequentially in catalog order with a fresh browser, preserve a
-five-minute default candidate timeout plus bounded cleanup escalation, and
-use the audit lifecycle handoff to verify that the exact detached Chrome group
-and profile are gone. Bind that handoff to the canonical batch root and exact
-candidate as well as PID/start identity/profile, and recover it before any rerun
-cleanup. Serialize one writer per output root. Reject symlinked output paths,
+Run recipes sequentially in catalog order. Fresh-browser isolation remains the
+default and is mandatory for true 8×/recovery; compatible normal-scale cohorts
+may opt into one Linux shared host only when every candidate receives a fresh
+incognito context/target and staged reports remain unpublished until clean host
+teardown. Preserve a five-minute default candidate timeout plus bounded cleanup
+escalation, and use the applicable candidate- or batch-root lifecycle handoff to
+verify that the exact detached Chrome group and profile are gone. Bind that
+handoff to PID/start identity/profile and recover it before any rerun cleanup.
+Serialize one writer per output root. Reject symlinked output paths,
 ancestors, candidate roots, and candidate directories; clear only named tool-
 owned files; and publish diagnostics through an atomic no-follow replacement.
 Treat `failure.log` as an index-only tombstone. Require two consecutive stable

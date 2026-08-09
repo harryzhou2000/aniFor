@@ -461,6 +461,9 @@ describe('Visual Lab fixture adapters', () => {
       ['--fixture=oil-motion', '--fixture=oil-motion requires --domain=liquid --target=8'],
       ['--fixture=water-motion', '--fixture=water-motion requires --domain=liquid --target=2'],
       ['--lifecycle-file=', '--lifecycle-file must not be empty'],
+      ['--browser-host=reuse', '--browser-host must be fresh or shared'],
+      ['--browser-host=shared', '--browser-host=shared requires'],
+      ['--defer-report=1', '--defer-report=1 requires --browser-host=shared'],
     ]) {
       const child = spawnSync(process.execPath, [
         auditScript.pathname, ...argument.split(' '),

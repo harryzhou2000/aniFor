@@ -17,11 +17,10 @@
  * targets are semantic material IDs (0 = wildcard).
  */
 
-import { createHash, randomUUID } from 'node:crypto';
-import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { realpathSync } from 'node:fs';
 import {
-  access, mkdir, mkdtemp, readFile, rename, rm, stat, writeFile,
+  access, lstat, mkdir, readFile, stat, writeFile,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -37,13 +36,21 @@ import {
 } from './visual-lab-recipes.mjs';
 import { createVisualLabResultRecord } from './visual-lab-result.mjs';
 import { createVisualLabTimingRecorder } from './visual-lab-timing.mjs';
-import {
-  requestBrowserShutdown, terminateDetachedProcess,
-} from './detached-process.mjs';
 import { VISUAL_LAB_CAPTURE_VARIANTS as VARIANTS } from './visual-lab-capture-abi.mjs';
+import {
+  Cdp,
+  connectVisualLabIncognitoPage,
+  removeVisualLabHostArtifacts,
+  resolveVisualLabChrome,
+  startVisualLabChromeHost,
+} from './visual-lab-chrome-host.mjs';
+import {
+  resolveVisualLabBrowserHostPlanEntry,
+} from './visual-lab-browser-host-plan.mjs';
+
+export { removeVisualLabHostArtifacts } from './visual-lab-chrome-host.mjs';
 
 const MODULE_PATH = fileURLToPath(import.meta.url);
-const CDP_CONNECT_TIMEOUT_MS = 10_000;
 const CDP_COMMAND_TIMEOUT_MS = 20_000;
 const PAGE_STARTUP_TIMEOUT_MS = 60_000;
 const VARIANT_SETTLE_TIMEOUT_MS = 10_000;
@@ -53,7 +60,12 @@ const VARIANT_SETTLE_TIMEOUT_MS = 10_000;
 // while giving the software path enough time to begin its second readback.
 const SWIFTSHADER_VARIANT_SETTLE_TIMEOUT_MS = 30_000;
 const RENDERER_DISPOSAL_TIMEOUT_MS = 5_000;
-const VISUAL_LAB_LIFECYCLE_SCHEMA = 'anifor.visual-lab.lifecycle/v1';
+const CAPTURE_VIEWPORT_WIDTH = 1280;
+// Preserve the historical fresh-target content viewport. Chrome's
+// `--window-size=1280,720` includes headless window chrome for the initial
+// target, whose stable layout viewport is 1280x600; incognito targets otherwise
+// inherit a different content height and produce incomparable capture clips.
+const CAPTURE_VIEWPORT_HEIGHT = 600;
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 const HELP = `Usage:
@@ -71,18 +83,27 @@ Options (use --name=value):
   --output-dir=/tmp/anifor-visual-lab-gas
   --chrome=/path/to/chrome              Otherwise CHROME_BIN/autodetection
   --gpu=auto|swiftshader                Prefer local GPU; CI can force software
+  --browser-host=fresh|shared           Fresh Chrome or supervisor-owned host (Linux only)
+  --browser-websocket=ws://...          Internal shared-host DevTools endpoint
+  --browser-host-plan=/path/to/plan     Internal shared-host sibling plan
+  --browser-host-entry-id=sha256:<hex>  Required shared sibling-plan entry binding
+  --defer-report=0|1                    Stage shared-host report until host teardown
   --lifecycle-file=/path/to/state.json  Optional detached-Chrome cleanup handoff
   --lifecycle-owner=<sha256>             Required root/candidate identity for that handoff
   --execution-plan-id=sha256:<hex>       Optional supervisor binding for a named plan entry
   --help
 
-Outputs: off.png, a.png, b.png, and report.json in --output-dir.`;
+Outputs: off.png, a.png, b.png, and report.json in --output-dir. Internal shared
+mode stages report.pending.json for supervisor publication.`;
 
 function parseArguments(argv) {
   if (argv.includes('--help')) return { help: true };
   const known = new Set([
     'base-url', 'bundle', 'candidate', 'domain', 'target', 'fixture', 'gain', 'render-scale',
-    'output-dir', 'chrome', 'gpu', 'lifecycle-file', 'lifecycle-owner', 'execution-plan-id',
+    'output-dir', 'chrome', 'gpu', 'browser-host', 'browser-websocket',
+    'browser-host-plan', 'browser-host-entry-id', 'defer-report',
+    'lifecycle-file', 'lifecycle-owner',
+    'execution-plan-id',
   ]);
   const values = new Map();
   for (const argument of argv) {
@@ -140,6 +161,51 @@ function parseArguments(argv) {
   if (gpu !== 'auto' && gpu !== 'swiftshader') {
     throw new Error('--gpu must be auto or swiftshader');
   }
+  const browserHost = values.get('browser-host') ?? 'fresh';
+  if (browserHost !== 'fresh' && browserHost !== 'shared') {
+    throw new Error('--browser-host must be fresh or shared');
+  }
+  const deferReportValue = values.get('defer-report') ?? '0';
+  if (deferReportValue !== '0' && deferReportValue !== '1') {
+    throw new Error('--defer-report must be 0 or 1');
+  }
+  const deferReport = deferReportValue === '1';
+  if (values.has('browser-host-entry-id')
+    && !/^sha256:[a-f0-9]{64}$/.test(values.get('browser-host-entry-id'))) {
+    throw new Error('--browser-host-entry-id must be a lowercase SHA-256 identity');
+  }
+  if (browserHost === 'shared') {
+    const required = ['browser-websocket', 'browser-host-plan', 'browser-host-entry-id'].filter(
+      (name) => !values.has(name),
+    );
+    if (required.length > 0) {
+      throw new Error(
+        `--browser-host=shared requires ${required.map((name) => `--${name}`).join(', ')}`,
+      );
+    }
+    if (!deferReport) {
+      throw new Error('--browser-host=shared requires --defer-report=1');
+    }
+    const conflicts = ['chrome', 'lifecycle-file', 'lifecycle-owner'].filter(
+      (name) => values.has(name),
+    );
+    if (conflicts.length > 0) {
+      throw new Error(
+        `--browser-host=shared does not own Chrome lifecycle; remove ${
+          conflicts.map((name) => `--${name}`).join(', ')
+        }`,
+      );
+    }
+  } else {
+    if (values.has('browser-websocket') || values.has('browser-host-plan')
+      || values.has('browser-host-entry-id')) {
+      throw new Error(
+        '--browser-websocket, --browser-host-plan, and --browser-host-entry-id'
+          + ' require --browser-host=shared',
+      );
+    }
+    if (deferReport) throw new Error('--defer-report=1 requires --browser-host=shared');
+  }
 
   if (values.has('base-url') && values.has('bundle')) {
     throw new Error('--base-url and --bundle are mutually exclusive');
@@ -149,6 +215,11 @@ function parseArguments(argv) {
   }
   if (values.has('output-dir') && values.get('output-dir') === '') {
     throw new Error('--output-dir must not be empty');
+  }
+  for (const name of ['browser-websocket', 'browser-host-plan']) {
+    if (values.has(name) && values.get(name).trim().length === 0) {
+      throw new Error(`--${name} must not be empty`);
+    }
   }
   let baseUrl;
   try {
@@ -207,6 +278,12 @@ function parseArguments(argv) {
     gain: executionPlan.request.gain,
     renderScale: executionPlan.request.renderScale,
     gpu,
+    browserHost,
+    browserWebSocket: values.get('browser-websocket'),
+    browserHostPlanFile: values.has('browser-host-plan')
+      ? path.resolve(values.get('browser-host-plan')) : undefined,
+    browserHostEntryId: values.get('browser-host-entry-id'),
+    deferReport,
     outputDir,
     chrome: values.get('chrome'),
     lifecycleFile,
@@ -214,41 +291,6 @@ function parseArguments(argv) {
     bundle: values.has('bundle'),
   });
 }
-
-const readProcessStartToken = async (pid) => {
-  if (process.platform !== 'linux') return null;
-  const source = await readFile(`/proc/${pid}/stat`, 'utf8');
-  const commandEnd = source.lastIndexOf(')');
-  const fields = commandEnd >= 0
-    ? source.slice(commandEnd + 1).trim().split(/\s+/) : [];
-  const token = fields[19];
-  if (!token || !/^\d+$/.test(token)) {
-    throw new Error(`Cannot identify Chrome process ${pid} from /proc`);
-  }
-  return token;
-};
-
-const publishLifecycleFile = async (file, pid, profile, owner) => {
-  if (!Number.isSafeInteger(pid) || pid <= 1) {
-    throw new Error(`Chrome returned an unsafe detached process group PID: ${String(pid)}`);
-  }
-  const temporary = `${file}.${process.pid}.${randomUUID()}.tmp`;
-  const record = {
-    schema: VISUAL_LAB_LIFECYCLE_SCHEMA,
-    pid,
-    profile,
-    createdAtMs: Date.now(),
-    startToken: await readProcessStartToken(pid),
-    owner,
-  };
-  try {
-    await writeFile(temporary, `${JSON.stringify(record)}\n`, { mode: 0o600, flag: 'wx' });
-    await rename(temporary, file);
-  } catch (error) {
-    await rm(temporary, { force: true }).catch(() => {});
-    throw error;
-  }
-};
 
 async function captureVisualLabCandidateEvidence({
   entry,
@@ -451,6 +493,14 @@ export async function captureVisualLabCandidatePage({
         pageCdp.send('Page.enable'),
         pageCdp.send('Runtime.enable'),
         pageCdp.send('Log.enable'),
+        pageCdp.send('Emulation.setDeviceMetricsOverride', {
+          width: CAPTURE_VIEWPORT_WIDTH,
+          height: CAPTURE_VIEWPORT_HEIGHT,
+          deviceScaleFactor: 1,
+          mobile: false,
+          screenWidth: CAPTURE_VIEWPORT_WIDTH,
+          screenHeight: CAPTURE_VIEWPORT_HEIGHT,
+        }),
       ]);
     });
     report = await captureVisualLabCandidateEvidence({
@@ -543,35 +593,29 @@ export const formatVisualLabCliError = (error) => (
   renderVisualLabError(error, new Set(), 0).slice(0, CLI_ERROR_MAX_CHARACTERS)
 );
 
-/** Retains the lifecycle handoff until its referenced profile is gone. */
-export async function removeVisualLabHostArtifacts({
-  profile,
-  lifecycleFile,
-  lifecyclePublished,
-  remove = rm,
-}) {
-  const cleanupErrors = [];
-  let profileRemoved = profile === undefined;
-  if (profile) {
-    try {
-      await remove(profile, { recursive: true, force: true });
-      profileRemoved = true;
-    } catch (error) {
-      cleanupErrors.push(error instanceof Error ? error : new Error(String(error)));
-    }
+const readBrowserHostPlan = async (file) => {
+  const before = await lstat(file, { bigint: true });
+  if (before.isSymbolicLink() || !before.isFile()) {
+    throw new Error('Visual Lab browser-host plan must be a real regular file');
   }
-  let lifecycleRemoved = !lifecyclePublished;
-  if (lifecyclePublished && profileRemoved) {
-    try {
-      await remove(lifecycleFile, { force: true });
-      lifecycleRemoved = true;
-    } catch (error) {
-      cleanupErrors.push(error instanceof Error ? error : new Error(String(error)));
-    }
+  if (before.size > 1_048_576n) {
+    throw new Error('Visual Lab browser-host plan exceeds its 1 MiB budget');
   }
-  throwCollectedErrors(cleanupErrors, 'Visual Lab host-artifact cleanup failed');
-  return Object.freeze({ profileRemoved, lifecycleRemoved });
-}
+  const source = await readFile(file, 'utf8');
+  const after = await lstat(file, { bigint: true });
+  if (after.isSymbolicLink() || !after.isFile()
+    || before.dev !== after.dev || before.ino !== after.ino
+    || before.size !== after.size || before.mtimeNs !== after.mtimeNs
+    || before.ctimeNs !== after.ctimeNs) {
+    throw new Error('Visual Lab browser-host plan changed while reading');
+  }
+  try { return JSON.parse(source); }
+  catch (error) {
+    throw new Error(`Visual Lab browser-host plan is not valid JSON: ${error.message}`, {
+      cause: error,
+    });
+  }
+};
 
 async function main() {
   const totalStarted = performance.now();
@@ -586,30 +630,50 @@ async function main() {
 
   const url = new URL(options.executionPlan.compiled.url);
   let chromePath;
+  let browserHostPlanEntry;
   await timings.measure('preflight', async () => {
+    if (options.browserHost === 'shared' && process.platform !== 'linux') {
+      throw new Error('Shared Visual Lab browser hosts are currently supported on Linux only');
+    }
     await ensureServer(url, options.bundle);
     await mkdir(options.executionPlan.runtime.artifactRoot, { recursive: true });
     if (options.lifecycleFile) {
       await mkdir(path.dirname(options.lifecycleFile), { recursive: true });
     }
-    chromePath = await resolveChrome(options.chrome);
+    if (options.browserHost === 'fresh') {
+      chromePath = await resolveVisualLabChrome(options.chrome);
+    } else {
+      const browserHostPlan = await readBrowserHostPlan(options.browserHostPlanFile);
+      browserHostPlanEntry = resolveVisualLabBrowserHostPlanEntry(
+        browserHostPlan,
+        options.browserHostEntryId,
+        options.executionPlan.inspection.id,
+      );
+      if (browserHostPlanEntry.effectiveMode !== 'shared') {
+        throw new Error(
+          `Visual Lab browser-host entry ${browserHostPlanEntry.id} requires a fresh browser`,
+        );
+      }
+    }
   });
   let pageCdp;
-  let browserCdp;
   let chromeTarget;
-  let chrome;
-  let profile;
-  let lifecyclePublished = false;
-  let lifecyclePublicationPromise;
+  let chromeHost;
+  let incognitoPage;
   let targetCleanupPromise;
   let hostCleanupPromise;
   let report;
   const closeTarget = () => {
     targetCleanupPromise ??= (async () => {
       const targetErrors = [];
-      if (browserCdp && chromeTarget?.id) {
+      if (incognitoPage) {
+        try { await incognitoPage.close(); }
+        catch (error) {
+          targetErrors.push(error instanceof Error ? error : new Error(String(error)));
+        }
+      } else if (chromeHost?.browserCdp && chromeTarget?.id) {
         try {
-          const closed = await browserCdp.send(
+          const closed = await chromeHost.browserCdp.send(
             'Target.closeTarget', { targetId: chromeTarget.id }, 5_000,
           );
           if (closed.success !== true) {
@@ -619,9 +683,11 @@ async function main() {
           targetErrors.push(error instanceof Error ? error : new Error(String(error)));
         }
       }
-      try { pageCdp?.close(); }
-      catch (error) {
-        targetErrors.push(error instanceof Error ? error : new Error(String(error)));
+      if (!incognitoPage) {
+        try { pageCdp?.close(); }
+        catch (error) {
+          targetErrors.push(error instanceof Error ? error : new Error(String(error)));
+        }
       }
       throwCollectedErrors(targetErrors, 'Visual Lab target teardown failed');
     })();
@@ -629,35 +695,7 @@ async function main() {
   };
   const cleanupHost = () => {
     hostCleanupPromise ??= (async () => {
-      const cleanupErrors = [];
-      if (lifecyclePublicationPromise) {
-        await lifecyclePublicationPromise.catch(() => {});
-      }
-      await requestBrowserShutdown(browserCdp ?? pageCdp);
-      let terminated = false;
-      try {
-        terminated = await terminateDetachedProcess(chrome);
-      } catch (error) {
-        cleanupErrors.push(error instanceof Error ? error : new Error(String(error)));
-      }
-      if (!terminated) {
-        cleanupErrors.push(
-          new Error(`Chrome process group ${chrome?.pid ?? 'unknown'} survived cleanup`),
-        );
-      }
-      if (terminated) {
-        try {
-          const removed = await removeVisualLabHostArtifacts({
-            profile,
-            lifecycleFile: options.lifecycleFile,
-            lifecyclePublished,
-          });
-          if (removed.lifecycleRemoved) lifecyclePublished = false;
-        } catch (error) {
-          cleanupErrors.push(error instanceof Error ? error : new Error(String(error)));
-        }
-      }
-      throwCollectedErrors(cleanupErrors, 'Visual Lab Chrome-host teardown failed');
+      if (chromeHost) await chromeHost.teardown();
     })();
     return hostCleanupPromise;
   };
@@ -682,39 +720,34 @@ async function main() {
   process.once('SIGTERM', onSigterm);
   let captureError;
   try {
-    chromeTarget = await timings.measure('hostLaunch', async () => {
-      profile = await mkdtemp(path.join(tmpdir(), 'anifor-visual-lab-chrome-'));
-      const gpuFlags = options.gpu === 'swiftshader'
-        ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader']
-        : ['--enable-webgl', '--ignore-gpu-blocklist'];
-      chrome = spawn(chromePath, [
-        '--headless=new', '--no-sandbox', '--disable-dev-shm-usage',
-        '--no-proxy-server', '--remote-debugging-port=0',
-        ...(url.protocol === 'file:' ? ['--allow-file-access-from-files'] : []),
-        `--user-data-dir=${profile}`, '--window-size=1280,720',
-        '--force-device-scale-factor=1', '--disable-background-timer-throttling',
-        '--disable-renderer-backgrounding', ...gpuFlags, url.href,
-      ], { detached: true, stdio: ['ignore', 'ignore', 'pipe'] });
-      // Install Chrome's error/exit/stderr observers before any filesystem
-      // publication can yield. An immediately failing executable must not race
-      // past the DevTools watcher and masquerade as a 15-second timeout.
-      const targetPromise = findChromeTarget(chrome, url);
-      if (options.lifecycleFile) {
-        lifecyclePublicationPromise = publishLifecycleFile(
-          options.lifecycleFile, chrome.pid, profile, options.lifecycleOwner,
-        ).then(() => { lifecyclePublished = true; });
-      }
-      const [resolvedHostTarget] = await Promise.all([
-        targetPromise,
-        lifecyclePublicationPromise ?? Promise.resolve(),
-      ]);
-      browserCdp = await Cdp.connect(resolvedHostTarget.browserWebSocketDebuggerUrl);
-      return resolvedHostTarget.page;
-    });
+    if (options.browserHost === 'fresh') {
+      chromeTarget = await timings.measure('hostLaunch', async () => {
+        chromeHost = await startVisualLabChromeHost({
+          chromePath,
+          gpuMode: options.gpu,
+          initialUrl: url,
+          allowFileAccess: url.protocol === 'file:',
+          lifecycleFile: options.lifecycleFile,
+          lifecycleOwner: options.lifecycleOwner,
+        });
+        const ready = await chromeHost.ready();
+        return ready.initialPage;
+      });
+    } else {
+      timings.record('hostLaunch', 0);
+    }
     report = await captureVisualLabCandidatePage({
       entry: options.executionPlan,
       connectPage: async () => {
-        pageCdp = await Cdp.connect(chromeTarget.webSocketDebuggerUrl);
+        if (options.browserHost === 'shared') {
+          incognitoPage = await connectVisualLabIncognitoPage({
+            browserWebSocketDebuggerUrl: options.browserWebSocket,
+            url,
+          });
+          pageCdp = incognitoPage.pageCdp;
+        } else {
+          pageCdp = await Cdp.connect(chromeTarget.webSocketDebuggerUrl);
+        }
         return pageCdp;
       },
       gpuMode: options.gpu,
@@ -731,7 +764,11 @@ async function main() {
   }
   let hostError;
   try {
-    await timings.measure('hostTeardown', cleanupHost);
+    if (options.browserHost === 'fresh') {
+      await timings.measure('hostTeardown', cleanupHost);
+    } else {
+      timings.record('hostTeardown', 0);
+    }
   } catch (error) {
     hostError = error instanceof Error ? error : new Error(String(error));
   } finally {
@@ -746,14 +783,16 @@ async function main() {
   report = {
     ...report,
     timings: timings.finish({
-      browserHosts: 1,
+      browserHosts: options.browserHost === 'fresh' ? 1 : 0,
       browserContexts: 1,
       targets: 1,
       hostRestarts: 0,
       captures: VARIANTS.length,
     }),
   };
-  const reportPath = options.executionPlan.runtime.artifacts.report;
+  const reportPath = options.deferReport
+    ? path.join(options.executionPlan.runtime.artifactRoot, 'report.pending.json')
+    : options.executionPlan.runtime.artifacts.report;
   await writeFile(reportPath, `${JSON.stringify(report)}\n`);
   process.stdout.write(`${JSON.stringify({ ...report, report: reportPath })}\n`);
 }
@@ -782,64 +821,6 @@ async function ensureServer(url, requireBundleFile = false) {
   if (!response.ok) {
     throw new Error(`Cannot load ${url.href}: HTTP ${response.status}`);
   }
-}
-
-async function resolveChrome(explicit) {
-  const candidates = [
-    explicit, process.env.CHROME_BIN, '/usr/bin/google-chrome',
-    '/usr/bin/chromium', '/usr/bin/chromium-browser',
-  ].filter(Boolean);
-  for (const candidate of candidates) {
-    try {
-      await access(candidate);
-      return candidate;
-    } catch { /* try the next candidate */ }
-  }
-  throw new Error('Chrome/Chromium not found; pass --chrome=/path or set CHROME_BIN');
-}
-
-async function findChromeTarget(chrome, expectedUrl) {
-  let chromeLog = '';
-  const browserSocket = await new Promise((resolve, reject) => {
-    let settled = false;
-    const finish = (callback) => (value) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timeout);
-      chrome.stderr.off('data', onStderr);
-      chrome.off('exit', onExit);
-      chrome.off('error', onError);
-      callback(value);
-    };
-    const timeout = setTimeout(() => {
-      finish(reject)(new Error(`Chrome DevTools timeout\n${chromeLog.slice(-4_000)}`));
-    }, 15_000);
-    const onStderr = (chunk) => {
-      chromeLog = `${chromeLog}${chunk}`.slice(-8_000);
-      const match = chromeLog.match(/DevTools listening on (ws:\/\/[^\s]+)/);
-      if (!match) return;
-      finish(resolve)(match[1]);
-    };
-    const onExit = (code) => finish(reject)(
-      new Error(`Chrome exited before DevTools (${code})\n${chromeLog}`),
-    );
-    const onError = (error) => finish(reject)(
-      new Error(`Chrome failed to start: ${error instanceof Error ? error.message : String(error)}`),
-    );
-    chrome.stderr.on('data', onStderr);
-    chrome.once('exit', onExit);
-    chrome.once('error', onError);
-  });
-  const port = new URL(browserSocket).port;
-  const page = await waitFor(async () => {
-    const response = await fetch(`http://127.0.0.1:${port}/json/list`, {
-      signal: AbortSignal.timeout(2_000),
-    });
-    const targets = await response.json();
-    return targets.find((candidate) => candidate.type === 'page'
-      && candidate.url === expectedUrl.href && candidate.webSocketDebuggerUrl);
-  }, 10_000, 'Chrome page target');
-  return Object.freeze({ page, browserWebSocketDebuggerUrl: browserSocket });
 }
 
 function collectBrowserErrors(cdp) {
@@ -1166,113 +1147,6 @@ function sleep(milliseconds) {
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
-}
-
-class Cdp {
-  static async connect(url, timeoutMs = CDP_CONNECT_TIMEOUT_MS) {
-    const socket = new WebSocket(url);
-    await new Promise((resolve, reject) => {
-      const cleanup = () => {
-        clearTimeout(timeout);
-        socket.removeEventListener('open', opened);
-        socket.removeEventListener('error', failed);
-        socket.removeEventListener('close', closed);
-      };
-      const opened = () => { cleanup(); resolve(); };
-      const failed = () => { cleanup(); reject(new Error(`CDP connection failed: ${url}`)); };
-      const closed = () => { cleanup(); reject(new Error(`CDP closed while connecting: ${url}`)); };
-      const timeout = setTimeout(() => {
-        cleanup();
-        try { socket.close(); } catch { /* not open */ }
-        reject(new Error(`CDP connection timed out after ${timeoutMs}ms`));
-      }, timeoutMs);
-      socket.addEventListener('open', opened, { once: true });
-      socket.addEventListener('error', failed, { once: true });
-      socket.addEventListener('close', closed, { once: true });
-    });
-    return new Cdp(socket);
-  }
-
-  constructor(socket) {
-    this.socket = socket;
-    this.nextId = 1;
-    this.pending = new Map();
-    this.listeners = new Map();
-    this.closed = false;
-    socket.addEventListener('message', ({ data }) => {
-      let message;
-      try { message = JSON.parse(data); }
-      catch (error) {
-        this.fail(error instanceof Error ? error : new Error(String(error)));
-        return;
-      }
-      if (message.id) {
-        const pending = this.pending.get(message.id);
-        if (!pending) return;
-        this.pending.delete(message.id);
-        clearTimeout(pending.timeout);
-        if (message.error) {
-          pending.reject(new Error(`${message.error.message}: ${JSON.stringify(message.error.data ?? {})}`));
-        } else {
-          pending.resolve(message.result ?? {});
-        }
-        return;
-      }
-      for (const listener of this.listeners.get(message.method) ?? []) {
-        listener(message.params ?? {});
-      }
-    });
-    socket.addEventListener('error', () => {
-      this.closed = true;
-      this.fail(new Error('CDP WebSocket error'));
-    });
-    socket.addEventListener('close', () => {
-      this.closed = true;
-      this.fail(new Error('CDP WebSocket closed'));
-    });
-  }
-
-  send(method, params = {}, timeoutMs = CDP_COMMAND_TIMEOUT_MS) {
-    const id = this.nextId++;
-    return new Promise((resolve, reject) => {
-      if (this.closed || this.socket.readyState !== WebSocket.OPEN) {
-        reject(new Error(`Cannot send ${method}: CDP WebSocket is not open`));
-        return;
-      }
-      const timeout = setTimeout(() => {
-        if (!this.pending.delete(id)) return;
-        reject(new Error(`CDP ${method} timed out after ${timeoutMs}ms`));
-      }, timeoutMs);
-      this.pending.set(id, { resolve, reject, timeout });
-      try { this.socket.send(JSON.stringify({ id, method, params })); }
-      catch (error) {
-        this.pending.delete(id);
-        clearTimeout(timeout);
-        reject(error);
-      }
-    });
-  }
-
-  on(method, listener) {
-    const listeners = this.listeners.get(method) ?? [];
-    listeners.push(listener);
-    this.listeners.set(method, listeners);
-  }
-
-  fail(error) {
-    for (const { reject, timeout } of this.pending.values()) {
-      clearTimeout(timeout);
-      reject(error);
-    }
-    this.pending.clear();
-  }
-
-  close() {
-    if (this.closed) return;
-    this.closed = true;
-    this.fail(new Error('CDP connection closed by visual-lab audit'));
-    try { this.socket.close(); } catch { /* already closed */ }
-  }
 }
 
 const isDirectExecution = () => {

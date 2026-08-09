@@ -22,6 +22,11 @@ const batchEvidence = {
     id: `sha256:${'2'.repeat(64)}`,
     name: 'gas-review',
   },
+  browserHostPlan: {
+    schema: 'anifor.visual-lab.browser-host-plan/v1',
+    id: `sha256:${'4'.repeat(64)}`,
+    requestedMode: 'shared',
+  },
 };
 
 const comparisonEvidence = {
@@ -49,6 +54,7 @@ describe('Visual Lab portable package verifier', () => {
       baselineRoot: undefined,
       comparisonRoot: undefined,
       recipeSetSourcePath: undefined,
+      requireBrowserHostPlan: false,
       requireComplete: true,
       requireRecipeSet: false,
     });
@@ -58,12 +64,14 @@ describe('Visual Lab portable package verifier', () => {
       '--recipe-set-source=visual-lab/recipe-sets/release.json',
       '--require-complete=0',
       '--require-recipe-set=1',
+      '--require-browser-host-plan=1',
     ])).toEqual({
       help: false,
       batchRoot: 'artifacts/review',
       baselineRoot: 'visual-baselines/accepted-v1',
       comparisonRoot: 'artifacts/review/comparison',
       recipeSetSourcePath: 'visual-lab/recipe-sets/release.json',
+      requireBrowserHostPlan: true,
       requireComplete: false,
       requireRecipeSet: true,
     });
@@ -90,6 +98,7 @@ describe('Visual Lab portable package verifier', () => {
       baselineRoot: 'accepted',
       comparisonRoot: 'downloaded-review/comparison',
       recipeSetSourcePath: 'release.json',
+      requireBrowserHostPlan: true,
       requireComplete: true,
       requireRecipeSet: true,
     }, {
@@ -103,6 +112,7 @@ describe('Visual Lab portable package verifier', () => {
     expect(calls).toEqual([
       ['batch', {
         batchRoot: 'downloaded-review',
+        requireBrowserHostPlan: true,
         requireComplete: true,
         requireRecipeSet: true,
         recipeSetSourcePath: 'release.json',
@@ -127,6 +137,7 @@ describe('Visual Lab portable package verifier', () => {
         id: `sha256:${'2'.repeat(64)}`,
         name: 'gas-review',
       },
+      browserHostPlan: batchEvidence.browserHostPlan,
       comparison: comparisonEvidence.comparison,
     });
     expect(Object.isFrozen(result)).toBe(true);
@@ -135,10 +146,13 @@ describe('Visual Lab portable package verifier', () => {
     const batchOnly = await runVisualLabPackageVerification({
       batchRoot: 'legacy', requireComplete: false, requireRecipeSet: false,
     }, {
-      verifyBatch: async () => ({ ...batchEvidence, recipeSet: null }),
+      verifyBatch: async () => ({
+        ...batchEvidence, recipeSet: null, browserHostPlan: null,
+      }),
       verifyComparison: async () => { throw new Error('must not run'); },
     });
     expect(batchOnly.recipeSet).toBeNull();
+    expect(batchOnly.browserHostPlan).toBeNull();
     expect(batchOnly.comparison).toBeNull();
   });
 
@@ -180,6 +194,7 @@ describe('Visual Lab portable package verifier', () => {
     expect(workflow).toContain('"--comparison-root=${REVIEW_ROOT}/comparison"');
     expect(workflow).toContain('--require-complete=1');
     expect(workflow).toContain('--require-recipe-set=1');
+    expect(workflow).toContain('--require-browser-host-plan=1');
     expect(deployVerification).toBeGreaterThan(verify);
     expect(deploySuccessGuard).toBeGreaterThan(deployVerification);
     expect(liveVerification).toBeGreaterThan(deploySuccessGuard);

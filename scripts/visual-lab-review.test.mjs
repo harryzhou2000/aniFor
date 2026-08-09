@@ -49,6 +49,7 @@ describe('Visual Lab review-cycle CLI', () => {
       '--output-dir=artifacts/review',
       '--chrome=/usr/bin/chrome',
       '--gpu=swiftshader',
+      '--browser-host=shared',
       '--candidate-timeout-ms=123456',
     ]);
 
@@ -59,6 +60,7 @@ describe('Visual Lab review-cycle CLI', () => {
       outputDir: 'artifacts/review',
       chrome: '/usr/bin/chrome',
       gpu: 'swiftshader',
+      browserHost: 'shared',
       candidateTimeoutMs: 123456,
     });
     expect(parsed.baselineRoot).toBe(path.resolve('visual-baselines/accepted-v1'));
@@ -79,6 +81,8 @@ describe('Visual Lab review-cycle CLI', () => {
       .toThrow('--index-only is not supported');
     expect(() => parseVisualLabReviewArguments(['--output-dir=review', '--index-only=1']))
       .toThrow('--index-only is not supported');
+    expect(() => parseVisualLabReviewArguments(['--output-dir=review', '--plan-only=1']))
+      .toThrow('--plan-only is not supported');
     expect(() => parseVisualLabReviewArguments([
       '--output-dir=review', '--candidates=gas-showcase', '--recipe-set=set.json',
     ])).toThrow('mutually exclusive');
@@ -97,6 +101,7 @@ describe('Visual Lab review-cycle orchestration', () => {
       outputDir,
       chrome: '/usr/bin/chrome',
       gpu: 'swiftshader',
+      browserHost: 'shared',
       candidateTimeoutMs: 987,
       baselineRoot,
     }, {
@@ -123,6 +128,7 @@ describe('Visual Lab review-cycle orchestration', () => {
         outputDir,
         chrome: '/usr/bin/chrome',
         gpu: 'swiftshader',
+        browserHost: 'shared',
         candidateTimeoutMs: 987,
       }],
       ['baseline', {
@@ -132,6 +138,7 @@ describe('Visual Lab review-cycle orchestration', () => {
         batchRoot: outputDir,
         baselineRoot,
         comparisonRoot,
+        requireBrowserHostPlan: true,
         requireComplete: true,
         requireRecipeSet: true,
       }],

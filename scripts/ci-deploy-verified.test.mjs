@@ -155,6 +155,7 @@ describe('deploy-verified CI workflow contract', () => {
     expect(review).toContain('"--comparison-root=${REVIEW_ROOT}/comparison"');
     expect(review).toContain('--require-complete=1');
     expect(review).toContain('--require-recipe-set=1');
+    expect(review).toContain('--require-browser-host-plan=1');
 
     const live = indentedEntry(workflow, 'verify-deployment', 2);
     expect(live).toContain("if: always() && needs.deploy.result == 'success'");

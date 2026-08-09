@@ -236,6 +236,7 @@ describe('Visual Lab recipe-set/v1', () => {
     expect(workflow).toContain('path: ${{ runner.temp }}/anifortpt-visual-lab-review');
     expect(workflow).toContain('node scripts/visual-lab-verify.mjs "${verify_args[@]}"');
     expect(workflow).toContain('--require-recipe-set=1');
+    expect(workflow).toContain('--require-browser-host-plan=1');
     expect(workflow).toContain('--recipe-set-source=${VISUAL_LAB_RECIPE_SET}');
   });
 });

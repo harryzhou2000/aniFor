@@ -7,6 +7,7 @@ import {
 import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { deflateSync } from 'node:zlib';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -32,6 +33,8 @@ import {
 import { resolveVisualLabCaptureRecipe } from './visual-lab-recipes.mjs';
 import { createVisualLabRecipeSet } from './visual-lab-recipe-set.mjs';
 import { createVisualLabResultRecord } from './visual-lab-result.mjs';
+import { createVisualLabExecutionPlan } from './visual-lab-execution-plan.mjs';
+import { createVisualLabBrowserHostPlan } from './visual-lab-browser-host-plan.mjs';
 import { VISUAL_LAB_TIMING_SCHEMA } from './visual-lab-timing.mjs';
 import { isDetachedProcessGroupAlive } from './detached-process.mjs';
 
@@ -320,7 +323,10 @@ const writeValidCapture = async (directory, candidate, options = {}) => {
     ...(options.timings === undefined ? {} : { timings: options.timings }),
   };
   if (options.mutateReport) options.mutateReport(report);
-  await writeFile(path.join(directory, 'report.json'), `${JSON.stringify(report)}\n`);
+  await writeFile(
+    path.join(directory, options.reportFileName ?? 'report.json'),
+    `${JSON.stringify(report)}\n`,
+  );
   return { buffers, hashes, report, result };
 };
 
@@ -528,6 +534,277 @@ describe('Visual Lab batch runner', () => {
       .toContain('<strong>Incomplete</strong> · 2/4 passed');
   });
 
+  it.skipIf(process.platform !== 'linux')(
+    'reuses one injected host while keeping entry bindings, deferred publication, and identities exact',
+    async () => {
+      const root = await makeTemporaryDirectory();
+      const bundle = path.join(root, 'index.html');
+      const freshOutput = path.join(root, 'fresh');
+      const sharedOutput = path.join(root, 'shared');
+      const candidates = ['water-motion', 'gas-showcase'];
+      const canonicalCandidates = ['gas-showcase', 'water-motion'];
+      await writeFile(bundle, '<!doctype html>');
+
+      const fresh = await runVisualLabBatch({
+        candidates, bundle, outputDir: freshOutput,
+      }, {
+        runCandidate: async (call) => {
+          await writeValidCapture(call.candidateDirectory, call.recipe.name);
+          return { code: 0, signal: null, timedOut: false };
+        },
+      });
+
+      const hostStarts = [];
+      const childCalls = [];
+      const teardownSnapshots = [];
+      let hostHealthy = true;
+      const shared = await runVisualLabBatch({
+        candidates, bundle, outputDir: sharedOutput, browserHost: 'shared',
+      }, {
+        startSharedHost: async (options) => {
+          hostStarts.push(options);
+          return {
+            ready: async () => ({
+              browserWebSocketDebuggerUrl:
+                'ws://127.0.0.1:9222/devtools/browser/injected-shared-host',
+            }),
+            assertHealthy: async () => {
+              if (!hostHealthy) throw new Error('injected host was reused after teardown');
+            },
+            teardown: async () => {
+              const snapshots = [];
+              for (const candidate of canonicalCandidates) {
+                const directory = path.join(sharedOutput, 'candidates', candidate);
+                const present = async (name) => {
+                  try { await access(path.join(directory, name)); return true; }
+                  catch (error) {
+                    if (error?.code === 'ENOENT') return false;
+                    throw error;
+                  }
+                };
+                snapshots.push({
+                  candidate,
+                  deferred: await present('report.pending.json'),
+                  published: await present('report.json'),
+                });
+              }
+              teardownSnapshots.push(snapshots);
+              hostHealthy = false;
+            },
+          };
+        },
+        runCandidate: async (call) => {
+          childCalls.push(call);
+          const timings = timingRecord();
+          timings.phases.total -= timings.phases.hostLaunch + timings.phases.hostTeardown;
+          timings.phases.hostLaunch = 0;
+          timings.phases.hostTeardown = 0;
+          timings.counters.browserHosts = 0;
+          await writeValidCapture(call.candidateDirectory, call.recipe.name, {
+            reportFileName: 'report.pending.json',
+            timings,
+          });
+          await expect(access(path.join(call.candidateDirectory, 'report.json')))
+            .rejects.toMatchObject({ code: 'ENOENT' });
+          return { code: 0, signal: null, timedOut: false };
+        },
+      });
+
+      expect(hostStarts).toHaveLength(1);
+      expect(childCalls.map(({ recipe }) => recipe.name)).toEqual(canonicalCandidates);
+      const boundEntryIds = childCalls.map((call) => {
+        expect(call.browserHostPlanEntry.captureEntryId).toBe(call.executionPlan.inspection.id);
+        expect(call.args).toContain('--browser-host=shared');
+        expect(call.args).toContain('--defer-report=1');
+        expect(call.args).toContain(
+          `--browser-host-plan=${shared.browserHostPlanPath}`,
+        );
+        const argument = call.args.find((value) => value.startsWith('--browser-host-entry-id='));
+        expect(argument).toBe(`--browser-host-entry-id=${call.browserHostPlanEntry.id}`);
+        return call.browserHostPlanEntry.id;
+      });
+      expect(new Set(boundEntryIds).size).toBe(canonicalCandidates.length);
+      expect(teardownSnapshots).toEqual([canonicalCandidates.map((candidate) => ({
+        candidate, deferred: true, published: false,
+      }))]);
+      for (const candidate of canonicalCandidates) {
+        const directory = path.join(sharedOutput, 'candidates', candidate);
+        await expect(access(path.join(directory, 'report.json'))).resolves.toBeUndefined();
+        await expect(access(path.join(directory, 'report.pending.json')))
+          .rejects.toMatchObject({ code: 'ENOENT' });
+      }
+      expect(shared.browserHostRuntime).toMatchObject({
+        requestedMode: 'shared',
+        hostsStarted: 1,
+        hostRestarts: 0,
+        assignments: canonicalCandidates.map((candidate) => ({ candidate, host: 1 })),
+        recycleReasons: ['cohort-complete'],
+      });
+      expect(shared.plan.id).toBe(fresh.plan.id);
+      expect(shared.browserHostPlan.capturePlan.id).toBe(fresh.browserHostPlan.capturePlan.id);
+      expect(shared.index).toEqual(fresh.index);
+      expect(shared.index.candidates.map(({ result }) => result.id))
+        .toEqual(fresh.index.candidates.map(({ result }) => result.id));
+
+      await expect(verifyVisualLabBatchPackage({
+        batchRoot: sharedOutput,
+        requireBrowserHostPlan: true,
+        requireComplete: true,
+      })).resolves.toMatchObject({ browserHostPlan: shared.browserHostPlan });
+      const sharedPlanBytes = await readFile(shared.browserHostPlanPath);
+      await writeFile(
+        shared.browserHostPlanPath, `${JSON.stringify(fresh.browserHostPlan, null, 2)}\n`,
+      );
+      await expect(verifyVisualLabBatchPackage({
+        batchRoot: sharedOutput,
+        requireBrowserHostPlan: true,
+      })).rejects.toThrow('does not match its capture timing');
+      await writeFile(shared.browserHostPlanPath, sharedPlanBytes);
+
+      const swiftshaderPlan = createVisualLabBrowserHostPlan(
+        createVisualLabExecutionPlan({
+          candidates,
+          baseUrl: pathToFileURL(bundle),
+          outputDir: sharedOutput,
+          gpu: 'swiftshader',
+        }),
+        'shared',
+      );
+      await writeFile(
+        shared.browserHostPlanPath, `${JSON.stringify(swiftshaderPlan, null, 2)}\n`,
+      );
+      await expect(verifyVisualLabBatchPackage({
+        batchRoot: sharedOutput,
+        requireBrowserHostPlan: true,
+      })).rejects.toThrow('does not bind the captured execution plan identity');
+      await writeFile(shared.browserHostPlanPath, sharedPlanBytes);
+
+      const reindexed = await runVisualLabBatch({
+        candidates,
+        bundle,
+        outputDir: sharedOutput,
+        indexOnly: true,
+      });
+      expect(reindexed.browserHostPlan).toEqual(shared.browserHostPlan);
+      expect(await readFile(shared.browserHostPlanPath)).toStrictEqual(sharedPlanBytes);
+    },
+  );
+
+  it.skipIf(process.platform !== 'linux')(
+    'recycles an injected shared host after a candidate process fault before continuing',
+    async () => {
+      const root = await makeTemporaryDirectory();
+      const bundle = path.join(root, 'index.html');
+      const outputDirectory = path.join(root, 'shared');
+      await writeFile(bundle, '<!doctype html>');
+      const events = [];
+      let activeHost = 0;
+
+      const result = await runVisualLabBatch({
+        candidates: ['oxygen-showcase', 'gas-showcase'],
+        bundle,
+        outputDir: outputDirectory,
+        browserHost: 'shared',
+      }, {
+        startSharedHost: async () => {
+          const host = ++activeHost;
+          events.push(`start:${host}`);
+          let healthy = true;
+          return {
+            ready: async () => ({
+              browserWebSocketDebuggerUrl:
+                `ws://127.0.0.1:922${host}/devtools/browser/injected-host-${host}`,
+            }),
+            assertHealthy: async () => {
+              if (!healthy) throw new Error(`host ${host} was reused after teardown`);
+            },
+            teardown: async () => {
+              events.push(`teardown:${host}`);
+              healthy = false;
+            },
+          };
+        },
+        runCandidate: async (call) => {
+          events.push(`run:${call.recipe.name}:host-${activeHost}`);
+          if (call.recipe.name === 'gas-showcase') {
+            return { code: 9, signal: null, timedOut: false };
+          }
+          expect(events).toContain('teardown:1');
+          await writeValidCapture(call.candidateDirectory, call.recipe.name, {
+            reportFileName: 'report.pending.json',
+          });
+          return { code: 0, signal: null, timedOut: false };
+        },
+      });
+
+      expect(events.indexOf('teardown:1'))
+        .toBeLessThan(events.indexOf('run:oxygen-showcase:host-2'));
+      expect(events).toEqual([
+        'start:1',
+        'run:gas-showcase:host-1',
+        'teardown:1',
+        'start:2',
+        'run:oxygen-showcase:host-2',
+        'teardown:2',
+      ]);
+      expect(result.browserHostRuntime).toMatchObject({
+        hostsStarted: 2,
+        hostRestarts: 1,
+        assignments: [
+          { candidate: 'gas-showcase', host: 1 },
+          { candidate: 'oxygen-showcase', host: 2 },
+        ],
+        recycleReasons: ['candidate-process-fault', 'cohort-complete'],
+      });
+      expect(result.index.candidates).toMatchObject([
+        { candidate: 'gas-showcase', status: 'failed', failure: 'capture-failed' },
+        { candidate: 'oxygen-showcase', status: 'passed' },
+      ]);
+    },
+  );
+
+  it.skipIf(process.platform !== 'linux')(
+    'aborts before restart when failed host cleanup has no recoverable lifecycle handoff',
+    async () => {
+      const root = await makeTemporaryDirectory();
+      const bundle = path.join(root, 'index.html');
+      const outputDirectory = path.join(root, 'shared');
+      await writeFile(bundle, '<!doctype html>');
+      let hostStarts = 0;
+      let candidateRuns = 0;
+
+      await expect(runVisualLabBatch({
+        candidates: ['gas-showcase', 'oxygen-showcase'],
+        bundle,
+        outputDir: outputDirectory,
+        browserHost: 'shared',
+      }, {
+        startSharedHost: async () => {
+          hostStarts += 1;
+          return {
+            ready: async () => {
+              throw new Error('synthetic DevTools readiness fault');
+            },
+            assertHealthy: async () => {},
+            teardown: async () => {
+              throw new Error('synthetic process-group cleanup fault');
+            },
+          };
+        },
+        runCandidate: async () => {
+          candidateRuns += 1;
+          return { code: 0, signal: null, timedOut: false };
+        },
+      })).rejects.toThrow('Shared Chrome launch and cleanup both failed');
+
+      expect(hostStarts).toBe(1);
+      expect(candidateRuns).toBe(0);
+      await expect(access(path.join(
+        outputDirectory, '.shared-chrome-lifecycle.json',
+      ))).rejects.toMatchObject({ code: 'ENOENT' });
+    },
+  );
+
   it('continues after a runner exception and does not accept a report from the failed run', async () => {
     const root = await makeTemporaryDirectory();
     const bundle = path.join(root, 'index.html');
@@ -632,7 +909,7 @@ describe('Visual Lab batch runner', () => {
       publishFile: async (file, source) => {
         const name = path.basename(file);
         published.push(name);
-        if (name === 'recipe-set.json') {
+        if (name === 'recipe-set.json' || name === 'browser-host-plan.json') {
           await writeFile(file, source);
           return;
         }
@@ -640,7 +917,9 @@ describe('Visual Lab batch runner', () => {
       },
     })).rejects.toThrow('synthetic contact-sheet publication failure');
 
-    expect(published).toEqual(['recipe-set.json', 'index.html']);
+    expect(published).toEqual([
+      'recipe-set.json', 'browser-host-plan.json', 'index.html',
+    ]);
     await expect(access(indexPath)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
@@ -798,6 +1077,11 @@ describe('Visual Lab batch runner', () => {
       .rejects.toThrow('contact sheet does not match');
     await writeFile(generated.contactSheetPath, renderVisualLabContactSheet(generated.index));
 
+    expect(generated.browserHostPlan).toBeNull();
+    await expect(verifyVisualLabBatchPackage({
+      batchRoot: outputDirectory, requireBrowserHostPlan: true,
+    })).rejects.toThrow('missing browser-host-plan.json');
+
     const offPath = path.join(candidateDirectory, 'off.png');
     const offBytes = await readFile(offPath);
     const external = path.join(root, 'external.png');
@@ -809,6 +1093,8 @@ describe('Visual Lab batch runner', () => {
     await rm(offPath);
     await writeFile(offPath, offBytes);
 
+    await expect(verifyVisualLabBatchPackage({ batchRoot: outputDirectory }))
+      .resolves.toMatchObject({ browserHostPlan: null });
     await rm(generated.recipeSetPath);
     await expect(verifyVisualLabBatchPackage({
       batchRoot: outputDirectory, requireRecipeSet: false,
@@ -1594,6 +1880,7 @@ describe('Visual Lab batch CLI', () => {
       outputDir: '/tmp/sheet',
       chrome: '/usr/bin/chrome',
       gpu: 'swiftshader',
+      browserHost: 'fresh',
       candidateTimeoutMs: 123456,
       indexOnly: true,
       planOnly: false,
@@ -1601,6 +1888,8 @@ describe('Visual Lab batch CLI', () => {
     expect(parseVisualLabBatchArguments(['--plan-only=1'])).toMatchObject({
       planOnly: true, indexOnly: false,
     });
+    expect(parseVisualLabBatchArguments(['--browser-host=shared']).browserHost)
+      .toBe('shared');
     expect(parseVisualLabBatchArguments(['--help'])).toEqual({ help: true });
     expect(parseVisualLabBatchArguments([]).candidateTimeoutMs).toBe(300_000);
   });
@@ -1614,6 +1903,8 @@ describe('Visual Lab batch CLI', () => {
       .toThrow('--plan-only must be 0 or 1');
     expect(() => parseVisualLabBatchArguments(['--index-only=1', '--plan-only=1']))
       .toThrow('mutually exclusive');
+    expect(() => parseVisualLabBatchArguments(['--browser-host=reuse']))
+      .toThrow('--browser-host must be fresh or shared');
     for (const value of ['0', '-1', '1.5', '2147483648', 'not-a-number']) {
       expect(() => parseVisualLabBatchArguments([`--candidate-timeout-ms=${value}`]))
         .toThrow('--candidate-timeout-ms must be a positive integer');

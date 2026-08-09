@@ -12,14 +12,17 @@ const HELP = `Usage:
     [--baseline-root=<accepted-baseline>] \\
     [--comparison-root=<comparison-package>] \\
     [--recipe-set-source=<checked-recipe-set>] \\
-    [--require-complete=0|1] [--require-recipe-set=0|1]
+    [--require-complete=0|1] [--require-recipe-set=0|1] \
+    [--require-browser-host-plan=0|1]
 
 The verifier is read-only. It reconstructs the batch from reports and PNGs,
 checks the deterministic contact sheet and optional recipe-set sidecar, and can
 also apply the promotion-grade accepted-baseline comparison validation. When a
 baseline is supplied, comparison-root defaults to <batch-root>/comparison.`;
 
-const BOOLEAN_OPTIONS = new Set(['require-complete', 'require-recipe-set']);
+const BOOLEAN_OPTIONS = new Set([
+  'require-browser-host-plan', 'require-complete', 'require-recipe-set',
+]);
 const PATH_OPTIONS = new Set([
   'batch-root', 'baseline-root', 'comparison-root', 'recipe-set-source',
 ]);
@@ -64,6 +67,7 @@ export function parseVisualLabVerifyArguments(argv) {
     comparisonRoot: baselineRoot === undefined
       ? undefined : values.get('comparison-root') ?? path.join(batchRoot, 'comparison'),
     recipeSetSourcePath: values.get('recipe-set-source'),
+    requireBrowserHostPlan: parseBoolean(values, 'require-browser-host-plan', false),
     requireComplete: parseBoolean(values, 'require-complete', true),
     requireRecipeSet: parseBoolean(values, 'require-recipe-set', false),
   });
@@ -81,7 +85,7 @@ export async function runVisualLabPackageVerification(options, dependencies = {}
   }
   const allowed = new Set([
     'batchRoot', 'baselineRoot', 'comparisonRoot', 'recipeSetSourcePath',
-    'requireComplete', 'requireRecipeSet',
+    'requireBrowserHostPlan', 'requireComplete', 'requireRecipeSet',
   ]);
   const unexpected = Reflect.ownKeys(options).filter((key) => !allowed.has(key));
   if (unexpected.length > 0) {
@@ -99,6 +103,7 @@ export async function runVisualLabPackageVerification(options, dependencies = {}
     ?? verifyVisualLabComparisonPackage;
   const batch = await verifyBatch({
     batchRoot: options.batchRoot,
+    requireBrowserHostPlan: options.requireBrowserHostPlan ?? false,
     requireComplete: options.requireComplete ?? true,
     requireRecipeSet: options.requireRecipeSet ?? false,
     ...(options.recipeSetSourcePath === undefined
@@ -120,6 +125,11 @@ export async function runVisualLabPackageVerification(options, dependencies = {}
       resultIds: batch.index.candidates
         .filter(({ status }) => status === 'passed')
         .map(({ result }) => result.id),
+    },
+    browserHostPlan: batch.browserHostPlan === null ? null : {
+      schema: batch.browserHostPlan.schema,
+      id: batch.browserHostPlan.id,
+      requestedMode: batch.browserHostPlan.requestedMode,
     },
     recipeSet: batch.recipeSet === null ? null : {
       schema: batch.recipeSet.schema,

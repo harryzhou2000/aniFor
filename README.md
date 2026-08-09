@@ -46,13 +46,27 @@ For a portable cohort and static contact sheet, run:
 
 ```sh
 npm run audit:visual-lab:batch:capture -- \
-  --bundle=dist/index.html \
   --candidates=gas-showcase,powder-style-atlas \
   --output-dir=/tmp/anifor-visual-review
 node scripts/visual-lab-verify.mjs \
   --batch-root=/tmp/anifor-visual-review \
-  --require-complete=1 --require-recipe-set=1
+  --require-complete=1 --require-recipe-set=1 \
+  --require-browser-host-plan=1
 ```
+
+For a larger normal-scale cohort on Linux, opt into sequential Chrome-host
+reuse while retaining a fresh incognito context, target, document, simulation,
+WebGL state, and browser-error collector per candidate:
+
+```sh
+npm run audit:visual-lab:batch:capture -- \
+  --candidates=gas-showcase,powder-style-atlas \
+  --browser-host=shared \
+  --output-dir=/tmp/anifor-visual-review
+```
+
+The default remains `--browser-host=fresh`. True 8× and recovery audits always
+remain fresh-browser-only.
 
 The JSON plan resolves the recipe-set identity, fixture-owned driver, canonical
 query, preparation kind, off/A/B selections and labels, expected browser
@@ -73,10 +87,21 @@ explicitly closes its target and tears down the host before publishing
 non-overlapping monotonic phases—from plan/preflight through target and host
 teardown—are diagnostic only, excluded from frozen identities, and reject
 impossible or over-300-second values. A real built Gas gate completed in about
-29.978 seconds with no Chrome left behind. Next, measured shared-host workers
-will give each normal-scale candidate a fresh incognito context and direct-URL
-target, optimizing readiness and variant cost while recycling the host after
-any capture or teardown fault. True 8× and recovery remain fresh-browser-only.
+29.978 seconds with no Chrome left behind. The opt-in shared-host layer keeps
+that capture plan and all result/batch identities unchanged, adds a separate
+content-addressed `browser-host-plan/v1`, and keeps each audit child as the hard
+per-candidate timeout boundary. Shared reports are staged until their host
+generation closes cleanly; any capture, backend, browser, health, target,
+context, or teardown fault recycles the whole host. Fresh and shared targets
+use one explicit 1280×600 CSS viewport, preserving the historical fresh capture
+geometry. A built Gas+Powder fresh/shared pair matched all six PNGs and both
+result IDs byte-for-byte. Shared mode used one host for two fresh contexts with
+no restart, reduced sampled candidate time from about 58.2 to 53.1 seconds, and
+left no Chrome residue. True 8× and recovery remain fresh-browser-only.
+The portable verifier's `--require-browser-host-plan=1` gate reconstructs and
+checks the exact capture-plan/entry identities, GPU/base URL, and timing-derived
+host mode. `--index-only=1` preserves that sidecar unchanged and does not invent
+one for a legacy package.
 
 Each recipe keeps the stable six fields `name/domain/target/fixture/gain/renderScale`.
 The resolved fixture—not the material domain—selects its capture driver, so one

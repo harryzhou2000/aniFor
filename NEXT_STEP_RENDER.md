@@ -156,9 +156,11 @@ canonical plan query is complete. Historical preparation report labels remain
 diagnostics. Gas plus Powder passed a real built-bundle WebGL batch with
 unchanged result IDs and portable verification.
 
-The current increment keeps the objective on execution
-throughput rather than visual-detail volume. One page-scoped candidate
-transaction now owns CDP protocol setup and error collection, fixture startup,
+The page-transaction/timing checkpoint is deployed at revision
+`c4040ca6c989ee18b4dc77f46a96209676f497eb`: source workflow run
+`31310966736` passed, deploy-verified run `31311115134` reused the exact source
+artifact, and live Pages served that revision. One page-scoped candidate
+transaction owns CDP protocol setup and error collection, fixture startup,
 WebGL/field readiness, ordered off/A/B capture, invariant validation, in-memory
 report construction, and strict renderer disposal. The host still owns Chrome/
 profile lifecycle plus browser-context/target ownership. It explicitly closes
@@ -174,18 +176,52 @@ comparison, and recipe-set identity. A real built Gas strict-disposal gate
 passed at roughly `hostLaunch=0.234s`, `startup=1.285s`,
 `readiness=16.749s`, and `total=29.978s`, with no Chrome process left behind.
 
-The next active objective is measured shared-host worker reuse for compatible
-normal-scale candidates, optimizing readiness and variant cost rather than
-process launch. Reuse only a killable Chrome host, sequentially; every candidate
-still receives a fresh incognito browser context, direct-URL target, document,
-simulation, WebGL state, and error collector. Any timeout, context loss,
-backend fallback, browser error, renderer-disposal failure, or context/target
-teardown failure must recycle the whole host before continuing. True 8× and
-recovery gates remain fresh-browser-only. Preserve bounded lifecycle cleanup,
-content identities, and portable verification. A new same-domain control should
-require a static declaration plus one executable adapter and optional typed
-fixture preparer—not edits to audit, batch, baseline, review, CI, or
-contact-sheet dispatch.
+The active increment now implements measured, opt-in
+`--browser-host=shared` reuse for compatible normal-scale candidates. The
+deployed capture execution plan remains unchanged; a sibling
+`anifor.visual-lab.browser-host-plan/v1` owns only requested/effective host
+routing, sequential isolation, and recycle policy. The batch supervisor owns
+one killable detached Chrome/profile/lifecycle record while each existing audit
+child remains an independently timeout-killable transaction. Every candidate
+creates a fresh incognito context with `disposeOnDetach`, a direct-URL target
+resolved by exact target ID, a fresh page CDP/error collector, document,
+simulation, and WebGL state. Teardown proves renderer disposal, target close,
+context disposal and absence, and root-CDP health. Any timeout, context loss,
+backend fallback, browser/capture/report error, renderer-disposal failure, or
+target/context teardown failure poisons and recycles the whole host before the
+next candidate. Shared reports remain `report.pending.json` until their host
+generation tears down cleanly; only then can the batch atomically promote them
+and publish its unchanged batch/v1 completion marker. The root lifecycle owner
+is batch-bound, crash-recoverable, and initially Linux-only. True 8× and
+context-loss recovery remain fresh-browser-only.
+
+Fresh and shared targets now receive the same explicit 1280×600 CSS device
+metrics before evidence collection. That matches the historical fresh-target
+content viewport and prevents Chrome's default initial/incognito target heights
+from changing the capture clip. A real built Gas pair produced exact 749×469
+geometry, identical off/A/B PNG hashes, the same result ID, complete portable
+verification, and no Chrome residue in both modes. The final built Gas+Powder
+pair also matched all six PNGs and both result IDs byte-for-byte between fresh
+and shared modes. Shared used one host for two contexts/targets and six captures
+with no restart, reducing sampled candidate time from roughly 58.2 seconds to
+53.1 seconds; supervisor launch/teardown remains separate from the unchanged
+per-candidate timing schema.
+
+The host sidecar is portable provenance, not merely a requested-mode label.
+`--require-browser-host-plan=1` reconstructs the authoritative capture plan from
+the packaged recipe set and each report's GPU/base URL, checks the full plan and
+entry IDs, and cross-binds effective fresh/shared mode to timing counters.
+Index-only aggregation preserves an existing sidecar byte-for-byte and leaves a
+legacy absence explicit instead of manufacturing a fresh-mode plan.
+
+After this checkpoint is deployed, keep the objective on effective framework
+leverage rather than isolated visual-detail volume. Profile and shorten the
+dominant readiness and off/A/B phases without weakening semantic, field-alpha,
+framebuffer-alpha, GPU-completion, or teardown evidence. Prefer a separate
+content-addressed execution-tuning plan plus driver-owned declarative readiness/
+settle capabilities over adding audit/batch/review/CI/contact-sheet branches. A
+new same-domain control should still require only a static declaration, one
+executable adapter, and an optional typed fixture preparer.
 
 ### Cross-runtime static-contract acceptance
 
@@ -299,7 +335,8 @@ rewriting its index with:
 ```sh
 npm run audit:visual-lab:verify -- \
   --batch-root=/path/to/downloaded-review \
-  --require-complete=1 --require-recipe-set=1
+  --require-complete=1 --require-recipe-set=1 \
+  --require-browser-host-plan=1
 ```
 
 For the release artifact, bind both the checked cohort and the accepted-baseline
@@ -310,7 +347,8 @@ npm run audit:visual-lab:verify -- \
   --batch-root=/path/to/downloaded-review \
   --baseline-root=visual-baselines/accepted-v1 \
   --recipe-set-source=visual-lab/recipe-sets/release.json \
-  --require-complete=1 --require-recipe-set=1
+  --require-complete=1 --require-recipe-set=1 \
+  --require-browser-host-plan=1
 ```
 
 The comparison defaults to `<batch-root>/comparison`. The verifier performs only
@@ -335,15 +373,16 @@ The equivalent reusable checked cohort is selected with
 mutually exclusive. Every run publishes the normalized selection as
 `recipe-set.json` before the contact sheet and final batch marker.
 
-Each candidate gets a fresh browser and an isolated
-`candidates/<name>/` directory containing off/A/B PNGs, `report.json`, and
-stdout/stderr logs. The default five-minute candidate deadline first requests
-the audit's bounded Chrome cleanup, then escalates if the child cannot exit. An
-atomic lifecycle handoff lets the parent terminate and verify the exact detached
-Chrome group even if the audit child must be killed; it is bound to canonical
-batch-root/candidate ownership plus the process start token and exact browser
-profile. Successful cleanup removes the profile and handoff, while an unverifiable
-live process retains both for manual recovery. One output-root lock serializes
+Each candidate gets a fresh browser by default; opt-in Linux shared mode instead
+gives each candidate a fresh incognito context/target inside one sequentially
+reused host. Its isolated `candidates/<name>/` directory contains off/A/B PNGs,
+`report.json`, and stdout/stderr logs. The default five-minute candidate deadline
+first requests bounded cleanup, then escalates if the child cannot exit. Atomic
+lifecycle handoffs let the parent terminate and verify the exact detached Chrome
+group even if the audit child must be killed; ownership is bound to either the
+canonical batch-root/candidate or the shared batch root, plus process start token
+and exact browser profile. Successful cleanup removes the profile and handoff,
+while an unverifiable live process retains both for manual recovery. One output-root lock serializes
 capture and index-only writers. Output ancestors, roots, candidate roots, and
 candidate directories must be real contained directories, diagnostics are
 published atomically without following a leaf symlink, and a rerun clears only
@@ -3977,9 +4016,11 @@ Reuse an existing production bundle with:
 Every report retains full capability/protocol evidence and adds
 `anifor.visual-lab.result/v1`: candidate name, normalized request, ordered
 off/A/B hashes, and a deterministic `sha256:` identity over that exact record.
-The batch runner resolves a selected set in frozen catalog order, launches one
-fresh browser per candidate against one existing production build, independently
-validates the actual PNG/report bytes, and publishes
+The batch runner resolves a selected set in frozen catalog order and uses one
+fresh browser per candidate by default against one existing production build.
+Compatible normal-scale Linux cohorts may explicitly reuse a host with a fresh
+incognito context/target per candidate. It independently validates the actual
+PNG/report bytes and publishes
 `anifor.visual-lab.batch/v1` plus a static relative-path contact sheet. A failed
 candidate retains its logs and failure tombstone but forces `complete: false`.
 The reusable gate is focused catalog/result/batch tests, a production build, one
