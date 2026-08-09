@@ -47,18 +47,19 @@ import {
 import {
   resolveVisualLabBrowserHostPlanEntry,
 } from './visual-lab-browser-host-plan.mjs';
+import {
+  resolveVisualCaptureExecutionCapabilities,
+} from './visual-capture-execution-capabilities.mjs';
+import {
+  resolveVisualLabExecutionTuningPlanEntry,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
+} from './visual-lab-execution-tuning-plan.mjs';
 
 export { removeVisualLabHostArtifacts } from './visual-lab-chrome-host.mjs';
 
 const MODULE_PATH = fileURLToPath(import.meta.url);
 const CDP_COMMAND_TIMEOUT_MS = 20_000;
 const PAGE_STARTUP_TIMEOUT_MS = 60_000;
-const VARIANT_SETTLE_TIMEOUT_MS = 10_000;
-// A cold hosted SwiftShader readback covers the full 1224x768 framebuffer plus
-// both world-sized semantic fields. One snapshot can consume most of the
-// ordinary settle window, so retain the exact two-consecutive-snapshot proof
-// while giving the software path enough time to begin its second readback.
-const SWIFTSHADER_VARIANT_SETTLE_TIMEOUT_MS = 30_000;
 const RENDERER_DISPOSAL_TIMEOUT_MS = 5_000;
 const CAPTURE_VIEWPORT_WIDTH = 1280;
 // Preserve the historical fresh-target content viewport. Chrome's
@@ -67,6 +68,25 @@ const CAPTURE_VIEWPORT_WIDTH = 1280;
 // inherit a different content height and produce incomparable capture clips.
 const CAPTURE_VIEWPORT_HEIGHT = 600;
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+/** Exact historical alpha digest over a tightly packed RGBA framebuffer. */
+export function digestVisualLabFramebufferAlpha(rgba) {
+  let hash = 2166136261 >>> 0;
+  let supportHash = 2166136261 >>> 0;
+  let alphaSum = 0;
+  let nonzero = 0;
+  // Preserve the exact per-pixel index/hash grammar while avoiding almost one
+  // million callback and coordinate calculations for every 2x proof.
+  for (let offset = 3, index = 0; offset < rgba.length; offset += 4, index++) {
+    const byte = rgba[offset];
+    const supported = Number(byte > 0);
+    hash = Math.imul((hash ^ byte ^ index) >>> 0, 16777619) >>> 0;
+    supportHash = Math.imul((supportHash ^ supported ^ index) >>> 0, 16777619) >>> 0;
+    alphaSum += byte;
+    nonzero += supported;
+  }
+  return { hash, supportHash, alphaSum, nonzero };
+}
 
 const HELP = `Usage:
   node scripts/visual-lab-audit.mjs [options]
@@ -87,6 +107,8 @@ Options (use --name=value):
   --browser-websocket=ws://...          Internal shared-host DevTools endpoint
   --browser-host-plan=/path/to/plan     Internal shared-host sibling plan
   --browser-host-entry-id=sha256:<hex>  Required shared sibling-plan entry binding
+  --execution-tuning-plan=/path/to/plan Declarative readiness/settle sibling plan
+  --execution-tuning-entry-id=sha256:<hex> Required tuning-plan entry binding
   --defer-report=0|1                    Stage shared-host report until host teardown
   --lifecycle-file=/path/to/state.json  Optional detached-Chrome cleanup handoff
   --lifecycle-owner=<sha256>             Required root/candidate identity for that handoff
@@ -102,6 +124,7 @@ function parseArguments(argv) {
     'base-url', 'bundle', 'candidate', 'domain', 'target', 'fixture', 'gain', 'render-scale',
     'output-dir', 'chrome', 'gpu', 'browser-host', 'browser-websocket',
     'browser-host-plan', 'browser-host-entry-id', 'defer-report',
+    'execution-tuning-plan', 'execution-tuning-entry-id',
     'lifecycle-file', 'lifecycle-owner',
     'execution-plan-id',
   ]);
@@ -130,6 +153,15 @@ function parseArguments(argv) {
   if (values.has('execution-plan-id')
     && !/^sha256:[a-f0-9]{64}$/.test(values.get('execution-plan-id'))) {
     throw new Error('--execution-plan-id must be a lowercase SHA-256 identity');
+  }
+  if (values.has('execution-tuning-plan') !== values.has('execution-tuning-entry-id')) {
+    throw new Error(
+      '--execution-tuning-plan and --execution-tuning-entry-id must be provided together',
+    );
+  }
+  if (values.has('execution-tuning-entry-id')
+    && !/^sha256:[a-f0-9]{64}$/.test(values.get('execution-tuning-entry-id'))) {
+    throw new Error('--execution-tuning-entry-id must be a lowercase SHA-256 identity');
   }
 
   const candidate = values.has('candidate')
@@ -216,7 +248,7 @@ function parseArguments(argv) {
   if (values.has('output-dir') && values.get('output-dir') === '') {
     throw new Error('--output-dir must not be empty');
   }
-  for (const name of ['browser-websocket', 'browser-host-plan']) {
+  for (const name of ['browser-websocket', 'browser-host-plan', 'execution-tuning-plan']) {
     if (values.has(name) && values.get(name).trim().length === 0) {
       throw new Error(`--${name} must not be empty`);
     }
@@ -247,6 +279,9 @@ function parseArguments(argv) {
   });
   if (values.has('execution-plan-id') && candidate === null) {
     throw new Error('--execution-plan-id requires --candidate');
+  }
+  if (values.has('execution-tuning-plan') && candidate === null) {
+    throw new Error('--execution-tuning-plan requires --candidate');
   }
   if (values.has('execution-plan-id')
     && values.get('execution-plan-id') !== executionPlan.inspection.id) {
@@ -283,6 +318,9 @@ function parseArguments(argv) {
     browserHostPlanFile: values.has('browser-host-plan')
       ? path.resolve(values.get('browser-host-plan')) : undefined,
     browserHostEntryId: values.get('browser-host-entry-id'),
+    executionTuningPlanFile: values.has('execution-tuning-plan')
+      ? path.resolve(values.get('execution-tuning-plan')) : undefined,
+    executionTuningEntryId: values.get('execution-tuning-entry-id'),
     deferReport,
     outputDir,
     chrome: values.get('chrome'),
@@ -294,6 +332,8 @@ function parseArguments(argv) {
 
 async function captureVisualLabCandidateEvidence({
   entry,
+  executionTuningEntry,
+  executionTuningProof,
   pageCdp,
   gpuMode,
   browserErrors,
@@ -311,6 +351,7 @@ async function captureVisualLabCandidateEvidence({
     gain: entry.request.gain,
     renderScale: entry.request.renderScale,
     gpu: gpuMode,
+    executionTuning: executionTuningEntry,
   });
   const cdp = pageCdp;
   const startupSelection = await measure('startup', async () => {
@@ -335,19 +376,34 @@ async function captureVisualLabCandidateEvidence({
   });
 
   await measure('readiness', async () => {
-    await waitForPage(cdp, options, 2);
+    const { profile, effectiveTimeouts } = options.executionTuning;
+    await waitForPage(
+      cdp,
+      options,
+      profile.startup.variant,
+      effectiveTimeouts.readinessMs,
+      profile.readiness.pollIntervalMs,
+    );
     await evaluate(cdp, `(() => {
       const audit = window.__ANIFOR_INPUT_AUDIT__;
       audit.refreshPresentationFields();
-      return new Promise((resolve) => requestAnimationFrame(() =>
-        requestAnimationFrame(() => resolve(true))));
+      let remaining = ${profile.startup.rafs};
+      return new Promise((resolve) => {
+        const advance = () => {
+          remaining--;
+          if (remaining === 0) resolve(true);
+          else requestAnimationFrame(advance);
+        };
+        requestAnimationFrame(advance);
+      });
     })()`);
     await waitFor(async () => {
       const snapshot = await snapshotState(cdp, options.executionPlan);
       return snapshot.semantic.occupied > 0
         && snapshot.fieldAlpha.nonzero > 0
         && snapshot.framebufferAlpha.nonzero > 0;
-    }, PAGE_STARTUP_TIMEOUT_MS, `populated ${options.fixture} presentation fields`);
+    }, effectiveTimeouts.readinessMs, `populated ${options.fixture} presentation fields`,
+    profile.readiness.pollIntervalMs);
   });
 
   const captures = {};
@@ -447,6 +503,7 @@ async function captureVisualLabCandidateEvidence({
       gain: options.gain,
       renderScale: options.renderScale,
       gpu: options.gpu,
+      ...(executionTuningProof === undefined ? {} : { executionTuning: executionTuningProof }),
       startupSelection,
       backend: reference.backend.backend,
       hdrPipeline: reference.dataset.hdrPipeline,
@@ -462,6 +519,17 @@ async function captureVisualLabCandidateEvidence({
   });
 }
 
+const localExecutionTuningEntry = (entry, gpuMode) => {
+  const profile = resolveVisualCaptureExecutionCapabilities(entry.captureDriver.name);
+  return Object.freeze({
+    profile,
+    effectiveTimeouts: Object.freeze({
+      readinessMs: profile.readiness.timeoutMsByGpu[gpuMode],
+      stabilityMs: profile.stability.timeoutMsByGpu[gpuMode],
+    }),
+  });
+};
+
 /**
  * Runs one candidate transaction through a caller-owned fresh target. The
  * transaction owns its CDP connection, protocol domains, browser-error
@@ -471,6 +539,8 @@ async function captureVisualLabCandidateEvidence({
  */
 export async function captureVisualLabCandidatePage({
   entry,
+  executionTuningEntry,
+  executionTuningProof,
   connectPage,
   gpuMode,
   measure = async (_phase, operation) => operation(),
@@ -478,6 +548,8 @@ export async function captureVisualLabCandidatePage({
   if (typeof connectPage !== 'function') {
     throw new TypeError('Visual Lab candidate transaction requires a page connector');
   }
+  const resolvedExecutionTuningEntry = executionTuningEntry
+    ?? localExecutionTuningEntry(entry, gpuMode);
   let pageCdp;
   let browserErrors = [];
   let report;
@@ -505,6 +577,8 @@ export async function captureVisualLabCandidatePage({
     });
     report = await captureVisualLabCandidateEvidence({
       entry,
+      executionTuningEntry: resolvedExecutionTuningEntry,
+      executionTuningProof,
       pageCdp,
       gpuMode,
       browserErrors,
@@ -593,13 +667,13 @@ export const formatVisualLabCliError = (error) => (
   renderVisualLabError(error, new Set(), 0).slice(0, CLI_ERROR_MAX_CHARACTERS)
 );
 
-const readBrowserHostPlan = async (file) => {
+const readPortableSiblingPlan = async (file, label) => {
   const before = await lstat(file, { bigint: true });
   if (before.isSymbolicLink() || !before.isFile()) {
-    throw new Error('Visual Lab browser-host plan must be a real regular file');
+    throw new Error(`${label} must be a real regular file`);
   }
   if (before.size > 1_048_576n) {
-    throw new Error('Visual Lab browser-host plan exceeds its 1 MiB budget');
+    throw new Error(`${label} exceeds its 1 MiB budget`);
   }
   const source = await readFile(file, 'utf8');
   const after = await lstat(file, { bigint: true });
@@ -607,15 +681,23 @@ const readBrowserHostPlan = async (file) => {
     || before.dev !== after.dev || before.ino !== after.ino
     || before.size !== after.size || before.mtimeNs !== after.mtimeNs
     || before.ctimeNs !== after.ctimeNs) {
-    throw new Error('Visual Lab browser-host plan changed while reading');
+    throw new Error(`${label} changed while reading`);
   }
   try { return JSON.parse(source); }
   catch (error) {
-    throw new Error(`Visual Lab browser-host plan is not valid JSON: ${error.message}`, {
+    throw new Error(`${label} is not valid JSON: ${error.message}`, {
       cause: error,
     });
   }
 };
+
+const readBrowserHostPlan = (file) => readPortableSiblingPlan(
+  file, 'Visual Lab browser-host plan',
+);
+
+const readExecutionTuningPlan = (file) => readPortableSiblingPlan(
+  file, 'Visual Lab execution-tuning plan',
+);
 
 async function main() {
   const totalStarted = performance.now();
@@ -631,6 +713,10 @@ async function main() {
   const url = new URL(options.executionPlan.compiled.url);
   let chromePath;
   let browserHostPlanEntry;
+  let executionTuningPlanEntry = localExecutionTuningEntry(
+    options.executionPlan, options.gpu,
+  );
+  let executionTuningProof;
   await timings.measure('preflight', async () => {
     if (options.browserHost === 'shared' && process.platform !== 'linux') {
       throw new Error('Shared Visual Lab browser hosts are currently supported on Linux only');
@@ -639,6 +725,25 @@ async function main() {
     await mkdir(options.executionPlan.runtime.artifactRoot, { recursive: true });
     if (options.lifecycleFile) {
       await mkdir(path.dirname(options.lifecycleFile), { recursive: true });
+    }
+    if (options.executionTuningPlanFile) {
+      const executionTuningPlan = await readExecutionTuningPlan(
+        options.executionTuningPlanFile,
+      );
+      executionTuningPlanEntry = resolveVisualLabExecutionTuningPlanEntry(
+        executionTuningPlan,
+        options.executionTuningEntryId,
+        options.executionPlan.inspection.id,
+      );
+      if (executionTuningPlanEntry.candidate !== options.executionPlan.candidate
+        || executionTuningPlanEntry.driver !== options.executionPlan.captureDriver.name) {
+        throw new Error('Visual Lab execution-tuning entry does not match its capture request');
+      }
+      executionTuningProof = Object.freeze({
+        schema: VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
+        planId: executionTuningPlan.id,
+        entryId: executionTuningPlanEntry.id,
+      });
     }
     if (options.browserHost === 'fresh') {
       chromePath = await resolveVisualLabChrome(options.chrome);
@@ -738,6 +843,8 @@ async function main() {
     }
     report = await captureVisualLabCandidatePage({
       entry: options.executionPlan,
+      executionTuningEntry: executionTuningPlanEntry,
+      executionTuningProof,
       connectPage: async () => {
         if (options.browserHost === 'shared') {
           incognitoPage = await connectVisualLabIncognitoPage({
@@ -842,14 +949,21 @@ function collectBrowserErrors(cdp) {
 async function stageVariantDuringStartup(cdp, options) {
   return waitFor(
     () => evaluate(cdp, options.executionPlan.compiled.startupExpression),
-    PAGE_STARTUP_TIMEOUT_MS,
+    options.executionTuning.effectiveTimeouts.readinessMs,
     `${options.fixture} startup audit bridge`,
+    options.executionTuning.profile.readiness.pollIntervalMs,
   );
 }
 
-async function waitForPage(cdp, options, expectedVariant) {
+async function waitForPage(
+  cdp,
+  options,
+  expectedVariant,
+  timeoutMs = PAGE_STARTUP_TIMEOUT_MS,
+  pollIntervalMs = 50,
+) {
   const compiledVariant = options.executionPlan.compiled.variants.find(
-    ({ value }) => value === expectedVariant,
+    ({ name, value }) => name === expectedVariant || value === expectedVariant,
   );
   assert(compiledVariant, `execution plan is missing capture variant ${expectedVariant}`);
   const expectedDriverState = compiledVariant.expectedDataset;
@@ -893,8 +1007,9 @@ async function waitForPage(cdp, options, expectedVariant) {
   try {
     await waitFor(
       () => evaluate(cdp, readinessExpression),
-      PAGE_STARTUP_TIMEOUT_MS,
+      timeoutMs,
       'WebGL/HDR visual-lab page',
+      pollIntervalMs,
     );
   } catch (error) {
     const diagnostic = await evaluate(cdp, `(() => {
@@ -916,8 +1031,8 @@ async function waitForPage(cdp, options, expectedVariant) {
 }
 
 async function captureVariant(cdp, options, variant) {
-  const settleTimeoutMs = options.gpu === 'swiftshader'
-    ? SWIFTSHADER_VARIANT_SETTLE_TIMEOUT_MS : VARIANT_SETTLE_TIMEOUT_MS;
+  const { profile, effectiveTimeouts } = options.executionTuning;
+  const settleTimeoutMs = effectiveTimeouts.stabilityMs;
   const compiledVariant = options.executionPlan.compiled.variants.find(
     ({ name }) => name === variant.name,
   );
@@ -929,8 +1044,15 @@ async function captureVariant(cdp, options, variant) {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     const selection = ${selectionExpression};
     if (!selection.ok) throw new Error('visual capture selector failed: ' + selection.failure);
-    return new Promise((resolve) => requestAnimationFrame(() =>
-      requestAnimationFrame(() => resolve(selection))));
+    let remaining = ${profile.selection.rafs};
+    return new Promise((resolve) => {
+      const advance = () => {
+        remaining--;
+        if (remaining === 0) resolve(selection);
+        else requestAnimationFrame(advance);
+      };
+      requestAnimationFrame(advance);
+    });
   })()`);
   await waitFor(() => evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
@@ -949,18 +1071,22 @@ async function captureVariant(cdp, options, variant) {
     return Object.entries(expectedDriverState).every(([name, value]) => (
       driverState[name] === value
     ));
-  })()`), settleTimeoutMs, `${variant.name} capture-driver state`);
+  })()`), settleTimeoutMs, `${variant.name} capture-driver state`,
+  profile.stability.pollIntervalMs);
 
   let previousState;
+  let consecutiveSnapshots = 0;
   const state = await waitFor(async () => {
     const current = await snapshotState(cdp, options.executionPlan);
     const stable = previousState
       && sameDigest(previousState.semantic, current.semantic)
       && sameDigest(previousState.fieldAlpha, current.fieldAlpha)
       && sameDigest(previousState.framebufferAlpha, current.framebufferAlpha);
+    consecutiveSnapshots = stable ? consecutiveSnapshots + 1 : 1;
     previousState = current;
-    return stable ? current : false;
-  }, settleTimeoutMs, `${variant.name} stable semantic/alpha presentation`);
+    return consecutiveSnapshots >= profile.stability.consecutiveSnapshots ? current : false;
+  }, settleTimeoutMs, `${variant.name} stable semantic/alpha presentation`,
+  profile.stability.pollIntervalMs);
   assertVariantState(state, options, variant);
   const clip = await evaluate(cdp, `(() => {
     const rect = document.querySelector('.semantic-field-canvas').getBoundingClientRect();
@@ -1067,6 +1193,7 @@ async function snapshotState(cdp, executionPlan) {
       }
       return { hash, supportHash, alphaSum, nonzero };
     };
+    const digestRgbaAlpha = ${digestVisualLabFramebufferAlpha.toString()};
     const material = audit.materialPlaneDigest();
     let countHash = 2166136261 >>> 0;
     for (let index = 0; index < material.materialCounts.length; index++) {
@@ -1080,9 +1207,7 @@ async function snapshotState(cdp, executionPlan) {
     if (!gl) throw new Error('semantic-field canvas has no readable WebGL context');
     const rgba = new Uint8Array(canvas.width * canvas.height * 4);
     gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, rgba);
-    const framebufferAlpha = digestBytes(
-      (x, y) => rgba[(y * canvas.width + x) * 4 + 3], canvas.width, canvas.height,
-    );
+    const framebufferAlpha = digestRgbaAlpha(rgba);
     const rect = canvas.getBoundingClientRect();
     return {
       world: { width: audit.width, height: audit.height },
@@ -1126,7 +1251,7 @@ async function evaluate(cdp, expression, timeoutMs = CDP_COMMAND_TIMEOUT_MS) {
   return response.result.value;
 }
 
-async function waitFor(check, timeoutMs, label) {
+async function waitFor(check, timeoutMs, label, pollIntervalMs = 50) {
   const deadline = Date.now() + timeoutMs;
   let lastError;
   while (Date.now() < deadline) {
@@ -1136,7 +1261,7 @@ async function waitFor(check, timeoutMs, label) {
     } catch (error) {
       lastError = error;
     }
-    await sleep(50);
+    await sleep(pollIntervalMs);
   }
   throw new Error(`${label} timed out${lastError ? `: ${lastError}` : ''}`);
 }

@@ -1409,7 +1409,14 @@ export class MaterialRenderer {
   setPowderRenderStyle(style: PowderRenderStyle): void {
     if (style === this.powderRenderStyle) return;
     this.powderRenderStyle = style;
-    this.presenter?.setPowderRenderStyle(style);
+    if (this.presenter) {
+      // The WebGL presenter owns this uniform-only transition and submits the
+      // causal frame synchronously. Queuing the Canvas/field redraw as well
+      // makes capture controls render the entire backing twice; recovery marks
+      // every Canvas contour dirty when it recreates the fallback.
+      this.presenter.setPowderRenderStyle(style);
+      return;
+    }
     this.contourChunks.markAll();
     this.changed = true;
   }

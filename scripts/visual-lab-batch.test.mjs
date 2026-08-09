@@ -35,6 +35,12 @@ import { createVisualLabRecipeSet } from './visual-lab-recipe-set.mjs';
 import { createVisualLabResultRecord } from './visual-lab-result.mjs';
 import { createVisualLabExecutionPlan } from './visual-lab-execution-plan.mjs';
 import { createVisualLabBrowserHostPlan } from './visual-lab-browser-host-plan.mjs';
+import {
+  resolveVisualCaptureExecutionCapabilities,
+} from './visual-capture-execution-capabilities.mjs';
+import {
+  createVisualLabExecutionTuningPlan,
+} from './visual-lab-execution-tuning-plan.mjs';
 import { VISUAL_LAB_TIMING_SCHEMA } from './visual-lab-timing.mjs';
 import { isDetachedProcessGroupAlive } from './detached-process.mjs';
 
@@ -256,6 +262,24 @@ const writeValidCapture = async (directory, candidate, options = {}) => {
     await writeFile(path.join(directory, `${variant}.png`), bytes);
   }
   const result = createVisualLabResultRecord(candidate, requestFor(candidate), hashes);
+  let executionTuning;
+  let gpu = 'auto';
+  try {
+    const tuningPlan = JSON.parse(await readFile(
+      path.resolve(directory, '..', '..', 'execution-tuning-plan.json'), 'utf8',
+    ));
+    const tuningEntry = tuningPlan.entries.find((entry) => entry.candidate === candidate);
+    gpu = tuningPlan.gpuMode;
+    if (tuningEntry) {
+      executionTuning = {
+        schema: tuningPlan.schema,
+        planId: tuningPlan.id,
+        entryId: tuningEntry.id,
+      };
+    }
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error;
+  }
   const backingSize = `${612 * recipe.renderScale}x${384 * recipe.renderScale}`;
   const fixturePreparation = visualLabFixturePreparationLabel(fixture);
   const report = {
@@ -280,6 +304,8 @@ const writeValidCapture = async (directory, candidate, options = {}) => {
     captureProtocol: VISUAL_LAB_CAPTURE_PROTOCOL,
     gain: recipe.gain,
     renderScale: recipe.renderScale,
+    gpu,
+    ...(executionTuning === undefined ? {} : { executionTuning }),
     startupSelection: {
       requestedVariant: 2,
       fixture: recipe.fixture,
@@ -614,6 +640,8 @@ describe('Visual Lab batch runner', () => {
       expect(childCalls.map(({ recipe }) => recipe.name)).toEqual(canonicalCandidates);
       const boundEntryIds = childCalls.map((call) => {
         expect(call.browserHostPlanEntry.captureEntryId).toBe(call.executionPlan.inspection.id);
+        expect(call.executionTuningPlanEntry.captureEntryId)
+          .toBe(call.executionPlan.inspection.id);
         expect(call.args).toContain('--browser-host=shared');
         expect(call.args).toContain('--defer-report=1');
         expect(call.args).toContain(
@@ -621,6 +649,12 @@ describe('Visual Lab batch runner', () => {
         );
         const argument = call.args.find((value) => value.startsWith('--browser-host-entry-id='));
         expect(argument).toBe(`--browser-host-entry-id=${call.browserHostPlanEntry.id}`);
+        expect(call.args).toContain(
+          `--execution-tuning-plan=${shared.executionTuningPlanPath}`,
+        );
+        expect(call.args).toContain(
+          `--execution-tuning-entry-id=${call.executionTuningPlanEntry.id}`,
+        );
         return call.browserHostPlanEntry.id;
       });
       expect(new Set(boundEntryIds).size).toBe(canonicalCandidates.length);
@@ -642,6 +676,7 @@ describe('Visual Lab batch runner', () => {
       });
       expect(shared.plan.id).toBe(fresh.plan.id);
       expect(shared.browserHostPlan.capturePlan.id).toBe(fresh.browserHostPlan.capturePlan.id);
+      expect(shared.executionTuningPlan).toEqual(fresh.executionTuningPlan);
       expect(shared.index).toEqual(fresh.index);
       expect(shared.index.candidates.map(({ result }) => result.id))
         .toEqual(fresh.index.candidates.map(({ result }) => result.id));
@@ -649,8 +684,12 @@ describe('Visual Lab batch runner', () => {
       await expect(verifyVisualLabBatchPackage({
         batchRoot: sharedOutput,
         requireBrowserHostPlan: true,
+        requireExecutionTuningPlan: true,
         requireComplete: true,
-      })).resolves.toMatchObject({ browserHostPlan: shared.browserHostPlan });
+      })).resolves.toMatchObject({
+        browserHostPlan: shared.browserHostPlan,
+        executionTuningPlan: shared.executionTuningPlan,
+      });
       const sharedPlanBytes = await readFile(shared.browserHostPlanPath);
       await writeFile(
         shared.browserHostPlanPath, `${JSON.stringify(fresh.browserHostPlan, null, 2)}\n`,
@@ -679,6 +718,32 @@ describe('Visual Lab batch runner', () => {
       })).rejects.toThrow('does not bind the captured execution plan identity');
       await writeFile(shared.browserHostPlanPath, sharedPlanBytes);
 
+      const tuningPlanBytes = await readFile(shared.executionTuningPlanPath);
+      const tamperedTuningPlan = structuredClone(shared.executionTuningPlan);
+      tamperedTuningPlan.entries[0].profile.stability.pollIntervalMs++;
+      await writeFile(
+        shared.executionTuningPlanPath,
+        `${JSON.stringify(tamperedTuningPlan, null, 2)}\n`,
+      );
+      await expect(verifyVisualLabBatchPackage({
+        batchRoot: sharedOutput,
+        requireExecutionTuningPlan: true,
+      })).rejects.toThrow(/identity mismatch/);
+      await writeFile(shared.executionTuningPlanPath, tuningPlanBytes);
+
+      const gasReportPath = path.join(
+        sharedOutput, 'candidates', 'gas-showcase', 'report.json',
+      );
+      const gasReportBytes = await readFile(gasReportPath);
+      const gasReport = JSON.parse(gasReportBytes);
+      gasReport.executionTuning.entryId = `sha256:${'0'.repeat(64)}`;
+      await writeFile(gasReportPath, `${JSON.stringify(gasReport)}\n`);
+      await expect(verifyVisualLabBatchPackage({
+        batchRoot: sharedOutput,
+        requireExecutionTuningPlan: true,
+      })).rejects.toThrow(/execution-tuning proof.*does not match/);
+      await writeFile(gasReportPath, gasReportBytes);
+
       const reindexed = await runVisualLabBatch({
         candidates,
         bundle,
@@ -686,7 +751,9 @@ describe('Visual Lab batch runner', () => {
         indexOnly: true,
       });
       expect(reindexed.browserHostPlan).toEqual(shared.browserHostPlan);
+      expect(reindexed.executionTuningPlan).toEqual(shared.executionTuningPlan);
       expect(await readFile(shared.browserHostPlanPath)).toStrictEqual(sharedPlanBytes);
+      expect(await readFile(shared.executionTuningPlanPath)).toStrictEqual(tuningPlanBytes);
     },
   );
 
@@ -909,7 +976,8 @@ describe('Visual Lab batch runner', () => {
       publishFile: async (file, source) => {
         const name = path.basename(file);
         published.push(name);
-        if (name === 'recipe-set.json' || name === 'browser-host-plan.json') {
+        if (name === 'recipe-set.json' || name === 'browser-host-plan.json'
+          || name === 'execution-tuning-plan.json') {
           await writeFile(file, source);
           return;
         }
@@ -918,7 +986,7 @@ describe('Visual Lab batch runner', () => {
     })).rejects.toThrow('synthetic contact-sheet publication failure');
 
     expect(published).toEqual([
-      'recipe-set.json', 'browser-host-plan.json', 'index.html',
+      'recipe-set.json', 'browser-host-plan.json', 'execution-tuning-plan.json', 'index.html',
     ]);
     await expect(access(indexPath)).rejects.toMatchObject({ code: 'ENOENT' });
   });
@@ -1062,6 +1130,48 @@ describe('Visual Lab batch runner', () => {
     expect(await snapshotPackageTree(incompleteDirectory)).toStrictEqual(incompleteBefore);
   });
 
+  it('reconstructs a present tuning sidecar even when every capture failed', async () => {
+    const root = await makeTemporaryDirectory();
+    const bundle = path.join(root, 'index.html');
+    const outputDirectory = path.join(root, 'failed-batch');
+    await writeFile(bundle, '<!doctype html>');
+    const candidates = ['gas-showcase'];
+    const generated = await runVisualLabBatch({
+      candidates, bundle, outputDir: outputDirectory,
+    }, {
+      runCandidate: async () => ({ code: 9, signal: null, timedOut: false }),
+    });
+
+    expect(generated.index.complete).toBe(false);
+    await expect(verifyVisualLabBatchPackage({
+      batchRoot: outputDirectory,
+      requireComplete: false,
+    })).resolves.toMatchObject({ executionTuningPlan: generated.executionTuningPlan });
+
+    const capturePlan = createVisualLabExecutionPlan({
+      candidates,
+      baseUrl: pathToFileURL(bundle),
+      outputDir: outputDirectory,
+      gpu: 'auto',
+    });
+    const alteredProfile = structuredClone(
+      resolveVisualCaptureExecutionCapabilities('normal-hdr'),
+    );
+    alteredProfile.stability.timeoutMsByGpu.auto = 11_000;
+    const alteredPlan = createVisualLabExecutionTuningPlan(capturePlan, {
+      'normal-hdr': alteredProfile,
+    });
+    await writeFile(
+      generated.executionTuningPlanPath,
+      `${JSON.stringify(alteredPlan, null, 2)}\n`,
+    );
+
+    await expect(verifyVisualLabBatchPackage({
+      batchRoot: outputDirectory,
+      requireComplete: false,
+    })).rejects.toThrow('does not bind the captured execution plan/capabilities');
+  });
+
   it('rejects portable package tampering and symlinks while allowing legacy sidecar absence', async () => {
     const root = await makeTemporaryDirectory();
     const outputDirectory = path.join(root, 'batch');
@@ -1078,9 +1188,13 @@ describe('Visual Lab batch runner', () => {
     await writeFile(generated.contactSheetPath, renderVisualLabContactSheet(generated.index));
 
     expect(generated.browserHostPlan).toBeNull();
+    expect(generated.executionTuningPlan).toBeNull();
     await expect(verifyVisualLabBatchPackage({
       batchRoot: outputDirectory, requireBrowserHostPlan: true,
     })).rejects.toThrow('missing browser-host-plan.json');
+    await expect(verifyVisualLabBatchPackage({
+      batchRoot: outputDirectory, requireExecutionTuningPlan: true,
+    })).rejects.toThrow('missing execution-tuning-plan.json');
 
     const offPath = path.join(candidateDirectory, 'off.png');
     const offBytes = await readFile(offPath);

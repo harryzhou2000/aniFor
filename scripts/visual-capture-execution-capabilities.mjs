@@ -1,0 +1,308 @@
+import { VISUAL_CAPTURE_STATIC_CONTRACT } from '../src/shared/visual-capture-static-contract.js';
+import { VISUAL_CAPTURE_DRIVER_NAMES } from './visual-capture-drivers.mjs';
+
+const SAFE_NAME = /^[a-z][a-z0-9-]*$/;
+const STARTUP_FIELDS = Object.freeze(['variant', 'fieldRefresh', 'rafs']);
+const READINESS_FIELDS = Object.freeze([
+  'planes',
+  'pollIntervalMs',
+  'timeoutMsByGpu',
+]);
+const SELECTION_FIELDS = Object.freeze(['rafs', 'exactDataset']);
+const STABILITY_FIELDS = Object.freeze([
+  'planes',
+  'consecutiveSnapshots',
+  'pollIntervalMs',
+  'timeoutMsByGpu',
+]);
+const GPU_TIMEOUT_FIELDS = Object.freeze(['auto', 'swiftshader']);
+const SCREENSHOT_FIELDS = Object.freeze(['after']);
+const PROFILE_FIELDS = Object.freeze(['startup', 'readiness', 'selection', 'stability', 'screenshot']);
+const EVIDENCE_PLANES = Object.freeze([
+  'semantic',
+  'field-alpha',
+  'framebuffer-alpha',
+]);
+
+const displayValue = (value) => JSON.stringify(value) ?? String(value);
+
+const assertExactDataKeys = (value, fields, label) => {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)
+    || Object.getPrototypeOf(value) !== Object.prototype) {
+    throw new TypeError(`${label} must be a plain object`);
+  }
+  const keys = Reflect.ownKeys(value);
+  if (keys.length !== fields.length || keys.some((key, index) => key !== fields[index])) {
+    throw new TypeError(`${label} fields must be exactly ${fields.join(', ')}`);
+  }
+  for (const field of fields) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, field);
+    if (!descriptor?.enumerable || !Object.hasOwn(descriptor, 'value')) {
+      throw new TypeError(`${label}.${field} must be an enumerable data value`);
+    }
+  }
+};
+
+const assertJsonValue = (value, label, seen = new Set()) => {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return;
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) throw new TypeError(`${label} must be JSON-safe`);
+    return;
+  }
+  if (typeof value !== 'object') throw new TypeError(`${label} must be JSON-safe`);
+  if (seen.has(value)) throw new TypeError(`${label} must not contain a cycle`);
+  seen.add(value);
+
+  if (Array.isArray(value)) {
+    if (Object.getPrototypeOf(value) !== Array.prototype
+      || Reflect.ownKeys(value).length !== value.length + 1) {
+      throw new TypeError(`${label} must be a JSON-safe array`);
+    }
+    for (let index = 0; index < value.length; index++) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+      if (!descriptor?.enumerable || !Object.hasOwn(descriptor, 'value')) {
+        throw new TypeError(`${label}[${index}] must be an enumerable data value`);
+      }
+      assertJsonValue(descriptor.value, `${label}[${index}]`, seen);
+    }
+  } else {
+    if (Object.getPrototypeOf(value) !== Object.prototype) {
+      throw new TypeError(`${label} must be a JSON-safe plain object`);
+    }
+    for (const key of Reflect.ownKeys(value)) {
+      if (typeof key !== 'string') throw new TypeError(`${label} must be JSON-safe`);
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor?.enumerable || !Object.hasOwn(descriptor, 'value')) {
+        throw new TypeError(`${label}.${key} must be an enumerable data value`);
+      }
+      assertJsonValue(descriptor.value, `${label}.${key}`, seen);
+    }
+  }
+  seen.delete(value);
+};
+
+const assertIntegerInRange = (value, minimum, maximum, label) => {
+  if (!Number.isInteger(value) || value < minimum || value > maximum) {
+    throw new TypeError(`${label} must be an integer from ${minimum} to ${maximum}`);
+  }
+};
+
+const assertExactArray = (value, expected, label) => {
+  if (!Array.isArray(value) || value.length !== expected.length
+    || value.some((entry, index) => entry !== expected[index])) {
+    throw new TypeError(`${label} must be exactly ${expected.join(', ')}`);
+  }
+};
+
+const normalizeProfile = (profile, driverName) => {
+  const label = `Visual capture execution capability ${driverName}`;
+  assertJsonValue(profile, label);
+  assertExactDataKeys(profile, PROFILE_FIELDS, label);
+
+  const {
+    startup, readiness, selection, stability, screenshot,
+  } = profile;
+  assertExactDataKeys(startup, STARTUP_FIELDS, `${label}.startup`);
+  if (startup.variant !== 'b' || startup.fieldRefresh !== 'explicit') {
+    throw new TypeError(`${label}.startup is not supported`);
+  }
+  assertIntegerInRange(startup.rafs, 1, 120, `${label}.startup.rafs`);
+
+  assertExactDataKeys(readiness, READINESS_FIELDS, `${label}.readiness`);
+  assertExactArray(readiness.planes, EVIDENCE_PLANES, `${label}.readiness.planes`);
+  assertIntegerInRange(readiness.pollIntervalMs, 1, 1_000, `${label}.readiness.pollIntervalMs`);
+  assertExactDataKeys(readiness.timeoutMsByGpu, GPU_TIMEOUT_FIELDS,
+    `${label}.readiness.timeoutMsByGpu`);
+  assertIntegerInRange(readiness.timeoutMsByGpu.auto, 1_000, 300_000,
+    `${label}.readiness.timeoutMsByGpu.auto`);
+  assertIntegerInRange(readiness.timeoutMsByGpu.swiftshader, 1_000, 300_000,
+    `${label}.readiness.timeoutMsByGpu.swiftshader`);
+
+  assertExactDataKeys(selection, SELECTION_FIELDS, `${label}.selection`);
+  assertIntegerInRange(selection.rafs, 1, 120, `${label}.selection.rafs`);
+  if (selection.exactDataset !== true) {
+    throw new TypeError(`${label}.selection.exactDataset must be true`);
+  }
+
+  assertExactDataKeys(stability, STABILITY_FIELDS, `${label}.stability`);
+  assertExactArray(stability.planes, EVIDENCE_PLANES, `${label}.stability.planes`);
+  assertExactDataKeys(stability.timeoutMsByGpu, GPU_TIMEOUT_FIELDS,
+    `${label}.stability.timeoutMsByGpu`);
+  assertIntegerInRange(stability.timeoutMsByGpu.auto, 1_000, 300_000,
+    `${label}.stability.timeoutMsByGpu.auto`);
+  assertIntegerInRange(stability.timeoutMsByGpu.swiftshader, 1_000, 300_000,
+    `${label}.stability.timeoutMsByGpu.swiftshader`);
+  if (stability.timeoutMsByGpu.swiftshader < stability.timeoutMsByGpu.auto) {
+    throw new TypeError(`${label}.stability.timeoutMsByGpu.swiftshader must not be shorter than auto`);
+  }
+  assertIntegerInRange(stability.pollIntervalMs, 1, 1_000, `${label}.stability.pollIntervalMs`);
+  assertIntegerInRange(
+    stability.consecutiveSnapshots, 2, 120, `${label}.stability.consecutiveSnapshots`,
+  );
+  assertExactDataKeys(screenshot, SCREENSHOT_FIELDS, `${label}.screenshot`);
+  if (screenshot.after !== 'stability-proof') {
+    throw new TypeError(`${label}.screenshot.after must wait for stability proof`);
+  }
+
+  return {
+    startup: {
+      variant: startup.variant,
+      fieldRefresh: startup.fieldRefresh,
+      rafs: startup.rafs,
+    },
+    readiness: {
+      planes: [...readiness.planes],
+      pollIntervalMs: readiness.pollIntervalMs,
+      timeoutMsByGpu: {
+        auto: readiness.timeoutMsByGpu.auto,
+        swiftshader: readiness.timeoutMsByGpu.swiftshader,
+      },
+    },
+    selection: {
+      rafs: selection.rafs,
+      exactDataset: selection.exactDataset,
+    },
+    stability: {
+      planes: [...stability.planes],
+      consecutiveSnapshots: stability.consecutiveSnapshots,
+      pollIntervalMs: stability.pollIntervalMs,
+      timeoutMsByGpu: {
+        auto: stability.timeoutMsByGpu.auto,
+        swiftshader: stability.timeoutMsByGpu.swiftshader,
+      },
+    },
+    screenshot: { after: screenshot.after },
+  };
+};
+
+const deepFreeze = (value) => {
+  if (value !== null && typeof value === 'object' && !Object.isFrozen(value)) {
+    for (const nested of Object.values(value)) deepFreeze(nested);
+    Object.freeze(value);
+  }
+  return value;
+};
+
+/**
+ * Creates the closed data-only execution-capability registry. It deliberately
+ * accepts no executable hooks: browser dispatch remains in the typed drivers.
+ */
+export function createVisualCaptureExecutionCapabilityRegistry(drivers, profiles) {
+  if (!Array.isArray(drivers) || drivers.length === 0) {
+    throw new TypeError('Visual capture execution drivers must be a nonempty array');
+  }
+  if (profiles === null || typeof profiles !== 'object' || Array.isArray(profiles)
+    || Object.getPrototypeOf(profiles) !== Object.prototype) {
+    throw new TypeError('Visual capture execution capabilities must be a plain object');
+  }
+
+  const names = [];
+  const seen = new Set();
+  for (const driver of drivers) {
+    const name = driver?.name;
+    if (typeof name !== 'string' || !SAFE_NAME.test(name) || seen.has(name)) {
+      throw new TypeError(`Invalid or duplicate visual capture execution driver ${displayValue(name)}`);
+    }
+    seen.add(name);
+    names.push(name);
+  }
+
+  const profileNames = Reflect.ownKeys(profiles);
+  const unsafe = profileNames.find((name) => typeof name !== 'string' || !SAFE_NAME.test(name));
+  if (unsafe !== undefined) {
+    throw new TypeError(`Unsafe visual capture execution capability name ${String(unsafe)}`);
+  }
+  const missing = names.filter((name) => !profileNames.includes(name));
+  const extra = profileNames.filter((name) => !seen.has(name));
+  const reordered = missing.length === 0 && extra.length === 0
+    && profileNames.some((name, index) => name !== names[index]);
+  if (missing.length > 0 || extra.length > 0 || reordered) {
+    const details = [
+      missing.length > 0 ? `missing ${missing.join(', ')}` : '',
+      extra.length > 0 ? `undeclared ${extra.join(', ')}` : '',
+      reordered ? 'capability order differs from declared driver order' : '',
+    ].filter(Boolean).join('; ');
+    throw new TypeError(`Visual capture execution registry is not exhaustive (${details})`);
+  }
+
+  const capabilities = {};
+  for (const name of names) {
+    const descriptor = Object.getOwnPropertyDescriptor(profiles, name);
+    if (!descriptor?.enumerable || !Object.hasOwn(descriptor, 'value')) {
+      throw new TypeError(`Visual capture execution capability ${name} must be an enumerable data value`);
+    }
+    capabilities[name] = normalizeProfile(descriptor.value, name);
+  }
+
+  const frozenNames = Object.freeze([...names]);
+  const frozenCapabilities = deepFreeze(capabilities);
+  const resolve = (name) => {
+    if (typeof name !== 'string' || !Object.hasOwn(frozenCapabilities, name)) {
+      throw new Error(`Unknown visual capture execution capability ${displayValue(name)}`);
+    }
+    return frozenCapabilities[name];
+  };
+  return Object.freeze({ names: frozenNames, capabilities: frozenCapabilities, resolve });
+}
+
+/** Returns a frozen map only for an exact, duplicate-free capture-order subset. */
+export function visualCaptureExecutionCapabilitiesForCaptureOrder(driverNames) {
+  if (!Array.isArray(driverNames) || driverNames.length === 0) {
+    throw new TypeError('Visual capture execution capture order must be a nonempty array');
+  }
+  const subset = {};
+  const seen = new Set();
+  for (const name of driverNames) {
+    if (seen.has(name)) {
+      throw new TypeError(`Visual capture execution capture order repeats ${displayValue(name)}`);
+    }
+    seen.add(name);
+    subset[name] = REGISTRY.resolve(name);
+  }
+  return Object.freeze(subset);
+}
+
+const CONSERVATIVE_PROFILE = () => ({
+  startup: {
+    variant: 'b',
+    fieldRefresh: 'explicit',
+    rafs: 2,
+  },
+  readiness: {
+    planes: [...EVIDENCE_PLANES],
+    pollIntervalMs: 50,
+    timeoutMsByGpu: { auto: 60_000, swiftshader: 60_000 },
+  },
+  selection: {
+    rafs: 2,
+    exactDataset: true,
+  },
+  stability: {
+    planes: [...EVIDENCE_PLANES],
+    consecutiveSnapshots: 2,
+    pollIntervalMs: 50,
+    timeoutMsByGpu: { auto: 10_000, swiftshader: 30_000 },
+  },
+  screenshot: { after: 'stability-proof' },
+});
+
+const DECLARED_DRIVER_NAMES = VISUAL_CAPTURE_STATIC_CONTRACT.drivers.map(({ name }) => name);
+if (DECLARED_DRIVER_NAMES.length !== VISUAL_CAPTURE_DRIVER_NAMES.length
+  || DECLARED_DRIVER_NAMES.some((name, index) => name !== VISUAL_CAPTURE_DRIVER_NAMES[index])) {
+  throw new TypeError('Visual capture driver names do not match the static contract');
+}
+
+const PROFILE_REGISTRY = Object.fromEntries(
+  DECLARED_DRIVER_NAMES.map((name) => [name, CONSERVATIVE_PROFILE()]),
+);
+const REGISTRY = createVisualCaptureExecutionCapabilityRegistry(
+  VISUAL_CAPTURE_STATIC_CONTRACT.drivers,
+  PROFILE_REGISTRY,
+);
+
+export const VISUAL_CAPTURE_EXECUTION_CAPABILITY_NAMES = REGISTRY.names;
+export const VISUAL_CAPTURE_EXECUTION_CAPABILITIES = REGISTRY.capabilities;
+
+export function resolveVisualCaptureExecutionCapabilities(name) {
+  return REGISTRY.resolve(name);
+}

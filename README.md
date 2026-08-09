@@ -51,7 +51,8 @@ npm run audit:visual-lab:batch:capture -- \
 node scripts/visual-lab-verify.mjs \
   --batch-root=/tmp/anifor-visual-review \
   --require-complete=1 --require-recipe-set=1 \
-  --require-browser-host-plan=1
+  --require-browser-host-plan=1 \
+  --require-execution-tuning-plan=1
 ```
 
 For a larger normal-scale cohort on Linux, opt into sequential Chrome-host
@@ -102,6 +103,26 @@ The portable verifier's `--require-browser-host-plan=1` gate reconstructs and
 checks the exact capture-plan/entry identities, GPU/base URL, and timing-derived
 host mode. `--index-only=1` preserves that sidecar unchanged and does not invent
 one for a legacy package.
+
+Readiness and settle behavior is independently bound by
+`execution-tuning-plan.json`. Its content-addressed entries come from one
+exhaustive driver-capability registry and declare the startup variant, field
+refresh, RAF counts, exact dataset acknowledgement, polling/timeouts, two
+consecutive semantic/field/framebuffer digest snapshots, and screenshot-after-
+proof rule. The generic audit child consumes those entries; reports carry their
+plan/entry IDs, and `--require-execution-tuning-plan=1` reconstructs the same
+capture plan and capabilities from a downloaded package. This sibling remains
+host-agnostic and outside result, batch, baseline, comparison, and recipe-set
+identities. Index-only aggregation preserves an existing tuning sidecar exactly
+and leaves legacy absence explicit.
+
+The first tuning-backed optimization keeps those proofs intact: Powder style
+selection now has one WebGL presentation owner instead of submitting a second
+full field frame, and framebuffer alpha uses the same historical digest through
+a direct RGBA stride walk. In the local built SwiftShader pair, fresh/shared
+captures retained identical PNG bytes and result IDs; Powder A+B fell from the
+prior 6.46/5.79 seconds to 4.49/3.77 seconds, while the direct digest's isolated
+2× CPU walk was byte-identical and about 5.9× faster.
 
 Each recipe keeps the stable six fields `name/domain/target/fixture/gain/renderScale`.
 The resolved fixture—not the material domain—selects its capture driver, so one

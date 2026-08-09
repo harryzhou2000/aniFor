@@ -146,6 +146,55 @@ describe('field renderer layout scheduling', () => {
     expect(renderer.changed).toBe(false);
   });
 
+  it('submits a Powder-style change once through WebGL without queuing a second field frame', () => {
+    const setPowderRenderStyle = vi.fn();
+    const markAll = vi.fn();
+    const renderer = Object.create(MaterialRenderer.prototype) as {
+      powderRenderStyle: 'smooth' | 'local' | 'grains';
+      presenter?: { setPowderRenderStyle(style: 'smooth' | 'local' | 'grains'): void };
+      contourChunks: { markAll(): void };
+      changed: boolean;
+      setPowderRenderStyle(style: 'smooth' | 'local' | 'grains'): void;
+    };
+    Object.assign(renderer, {
+      powderRenderStyle: 'smooth',
+      presenter: { setPowderRenderStyle },
+      contourChunks: { markAll },
+      changed: false,
+    });
+
+    renderer.setPowderRenderStyle('local');
+
+    expect(setPowderRenderStyle).toHaveBeenCalledOnce();
+    expect(setPowderRenderStyle).toHaveBeenCalledWith('local');
+    expect(markAll).not.toHaveBeenCalled();
+    expect(renderer.powderRenderStyle).toBe('local');
+    expect(renderer.changed).toBe(false);
+  });
+
+  it('retains Powder-style Canvas invalidation while no WebGL presenter is active', () => {
+    const markAll = vi.fn();
+    const renderer = Object.create(MaterialRenderer.prototype) as {
+      powderRenderStyle: 'smooth' | 'local' | 'grains';
+      presenter?: undefined;
+      contourChunks: { markAll(): void };
+      changed: boolean;
+      setPowderRenderStyle(style: 'smooth' | 'local' | 'grains'): void;
+    };
+    Object.assign(renderer, {
+      powderRenderStyle: 'smooth',
+      presenter: undefined,
+      contourChunks: { markAll },
+      changed: false,
+    });
+
+    renderer.setPowderRenderStyle('grains');
+
+    expect(markAll).toHaveBeenCalledOnce();
+    expect(renderer.powderRenderStyle).toBe('grains');
+    expect(renderer.changed).toBe(true);
+  });
+
   it('delegates photon/Metal irradiance without queuing a Canvas or second field frame', () => {
     const setPhotonMetalIrradianceVfxEnabled = vi.fn();
     const renderer = Object.create(MaterialRenderer.prototype) as {

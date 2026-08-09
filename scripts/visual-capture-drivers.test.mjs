@@ -163,12 +163,43 @@ describe('typed visual capture drivers', () => {
     const audit = await import('./visual-lab-audit.mjs');
     expect(typeof audit.captureVisualLabCandidatePage).toBe('function');
     expect(typeof audit.disposeVisualLabCandidatePage).toBe('function');
+    expect(typeof audit.digestVisualLabFramebufferAlpha).toBe('function');
     const source = readFileSync(new URL('./visual-lab-audit.mjs', import.meta.url), 'utf8');
     expect(source).toContain('entry: options.executionPlan');
     expect(source).toContain("pageCdp.send('Page.enable')");
     expect(source).toContain('browserErrors = collectBrowserErrors(pageCdp)');
     expect(source).toContain('realpathSync(process.argv[1]) === realpathSync(MODULE_PATH)');
     expect(source).not.toMatch(/export async function captureVisualLabCandidatePage\(cdp, options/);
+  });
+
+  it('keeps the direct framebuffer-alpha digest byte-identical to the legacy grid walk', async () => {
+    const { digestVisualLabFramebufferAlpha } = await import('./visual-lab-audit.mjs');
+    const rgba = new Uint8Array([
+      1, 2, 3, 0,
+      4, 5, 6, 255,
+      7, 8, 9, 17,
+      10, 11, 12, 0,
+      13, 14, 15, 128,
+      16, 17, 18, 1,
+    ]);
+    let hash = 2166136261 >>> 0;
+    let supportHash = 2166136261 >>> 0;
+    let alphaSum = 0;
+    let nonzero = 0;
+    for (let y = 0; y < 2; y++) {
+      for (let x = 0; x < 3; x++) {
+        const index = y * 3 + x;
+        const byte = rgba[index * 4 + 3];
+        const supported = Number(byte > 0);
+        hash = Math.imul((hash ^ byte ^ index) >>> 0, 16777619) >>> 0;
+        supportHash = Math.imul((supportHash ^ supported ^ index) >>> 0, 16777619) >>> 0;
+        alphaSum += byte;
+        nonzero += supported;
+      }
+    }
+    expect(digestVisualLabFramebufferAlpha(rgba)).toEqual({
+      hash, supportHash, alphaSum, nonzero,
+    });
   });
 
   it('requires explicit renderer disposal before a successful capture can publish', async () => {

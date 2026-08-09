@@ -315,6 +315,7 @@ jobs:
             --require-complete=1
             --require-recipe-set=1
             --require-browser-host-plan=1
+            --require-execution-tuning-plan=1
           )
           if [[ -n "${VISUAL_LAB_RECIPE_SET//[[:space:]]/}" ]]; then
             verify_args+=("--recipe-set-source=${VISUAL_LAB_RECIPE_SET}")

@@ -223,6 +223,43 @@ settle capabilities over adding audit/batch/review/CI/contact-sheet branches. A
 new same-domain control should still require only a static declaration, one
 executable adapter, and an optional typed fixture preparer.
 
+The execution-tuning framework checkpoint is now implemented and locally
+accepted. A separate exhaustive scripts-side capability registry covers every
+typed capture driver without widening `visual-capture.static-contract/v1` or
+the executable adapter ABI. Its conservative profiles are serialized through
+`anifor.visual-lab.execution-tuning-plan/v1`, bind the unchanged capture-plan
+and entry IDs, and declare variant-B startup, one explicit field refresh, two
+RAFs, exact driver dataset state, 50 ms polling, GPU-specific bounded timeouts,
+two consecutive semantic/authoritative-field/framebuffer digest snapshots, and
+screenshot-after-proof. Batch children receive only the sidecar path and exact
+entry ID; reports prove both IDs. Portable verification reconstructs the
+capture plan plus current capability registry, and CI now requires the sidecar.
+Index-only aggregation preserves an existing sidecar byte-for-byte and never
+invents one for legacy output. The frozen two-candidate SwiftShader tuning ID is
+`sha256:07e0444cb11c5d363758dab8d601eb1e4d2a8c6c203d8f129830c6c66333f136`.
+
+The first profile-preserving efficiency changes are accepted locally. WebGL
+Powder style selection now owns exactly one causal presenter frame; Canvas
+retains its dirty-contour redraw and context-loss recovery still marks the
+fallback completely dirty. The framebuffer-alpha digest replaces the historical
+per-pixel callback/coordinate walk with an exact stride-four RGBA walk. A 2×
+940,032-pixel CPU microbenchmark retained identical hash/support/sum/nonzero
+bytes and improved the median walk from 16.85 ms to 2.86 ms (5.89×). A real
+built fresh/shared Gas+Powder pair passed both portable gates with all six PNGs
+and both result IDs byte-identical and no Chrome residue. Powder A+B measured
+4.49 s fresh and 3.77 s shared versus the prior 6.46 s and 5.79 s samples; the
+shared cohort plus its supervisor was about 59.7 s versus 66.6 s fresh in this
+cold run. Treat these single-run timings as directional, not a stable benchmark.
+
+The next active framework work is measurement and completion signaling, not a
+new material effect. Add bounded non-identity subphase diagnostics for dataset
+wait, refresh/selection, snapshot attempts, readback/hash, screenshot, and write;
+then repeat fresh/shared cohorts in alternating order before changing proof
+semantics. Only a renderer-owned completed-frame/fence capability may justify a
+future one-snapshot profile. Two RAFs or dataset acknowledgement alone are not
+GPU completion, and the current digest-convergence profile must remain the
+default until real WebGL evidence proves a versioned replacement.
+
 ### Cross-runtime static-contract acceptance
 
 `src/shared/visual-lab-static-contract.js` is the dependency-neutral source of

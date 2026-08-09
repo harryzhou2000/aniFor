@@ -202,6 +202,30 @@ require edits to audit, batch, baseline, review, CI, or sheet dispatch.
 Preserve `anifor.visual-lab.static-contract/v1`, every result/batch/baseline/
 comparison/recipe-set identity, and the generic WebGL capture path throughout.
 
+The tuning-plan increment is now the protected capture contract. The exhaustive
+scripts-side driver capability registry feeds a disjoint content-addressed
+`execution-tuning-plan/v1`; do not put this data into the static browser contract
+or executable adapter ABI. Each entry must bind the exact capture entry and keep
+variant-B startup, explicit field refresh, two RAFs, exact dataset state, the
+three semantic/authoritative-field/framebuffer digests, two consecutive stable
+snapshots, and screenshot-after-proof until a versioned renderer-completion
+capability is proven. Batch children receive a plan path plus entry ID, reports
+carry the plan/entry proof, portable verification reconstructs capabilities, CI
+requires the sidecar, and index-only preserves existing bytes without inventing
+legacy provenance. The accepted SwiftShader Gas+Powder plan ID is
+`sha256:07e0444cb11c5d363758dab8d601eb1e4d2a8c6c203d8f129830c6c66333f136`.
+
+Keep the WebGL Powder style selector single-owner: the presenter submits its
+uniform-only frame, while Canvas/no-presenter retains contour invalidation and
+context-loss recovery marks all fallback contours. Keep framebuffer-alpha
+digest semantics byte-identical when optimizing its direct RGBA walk. Current
+local evidence preserves all six fresh/shared PNGs and both result IDs, cuts the
+sampled Powder A+B pair from roughly 6.46/5.79 seconds to 4.49/3.77 seconds, and
+leaves no Chrome process. Next add non-identity subphase timing and repeat
+alternating-order cohorts; never replace two full snapshots with RAFs or dataset
+state alone. A future one-snapshot mode requires an explicit renderer-owned GPU
+completion/fence proof and a versioned capability grammar.
+
 The typed Visual Lab state, fixed normal-HDR composition seam, promotion-safe
 same-page off/A/B selection, declarative fixtures, and production-bundle capture
 route are established. Three leaf migrations are complete. E62 Oxygen volume

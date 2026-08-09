@@ -50,6 +50,15 @@ import {
   normalizeVisualLabBrowserHostPlan,
   resolveVisualLabBrowserHostPlanEntry,
 } from './visual-lab-browser-host-plan.mjs';
+import {
+  visualCaptureExecutionCapabilitiesForCaptureOrder,
+} from './visual-capture-execution-capabilities.mjs';
+import {
+  createVisualLabExecutionTuningPlan,
+  normalizeVisualLabExecutionTuningPlan,
+  resolveVisualLabExecutionTuningPlanEntry,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
+} from './visual-lab-execution-tuning-plan.mjs';
 import { startVisualLabChromeHost } from './visual-lab-chrome-host.mjs';
 
 export { inspectVisualLabPng } from './visual-lab-png.mjs';
@@ -71,6 +80,7 @@ const LIFECYCLE_SCHEMA = 'anifor.visual-lab.lifecycle/v1';
 const BATCH_LOCK_FILE_NAME = '.visual-lab-batch.lock';
 const BATCH_LOCK_SCHEMA = 'anifor.visual-lab.batch-lock/v1';
 const BROWSER_HOST_PLAN_FILE_NAME = 'browser-host-plan.json';
+const EXECUTION_TUNING_PLAN_FILE_NAME = 'execution-tuning-plan.json';
 const SHARED_CHROME_LIFECYCLE_FILE_NAME = '.shared-chrome-lifecycle.json';
 const DEFERRED_REPORT_FILE_NAME = 'report.pending.json';
 const LIFECYCLE_CLOCK_SKEW_MS = 60_000;
@@ -95,7 +105,8 @@ Options (use --name=value):
   --plan-only=0|1                        Inspect the exact plan without writes or Chrome
   --help
 
-Capture outputs: recipe-set.json, browser-host-plan.json, index.json, index.html,
+Capture outputs: recipe-set.json, browser-host-plan.json, execution-tuning-plan.json,
+index.json, index.html,
 and candidates/<name>/ artifacts.
 Plan-only writes one JSON record to stdout and does not create the output tree.`;
 
@@ -696,6 +707,8 @@ const readFailureTombstone = async (candidateDirectory, recipe, {
 const readCandidateReport = async (candidateDirectory, recipe, {
   strictFailureTombstone = false,
   executionPlan,
+  executionTuningPlan,
+  executionTuningEntry,
   reportFileName = 'report.json',
   skipFailureTombstone = false,
 } = {}) => {
@@ -731,6 +744,7 @@ const readCandidateReport = async (candidateDirectory, recipe, {
   let expected;
   let timings = null;
   let executionProof;
+  let executionTuningProof = null;
   try {
     if (report?.tool !== 'visual-lab-audit-v1') throw new Error('unexpected report tool');
     const hashes = Object.fromEntries(VARIANTS.map((variant) => [
@@ -777,6 +791,36 @@ const readCandidateReport = async (candidateDirectory, recipe, {
       baseUrl: reportBaseUrl.href,
       gpu: report.gpu,
     });
+    if (report.executionTuning !== undefined) {
+      const proof = report.executionTuning;
+      const fields = proof !== null && typeof proof === 'object' && !Array.isArray(proof)
+        ? Reflect.ownKeys(proof) : [];
+      if (fields.length !== 3
+        || !['schema', 'planId', 'entryId'].every((field) => fields.includes(field))
+        || proof.schema !== VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA
+        || !/^sha256:[a-f0-9]{64}$/.test(proof.planId)
+        || !/^sha256:[a-f0-9]{64}$/.test(proof.entryId)) {
+        throw new Error('execution-tuning proof is malformed');
+      }
+      executionTuningProof = Object.freeze({
+        schema: proof.schema,
+        planId: proof.planId,
+        entryId: proof.entryId,
+      });
+    }
+    if (executionTuningPlan !== undefined || executionTuningEntry !== undefined) {
+      if (!executionTuningPlan || !executionTuningEntry) {
+        throw new Error('execution-tuning validation requires its plan and entry together');
+      }
+      const expectedTuningProof = {
+        schema: VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
+        planId: executionTuningPlan.id,
+        entryId: executionTuningEntry.id,
+      };
+      if (!isDeepStrictEqual(executionTuningProof, expectedTuningProof)) {
+        throw new Error('execution-tuning proof does not match the captured plan entry');
+      }
+    }
   } catch (error) {
     throw new CandidateArtifactError(
       'report-invalid', `${recipe.name} report validation failed: ${error.message}`, { cause: error },
@@ -831,6 +875,7 @@ const readCandidateReport = async (candidateDirectory, recipe, {
     result: expected,
     warnings: [...report.warnings],
     executionProof,
+    executionTuningProof,
     ...(timings === null ? {} : { timings }),
   };
 };
@@ -865,6 +910,14 @@ const readOptionalBrowserHostPlan = async (file) => {
   const source = await readStableRegularFile(file, 'Visual Lab browser-host plan', 'utf8');
   return normalizeVisualLabBrowserHostPlan(
     parsePortableJson(source, 'Visual Lab browser-host plan'),
+  );
+};
+
+const readOptionalExecutionTuningPlan = async (file) => {
+  if (await pathDetails(file) === undefined) return null;
+  const source = await readStableRegularFile(file, 'Visual Lab execution-tuning plan', 'utf8');
+  return normalizeVisualLabExecutionTuningPlan(
+    parsePortableJson(source, 'Visual Lab execution-tuning plan'),
   );
 };
 
@@ -958,6 +1011,107 @@ const assertBrowserHostPlanCaptureIdentity = (
   }
 };
 
+const assertExecutionTuningPlanMatchesEntries = (
+  executionTuningPlan,
+  recipes,
+  entries = [],
+  { requireProof = false } = {},
+) => {
+  if (executionTuningPlan.entries.length !== recipes.length) {
+    throw new TypeError('Visual Lab execution-tuning plan does not match batch candidate count');
+  }
+  for (let index = 0; index < recipes.length; index++) {
+    const recipe = recipes[index];
+    const planEntry = executionTuningPlan.entries[index];
+    if (planEntry.candidate !== recipe.name) {
+      throw new TypeError(
+        `Visual Lab execution-tuning plan entry ${index} does not match ${recipe.name}`,
+      );
+    }
+    const captured = entries[index];
+    if (captured?.status !== 'passed') continue;
+    const expectedProof = {
+      schema: VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
+      planId: executionTuningPlan.id,
+      entryId: planEntry.id,
+    };
+    if (captured.executionTuningProof === null) {
+      if (requireProof) {
+        throw new TypeError(
+          `Visual Lab execution-tuning plan for ${recipe.name} lacks report proof`,
+        );
+      }
+      continue;
+    }
+    if (!isDeepStrictEqual(captured.executionTuningProof, expectedProof)) {
+      throw new TypeError(
+        `Visual Lab execution-tuning proof for ${recipe.name} does not match its plan entry`,
+      );
+    }
+  }
+};
+
+const assertExecutionTuningPlanCaptureIdentity = (
+  executionTuningPlan,
+  recipes,
+  entries,
+  recipeSet,
+  outputDirectory,
+  { required = false } = {},
+) => {
+  const passed = entries.filter((entry) => entry.status === 'passed');
+  if (passed.some((entry) => entry.executionProof === undefined)) {
+    throw new TypeError('Visual Lab execution-tuning plan lacks capture execution-entry proof');
+  }
+  const baseUrls = new Set(passed.map(({ executionProof }) => executionProof.baseUrl));
+  const gpuModes = new Set(passed.map(({ executionProof }) => executionProof.gpu));
+  if (passed.length > 0 && (baseUrls.size !== 1 || gpuModes.size !== 1)) {
+    throw new TypeError(
+      'Visual Lab execution-tuning plan capture policy is inconsistent across reports',
+    );
+  }
+  // A present sidecar is authoritative evidence even when every capture failed.
+  // Reconstruct it against the current capability registry before applying the
+  // stronger "must have passed proof" requirement. Capture-plan identity is
+  // independent of the runtime base URL, so a fixed valid URL is sufficient in
+  // the no-report case; GPU mode remains an explicit tuning-plan identity input.
+  const reconstructedBaseUrl = passed.length === 0
+    ? 'https://visual-lab.invalid/' : [...baseUrls][0];
+  const reconstructedGpuMode = passed.length === 0
+    ? executionTuningPlan.gpuMode : [...gpuModes][0];
+  const reconstructed = createVisualLabExecutionPlan({
+    ...(recipeSet === null
+      ? { candidates: recipes.map(({ name }) => name) }
+      : { recipeSet }),
+    baseUrl: reconstructedBaseUrl,
+    gpu: reconstructedGpuMode,
+    outputDir: outputDirectory,
+  });
+  const driverOrder = [...new Set(
+    reconstructed.entries.map(({ captureDriver }) => captureDriver.name),
+  )];
+  const expected = createVisualLabExecutionTuningPlan(
+    reconstructed,
+    visualCaptureExecutionCapabilitiesForCaptureOrder(driverOrder),
+  );
+  if (!isDeepStrictEqual(executionTuningPlan, expected)) {
+    throw new TypeError(
+      'Visual Lab execution-tuning plan does not bind the captured execution plan/capabilities',
+    );
+  }
+  if (passed.length === 0 && required) {
+    throw new TypeError('Visual Lab execution-tuning plan lacks passed capture identity proof');
+  }
+  for (let index = 0; index < reconstructed.entries.length; index++) {
+    if (entries[index].status !== 'passed') continue;
+    if (entries[index].executionProof.entryId !== reconstructed.entries[index].inspection.id) {
+      throw new TypeError(
+        `Visual Lab report does not prove capture entry ${recipes[index].name}`,
+      );
+    }
+  }
+};
+
 /**
  * Revalidates a downloaded Visual Lab batch without creating, deleting, or
  * rewriting any package file. Legacy batches may omit recipe-set.json; every
@@ -968,7 +1122,8 @@ export async function verifyVisualLabBatchPackage(options = {}) {
     throw new TypeError('Visual Lab batch verification options must be an object');
   }
   const allowed = new Set([
-    'batchRoot', 'requireBrowserHostPlan', 'requireComplete', 'requireRecipeSet',
+    'batchRoot', 'requireBrowserHostPlan', 'requireExecutionTuningPlan',
+    'requireComplete', 'requireRecipeSet',
     'recipeSetSourcePath',
   ]);
   const unexpected = Reflect.ownKeys(options).filter((key) => !allowed.has(key));
@@ -980,9 +1135,11 @@ export async function verifyVisualLabBatchPackage(options = {}) {
   }
   const requireComplete = options.requireComplete ?? true;
   const requireBrowserHostPlan = options.requireBrowserHostPlan ?? false;
+  const requireExecutionTuningPlan = options.requireExecutionTuningPlan ?? false;
   const requireRecipeSet = options.requireRecipeSet ?? false;
   if (typeof requireComplete !== 'boolean'
     || typeof requireBrowserHostPlan !== 'boolean'
+    || typeof requireExecutionTuningPlan !== 'boolean'
     || typeof requireRecipeSet !== 'boolean') {
     throw new TypeError('Visual Lab batch verification requirement flags must be booleans');
   }
@@ -1063,6 +1220,26 @@ export async function verifyVisualLabBatchPackage(options = {}) {
     );
   }
 
+  const executionTuningPlan = await readOptionalExecutionTuningPlan(
+    path.join(batchRoot, EXECUTION_TUNING_PLAN_FILE_NAME),
+  );
+  if (requireExecutionTuningPlan && executionTuningPlan === null) {
+    throw new TypeError('Visual Lab batch package is missing execution-tuning-plan.json');
+  }
+  if (executionTuningPlan !== null) {
+    assertExecutionTuningPlanMatchesEntries(executionTuningPlan, recipes, entries, {
+      requireProof: true,
+    });
+    assertExecutionTuningPlanCaptureIdentity(
+      executionTuningPlan,
+      recipes,
+      entries,
+      recipeSet ?? null,
+      batchRoot,
+      { required: requireExecutionTuningPlan },
+    );
+  }
+
   let sourceRecipeSet;
   if (options.recipeSetSourcePath !== undefined) {
     sourceRecipeSet = await readVisualLabRecipeSet(options.recipeSetSourcePath);
@@ -1076,6 +1253,7 @@ export async function verifyVisualLabBatchPackage(options = {}) {
     index: canonical,
     recipeSet: recipeSet ?? null,
     browserHostPlan,
+    executionTuningPlan,
     timings: summarizeEntryTimings(entries),
   });
 }
@@ -1365,6 +1543,13 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   });
   const { recipeSet } = executionPlan;
   const browserHostPlan = createVisualLabBrowserHostPlan(executionPlan, browserHost);
+  const captureDriverOrder = [...new Set(
+    executionPlan.entries.map(({ captureDriver }) => captureDriver.name),
+  )];
+  const executionTuningPlan = createVisualLabExecutionTuningPlan(
+    executionPlan,
+    visualCaptureExecutionCapabilitiesForCaptureOrder(captureDriverOrder),
+  );
   const browserHostEntryByCandidate = new Map(browserHostPlan.entries.map((entry) => [
     entry.candidate,
     resolveVisualLabBrowserHostPlanEntry(
@@ -1373,6 +1558,17 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
       executionPlan.entries[entry.sequence].inspection.id,
     ),
   ]));
+  const executionTuningEntryByCandidate = new Map(
+    executionTuningPlan.entries.map((entry) => [
+      entry.candidate,
+      resolveVisualLabExecutionTuningPlanEntry(
+        executionTuningPlan,
+        entry.id,
+        executionPlan.entries[entry.sequence].inspection.id,
+        executionPlan,
+      ),
+    ]),
+  );
   const recipes = executionPlan.entries.map(({ recipe }) => recipe);
   const executionPlanByCandidate = new Map(
     executionPlan.entries.map((entry) => [entry.candidate, entry]),
@@ -1391,6 +1587,7 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
       planOnly: true,
       plan: executionPlan.inspection,
       browserHostPlan,
+      executionTuningPlan,
       runtime: executionPlan.runtime,
       recipeSet,
     });
@@ -1406,11 +1603,20 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   const contactSheetPath = path.join(outputDirectory, 'index.html');
   const recipeSetPath = path.join(outputDirectory, 'recipe-set.json');
   const browserHostPlanPath = path.join(outputDirectory, BROWSER_HOST_PLAN_FILE_NAME);
+  const executionTuningPlanPath = path.join(
+    outputDirectory, EXECUTION_TUNING_PLAN_FILE_NAME,
+  );
   const publishedBrowserHostPlan = indexOnly
     ? await readOptionalBrowserHostPlan(browserHostPlanPath)
     : browserHostPlan;
+  const publishedExecutionTuningPlan = indexOnly
+    ? await readOptionalExecutionTuningPlan(executionTuningPlanPath)
+    : executionTuningPlan;
   if (publishedBrowserHostPlan !== null) {
     assertBrowserHostPlanMatchesEntries(publishedBrowserHostPlan, recipes);
+  }
+  if (publishedExecutionTuningPlan !== null) {
+    assertExecutionTuningPlanMatchesEntries(publishedExecutionTuningPlan, recipes);
   }
   const sharedLifecyclePath = path.join(outputDirectory, SHARED_CHROME_LIFECYCLE_FILE_NAME);
   const sharedLifecycleOwner = lifecycleOwnerFor(outputDirectory, 'shared-browser-host');
@@ -1444,7 +1650,10 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   await Promise.all([
     indexPath, contactSheetPath, recipeSetPath,
     `${indexPath}.tmp`, `${contactSheetPath}.tmp`, `${recipeSetPath}.tmp`,
-    ...(!indexOnly ? [browserHostPlanPath, `${browserHostPlanPath}.tmp`] : []),
+    ...(!indexOnly ? [
+      browserHostPlanPath, `${browserHostPlanPath}.tmp`,
+      executionTuningPlanPath, `${executionTuningPlanPath}.tmp`,
+    ] : []),
   ].map((file) => rm(file, { force: true })));
   const runCandidate = dependencies.runCandidate ?? defaultRunCandidate;
   const publishFile = dependencies.publishFile ?? writeAtomic;
@@ -1556,7 +1765,11 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
       promoted.push(await readCandidateReport(
         pending.candidateDirectory,
         pending.recipe,
-        { executionPlan: pending.executionPlan },
+        {
+          executionPlan: pending.executionPlan,
+          executionTuningPlan,
+          executionTuningEntry: pending.executionTuningEntry,
+        },
       ));
     }
     for (const entry of promoted) entriesByCandidate.set(entry.candidate, entry);
@@ -1575,9 +1788,12 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   // independently inspectable even when capture is interrupted.
   await publishFile(recipeSetPath, `${JSON.stringify(recipeSet, null, 2)}\n`);
   if (!indexOnly) {
-    await publishFile(
-      browserHostPlanPath, `${JSON.stringify(browserHostPlan, null, 2)}\n`,
-    );
+    await Promise.all([
+      publishFile(browserHostPlanPath, `${JSON.stringify(browserHostPlan, null, 2)}\n`),
+      publishFile(
+        executionTuningPlanPath, `${JSON.stringify(executionTuningPlan, null, 2)}\n`,
+      ),
+    ]);
   }
   const publishedRecipeSet = await readVisualLabRecipeSet(recipeSetPath);
   if (!isDeepStrictEqual(publishedRecipeSet, recipeSet)) {
@@ -1589,6 +1805,7 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
       if (options.signal?.aborted) throw abortError(options.signal);
       const candidateExecutionPlan = executionPlanByCandidate.get(recipe.name);
       const browserHostEntry = browserHostEntryByCandidate.get(recipe.name);
+      const executionTuningEntry = executionTuningEntryByCandidate.get(recipe.name);
       const candidateDirectory = candidateDirectories.get(recipe.name);
       const lifecycleOwner = lifecycleOwners.get(recipe.name);
       await ensureCandidateDirectory(resolvedCandidateRoot, candidateDirectory, recipe.name);
@@ -1632,6 +1849,8 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
         `--output-dir=${candidateDirectory}`,
         `--gpu=${gpu}`,
         `--execution-plan-id=${candidateExecutionPlan.inspection.id}`,
+        `--execution-tuning-plan=${executionTuningPlanPath}`,
+        `--execution-tuning-entry-id=${executionTuningEntry.id}`,
       ];
       let sharedReady;
       let executionError;
@@ -1666,6 +1885,8 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
             command, args, cwd, recipe, candidateDirectory,
             executionPlan: candidateExecutionPlan,
             browserHostPlanEntry: browserHostEntry,
+            executionTuningPlan,
+            executionTuningPlanEntry: executionTuningEntry,
             stdoutPath, stderrPath, lifecyclePath, signal: options.signal,
             timeoutMs: candidateTimeoutMs,
           });
@@ -1736,6 +1957,8 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
         try {
           await readCandidateReport(candidateDirectory, recipe, {
             executionPlan: candidateExecutionPlan,
+            executionTuningPlan,
+            executionTuningEntry,
             reportFileName: DEFERRED_REPORT_FILE_NAME,
             skipFailureTombstone: true,
           });
@@ -1744,6 +1967,7 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
             recipe,
             candidateDirectory,
             executionPlan: candidateExecutionPlan,
+            executionTuningEntry,
           });
         } catch (error) {
           await rm(path.join(candidateDirectory, DEFERRED_REPORT_FILE_NAME), { force: true });
@@ -1762,7 +1986,11 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
       await rm(path.join(candidateDirectory, 'failure.log'), { force: true });
       try {
         entriesByCandidate.set(recipe.name, await readCandidateReport(
-          candidateDirectory, recipe, { executionPlan: candidateExecutionPlan },
+          candidateDirectory, recipe, {
+            executionPlan: candidateExecutionPlan,
+            executionTuningPlan,
+            executionTuningEntry,
+          },
         ));
       } catch (error) {
         const code = error instanceof CandidateArtifactError ? error.code : 'report-invalid';
@@ -1796,6 +2024,19 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
     );
   }
   const index = createVisualLabBatchIndex(entries);
+  if (publishedExecutionTuningPlan !== null) {
+    assertExecutionTuningPlanMatchesEntries(
+      publishedExecutionTuningPlan, recipes, entries, { requireProof: true },
+    );
+    assertExecutionTuningPlanCaptureIdentity(
+      publishedExecutionTuningPlan,
+      recipes,
+      entries,
+      publishedRecipeSet,
+      outputDirectory,
+      { required: index.complete },
+    );
+  }
   const timingSummary = summarizeEntryTimings(entries);
   // Publish the human sheet first and the machine-readable completion marker
   // last. A crash or sheet error therefore cannot leave complete:true without
@@ -1813,6 +2054,8 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
     plan: executionPlan.inspection,
     browserHostPlan: publishedBrowserHostPlan,
     browserHostPlanPath,
+    executionTuningPlan: publishedExecutionTuningPlan,
+    executionTuningPlanPath,
     browserHostRuntime: Object.freeze({
       ...browserHostRuntime,
       assignments: Object.freeze([...browserHostRuntime.assignments]),
@@ -1939,6 +2182,7 @@ const main = async () => {
       ok: true,
       plan: result.plan,
       browserHostPlan: result.browserHostPlan,
+      executionTuningPlan: result.executionTuningPlan,
       runtime: result.runtime,
     } : {
       tool: 'visual-lab-batch-v1',
@@ -1952,6 +2196,10 @@ const main = async () => {
         id: result.browserHostPlan.id,
         path: result.browserHostPlanPath,
         runtime: result.browserHostRuntime,
+      },
+      executionTuning: result.executionTuningPlan === null ? null : {
+        id: result.executionTuningPlan.id,
+        path: result.executionTuningPlanPath,
       },
       index: result.indexPath,
       contactSheet: result.contactSheetPath,
