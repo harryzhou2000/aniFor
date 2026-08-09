@@ -222,51 +222,32 @@ jobs:
           if-no-files-found: error
           include-hidden-files: true
 
-      - name: Require a complete Visual Lab review index
+      - name: Download uploaded Visual Lab review evidence
+        if: always()
+        uses: actions/download-artifact@v8
+        with:
+          name: anifortpt-visual-lab-${{ github.sha }}
+          path: ${{ runner.temp }}/anifortpt-visual-lab-review
+
+      - name: Verify uploaded portable Visual Lab review
         if: always()
         env:
           CAPTURE_OUTCOME: ${{ steps.visual-lab-batch.outcome }}
           VISUAL_LAB_RECIPE_SET: ${{ inputs.visual_lab_recipe_set }}
+          REVIEW_ROOT: ${{ runner.temp }}/anifortpt-visual-lab-review
         run: |
           test "${CAPTURE_OUTCOME}" = success
-          node --input-type=module -e "
-            import { readFile } from 'node:fs/promises';
-            import { isDeepStrictEqual } from 'node:util';
-            const index = JSON.parse(await readFile(
-              'artifacts/visual-lab-review/index.json', 'utf8',
-            ));
-            if (index.schema !== 'anifor.visual-lab.batch/v1' || index.complete !== true) {
-              throw new Error('Visual Lab review did not publish a complete v1 batch index');
-            }
-            const { readVisualLabRecipeSet } = await import(
-              './scripts/visual-lab-recipe-set.mjs'
-            );
-            const recipeSet = await readVisualLabRecipeSet(
-              'artifacts/visual-lab-review/recipe-set.json',
-            );
-            if (process.env.VISUAL_LAB_RECIPE_SET?.trim()) {
-              const sourceSet = await readVisualLabRecipeSet(
-                process.env.VISUAL_LAB_RECIPE_SET,
-              );
-              if (!isDeepStrictEqual(sourceSet, recipeSet)) {
-                throw new Error('Published Visual Lab recipe set differs from its source');
-              }
-            }
-            const captured = index.candidates.map(({ candidate, result }) => ({
-              name: candidate,
-              ...result.request,
-            }));
-            if (!isDeepStrictEqual(recipeSet.recipes, captured)) {
-              throw new Error('Visual Lab batch does not match its recipe-set request');
-            }
-            const comparison = JSON.parse(await readFile(
-              'artifacts/visual-lab-review/comparison/comparison.json', 'utf8',
-            ));
-            if (comparison.schema !== 'anifor.visual-lab.comparison/v1'
-              || comparison.complete !== true) {
-              throw new Error('Visual Lab review did not publish a complete v1 comparison');
-            }
-          "
+          verify_args=(
+            "--batch-root=${REVIEW_ROOT}"
+            --baseline-root=visual-baselines/accepted-v1
+            "--comparison-root=${REVIEW_ROOT}/comparison"
+            --require-complete=1
+            --require-recipe-set=1
+          )
+          if [[ -n "${VISUAL_LAB_RECIPE_SET//[[:space:]]/}" ]]; then
+            verify_args+=("--recipe-set-source=${VISUAL_LAB_RECIPE_SET}")
+          fi
+          node scripts/visual-lab-verify.mjs "${verify_args[@]}"
 
   deploy:
     if: >-

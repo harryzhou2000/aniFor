@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { constants as fsConstants } from 'node:fs';
 import {
-  copyFile, lstat, mkdir, open, readFile, readdir, rename, rm, writeFile,
+  copyFile, lstat, mkdir, open, readdir, rename, rm, writeFile,
 } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -580,9 +581,60 @@ export function parseVisualLabBaselineArguments(argv) {
   };
 }
 
+const sameStableFile = (left, right) => (
+  left.dev === right.dev
+  && left.ino === right.ino
+  && left.size === right.size
+  && left.mtimeNs === right.mtimeNs
+  && left.ctimeNs === right.ctimeNs
+);
+
+const assertRealFileAncestors = async (file, label) => {
+  const absolute = path.resolve(file);
+  const parsed = path.parse(absolute);
+  const segments = absolute.slice(parsed.root.length).split(path.sep).filter(Boolean);
+  let current = parsed.root;
+  for (const segment of segments.slice(0, -1)) {
+    current = path.join(current, segment);
+    const info = await lstat(current, { bigint: true });
+    if (info.isSymbolicLink() || !info.isDirectory()) {
+      throw new Error(`${label} must have only real directory ancestors: ${current}`);
+    }
+  }
+};
+
+/** Reads one real regular file without following a leaf/ancestor symlink or replacement. */
+const readStableRegularFile = async (file, label, encoding) => {
+  await assertRealFileAncestors(file, label);
+  const before = await lstat(file, { bigint: true });
+  if (before.isSymbolicLink() || !before.isFile()) {
+    throw new Error(`${label} must be a real regular file`);
+  }
+  const flags = typeof fsConstants.O_NOFOLLOW === 'number'
+    ? fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW
+    : 'r';
+  const handle = await open(file, flags);
+  let contents;
+  try {
+    const opened = await handle.stat({ bigint: true });
+    if (!opened.isFile() || !sameStableFile(before, opened)) {
+      throw new Error(`${label} changed while opening`);
+    }
+    contents = await handle.readFile(encoding);
+  } finally {
+    await handle.close();
+  }
+  await assertRealFileAncestors(file, label);
+  const after = await lstat(file, { bigint: true });
+  if (after.isSymbolicLink() || !after.isFile() || !sameStableFile(before, after)) {
+    throw new Error(`${label} changed while reading`);
+  }
+  return contents;
+};
+
 const readJson = async (file, label) => {
   let source;
-  try { source = await readFile(file, 'utf8'); }
+  try { source = await readStableRegularFile(file, label, 'utf8'); }
   catch (error) { throw new Error(`cannot read ${label} ${file}: ${error.message}`, { cause: error }); }
   try { return JSON.parse(source); }
   catch (error) { throw new Error(`${label} ${file} is not valid JSON`, { cause: error }); }
@@ -658,7 +710,7 @@ const validateCapturePackage = async (root, candidates, kind) => {
     for (const variant of VARIANTS) {
       const relative = `candidates/${candidate}/${variant}.png`;
       const file = await ensureContainedFile(root, relative, `${kind} ${candidate} ${variant}`);
-      const bytes = await readFile(file);
+      const bytes = await readStableRegularFile(file, `${kind} ${candidate} ${variant}`);
       const digest = createHash('sha256').update(bytes).digest('hex');
       if (digest !== result.captureSha256[variant]) {
         throw new Error(`${kind} ${candidate} ${variant}.png does not match its pinned SHA-256`);
@@ -725,7 +777,7 @@ const validateComparisonPackage = async (root, expected) => {
   ]);
   const [comparison, html] = await Promise.all([
     readJson(jsonPath, 'comparison index'),
-    readFile(htmlPath, 'utf8'),
+    readStableRegularFile(htmlPath, 'comparison sheet', 'utf8'),
   ]);
   if (!isDeepStrictEqual(comparison, expected)) {
     throw new TypeError('comparison package does not match the accepted baseline and current batch');
@@ -771,6 +823,55 @@ const assertComparisonOutput = (output, baselineRoot, resultRoot) => {
   // An empty child of the validated result package is intentionally allowed:
   // CI adds the portable comparison there before uploading one review root.
 };
+
+const canonicalPackagePath = (value, label) => {
+  if (typeof value !== 'string' || value.length === 0) {
+    throw new TypeError(`${label} must be a non-empty path`);
+  }
+  const segments = value.split(path.sep);
+  if (path.normalize(value) !== value
+    || segments.includes('.') || segments.includes('..')) {
+    throw new TypeError(`${label} must be canonical without dot segments`);
+  }
+  return path.resolve(value);
+};
+
+/** Revalidates one portable comparison and every pinned input/output PNG without writing. */
+export async function verifyVisualLabComparisonPackage(options = {}) {
+  if (options === null || typeof options !== 'object' || Array.isArray(options)) {
+    throw new TypeError('Visual Lab comparison verification options must be an object');
+  }
+  const allowed = new Set(['baselineRoot', 'resultRoot', 'comparisonRoot']);
+  const unexpected = Reflect.ownKeys(options).filter((key) => !allowed.has(key));
+  if (unexpected.length > 0) {
+    throw new TypeError(`Unknown Visual Lab comparison verification option ${String(unexpected[0])}`);
+  }
+  const baselineRoot = canonicalPackagePath(options.baselineRoot, 'accepted baseline root');
+  const resultRoot = canonicalPackagePath(options.resultRoot, 'batch result root');
+  const comparisonRoot = canonicalPackagePath(options.comparisonRoot, 'comparison root');
+  assertComparisonOutput(comparisonRoot, baselineRoot, resultRoot);
+  if (rootsOverlap(baselineRoot, resultRoot)) {
+    throw new Error('accepted baseline and result packages must be disjoint');
+  }
+
+  const [baselineIndex, batchIndex] = await Promise.all([
+    ensureContainedFile(baselineRoot, 'index.json', 'accepted baseline index'),
+    ensureContainedFile(resultRoot, 'index.json', 'batch index'),
+  ]);
+  const [baselineInput, batch] = await Promise.all([
+    readJson(baselineIndex, 'accepted baseline'),
+    readJson(batchIndex, 'batch index'),
+  ]);
+  const baseline = normalizeVisualLabBaseline(baselineInput);
+  const currentCandidates = normalizeCompleteBatch(batch);
+  await Promise.all([
+    validateCapturePackage(baselineRoot, baseline.candidates, 'accepted baseline'),
+    validateCapturePackage(resultRoot, currentCandidates, 'batch'),
+  ]);
+  const expected = compareVisualLabBaseline(baseline, batch);
+  const comparison = await validateComparisonPackage(comparisonRoot, expected);
+  return deepFreeze({ baseline, comparison, currentCandidates });
+}
 
 export async function runVisualLabBaseline(options, dependencies = {}) {
   if (options.mode === 'accept') {

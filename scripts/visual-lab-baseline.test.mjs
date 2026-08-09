@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import {
-  access, mkdir, mkdtemp, readFile, rm, symlink, unlink, writeFile,
+  access, lstat, mkdir, mkdtemp, open, readFile, readdir, rename, rm, symlink, unlink, writeFile,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -15,6 +15,7 @@ import {
   parseVisualLabBaselineArguments,
   promoteVisualLabBaseline,
   runVisualLabBaseline,
+  verifyVisualLabComparisonPackage,
 } from './visual-lab-baseline.mjs';
 import { resolveVisualLabCaptureRecipe } from './visual-lab-recipes.mjs';
 import { createVisualLabResultRecord } from './visual-lab-result.mjs';
@@ -46,6 +47,35 @@ const requestFor = (candidate) => {
 };
 
 const digest = (bytes) => createHash('sha256').update(bytes).digest('hex');
+
+const snapshotPackageTree = async (root) => {
+  const snapshot = {};
+  const visit = async (absolute, relative) => {
+    const details = await lstat(absolute, { bigint: true });
+    const shared = {
+      kind: details.isDirectory() ? 'directory' : details.isFile() ? 'file' : 'other',
+      dev: details.dev,
+      ino: details.ino,
+      mode: details.mode,
+      size: details.size,
+      mtimeNs: details.mtimeNs,
+      ctimeNs: details.ctimeNs,
+    };
+    if (details.isFile()) {
+      snapshot[relative] = { ...shared, sha256: digest(await readFile(absolute)) };
+      return;
+    }
+    snapshot[relative] = shared;
+    if (!details.isDirectory()) return;
+    const entries = await readdir(absolute);
+    entries.sort();
+    for (const entry of entries) {
+      await visit(path.join(absolute, entry), relative ? `${relative}/${entry}` : entry);
+    }
+  };
+  await visit(root, '');
+  return snapshot;
+};
 
 const crc32 = (bytes) => {
   let value = 0xFFFFFFFF;
@@ -250,6 +280,94 @@ describe('Visual Lab accepted baseline packages', () => {
     expect(compared.comparison.complete).toBe(true);
     expect(compared.comparison.summary).toMatchObject({ compared: 1, review: 1 });
     await assertPortableRefs(comparisonRoot, await readFile(compared.html, 'utf8'));
+
+    const beforeTrees = await Promise.all([
+      snapshotPackageTree(baselineRoot),
+      snapshotPackageTree(currentRoot),
+      snapshotPackageTree(comparisonRoot),
+    ]);
+    const beforeJson = await readFile(compared.json);
+    const beforeHtml = await readFile(compared.html);
+    const verified = await verifyVisualLabComparisonPackage({
+      baselineRoot, resultRoot: currentRoot, comparisonRoot,
+    });
+    expect(verified.baseline.id).toBe(accepted.baseline.id);
+    expect(verified.comparison).toStrictEqual(compared.comparison);
+    expect(verified.currentCandidates.map(({ candidate }) => candidate))
+      .toEqual(['gas-showcase']);
+    expect(await readFile(compared.json)).toStrictEqual(beforeJson);
+    expect(await readFile(compared.html)).toStrictEqual(beforeHtml);
+    expect(await Promise.all([
+      snapshotPackageTree(baselineRoot),
+      snapshotPackageTree(currentRoot),
+      snapshotPackageTree(comparisonRoot),
+    ])).toStrictEqual(beforeTrees);
+
+    await writeFile(compared.html, `${beforeHtml.toString('utf8')}\n<!-- tampered -->\n`);
+    await expect(verifyVisualLabComparisonPackage({
+      baselineRoot, resultRoot: currentRoot, comparisonRoot,
+    })).rejects.toThrow('comparison sheet');
+    await writeFile(compared.html, beforeHtml);
+    await expect(verifyVisualLabComparisonPackage({
+      baselineRoot,
+      resultRoot: `${currentRoot}/../current`,
+      comparisonRoot,
+    })).rejects.toThrow('canonical without dot segments');
+  });
+
+  it('rejects symlinked and replaced portable comparison verification inputs', async () => {
+    const root = await temporaryDirectory();
+    const batchRoot = path.join(root, 'batch');
+    const baselineRoot = path.join(root, 'baseline');
+    const currentRoot = path.join(root, 'current');
+    const comparisonRoot = path.join(root, 'comparison');
+    await writeBatchPackage(batchRoot, 'gas-showcase', 'accepted');
+    await writeBatchPackage(currentRoot, 'gas-showcase', 'changed');
+    await runVisualLabBaseline({ mode: 'accept', batchRoot, outputDir: baselineRoot });
+    await runVisualLabBaseline({
+      mode: 'compare', baselineRoot, resultRoot: currentRoot, outputDir: comparisonRoot,
+    });
+
+    const comparisonIndex = path.join(comparisonRoot, 'comparison.json');
+    const originalComparisonIndex = await readFile(comparisonIndex);
+    const externalComparisonIndex = path.join(root, 'external-comparison.json');
+    await writeFile(externalComparisonIndex, originalComparisonIndex);
+    await unlink(comparisonIndex);
+    await symlink(externalComparisonIndex, comparisonIndex);
+    await expect(verifyVisualLabComparisonPackage({
+      baselineRoot, resultRoot: currentRoot, comparisonRoot,
+    })).rejects.toThrow('must use only real contained files');
+    await unlink(comparisonIndex);
+    await writeFile(comparisonIndex, originalComparisonIndex);
+
+    // Interpose exactly after the verifier's fstat and before its read. The
+    // descriptor still points at the old index while the pathname is replaced,
+    // so only the final identity check can reject this TOCTOU race.
+    const baselineIndex = path.join(baselineRoot, 'index.json');
+    const replacementIndex = path.join(root, 'replacement-baseline-index.json');
+    await writeFile(replacementIndex, await readFile(baselineIndex));
+    const originalDetails = await lstat(baselineIndex, { bigint: true });
+    const probe = await open(baselineIndex, 'r');
+    const fileHandlePrototype = Object.getPrototypeOf(probe);
+    await probe.close();
+    const originalReadFile = fileHandlePrototype.readFile;
+    let replaced = false;
+    fileHandlePrototype.readFile = async function replaceVerifiedPath(...args) {
+      const details = await this.stat({ bigint: true });
+      if (!replaced && details.dev === originalDetails.dev && details.ino === originalDetails.ino) {
+        replaced = true;
+        await rename(replacementIndex, baselineIndex);
+      }
+      return originalReadFile.apply(this, args);
+    };
+    try {
+      await expect(verifyVisualLabComparisonPackage({
+        baselineRoot, resultRoot: currentRoot, comparisonRoot,
+      })).rejects.toThrow('changed while reading');
+      expect(replaced).toBe(true);
+    } finally {
+      fileHandlePrototype.readFile = originalReadFile;
+    }
   });
 
   it('rejects tampered, missing, and symlink capture files before creating a baseline', async () => {

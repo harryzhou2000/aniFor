@@ -9,10 +9,12 @@ result records are deployed, as is the deterministic batch runner and static
 contact-sheet index. Renderer and capture descriptors share exact domain,
 target, Detail/fallback, evidence, URL, backend/pipeline, and resource-budget
 semantics. The opt-in CI review/deploy gate, accepted-baseline comparison, and
-candidate-scoped comparison-bound promotion are complete. The current checkpoint
-is portable recipe-set leverage: named local and CI cohorts must be
-self-describing, content-addressed, canonical, and stale-detecting without
-widening the frozen result, batch, baseline, or comparison v1 schemas. A normal A/B idea
+candidate-scoped comparison-bound promotion are complete. Portable recipe sets
+are deployed. The current checkpoint is the portable consumer boundary: one
+read-only verifier must reconstruct a downloaded batch, its optional recipe-set
+sidecar, and its accepted-baseline comparison from stable bytes, and CI must run
+it against the exact same-run artifact it uploaded rather than the workspace.
+Do not widen the frozen result, batch, baseline, or comparison v1 schemas. A normal A/B idea
 should touch one domain module plus one catalog entry—not presenter setup, HDR
 lifecycle, app boot, package-script duplication, workflow duplication, or CDP
 branching.
@@ -25,11 +27,11 @@ motion is an accepted E08 baseline and uses the moving-Oil fixture with liquid
 target `8`; E65 Water surface motion is an accepted E08 baseline and uses the
 retained moving-Water fixture with liquid target `2`. Their legacy resolvers,
 uniforms, queries, datasets, and bespoke verifier paths are removed. E65 is also
-deployed. `main_codex` and Pages serve promotion framework revision
-`aff67f50c6d75d1cf8ccca5e6b2cf2bf1d0c67a7` after full-catalog gated workflow
-run `31288597052`: all four recipes and comparisons passed in canonical order,
-deployment ran only afterward, the downloaded 36-PNG artifact validated, and
-both hosted and independent checks closed all 19 runtime resources.
+deployed. `main_codex` and Pages serve recipe-set framework revision
+`294f8e09226c39fc09b56c8270c9b8a6a3edfc59` after release-set gated workflow
+run `31290360459`: all four named recipes and comparisons passed in canonical
+order, deployment ran only afterward, the downloaded 36-PNG artifact validated,
+and both hosted and independent checks closed all 19 runtime resources.
 
 `anifor.visual-lab.accepted-baseline/v1` contains only
 catalog-ordered candidate names and their existing content-addressed result
@@ -62,6 +64,18 @@ authoritative; older batches without the sidecar remain valid. Manual CI may
 only consume tracked sets beneath `visual-lab/recipe-sets/`, and invalid dual
 input must fail the running review job rather than skip it because deployment
 accepts a legitimately skipped optional review.
+Portable verification is strictly read-only. Reconstruct the batch from stable,
+non-following reads of its index, reports, result records, PNGs, failure
+tombstones, deterministic sheet, and optional recipe-set sidecar; then reuse the
+promotion-grade comparison validation for accepted/current image copies, JSON,
+and HTML. Recheck file identity and ancestors across each read so a replacement
+race cannot turn a validated path into another file. The CI review job must
+upload first, download that exact named artifact into runner-temporary storage,
+and invoke the shared verifier there without another browser or build. Legacy
+complete batches may omit the sidecar unless explicitly required. Incomplete
+diagnostic batches may be inspected only when completeness is relaxed and must
+never gate deployment as successful evidence. Do not regenerate evidence while
+claiming to verify it, and do not fork this contract into inline workflow code.
 Defer RGB decoding and aesthetic thresholds until the comparison workflow has
 proved useful; thumbnails and exact variant hashes are the v1 review contract.
 Defer E66

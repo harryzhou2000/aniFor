@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { constants as fsConstants } from 'node:fs';
 import { lstat, open } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -330,7 +331,10 @@ export async function readVisualLabRecipeSet(inputPath) {
     );
   }
 
-  const handle = await open(absolute, 'r');
+  const flags = typeof fsConstants.O_NOFOLLOW === 'number'
+    ? fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW
+    : 'r';
+  const handle = await open(absolute, flags);
   let bytes;
   try {
     const opened = await handle.stat({ bigint: true });

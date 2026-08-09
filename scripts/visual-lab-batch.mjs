@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
+import { constants as fsConstants } from 'node:fs';
 import {
   lstat, mkdir, open, readFile, realpath, rename, rm, stat, writeFile,
 } from 'node:fs/promises';
@@ -127,6 +128,63 @@ const assertRealAncestors = async (directory, label) => {
       throw new Error(`${label} must not have a symbolic-link ancestor: ${current}`);
     }
   }
+};
+
+const sameStableFile = (left, right) => (
+  left.dev === right.dev
+  && left.ino === right.ino
+  && left.size === right.size
+  && left.mtimeNs === right.mtimeNs
+  && left.ctimeNs === right.ctimeNs
+);
+
+/** Reads one real regular file without following a leaf/ancestor symlink or replacement. */
+const readStableRegularFile = async (file, label, encoding) => {
+  await assertRealAncestors(file, label);
+  const before = await lstat(file, { bigint: true });
+  if (before.isSymbolicLink() || !before.isFile()) {
+    throw new Error(`${label} must be a real regular file`);
+  }
+  const flags = typeof fsConstants.O_NOFOLLOW === 'number'
+    ? fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW
+    : 'r';
+  const handle = await open(file, flags);
+  let contents;
+  try {
+    const opened = await handle.stat({ bigint: true });
+    if (!opened.isFile() || !sameStableFile(before, opened)) {
+      throw new Error(`${label} changed while opening`);
+    }
+    contents = await handle.readFile(encoding);
+  } finally {
+    await handle.close();
+  }
+  await assertRealAncestors(file, label);
+  const after = await lstat(file, { bigint: true });
+  if (after.isSymbolicLink() || !after.isFile() || !sameStableFile(before, after)) {
+    throw new Error(`${label} changed while reading`);
+  }
+  return contents;
+};
+
+const assertExistingRealDirectory = async (directory, label) => {
+  if (typeof directory !== 'string' || directory.length === 0) {
+    throw new TypeError(`${label} path must be a non-empty string`);
+  }
+  const segments = directory.split(path.sep);
+  if (path.normalize(directory) !== directory
+    || segments.includes('.') || segments.includes('..')) {
+    throw new TypeError(`${label} path must be canonical without dot segments`);
+  }
+  const absolute = path.resolve(directory);
+  await assertRealAncestors(absolute, label);
+  const details = await lstat(absolute);
+  if (details.isSymbolicLink() || !details.isDirectory()) {
+    throw new Error(`${label} must be a real directory`);
+  }
+  const resolved = await realpath(absolute);
+  if (resolved !== absolute) throw new Error(`${label} must not resolve through a symbolic link`);
+  return resolved;
 };
 
 const assertResolvedChild = (resolvedParent, resolvedChild, label) => {
@@ -638,9 +696,28 @@ export const inspectVisualLabPng = (bytes, label) => {
   return { width, height };
 };
 
-const readFailureTombstone = async (candidateDirectory, recipe) => {
+const readFailureTombstone = async (candidateDirectory, recipe, {
+  rejectSymlink = false,
+} = {}) => {
+  const tombstonePath = path.join(candidateDirectory, 'failure.log');
+  const details = await pathDetails(tombstonePath);
+  // A stale leaf symlink is never evidence. Treat it as absent so the current
+  // report decision owns the failure code and writeFailure can atomically
+  // replace the link without following or modifying its target.
+  if (details?.isSymbolicLink()) {
+    if (rejectSymlink) {
+      throw new CandidateArtifactError(
+        'artifact-invalid', `${recipe.name} failure tombstone must not be a symbolic link`,
+      );
+    }
+    return;
+  }
   let source;
-  try { source = await readFile(path.join(candidateDirectory, 'failure.log'), 'utf8'); }
+  try {
+    source = await readStableRegularFile(
+      tombstonePath, `${recipe.name} failure tombstone`, 'utf8',
+    );
+  }
   catch (error) {
     if (error?.code === 'ENOENT') return;
     throw new CandidateArtifactError(
@@ -656,12 +733,16 @@ const readFailureTombstone = async (candidateDirectory, recipe) => {
   );
 };
 
-const readCandidateReport = async (candidateDirectory, recipe) => {
-  await readFailureTombstone(candidateDirectory, recipe);
+const readCandidateReport = async (candidateDirectory, recipe, {
+  strictFailureTombstone = false,
+} = {}) => {
+  await readFailureTombstone(candidateDirectory, recipe, {
+    rejectSymlink: strictFailureTombstone,
+  });
   const reportPath = path.join(candidateDirectory, 'report.json');
   let source;
   try {
-    source = await readFile(reportPath, 'utf8');
+    source = await readStableRegularFile(reportPath, `${recipe.name} report.json`, 'utf8');
   } catch (error) {
     throw new CandidateArtifactError(
       error?.code === 'ENOENT' ? 'report-missing' : 'report-invalid',
@@ -713,7 +794,7 @@ const readCandidateReport = async (candidateDirectory, recipe) => {
     const image = path.join(candidateDirectory, `${variant}.png`);
     let bytes;
     try {
-      bytes = await readFile(image);
+      bytes = await readStableRegularFile(image, `${recipe.name} ${variant}.png`);
     } catch (error) {
       throw new CandidateArtifactError(
         'artifact-invalid', `Cannot read ${recipe.name} ${variant}.png: ${error.message}`,
@@ -757,6 +838,118 @@ const readCandidateReport = async (candidateDirectory, recipe) => {
     warnings: [...report.warnings],
   };
 };
+
+const readPortableFailureEntry = async (candidateDirectory, recipe) => {
+  const source = await readStableRegularFile(
+    path.join(candidateDirectory, 'failure.log'), `${recipe.name} failure tombstone`, 'utf8',
+  );
+  const [recordedCode, ...details] = source.split(/\r?\n/);
+  if (!FAILURE_CODES.has(recordedCode) || details.join('\n').trim().length === 0) {
+    throw new CandidateArtifactError(
+      'capture-failed', `${recipe.name} failure tombstone is not canonical`,
+    );
+  }
+  return { candidate: recipe.name, status: 'failed', failure: recordedCode };
+};
+
+const parsePortableJson = (source, label) => {
+  try { return JSON.parse(source); }
+  catch (error) { throw new TypeError(`${label} is not valid JSON`, { cause: error }); }
+};
+
+/**
+ * Revalidates a downloaded Visual Lab batch without creating, deleting, or
+ * rewriting any package file. Legacy batches may omit recipe-set.json; every
+ * new batch can require and cross-check that sidecar explicitly.
+ */
+export async function verifyVisualLabBatchPackage(options = {}) {
+  if (options === null || typeof options !== 'object' || Array.isArray(options)) {
+    throw new TypeError('Visual Lab batch verification options must be an object');
+  }
+  const allowed = new Set([
+    'batchRoot', 'requireComplete', 'requireRecipeSet', 'recipeSetSourcePath',
+  ]);
+  const unexpected = Reflect.ownKeys(options).filter((key) => !allowed.has(key));
+  if (unexpected.length > 0) {
+    throw new TypeError(`Unknown Visual Lab batch verification option ${String(unexpected[0])}`);
+  }
+  if (typeof options.batchRoot !== 'string' || options.batchRoot.length === 0) {
+    throw new TypeError('Visual Lab batch verification requires batchRoot');
+  }
+  const requireComplete = options.requireComplete ?? true;
+  const requireRecipeSet = options.requireRecipeSet ?? false;
+  if (typeof requireComplete !== 'boolean' || typeof requireRecipeSet !== 'boolean') {
+    throw new TypeError('Visual Lab batch verification requirement flags must be booleans');
+  }
+
+  const batchRoot = await assertExistingRealDirectory(
+    options.batchRoot, 'Visual Lab batch package',
+  );
+  const [indexSource, sheet] = await Promise.all([
+    readStableRegularFile(path.join(batchRoot, 'index.json'), 'Visual Lab batch index', 'utf8'),
+    readStableRegularFile(path.join(batchRoot, 'index.html'), 'Visual Lab contact sheet', 'utf8'),
+  ]);
+  const index = parsePortableJson(indexSource, 'Visual Lab batch index');
+  if (!Array.isArray(index?.candidates) || index.candidates.length === 0) {
+    throw new TypeError('Visual Lab batch index must contain candidates');
+  }
+
+  const entries = [];
+  for (const raw of index.candidates) {
+    const recipe = resolveVisualLabCaptureRecipe(raw?.candidate);
+    const candidateDirectory = path.join(batchRoot, 'candidates', recipe.name);
+    if (raw?.status === 'passed') {
+      entries.push(await readCandidateReport(candidateDirectory, recipe, {
+        strictFailureTombstone: true,
+      }));
+    } else if (raw?.status === 'failed') {
+      entries.push(await readPortableFailureEntry(candidateDirectory, recipe));
+    } else {
+      throw new TypeError(`Visual Lab batch candidate ${recipe.name} has an invalid status`);
+    }
+  }
+  const canonical = createVisualLabBatchIndex(entries);
+  if (!isDeepStrictEqual(index, canonical)) {
+    throw new TypeError('Visual Lab batch index does not match its portable artifacts');
+  }
+  if (sheet !== renderVisualLabContactSheet(canonical)) {
+    throw new TypeError('Visual Lab contact sheet does not match its batch index');
+  }
+  if (requireComplete && !canonical.complete) {
+    throw new TypeError('Visual Lab batch package is incomplete');
+  }
+
+  const recipeSetPath = path.join(batchRoot, 'recipe-set.json');
+  const recipeSetDetails = await pathDetails(recipeSetPath);
+  let recipeSet;
+  if (recipeSetDetails) recipeSet = await readVisualLabRecipeSet(recipeSetPath);
+  if (requireRecipeSet && !recipeSet) {
+    throw new TypeError('Visual Lab batch package is missing recipe-set.json');
+  }
+  if (recipeSet) {
+    const captured = canonical.candidates.map(({ candidate }) => {
+      const recipe = resolveVisualLabCaptureRecipe(candidate);
+      return { name: candidate, ...requestForRecipe(recipe) };
+    });
+    if (!isDeepStrictEqual(recipeSet.recipes, captured)) {
+      throw new TypeError('Visual Lab batch package does not match its recipe-set request');
+    }
+  }
+
+  let sourceRecipeSet;
+  if (options.recipeSetSourcePath !== undefined) {
+    sourceRecipeSet = await readVisualLabRecipeSet(options.recipeSetSourcePath);
+    if (!recipeSet || !isDeepStrictEqual(sourceRecipeSet, recipeSet)) {
+      throw new TypeError('Published Visual Lab recipe set differs from its source');
+    }
+  }
+
+  return deepFreeze({
+    batchRoot,
+    index: canonical,
+    recipeSet: recipeSet ?? null,
+  });
+}
 
 const writeAtomic = async (file, contents) => {
   const temporary = `${file}.${process.pid}.${randomUUID()}.tmp`;

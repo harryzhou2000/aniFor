@@ -7,12 +7,15 @@ batch runner, and static contact-sheet index are deployed. Frozen renderer and
 capture descriptors share exact domain, target, Detail/fallback, evidence, URL,
 backend/pipeline, and resource-budget semantics, and the generic runner consumes
 them without domain branches. The opt-in CI review/deploy gate and versioned
-accepted-baseline/result layer are complete. The current checkpoint implements
-portable recipe-set reuse: local and hosted experiment cohorts are named,
-self-describing, content-addressed, catalog-drift detecting, and reproducible
-without widening the frozen result, batch, baseline, or comparison v1 records.
-A
-normal-scale A/B experiment should touch one domain module and one catalog
+accepted-baseline/result layer are complete. Portable recipe-set reuse is
+deployed: local and hosted experiment cohorts are named, self-describing,
+content-addressed, catalog-drift detecting, and reproducible without widening
+the frozen result, batch, baseline, or comparison v1 records. The active
+checkpoint is the portable consumer boundary: one read-only verifier must prove
+a downloaded batch, its optional recipe-set sidecar, and its accepted-baseline
+comparison from bytes alone, and CI must run that verifier against the exact
+same-run artifact it uploaded rather than the mutable workspace. A normal-scale
+A/B experiment should touch one domain module and one catalog
 entry—not presenter setup, app lifecycle, package/workflow duplication, or CDP
 branching.
 
@@ -20,15 +23,15 @@ The fixed `domain/variant/target/gain` state, promotion-safe same-page switching
 declarative fixture startup, and production-bundle off/A/B route already form
 the base. E62 Oxygen, E69 Oil motion, and E65 Water motion have been folded into
 their accepted parent baselines and their one-off selector/telemetry/verifier
-plumbing removed. The batch/index and CI review framework checkpoints are
-complete and deployed. `main_codex` and Pages serve comparison-bound promotion
-revision `aff67f50c6d75d1cf8ccca5e6b2cf2bf1d0c67a7` after gated workflow run
-`31288597052`: the build, four-candidate comparison, deploy, live revision, and
-19-resource closure all passed, and an independent artifact audit validated all
-36 PNG copies. The accepted visual manifest remains
+plumbing removed. The batch/index, CI review, promotion, and recipe-set framework
+checkpoints are complete and deployed. `main_codex` and Pages serve recipe-set
+revision `294f8e09226c39fc09b56c8270c9b8a6a3edfc59` after gated workflow run
+`31290360459`: the named four-recipe release set, comparison, deploy, live
+revision, and 19-resource closure all passed, and the downloaded artifact's 36
+PNG copies were independently validated. The accepted visual manifest remains
 `sha256:b95e09ecb1df93c2b9ae718d205159b17dc56379723f2d1ad904458e16c5653c`.
 
-This stable checkpoint adds a separate
+That deployed checkpoint adds a separate
 `anifor.visual-lab.recipe-set/v1` schema, not another effect and not a batch/v1
 field. A set contains a bounded safe name plus a nonempty canonical-order subset
 of complete built-in recipe descriptors; its identity hashes the reconstructed
@@ -73,6 +76,38 @@ runs synthesize deterministic `full-catalog` or `ad-hoc` sets so every new batch
 is self-describing; older batches without the sidecar remain valid. The sidecar
 is deliberately outside result/batch/baseline/comparison identity and is
 authoritative only after its full descriptors are cross-checked with the batch.
+
+### Portable-package verification acceptance
+
+Verify an existing batch in place without rebuilding, launching Chrome, or
+rewriting its index with:
+
+```sh
+npm run audit:visual-lab:verify -- \
+  --batch-root=/path/to/downloaded-review \
+  --require-complete=1 --require-recipe-set=1
+```
+
+For the release artifact, bind both the checked cohort and the accepted-baseline
+comparison:
+
+```sh
+npm run audit:visual-lab:verify -- \
+  --batch-root=/path/to/downloaded-review \
+  --baseline-root=visual-baselines/accepted-v1 \
+  --recipe-set-source=visual-lab/recipe-sets/release.json \
+  --require-complete=1 --require-recipe-set=1
+```
+
+The comparison defaults to `<batch-root>/comparison`. The verifier performs only
+stable, non-following reads: it reconstructs every result identity and invariant,
+re-hashes and structurally validates every PNG, reproduces the exact batch sheet,
+cross-checks the optional recipe-set descriptors, then reuses the
+promotion-grade comparison validator for the accepted/current copies, JSON, and
+deterministic HTML. It emits a compact content-identity summary and changes no
+artifact byte or metadata. A legacy complete package may omit `recipe-set.json`
+unless it is explicitly required. An incomplete diagnostic package is readable
+only with `--require-complete=0`; it is never deployable evidence.
 
 ### Batch framework acceptance
 
@@ -138,10 +173,12 @@ job depends on `build`, downloads that run's
 with `--gpu=swiftshader`. It performs no second WASM or Vite build. Its evidence
 artifact is named by the exact commit and uploads under `always()`, including an
 incomplete index, contact sheet, PNGs, reports, stdout/stderr, and failure
-tombstones. A final independent check requires the v1 schema and
-`complete: true`, reloads an explicitly requested source set, requires exact
-identity with the published sidecar, and cross-checks every full recipe against
-the completed result requests.
+tombstones. The same job then downloads that exact named artifact into a fresh
+runner-temporary directory and invokes the shared read-only package verifier,
+not an inline workspace-only approximation. It requires the v1 schema and
+`complete: true`, reloads an explicitly requested source set, verifies every
+result/PNG/sheet byte, requires exact identity with the published sidecar, and
+revalidates the accepted-baseline comparison. This adds no browser or build.
 
 Hosted software readback retains the exact two-consecutive semantic, field, and
 framebuffer-alpha snapshot proof but has a 30-second per-variant settle window;
@@ -3627,10 +3664,13 @@ fixtures, protocol-owned URL/dataset requirements, bounded Chrome lifecycle,
 named recipes, content-addressed results, deterministic batch index, and static
 contact sheet are complete and deployed at revision
 `e06d11398a37dcf1558411a350af631452c4953e` by workflow run `31283340387`.
-Operational CI review, accepted-baseline comparison, and gated deployment are
-now complete. The current milestone is proposal-only partial promotion: retain
-the complete baseline while replacing only explicitly accepted candidates from
-an exact comparison. Defer E66 and Powder until
+Operational CI review, accepted-baseline comparison, candidate-scoped promotion,
+recipe sets, and gated deployment are now complete. The current milestone is a
+single reusable portable verifier plus a same-run upload/download CI round trip,
+so the downloadable review object proves itself without a workspace-only check
+or another browser/build. After that proof, prioritize a typed generic fixture
+preparation bridge, then an optional additive review brief; neither may widen
+the frozen v1 records. Defer E66 and Powder until
 their extra samples or source-stage stability proof fit the existing budgeted
 facade without creating a second experiment framework.
 
@@ -3798,11 +3838,13 @@ hashing run metadata. Candidate-scoped promotion closes the manual review loop
 and is deployed at `aff67f50c6d75d1cf8ccca5e6b2cf2bf1d0c67a7` by run
 `31288597052`; it validates the exact comparison and emits a full baseline
 proposal plus a separate decision identity without auto-promoting or mutating
-version control. The active extension is the separately versioned recipe-set
-input and normalized sidecar described above, so recurring cohorts stop being
-copied through CLI strings or workflow dispatch history. Defer a bounded PNG
-decoder and RGB metrics to v2, and do not add another verifier or workflow
-clone. Defer E66 and
+version control. The separately versioned recipe-set input and normalized
+sidecar are deployed at `294f8e09226c39fc09b56c8270c9b8a6a3edfc59` by run
+`31290360459`, so recurring cohorts no longer depend on copied CLI strings or
+workflow dispatch history. The active extension is the read-only portable
+batch/comparison verifier and exact same-run artifact round trip described
+above. Defer a bounded PNG decoder and RGB metrics to v2, and extend the shared
+verifier rather than cloning it or the workflow. Defer E66 and
 Powder until the fixed HDR
 seam can receive their stability/body proof without a second experiment
 framework.

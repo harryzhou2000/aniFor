@@ -44,6 +44,24 @@ npm run audit:visual-lab:baseline:compare -- \
   --output-dir=/path/to/new-empty-comparison
 ```
 
+Verify a downloaded review package and its comparison without rewriting either:
+
+```sh
+npm run audit:visual-lab:verify -- \
+  --batch-root=/path/to/downloaded-review \
+  --baseline-root=visual-baselines/accepted-v1 \
+  --recipe-set-source=visual-lab/recipe-sets/release.json \
+  --require-complete=1 --require-recipe-set=1
+```
+
+The comparison defaults to `<batch-root>/comparison`. Omit
+`--recipe-set-source` when no checked cohort should be bound. Legacy complete
+batches may omit `recipe-set.json` when `--require-recipe-set=0`; incomplete
+diagnostic packages require `--require-complete=0` and are never deployable
+evidence. Verification uses stable non-following reads, reconstructs identities,
+PNG structure and hashes, deterministic HTML, and cross-package descriptors, and
+does not change artifact bytes or metadata.
+
 Use `accept` only to seed a new baseline scope from one complete batch. It writes
 to a new empty directory and does not merge an existing accepted package:
 

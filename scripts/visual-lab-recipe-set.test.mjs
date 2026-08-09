@@ -1,7 +1,9 @@
 import { createHash } from 'node:crypto';
+import fsPromises from 'node:fs/promises';
 import {
   mkdir, mkdtemp, readFile, rm, symlink, writeFile,
 } from 'node:fs/promises';
+import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -35,6 +37,29 @@ const temporaryDirectory = async () => {
 const recipeSetId = (recipeSet) => {
   const { id: _id, ...identity } = recipeSet;
   return `sha256:${createHash('sha256').update(JSON.stringify(identity), 'utf8').digest('hex')}`;
+};
+
+/** Interposes synchronously at the reader's open call, after its lstat completed. */
+const replaceLeafWithSymlinkWhenOpened = async (file, target, operation) => {
+  const absolute = path.resolve(file);
+  const originalOpen = fsPromises.open;
+  let interposed = false;
+  fsPromises.open = async (openedPath, ...arguments_) => {
+    if (!interposed && path.resolve(openedPath) === absolute) {
+      interposed = true;
+      await rm(absolute);
+      await symlink(target, absolute);
+    }
+    return originalOpen(openedPath, ...arguments_);
+  };
+  syncBuiltinESMExports();
+  try {
+    await expect(operation()).rejects.toThrow(/changed while opening|symbolic link/i);
+  } finally {
+    fsPromises.open = originalOpen;
+    syncBuiltinESMExports();
+  }
+  expect(interposed).toBe(true);
 };
 
 describe('Visual Lab recipe-set/v1', () => {
@@ -130,6 +155,25 @@ describe('Visual Lab recipe-set/v1', () => {
     await expect(readVisualLabRecipeSet(file)).rejects.toThrow('does not exactly match');
   });
 
+  it('rejects a regular recipe-set leaf replaced by a symlink between lstat and open', async () => {
+    if (process.platform === 'win32') return;
+    const root = await temporaryDirectory();
+    const recipeSet = createVisualLabRecipeSet('portable-review', ['gas-showcase']);
+    const input = path.join(root, 'recipe-set.json');
+    const replacement = path.join(root, 'replacement-recipe-set.json');
+    await writeFile(input, `${JSON.stringify(recipeSet)}\n`);
+    await writeFile(replacement, `${JSON.stringify(recipeSet)}\n`);
+
+    // The open wrapper is the interposition point: readVisualLabRecipeSet has
+    // already lstat'ed recipe-set.json, but has not yet issued its no-follow open.
+    await replaceLeafWithSymlinkWhenOpened(
+      input,
+      replacement,
+      () => readVisualLabRecipeSet(input),
+    );
+    expect(await readFile(replacement)).toStrictEqual(await readFile(input));
+  });
+
   it('keeps checked-in framework cohorts valid and pinned', async () => {
     const expected = new Map([
       ['release', ['gas-showcase', 'oxygen-showcase', 'oil-motion', 'water-motion']],
@@ -184,8 +228,10 @@ describe('Visual Lab recipe-set/v1', () => {
     );
     expect(workflow).toContain('review_args+=("--recipe-set=${VISUAL_LAB_RECIPE_SET}")');
     expect(workflow).toContain('node scripts/visual-lab-batch.mjs "${review_args[@]}"');
-    expect(workflow).toContain("'artifacts/visual-lab-review/recipe-set.json'");
-    expect(workflow).toContain('...result.request');
-    expect(workflow).toContain('Published Visual Lab recipe set differs from its source');
+    expect(workflow).toContain('Download uploaded Visual Lab review evidence');
+    expect(workflow).toContain('path: ${{ runner.temp }}/anifortpt-visual-lab-review');
+    expect(workflow).toContain('node scripts/visual-lab-verify.mjs "${verify_args[@]}"');
+    expect(workflow).toContain('--require-recipe-set=1');
+    expect(workflow).toContain('--recipe-set-source=${VISUAL_LAB_RECIPE_SET}');
   });
 });

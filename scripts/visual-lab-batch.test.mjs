@@ -1,8 +1,10 @@
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import fsPromises from 'node:fs/promises';
 import {
-  access, lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile,
+  access, lstat, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile,
 } from 'node:fs/promises';
+import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { deflateSync } from 'node:zlib';
@@ -13,6 +15,7 @@ import {
   parseVisualLabBatchArguments,
   renderVisualLabContactSheet,
   runVisualLabBatch,
+  verifyVisualLabBatchPackage,
   VISUAL_LAB_BATCH_SCHEMA,
 } from './visual-lab-batch.mjs';
 import {
@@ -37,6 +40,56 @@ const makeTemporaryDirectory = async () => {
   const directory = await mkdtemp(path.join(tmpdir(), 'visual-lab-batch-test-'));
   temporaryDirectories.push(directory);
   return directory;
+};
+
+/** Interposes synchronously at the reader's open call, after its lstat completed. */
+const replaceLeafWithSymlinkWhenOpened = async (file, target, operation) => {
+  const absolute = path.resolve(file);
+  const originalOpen = fsPromises.open;
+  let interposed = false;
+  fsPromises.open = async (openedPath, ...arguments_) => {
+    if (!interposed && path.resolve(openedPath) === absolute) {
+      interposed = true;
+      await rm(absolute);
+      await symlink(target, absolute);
+    }
+    return originalOpen(openedPath, ...arguments_);
+  };
+  syncBuiltinESMExports();
+  try {
+    await expect(operation()).rejects.toThrow(/changed while opening|symbolic link/i);
+  } finally {
+    fsPromises.open = originalOpen;
+    syncBuiltinESMExports();
+  }
+  expect(interposed).toBe(true);
+};
+
+const snapshotPackageTree = async (root) => {
+  const entries = [];
+  const visit = async (relative) => {
+    const file = path.join(root, relative);
+    const details = await lstat(file, { bigint: true });
+    const kind = details.isDirectory() ? 'directory' : details.isFile() ? 'file' : 'other';
+    const entry = {
+      relative,
+      kind,
+      dev: details.dev,
+      ino: details.ino,
+      mode: details.mode,
+      nlink: details.nlink,
+      size: details.size,
+      mtimeNs: details.mtimeNs,
+      ctimeNs: details.ctimeNs,
+    };
+    if (kind === 'file') entry.bytes = await readFile(file);
+    entries.push(entry);
+    if (kind === 'directory') {
+      for (const name of (await readdir(file)).sort()) await visit(path.join(relative, name));
+    }
+  };
+  await visit('');
+  return entries;
 };
 
 const linuxProcessStartToken = async (pid) => {
@@ -583,6 +636,134 @@ describe('Visual Lab batch runner', () => {
       indexOnly: true,
     })).rejects.toThrow('source must be outside');
     expect(await readFile(result.indexPath, 'utf8')).toBe(sentinel);
+  });
+
+  it('revalidates a complete portable package without changing any evidence', async () => {
+    const root = await makeTemporaryDirectory();
+    const outputDirectory = path.join(root, 'batch');
+    const candidateDirectory = path.join(
+      outputDirectory, 'candidates', 'gas-showcase',
+    );
+    const sourcePath = path.join(root, 'gas-review.json');
+    const recipeSet = createVisualLabRecipeSet('gas-review', ['gas-showcase']);
+    await writeFile(sourcePath, `${JSON.stringify(recipeSet, null, 2)}\n`);
+    await writeValidCapture(candidateDirectory, 'gas-showcase');
+    const generated = await runVisualLabBatch({
+      recipeSet, outputDir: outputDirectory, indexOnly: true,
+    });
+    const before = await snapshotPackageTree(outputDirectory);
+
+    const verified = await verifyVisualLabBatchPackage({
+      batchRoot: outputDirectory,
+      requireComplete: true,
+      requireRecipeSet: true,
+      recipeSetSourcePath: sourcePath,
+    });
+
+    expect(verified.index).toStrictEqual(generated.index);
+    expect(verified.recipeSet).toStrictEqual(recipeSet);
+    expect(await snapshotPackageTree(outputDirectory)).toStrictEqual(before);
+
+    const incompleteDirectory = path.join(root, 'incomplete-batch');
+    const incompleteCandidateDirectory = path.join(
+      incompleteDirectory, 'candidates', 'gas-showcase',
+    );
+    await writeValidCapture(incompleteCandidateDirectory, 'gas-showcase');
+    const incomplete = await runVisualLabBatch({
+      candidates: ['gas-showcase', 'oxygen-showcase'],
+      outputDir: incompleteDirectory,
+      indexOnly: true,
+    });
+    expect(incomplete.index.complete).toBe(false);
+    const incompleteBefore = await snapshotPackageTree(incompleteDirectory);
+    await expect(verifyVisualLabBatchPackage({
+      batchRoot: incompleteDirectory,
+      requireComplete: false,
+    })).resolves.toMatchObject({ index: incomplete.index });
+    expect(await snapshotPackageTree(incompleteDirectory)).toStrictEqual(incompleteBefore);
+  });
+
+  it('rejects portable package tampering and symlinks while allowing legacy sidecar absence', async () => {
+    const root = await makeTemporaryDirectory();
+    const outputDirectory = path.join(root, 'batch');
+    const candidateDirectory = path.join(
+      outputDirectory, 'candidates', 'gas-showcase',
+    );
+    await writeValidCapture(candidateDirectory, 'gas-showcase');
+    const generated = await runVisualLabBatch({
+      candidates: ['gas-showcase'], outputDir: outputDirectory, indexOnly: true,
+    });
+    await writeFile(generated.contactSheetPath, '<!doctype html>tampered');
+    await expect(verifyVisualLabBatchPackage({ batchRoot: outputDirectory }))
+      .rejects.toThrow('contact sheet does not match');
+    await writeFile(generated.contactSheetPath, renderVisualLabContactSheet(generated.index));
+
+    const offPath = path.join(candidateDirectory, 'off.png');
+    const offBytes = await readFile(offPath);
+    const external = path.join(root, 'external.png');
+    await writeFile(external, offBytes);
+    await rm(offPath);
+    await symlink(external, offPath);
+    await expect(verifyVisualLabBatchPackage({ batchRoot: outputDirectory }))
+      .rejects.toThrow('real regular file');
+    await rm(offPath);
+    await writeFile(offPath, offBytes);
+
+    await rm(generated.recipeSetPath);
+    await expect(verifyVisualLabBatchPackage({
+      batchRoot: outputDirectory, requireRecipeSet: false,
+    })).resolves.toMatchObject({ recipeSet: null });
+    await expect(verifyVisualLabBatchPackage({
+      batchRoot: outputDirectory, requireRecipeSet: true,
+    })).rejects.toThrow('missing recipe-set.json');
+    await expect(verifyVisualLabBatchPackage({
+      batchRoot: `${outputDirectory}/../batch`, requireRecipeSet: false,
+    })).rejects.toThrow('canonical without dot segments');
+  });
+
+  it('rejects a regular index leaf replaced by a symlink between lstat and open', async () => {
+    if (process.platform === 'win32') return;
+    const root = await makeTemporaryDirectory();
+    const outputDirectory = path.join(root, 'batch');
+    const candidateDirectory = path.join(
+      outputDirectory, 'candidates', 'gas-showcase',
+    );
+    await writeValidCapture(candidateDirectory, 'gas-showcase');
+    const generated = await runVisualLabBatch({
+      candidates: ['gas-showcase'], outputDir: outputDirectory, indexOnly: true,
+    });
+    const replacement = path.join(root, 'replacement-index.json');
+    await writeFile(replacement, await readFile(generated.indexPath));
+
+    // The open wrapper is the interposition point: readStableRegularFile has
+    // already lstat'ed index.json, but has not yet issued its no-follow open.
+    await replaceLeafWithSymlinkWhenOpened(
+      generated.indexPath,
+      replacement,
+      () => verifyVisualLabBatchPackage({ batchRoot: outputDirectory }),
+    );
+    expect(await readFile(replacement)).toStrictEqual(await readFile(generated.indexPath));
+  });
+
+  it('fails closed on a passed candidate with a symlinked failure tombstone', async () => {
+    if (process.platform === 'win32') return;
+    const root = await makeTemporaryDirectory();
+    const outputDirectory = path.join(root, 'batch');
+    const candidateDirectory = path.join(
+      outputDirectory, 'candidates', 'gas-showcase',
+    );
+    await writeValidCapture(candidateDirectory, 'gas-showcase');
+    await runVisualLabBatch({
+      candidates: ['gas-showcase'], outputDir: outputDirectory, indexOnly: true,
+    });
+    const failurePath = path.join(candidateDirectory, 'failure.log');
+    const external = path.join(root, 'external-failure.log');
+    await writeFile(external, 'capture-failed\nexternal diagnostic\n');
+    await symlink(external, failurePath);
+
+    await expect(verifyVisualLabBatchPackage({ batchRoot: outputDirectory }))
+      .rejects.toThrow('failure tombstone must not be a symbolic link');
+    expect(await readFile(external, 'utf8')).toBe('capture-failed\nexternal diagnostic\n');
   });
 
   it('indexes existing reports without a runner and isolates stale or tampered artifacts', async () => {
