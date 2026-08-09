@@ -28,6 +28,8 @@ const completeBatch = (outputDir) => ({
   index: { complete: true },
   indexPath: path.join(outputDir, 'index.json'),
   contactSheetPath: path.join(outputDir, 'index.html'),
+  responsePath: path.join(outputDir, 'experiment-response.json'),
+  experimentBoardPath: path.join(outputDir, 'experiment-board.html'),
   recipeSet: { id: 'sha256:recipe-set' },
   recipeSetPath: path.join(outputDir, 'recipe-set.json'),
 });
@@ -44,7 +46,7 @@ const completeComparison = (outputDir) => ({
 });
 
 describe('Visual Lab review-cycle CLI', () => {
-  it('accepts the batch selection flags, requires output, and defaults the accepted baseline', () => {
+  it('accepts batch selection flags, requires output, and does not inject a baseline', () => {
     const parsed = parseVisualLabReviewArguments([
       '--candidates=oxygen-showcase,water-motion',
       '--bundle=dist/index.html',
@@ -67,7 +69,7 @@ describe('Visual Lab review-cycle CLI', () => {
       candidateTimeoutMs: 123456,
       captureProof: 'completed-frame-receipt',
     });
-    expect(parsed.baselineRoot).toBe(path.resolve('visual-baselines/accepted-v1'));
+    expect(parsed).not.toHaveProperty('baselineRoot');
     expect(parsed).not.toHaveProperty('indexOnly');
     expect(parsed).not.toHaveProperty('planOnly');
 
@@ -108,6 +110,40 @@ describe('Visual Lab review-cycle CLI', () => {
 });
 
 describe('Visual Lab review-cycle orchestration', () => {
+  it('keeps a default review current-only: no baseline comparison and batch-only response verification', async () => {
+    const root = await temporaryDirectory();
+    const outputDir = path.join(root, 'batch');
+    let baselineCalls = 0;
+    let verificationOptions;
+    const result = await runVisualLabReviewCycle({
+      candidates: ['water-motion'], bundle: 'dist/index.html', outputDir,
+    }, {
+      runBatch: async (options) => completeBatch(options.outputDir),
+      runBaseline: async () => { baselineCalls++; },
+      verifyPackage: async (options) => {
+        verificationOptions = options;
+        return { ok: true, comparison: null };
+      },
+    });
+    expect(baselineCalls).toBe(0);
+    expect(verificationOptions).toEqual({
+      batchRoot: outputDir,
+      requireBaselineCaptureProvenance: false,
+      requireBrowserHostPlan: true,
+      requireCaptureGeometry: true,
+      requireExecutionTuningPlan: true,
+      requireExperimentResponse: true,
+      requireOriginAttestation: false,
+      requireComplete: true,
+      requireRecipeSet: true,
+    });
+    expect(result.comparison).toBeNull();
+    expect(result.batch).toMatchObject({
+      response: path.join(outputDir, 'experiment-response.json'),
+      experimentBoard: path.join(outputDir, 'experiment-board.html'),
+    });
+  });
+
   it('runs selected candidates through batch, comparison, then complete portable verification', async () => {
     const root = await temporaryDirectory();
     const outputDir = path.join(root, 'batch');

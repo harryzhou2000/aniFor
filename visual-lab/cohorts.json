@@ -1,0 +1,29 @@
+{
+  "schema": "anifor.visual-lab.cohort-catalog/v1",
+  "cohorts": [
+    {
+      "name": "atmosphere",
+      "includes": [],
+      "candidates": [
+        "gas-showcase",
+        "oxygen-showcase"
+      ]
+    },
+    {
+      "name": "liquid-motion",
+      "includes": [],
+      "candidates": [
+        "oil-motion",
+        "water-motion"
+      ]
+    },
+    {
+      "name": "release",
+      "includes": [
+        "atmosphere",
+        "liquid-motion"
+      ],
+      "candidates": []
+    }
+  ]
+}

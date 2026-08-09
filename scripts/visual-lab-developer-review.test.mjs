@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events';
-import { lstat, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { access, lstat, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -40,18 +40,18 @@ const successfulReview = async (reviewRoot) => {
   await mkdir(comparisonRoot, { recursive: true });
   await Promise.all([
     writeFile(path.join(reviewRoot, 'index.html'), 'captures'),
+    writeFile(path.join(reviewRoot, 'experiment-board.html'), 'experiment'),
     writeFile(path.join(comparisonRoot, 'experiment-board.html'), 'experiment'),
     writeFile(path.join(comparisonRoot, 'review-board.html'), 'board'),
     writeFile(path.join(comparisonRoot, 'review-brief.html'), 'brief'),
   ]);
   return {
     ok: true,
-    batch: { contactSheet: path.join(reviewRoot, 'index.html') },
-    comparison: {
-      experimentBoard: path.join(comparisonRoot, 'experiment-board.html'),
-      board: path.join(comparisonRoot, 'review-board.html'),
-      brief: path.join(comparisonRoot, 'review-brief.html'),
+    batch: {
+      contactSheet: path.join(reviewRoot, 'index.html'),
+      experimentBoard: path.join(reviewRoot, 'experiment-board.html'),
     },
+    comparison: null,
   };
 };
 
@@ -82,7 +82,6 @@ describe('Visual Lab developer review arguments', () => {
     expect(parsed).toMatchObject({
       candidates: ['water-motion'],
       bundle: path.join(repositoryRoot, 'dist', 'index.html'),
-      baselineRoot: path.join(repositoryRoot, 'visual-baselines', 'accepted-v1'),
       gpu: 'swiftshader',
       captureProof: 'completed-frame-receipt',
       browserHost: 'shared',
@@ -93,6 +92,16 @@ describe('Visual Lab developer review arguments', () => {
       recipeSetPath: path.join(repositoryRoot, 'visual-lab', 'recipe-sets', 'liquid-motion.json'),
       browserHost: 'fresh',
     });
+
+    expect(parseVisualLabDeveloperReviewArguments([
+      '--cohort=liquid-motion',
+    ], { repositoryRoot, platform: 'linux' })).toMatchObject({
+      cohortName: 'liquid-motion',
+      recipeSetPath: path.join(repositoryRoot, 'visual-lab', 'recipe-sets', 'liquid-motion.json'),
+    });
+    expect(() => parseVisualLabDeveloperReviewArguments([
+      '--cohort=liquid_motion',
+    ], { repositoryRoot, platform: 'linux' })).toThrow('safe kebab-case');
   });
 });
 
@@ -122,7 +131,6 @@ describe('Visual Lab developer review execution', () => {
       candidates: ['water-motion'],
       outputDir: expectedRoot,
       bundle: path.join(repositoryRoot, 'dist', 'index.html'),
-      baselineRoot: path.join(repositoryRoot, 'visual-baselines', 'accepted-v1'),
       gpu: 'swiftshader',
       captureProof: 'completed-frame-receipt',
       browserHost: 'shared',
@@ -131,9 +139,7 @@ describe('Visual Lab developer review execution', () => {
     expect(outcome.reviewRoot).toBe(expectedRoot);
     expect(stdout.read().split('\n')).toEqual([
       `Visual Lab review root: ${expectedRoot}`,
-      `Experiment response: ${pathToFileURL(path.join(expectedRoot, 'comparison', 'experiment-board.html')).href}`,
-      `Review board: ${pathToFileURL(path.join(expectedRoot, 'comparison', 'review-board.html')).href}`,
-      `Compact brief: ${pathToFileURL(path.join(expectedRoot, 'comparison', 'review-brief.html')).href}`,
+      `Experiment response: ${pathToFileURL(path.join(expectedRoot, 'experiment-board.html')).href}`,
       `Raw captures: ${pathToFileURL(path.join(expectedRoot, 'index.html')).href}`,
       '',
     ]);
@@ -198,6 +204,95 @@ describe('Visual Lab developer review execution', () => {
     expect(trackedCalls).toEqual([[expectedRecipeSet, repositoryRoot]]);
     expect(cycleOptions.recipeSetPath).toBe(expectedRecipeSet);
     expect(result).toMatchObject({ ok: true });
+  });
+
+  it('resolves a cohort through the declarative catalog before validating its tracked snapshot', async () => {
+    const repositoryRoot = await temporaryRepository();
+    const expectedRecipeSet = path.join(
+      repositoryRoot, 'visual-lab', 'recipe-sets', 'liquid-motion.json',
+    );
+    const resolverCalls = [];
+    const trackedCalls = [];
+    let cycleOptions;
+    await runVisualLabDeveloperReview(['--cohort=liquid-motion'], {
+      repositoryRoot,
+      randomUUID: () => UUID_A,
+      stdout: captureStream(),
+      stderr: captureStream(),
+      resolveCohort: async (...argumentsList) => {
+        resolverCalls.push(argumentsList);
+        return {
+          name: 'liquid-motion', snapshotPath: expectedRecipeSet,
+          recipeSet: { id: 'sha256:cohort' },
+        };
+      },
+      readRecipeSet: async () => ({ name: 'liquid-motion', id: 'sha256:cohort' }),
+      assertTrackedRecipeSet: async (...argumentsList) => trackedCalls.push(argumentsList),
+      runReviewCycle: async (options) => {
+        cycleOptions = options;
+        return successfulReview(options.outputDir);
+      },
+    });
+    expect(resolverCalls).toEqual([[
+      'liquid-motion',
+      {
+        catalogPath: path.join(repositoryRoot, 'visual-lab', 'cohorts.json'),
+        outputDirectory: path.join(repositoryRoot, 'visual-lab', 'recipe-sets'),
+      },
+    ]]);
+    expect(trackedCalls).toEqual([[expectedRecipeSet, repositoryRoot]]);
+    expect(cycleOptions).toMatchObject({ recipeSetPath: expectedRecipeSet });
+    expect(cycleOptions).not.toHaveProperty('cohortName');
+  });
+
+  it('rejects a stale declarative cohort snapshot before reserving evidence', async () => {
+    const repositoryRoot = await temporaryRepository();
+    const expectedRecipeSet = path.join(
+      repositoryRoot, 'visual-lab', 'recipe-sets', 'liquid-motion.json',
+    );
+    await expect(runVisualLabDeveloperReview(['--cohort=liquid-motion'], {
+      repositoryRoot,
+      stdout: captureStream(),
+      stderr: captureStream(),
+      resolveCohort: async () => ({
+        name: 'liquid-motion', snapshotPath: expectedRecipeSet,
+        recipeSet: { id: 'sha256:catalog' },
+      }),
+      assertTrackedRecipeSet: async () => {},
+      readRecipeSet: async () => ({ name: 'liquid-motion', id: 'sha256:stale' }),
+    })).rejects.toThrow('cohort snapshot is stale');
+    await expect(access(path.join(repositoryRoot, '.artifacts')))
+      .rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('prints explicit legacy comparison links after the current experiment response', async () => {
+    const repositoryRoot = await temporaryRepository();
+    const stdout = captureStream();
+    await runVisualLabDeveloperReview([
+      '--candidate=water-motion', '--baseline-root=visual-baselines/accepted-v1',
+    ], {
+      repositoryRoot,
+      randomUUID: () => UUID_A,
+      stdout,
+      stderr: captureStream(),
+      runReviewCycle: async (options) => {
+        const result = await successfulReview(options.outputDir);
+        result.comparison = {
+          board: path.join(options.outputDir, 'comparison', 'review-board.html'),
+          brief: path.join(options.outputDir, 'comparison', 'review-brief.html'),
+        };
+        return result;
+      },
+    });
+    const root = path.join(repositoryRoot, '.artifacts', 'visual-lab-reviews', `water-motion-${UUID_A}`);
+    expect(stdout.read().split('\n')).toEqual([
+      `Visual Lab review root: ${root}`,
+      `Experiment response: ${pathToFileURL(path.join(root, 'experiment-board.html')).href}`,
+      `Review board: ${pathToFileURL(path.join(root, 'comparison', 'review-board.html')).href}`,
+      `Compact brief: ${pathToFileURL(path.join(root, 'comparison', 'review-brief.html')).href}`,
+      `Raw captures: ${pathToFileURL(path.join(root, 'index.html')).href}`,
+      '',
+    ]);
   });
 
   it('reports a retained root on failure without emitting artifact URLs', async () => {
@@ -275,7 +370,10 @@ describe('Visual Lab developer review execution', () => {
       stderr: captureStream(),
       runReviewCycle: async (options) => {
         const result = await successfulReview(options.outputDir);
-        result.comparison.board = outside;
+        result.comparison = {
+          board: outside,
+          brief: path.join(options.outputDir, 'comparison', 'review-brief.html'),
+        };
         return result;
       },
     })).rejects.toThrow('outside its evidence root');

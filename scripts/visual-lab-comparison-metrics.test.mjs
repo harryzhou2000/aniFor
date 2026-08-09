@@ -3,9 +3,11 @@ import { deflateSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import {
   createVisualLabComparisonMetrics,
+  createVisualLabBatchExperimentResponse,
   createVisualLabExperimentResponse,
   measureVisualLabPngPair,
   VISUAL_LAB_COMPARISON_METRICS_SCHEMA,
+  VISUAL_LAB_CURRENT_EXPERIMENT_RESPONSE_SCHEMA,
   VISUAL_LAB_EXPERIMENT_RESPONSE_SCHEMA,
 } from './visual-lab-comparison-metrics.mjs';
 
@@ -89,6 +91,37 @@ const pairedComparison = (accepted, current) => {
 };
 
 describe('Visual Lab comparison metrics', () => {
+  it('binds current-only response evidence directly to complete ordered batch results', async () => {
+    const captures = {
+      off: png(1, 1, 4, [10, 20, 30, 255]),
+      a: png(1, 1, 4, [12, 20, 30, 255]),
+      b: png(1, 1, 4, [10, 24, 30, 255]),
+    };
+    const current = result('batch-current', captures);
+    const reads = [];
+    const response = await createVisualLabBatchExperimentResponse({
+      schema: 'anifor.visual-lab.batch/v1', complete: true,
+      candidates: [{ candidate: 'sample', status: 'passed', result: current }],
+    }, async (candidate, variant) => {
+      reads.push(`${candidate}:${variant}`);
+      return captures[variant];
+    });
+    expect(reads).toEqual(['sample:off', 'sample:a', 'sample:b']);
+    expect(response).toMatchObject({
+      schema: VISUAL_LAB_CURRENT_EXPERIMENT_RESPONSE_SCHEMA,
+      batch: { schema: 'anifor.visual-lab.batch/v1', resultIds: [current.id] },
+      candidates: [{
+        candidate: 'sample', result: { id: current.id },
+        pairs: {
+          offToA: { left: 'off', right: 'a', metric: { rgb: { absoluteDeltaSum: 2 } } },
+          offToB: { left: 'off', right: 'b', metric: { rgb: { absoluteDeltaSum: 4 } } },
+          aToB: { left: 'a', right: 'b', metric: { rgb: { absoluteDeltaSum: 6 } } },
+        },
+      }],
+    });
+    expect(response).not.toHaveProperty('comparison');
+  });
+
   it('reports exact integer RGB and alpha deltas without assigning a score', () => {
     const baseline = png(2, 1, 4, [10, 20, 30, 40, 50, 60, 70, 80]);
     const current = png(2, 1, 4, [11, 18, 30, 44, 50, 60, 75, 70]);

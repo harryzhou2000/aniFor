@@ -1269,7 +1269,8 @@ describe('Visual Lab batch runner', () => {
     })).rejects.toThrow('synthetic contact-sheet publication failure');
 
     expect(published).toEqual([
-      'recipe-set.json', 'browser-host-plan.json', 'execution-tuning-plan.json', 'index.html',
+      'recipe-set.json', 'browser-host-plan.json', 'execution-tuning-plan.json',
+      'experiment-response.json',
     ]);
     await expect(access(indexPath)).rejects.toMatchObject({ code: 'ENOENT' });
   });
@@ -1595,6 +1596,14 @@ describe('Visual Lab batch runner', () => {
 
     expect(verified.index).toStrictEqual(generated.index);
     expect(verified.recipeSet).toStrictEqual(recipeSet);
+    expect(generated.responsePath).toBe(path.join(outputDirectory, 'experiment-response.json'));
+    expect(generated.experimentBoardPath).toBe(path.join(outputDirectory, 'experiment-board.html'));
+    expect(verified.experimentResponse).toStrictEqual(generated.response);
+    const experimentBoard = await readFile(generated.experimentBoardPath, 'utf8');
+    expect(experimentBoard).toContain('Hashes authenticate files within this package only');
+    expect(experimentBoard).toContain('no score or verdict');
+    expect(experimentBoard).toContain('OFF→A');
+    expect(experimentBoard).not.toMatch(/accepted baseline|promot(e|ion)/i);
     expect(await snapshotPackageTree(outputDirectory)).toStrictEqual(before);
 
     const incompleteDirectory = path.join(root, 'incomplete-batch');

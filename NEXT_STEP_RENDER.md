@@ -1,6 +1,7 @@
 ## Current execution objective — framework leverage
 
-Prioritize an effective rendering-experiment framework over further isolated
+Prioritize finishing the current design goals through an effective
+rendering-experiment framework over further evidence ceremony or isolated
 visual-detail work. The modular typed Visual Lab facade, executable capability
 profiles, named capture recipes, content-addressed result records, deterministic
 batch runner, and static contact-sheet index are deployed. Frozen renderer and
@@ -16,6 +17,17 @@ consumer boundary is deployed at revision
 shared read-only verifier proved the fresh same-run downloaded release artifact,
 its recipe-set sidecar, accepted-baseline comparison, 36 PNG copies, and all 19
 runtime resources without another browser or build.
+
+Visual acceptance is deliberately human-led while those goals remain active.
+The current OFF/A/B images, response board, semantic/topology evidence, runtime
+health, and package integrity are authoritative; the primary agent makes the
+final aesthetic call and may use a subagent for an independent first-pass
+review. A PNG hash authenticates bytes inside one retained package only. It is
+not a cross-revision visual requirement, an aesthetic score, or a deployment
+gate. The checked-in `accepted-v1` pixels, encoded-identical statuses, and
+promotion workflow are deprecated legacy references: keep their readers for old
+portable packages and allow an explicit ad-hoc reference when useful, but do
+not use them by default in developer review, CI review, or deployment.
 
 Active priority order:
 
@@ -226,24 +238,53 @@ Active priority order:
    encoded-identical, Pages deployed, exact 19-resource closure passed, and the
    live receipt-bound Water result remained
    `sha256:2eb311dab81abef9fb1d035a0794a11f5028aafa4f8fe12a484bf583610ecd5a`.
-16. Make experiment response visible before adding more visual detail. Generate
+16. Treat portable experiment response as deployed framework infrastructure.
+   Revision `073ca8863a14c5b231b479a8b0466751d5703d8c` deployed through workflow
+   run `31339455780`: build, downloaded-package verification, Pages deployment,
+   exact 19-resource closure, and live Water capture all passed. Generate
    a portable `experiment-response.json` directly from each sampled current
    OFF/A/B triptych, ordered by the batch's pinned result IDs and including new
    candidates that have no accepted baseline. Measure OFF→A, OFF→B, and A→B
    with the existing integer RGBA arithmetic after reading, hashing, and decoding
    each current PNG once. Publish an exact-rerendered current-only
-   `experiment-board.html` with a local promotion-argument scratchpad, but no
-   score, threshold, ranking, persisted decision, or automatic promotion. Keep
+   `experiment-board.html` for direct inspection, but no score, threshold,
+   ranking, decision controls, persisted decision, or automatic promotion. Keep
    both files outside result, batch, baseline, comparison, promotion, recipe-set,
    execution, tuning, host, and provenance identities. Legacy packages may omit
    them; new developer and CI review packages require them through the portable
-   verifier. Once this is checkpointed and deployed, prefer declarative cohort
-   or fixture authoring only where it removes concrete repeated registration.
+   verifier.
+17. Declarative authoring is implemented locally and awaiting checkpoint
+   deployment. The runtime JavaScript static contracts are now the sole source
+   for their exhaustive TypeScript declarations. Cohort membership is defined
+   once with names and composition, then deterministically checked/synchronized
+   into the existing portable `recipe-set/v1` snapshots without changing their
+   schemas, bytes, or non-visual configuration identities. A developer-facing
+   `--cohort=<name>` path resolves through the catalog over the existing trusted
+   review runner. Executable
+   fixture preparation remains app-owned and typed; do not serialize method
+   names or create another capture path.
+   `npm run visual-lab:authoring:check`, typecheck, and the focused framework
+   suite pass. A real `--cohort=liquid-motion` production-bundle review resolved
+   through the catalog and produced a verified two-candidate current response.
+18. Exact visual pinning is deprecated locally and awaiting checkpoint
+   deployment. Developer and CI review are current-only by default: retain current
+   OFF/A/B PNGs, experiment response, topology/alpha evidence, renderer health,
+   revision/resource closure, and portable tamper checks, but do not require a
+   checked-in baseline, baseline provenance, encoded-identical result, fixed
+   result ID, or historical PNG hash. Keep legacy baseline comparison and
+   promotion readable and explicitly opt-in for old packages; remove them from
+   default deploy dependencies. Let a human reviewer—the primary agent, with an
+   optional subagent second opinion—accept or reject visual direction from the
+   generated board. Visual preference does not need broad unit-test coverage;
+   focused lifecycle/topology checks and a real screenshot review are enough.
+   The real liquid cohort emitted both current experiment and raw contact-sheet
+   links without constructing a comparison; all six OFF/A/B captures were
+   inspected directly, and the portable verifier accepted the package.
 
-Continue improving the registration and evidence loop before spending the
-milestone on isolated shader detail. Visual preference may later accept a
-candidate without broad unit-test expansion, but topology, renderer lifecycle,
-portable evidence, and deployment remain protected.
+Complete items 17 and 18 before returning effort to the unfinished material and
+graphics goals in this document. Visual preference may accept a candidate
+without broad unit-test expansion or hash churn, but topology, renderer
+lifecycle, portable integrity, and deployment remain protected.
 
 Do not spend the active milestone on another isolated highlight, texture, or
 material-specific shader branch. The intended leverage is a faster, observable,

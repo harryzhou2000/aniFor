@@ -64,9 +64,6 @@ export function parseVisualLabVerifyArguments(argv) {
   if (values.has('comparison-root') && !values.has('baseline-root')) {
     throw new Error('--comparison-root requires --baseline-root');
   }
-  if (values.get('require-experiment-response') === '1' && !values.has('baseline-root')) {
-    throw new Error('--require-experiment-response=1 requires --baseline-root');
-  }
   const batchRoot = values.get('batch-root');
   const baselineRoot = values.get('baseline-root');
   return Object.freeze({
@@ -117,9 +114,6 @@ export async function runVisualLabPackageVerification(options, dependencies = {}
   if (options.baselineRoot === undefined && options.comparisonRoot !== undefined) {
     throw new TypeError('comparisonRoot requires baselineRoot');
   }
-  if (options.requireExperimentResponse === true && options.baselineRoot === undefined) {
-    throw new TypeError('requireExperimentResponse requires baselineRoot');
-  }
   if (options.baselineRoot !== undefined && options.comparisonRoot === undefined) {
     throw new TypeError('baselineRoot requires comparisonRoot');
   }
@@ -135,6 +129,7 @@ export async function runVisualLabPackageVerification(options, dependencies = {}
     requireOriginAttestation: options.requireOriginAttestation ?? false,
     requireComplete: options.requireComplete ?? true,
     requireRecipeSet: options.requireRecipeSet ?? false,
+    requireExperimentResponse: options.requireExperimentResponse ?? false,
     ...(options.recipeSetSourcePath === undefined
       ? {} : { recipeSetSourcePath: options.recipeSetSourcePath }),
   });
@@ -184,9 +179,9 @@ export async function runVisualLabPackageVerification(options, dependencies = {}
       id: comparison.baselineCaptureProvenance.id,
       baseline: comparison.baselineCaptureProvenance.baseline,
     },
-    experimentResponse: comparison?.experimentResponse == null ? null : {
-      schema: comparison.experimentResponse.schema,
-      candidateCount: comparison.experimentResponse.candidates.length,
+    experimentResponse: (batch.experimentResponse ?? comparison?.experimentResponse) == null ? null : {
+      schema: (batch.experimentResponse ?? comparison?.experimentResponse).schema,
+      candidateCount: (batch.experimentResponse ?? comparison?.experimentResponse).candidates.length,
     },
     comparison: comparison === null ? null : {
       schema: comparison.comparison.schema,

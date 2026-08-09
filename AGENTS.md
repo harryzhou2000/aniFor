@@ -2,21 +2,31 @@
 
 ## Current direction
 
-Pause the detail-first E-number ladder. The active goal is practical framework
-leverage, not another isolated material treatment or evidence ceremony without
-a clear authoring benefit. The thin developer launcher is deployed at revision
-`55624597f2cf04ea280485959f33644a19b7b39e` by workflow run `31338337792`:
-build, shared-host review, Pages deployment, exact 19-resource closure, and the
-live Water fixture all passed. The current checkpoint adds portable current-only
-OFF→A, OFF→B, and A→B response evidence for sampled experiments—including new
-candidates without an accepted baseline—and makes that triptych the launcher's
-primary static review link. Keep it measurement-only, recomputable from pinned
-PNGs, ordered by the current batch result IDs, outside every frozen identity,
-and required only by new trusted review/CI packages so legacy packages remain
-valid. After that, prioritize declarative cohort/fixture authoring only where it
-removes real registration work. Keep the batch, comparison, verifier, and
-promotion implementations single-owned rather than creating a second capture
-pipeline. The modular typed Visual Lab facade,
+Pause the detail-first E-number ladder until the current design goals have an
+efficient authoring and review loop. Exact visual pinning is deprecated while
+the renderer is evolving. Current OFF/A/B captures, response measurements,
+semantic/topology evidence, renderer health, and package integrity are the
+working evidence; the primary agent makes the aesthetic decision and may ask a
+subagent for an independent visual pass. PNG hashes authenticate files within
+one package only. Never treat a historical PNG hash, result ID,
+`encoded-identical` status, or checked-in accepted baseline as a cross-revision
+visual requirement or deploy gate. Keep `accepted-v1`, baseline comparison, and
+promotion readable only for legacy packages or an explicit ad-hoc reference;
+developer review and CI must move to current-only evidence by default.
+
+The portable current-only OFF→A, OFF→B, and A→B response checkpoint is deployed
+at revision `073ca8863a14c5b231b479a8b0466751d5703d8c` by workflow run
+`31339455780`; build, downloaded-package verification, Pages deployment, exact
+19-resource closure, and live Water capture passed. The current local checkpoint
+adds names-only declarative cohort composition, generated static-contract
+declarations, catalog-backed `--cohort` review, and current-only developer/CI
+review without default baseline or provenance dependencies. A real built
+`liquid-motion` cohort review produced and portably verified Oil and Water
+OFF/A/B response evidence; no Chrome process remained. This increment is not
+deployed yet. Keep one capture implementation;
+do not replace integrity hashing, path containment, lifecycle checks, or runtime
+closure. Visual preference needs a retained board and human/agent inspection,
+not broad unit-test expansion. The modular typed Visual Lab facade,
 executable capability profiles, named capture recipes, and content-addressed
 result records are deployed, as is the deterministic batch runner and static
 contact-sheet index. Renderer and capture descriptors share exact domain,

@@ -1,8 +1,19 @@
-# Visual Lab accepted evidence
+# Visual Lab historical accepted evidence
 
-`accepted-v1/` is the portable accepted package for the four frozen Visual Lab
-recipes. Its manifest identity covers only catalog-ordered candidate/result
-records; provenance is deliberately external to that identity.
+`accepted-v1/` is retained as a readable historical/ad-hoc reference, not as
+the default source of visual acceptance. The active developer, CI, and deploy
+workflow captures current OFF/A/B evidence, verifies package integrity and
+renderer health, and presents `experiment-board.html` for human or agent
+inspection. Historical PNG hashes, result IDs, `encoded-identical`, accepted
+baselines, and promotions must not be treated as cross-revision visual gates.
+Hashes authenticate files within one package only; missing, tampered, unsafe,
+incomplete, or request-incompatible evidence remains blocking.
+
+`accepted-v1/` is the portable accepted package for the four formerly frozen
+Visual Lab recipes. Its manifest identity covers only catalog-ordered
+candidate/result records; provenance is deliberately external to that identity.
+The following IDs and byte-identical comparisons are historical records, not
+active acceptance or deployment criteria.
 
 The current package was visually accepted from a fresh local SwiftShader review
 of source revision `627ef5070ffd4628356ba5b27cefbf6554ecae08`. All four release
@@ -23,10 +34,25 @@ original reviewed source. Regeneration produced the exact existing baseline ID
 and byte-identical `index.json` plus twelve PNGs; the sidecar is the only added
 file. Provenance ID
 `sha256:0a7dfe433b4b878c67812e116513c0647affff53c97a7e7905505d271af067f8`
-binds the baseline and ordered result IDs to `hermetic-918x576-v1`. Release
-verification must use `--require-baseline-capture-provenance=1`.
+binds the baseline and ordered result IDs to `hermetic-918x576-v1`. Historical
+release verification used `--require-baseline-capture-provenance=1`; that is a
+legacy reference-only requirement, not a current-only CI/deploy gate.
 
 ## Reusable capture cohorts
+
+The names-only cohort catalog composes checked-in recipe sets without adding a
+new capture path. Validate it and regenerate its tracked projections with:
+
+```sh
+npm run visual-lab:authoring:check
+npm run visual-lab:authoring:sync
+```
+
+For day-to-day review, the developer launcher accepts the cohort name directly:
+
+```sh
+npm run visual-lab:review -- --cohort=liquid-motion
+```
 
 Checked-in `anifor.visual-lab.recipe-set/v1` files live under
 `visual-lab/recipe-sets/`. They contain a bounded name and a nonempty
@@ -54,12 +80,12 @@ using it as evidence, revalidate its ID and require its complete
 
 For the ordinary local edit-to-review loop, use the developer launcher. It
 requires an explicit selection, allocates a unique ignored output root, and
-prints direct static review links after provenance-required verification:
+prints direct current-only review links after verification:
 
 ```sh
 npm run visual-lab:review -- --candidate=water-motion
 npm run visual-lab:review -- \
-  --recipe-set=visual-lab/recipe-sets/liquid-motion.json
+  --cohort=liquid-motion
 ```
 
 When `dist/index.html` is already current, use `visual-lab:review:reuse` to omit
@@ -68,10 +94,20 @@ when CI or a diagnostic script must choose the output directory and capture
 options explicitly. Verified new reviews include a current-only
 `experiment-response.json` and `experiment-board.html` with OFF→A, OFF→B, and
 A→B integer RGBA measurements. These sidecars are recomputable, excluded from
-the frozen comparison identity, and optional only for legacy packages. Neither
-command opens the board, scores a variant, promotes a baseline, or mutates Git.
+the frozen comparison identity, and are checked by portable verification. They
+are evidence for human/agent review, not scoring, acceptance, failure, or
+promotion input. Neither command opens the board, promotes a baseline, or
+mutates Git.
 
-Compare a complete downloaded batch without rebuilding or launching Chrome:
+Use `--baseline-root=visual-baselines/accepted-v1` only when deliberately
+requesting a legacy/ad-hoc comparison. It adds historical comparison views; it
+does not make equality with that package a current CI or deploy requirement.
+
+## Legacy/ad-hoc baseline comparison
+
+Compare a complete downloaded batch against the historical reference without
+rebuilding or launching Chrome. This is informational only and not an active
+visual acceptance, CI, or deployment gate:
 
 ```sh
 npm run audit:visual-lab:baseline:compare -- \
@@ -96,17 +132,17 @@ are checked by the same portable verifier when present; it recomputes metrics
 from the pinned PNG bytes and exact-rerenders the board. Legacy comparison
 packages may omit the board, metrics, and/or brief.
 
-Verify a downloaded review package and its comparison without rewriting either:
+Verify a downloaded current-only review package without rewriting it:
 
 ```sh
 npm run audit:visual-lab:verify -- \
   --batch-root=/path/to/downloaded-review \
-  --baseline-root=visual-baselines/accepted-v1 \
   --recipe-set-source=visual-lab/recipe-sets/release.json \
-  --require-complete=1 --require-recipe-set=1
+  --require-complete=1 --require-recipe-set=1 \
+  --require-experiment-response=1
 ```
 
-The comparison defaults to `<batch-root>/comparison`. Omit
+An explicit legacy comparison defaults to `<batch-root>/comparison`. Omit
 `--recipe-set-source` when no checked cohort should be bound. Legacy complete
 batches may omit `recipe-set.json` when `--require-recipe-set=0`; incomplete
 diagnostic packages require `--require-complete=0` and are never deployable

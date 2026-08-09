@@ -13,7 +13,6 @@ import { runVisualLabPackageVerification } from './visual-lab-verify.mjs';
 const MODULE_PATH = fileURLToPath(import.meta.url);
 const SCRIPT_DIRECTORY = path.dirname(MODULE_PATH);
 const REPOSITORY_ROOT = path.resolve(SCRIPT_DIRECTORY, '..');
-const DEFAULT_BASELINE_ROOT = path.join(REPOSITORY_ROOT, 'visual-baselines/accepted-v1');
 const TOOL = 'visual-lab-review-cycle-v1';
 
 const HELP = `Usage:
@@ -28,9 +27,9 @@ const HELP = `Usage:
     [--candidate-timeout-ms=<milliseconds>]
 
 Runs one trusted review cycle against one existing production bundle or hosted origin:
-capture the selected recipes, compare them with the accepted baseline, then
-verify the exact portable package. The comparison is written beneath
-<new-review-root>/comparison. This command never promotes a baseline, records a
+capture the selected recipes and verify the exact current-only portable package.
+When --baseline-root is explicitly supplied, a legacy comparison is also written
+beneath <new-review-root>/comparison. This command never promotes a baseline, records a
 visual decision, opens a browser UI, or mutates version control.`;
 
 const displayError = (error) => error?.stack ?? String(error);
@@ -129,7 +128,7 @@ export function parseVisualLabReviewArguments(argv) {
   } = parsedBatch;
   return Object.freeze({
     ...batchOptions,
-    baselineRoot: baselineRoot ?? DEFAULT_BASELINE_ROOT,
+    ...(baselineRoot === undefined ? {} : { baselineRoot }),
   });
 }
 
@@ -154,16 +153,15 @@ export async function runVisualLabReviewCycle(options = {}, dependencies = {}) {
   }
 
   const outputDirectory = resolvedPath(options.outputDir, 'Visual Lab review output directory');
-  const baselineRoot = resolvedPath(
-    options.baselineRoot ?? DEFAULT_BASELINE_ROOT,
-    'accepted baseline root',
+  const baselineRoot = options.baselineRoot === undefined ? undefined : resolvedPath(
+    options.baselineRoot, 'accepted baseline root',
   );
   const comparisonRoot = path.join(outputDirectory, 'comparison');
-  if (rootsOverlap(outputDirectory, baselineRoot)) {
+  if (baselineRoot !== undefined && rootsOverlap(outputDirectory, baselineRoot)) {
     throw new Error('accepted baseline and review output must be disjoint');
   }
   await assertReviewOutputReady(outputDirectory);
-  await assertComparisonOutputReady(comparisonRoot);
+  if (baselineRoot !== undefined) await assertComparisonOutputReady(comparisonRoot);
   throwIfAborted(options.signal);
 
   const readRecipeSet = dependencies.readRecipeSet ?? readVisualLabRecipeSet;
@@ -202,20 +200,16 @@ export async function runVisualLabReviewCycle(options = {}, dependencies = {}) {
   }
   throwIfAborted(options.signal);
 
-  const comparison = await runBaseline({
-    mode: 'compare',
-    baselineRoot,
-    resultRoot: outputDirectory,
-    outputDir: comparisonRoot,
+  const comparison = baselineRoot === undefined ? null : await runBaseline({
+    mode: 'compare', baselineRoot, resultRoot: outputDirectory, outputDir: comparisonRoot,
   });
   throwIfAborted(options.signal);
 
   const verification = await verifyPackage({
     batchRoot: outputDirectory,
-    baselineRoot,
-    comparisonRoot,
+    ...(baselineRoot === undefined ? {} : { baselineRoot, comparisonRoot }),
     ...(recipeSetSourcePath === undefined ? {} : { recipeSetSourcePath }),
-    requireBaselineCaptureProvenance: true,
+    requireBaselineCaptureProvenance: baselineRoot !== undefined,
     requireBrowserHostPlan: true,
     requireCaptureGeometry: true,
     requireExecutionTuningPlan: true,
@@ -228,7 +222,7 @@ export async function runVisualLabReviewCycle(options = {}, dependencies = {}) {
   if (verification?.ok !== true) {
     throw new Error('Visual Lab review package verifier did not confirm the generated package');
   }
-  if (verification.comparison?.id !== comparison.comparison?.id) {
+  if (comparison !== null && verification.comparison?.id !== comparison.comparison?.id) {
     throw new Error('Visual Lab review verifier returned a different comparison identity');
   }
 
@@ -239,12 +233,14 @@ export async function runVisualLabReviewCycle(options = {}, dependencies = {}) {
     batch: {
       index: batch.indexPath,
       contactSheet: batch.contactSheetPath,
+      response: batch.responsePath,
+      experimentBoard: batch.experimentBoardPath,
     },
     recipeSet: {
       id: batch.recipeSet.id,
       path: batch.recipeSetPath,
     },
-    comparison: {
+    comparison: comparison === null ? null : {
       id: comparison.comparison.id,
       index: comparison.html,
       brief: comparison.brief,

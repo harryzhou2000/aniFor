@@ -27,23 +27,40 @@ Deploy `dist/` to GitHub Pages, Cloudflare Pages, or Netlify. Vite uses relative
 
 Use the developer launcher for ordinary edit-to-review work. It builds once,
 allocates a unique ignored evidence directory, captures the explicit selection,
-compares it with the accepted baseline, and runs the portable verifier:
+generates current-only response evidence, and runs the portable verifier. It
+does not compare with a historical baseline by default:
 
 ```sh
 npm run visual-lab:review -- --candidate=water-motion
 npm run visual-lab:review -- \
-  --recipe-set=visual-lab/recipe-sets/liquid-motion.json
+  --cohort=liquid-motion
 ```
 
 On Linux it defaults to SwiftShader, one shared browser host, and completed-frame
 receipt proof. The command prints the retained evidence root before capture and
-prints clickable `file://` links to the current experiment-response board,
-accepted/current review board, compact brief, and raw contact sheet only after
-the complete package verifies. The response board places OFF/A/B together and
+prints clickable `file://` links to the current experiment-response board and
+raw contact sheet only after the complete package verifies. An
+accepted/current review board or compact brief is shown only when an explicit
+legacy `--baseline-root` reference was requested. The response board places
+OFF/A/B together and
 reports OFF→A, OFF→B, and A→B integer RGBA differences; it does not score,
 threshold, rank, or promote them. It never clears an old review or opens a user
 browser. Use `npm run visual-lab:review:reuse -- ...` when `dist/index.html` is
 already current.
+
+Hashes in a completed package protect its own files from tampering. They are
+not a cross-revision visual requirement: changing pixels is reviewed by a human
+or agent from the current board, while missing, unsafe, incomplete, or
+incompatible evidence still fails verification. `accepted-v1`, comparison, and
+promotion commands remain available only for an explicit legacy or ad-hoc
+reference; they are not CI or deployment gates.
+
+Author checked-in cohorts and generated static-contract declaration files with:
+
+```sh
+npm run visual-lab:authoring:check
+npm run visual-lab:authoring:sync
+```
 
 ## Visual Lab planning and capture
 
@@ -68,14 +85,15 @@ For a portable cohort and static contact sheet, run:
 
 ```sh
 npm run audit:visual-lab:batch:capture -- \
-  --candidates=gas-showcase,powder-style-atlas \
+  --recipe-set=visual-lab/recipe-sets/atmosphere.json \
   --output-dir=/tmp/anifor-visual-review
 node scripts/visual-lab-verify.mjs \
   --batch-root=/tmp/anifor-visual-review \
   --require-complete=1 --require-recipe-set=1 \
   --require-browser-host-plan=1 \
   --require-execution-tuning-plan=1 \
-  --require-capture-geometry=1
+  --require-capture-geometry=1 \
+  --require-experiment-response=1
 ```
 
 For a larger normal-scale cohort on Linux, opt into sequential Chrome-host

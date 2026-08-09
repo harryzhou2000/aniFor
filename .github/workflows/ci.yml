@@ -287,14 +287,6 @@ jobs:
           fi
           node scripts/visual-lab-batch.mjs "${review_args[@]}"
 
-      - name: Compare with the accepted Visual Lab baseline
-        if: steps.visual-lab-batch.outcome == 'success'
-        run: |
-          node scripts/visual-lab-baseline.mjs compare \
-            --baseline-root=visual-baselines/accepted-v1 \
-            --result-root=artifacts/visual-lab-review \
-            --output-dir=artifacts/visual-lab-review/comparison
-
       - name: Upload Visual Lab review evidence
         if: always()
         uses: actions/upload-artifact@v7
@@ -321,12 +313,9 @@ jobs:
           test "${CAPTURE_OUTCOME}" = success
           verify_args=(
             "--batch-root=${REVIEW_ROOT}"
-            --baseline-root=visual-baselines/accepted-v1
-            "--comparison-root=${REVIEW_ROOT}/comparison"
             --require-complete=1
             --require-recipe-set=1
             --require-browser-host-plan=1
-            --require-baseline-capture-provenance=1
             --require-capture-geometry=1
             --require-execution-tuning-plan=1
             --require-experiment-response=1

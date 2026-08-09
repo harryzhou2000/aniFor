@@ -48,6 +48,10 @@ import {
 } from './visual-lab-capture-abi.mjs';
 import { inspectVisualLabPng } from './visual-lab-png.mjs';
 import {
+  createVisualLabBatchExperimentResponse,
+  VISUAL_LAB_CURRENT_EXPERIMENT_RESPONSE_SCHEMA,
+} from './visual-lab-comparison-metrics.mjs';
+import {
   createVisualLabBrowserHostPlan,
   normalizeVisualLabBrowserHostPlan,
   resolveVisualLabBrowserHostPlanEntry,
@@ -103,6 +107,7 @@ const BROWSER_HOST_PLAN_FILE_NAME = 'browser-host-plan.json';
 const EXECUTION_TUNING_PLAN_FILE_NAME = 'execution-tuning-plan.json';
 const ORIGIN_ATTESTATION_FILE_NAME = 'origin-attestation.json';
 const CLI_DIAGNOSTIC_MAX_FILE_BYTES = 1_048_576;
+const EXPERIMENT_EVIDENCE_MAX_BYTES = 1_048_576;
 const CLI_DIAGNOSTIC_MAX_CHARACTERS = 8_000;
 const CLI_DIAGNOSTIC_MAX_AGGREGATE_DEPTH = 4;
 const CLI_DIAGNOSTIC_MAX_AGGREGATE_CHILDREN = 8;
@@ -290,11 +295,14 @@ const sameStableFile = (left, right) => (
 );
 
 /** Reads one real regular file without following a leaf/ancestor symlink or replacement. */
-const readStableRegularFile = async (file, label, encoding) => {
+const readStableRegularFile = async (file, label, encoding, maxBytes) => {
   await assertRealAncestors(file, label);
   const before = await lstat(file, { bigint: true });
   if (before.isSymbolicLink() || !before.isFile()) {
     throw new Error(`${label} must be a real regular file`);
+  }
+  if (maxBytes !== undefined && before.size > BigInt(maxBytes)) {
+    throw new Error(`${label} exceeds ${maxBytes} bytes`);
   }
   const flags = typeof fsConstants.O_NOFOLLOW === 'number'
     ? fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW
@@ -306,7 +314,22 @@ const readStableRegularFile = async (file, label, encoding) => {
     if (!opened.isFile() || !sameStableFile(before, opened)) {
       throw new Error(`${label} changed while opening`);
     }
-    contents = await handle.readFile(encoding);
+    if (maxBytes === undefined) {
+      contents = await handle.readFile(encoding);
+    } else {
+      const bounded = Buffer.allocUnsafe(maxBytes + 1);
+      let offset = 0;
+      while (offset < bounded.length) {
+        const { bytesRead } = await handle.read(
+          bounded, offset, bounded.length - offset, offset,
+        );
+        if (bytesRead === 0) break;
+        offset += bytesRead;
+      }
+      if (offset > maxBytes) throw new Error(`${label} exceeds ${maxBytes} bytes`);
+      const bytes = bounded.subarray(0, offset);
+      contents = encoding === undefined ? bytes : bytes.toString(encoding);
+    }
   } finally {
     await handle.close();
   }
@@ -761,6 +784,38 @@ export function renderVisualLabContactSheet(index) {
 </body>
 </html>
 `;
+}
+
+/** Current-only inspection surface. It deliberately has no decision controls. */
+export function renderVisualLabExperimentBoard(index, response) {
+  if (index?.schema !== VISUAL_LAB_BATCH_SCHEMA || index.complete !== true
+    || response?.schema !== VISUAL_LAB_CURRENT_EXPERIMENT_RESPONSE_SCHEMA
+    || !Array.isArray(response.candidates)) {
+    throw new TypeError('Experiment board requires a complete batch and response evidence');
+  }
+  const byCandidate = new Map(response.candidates.map((entry) => [entry.candidate, entry]));
+  const cards = index.candidates.map((entry) => {
+    const measured = byCandidate.get(entry.candidate);
+    if (entry.status !== 'passed' || measured?.result?.id !== entry.result.id) {
+      throw new TypeError(`Experiment response does not match ${entry.candidate}`);
+    }
+    const figures = VARIANTS.map((variant) => `<figure><a href="./${
+      escapeHtml(entry.artifacts[variant])
+    }"><img src="./${escapeHtml(entry.artifacts[variant])}" loading="lazy" alt="${
+      escapeHtml(`${entry.candidate} ${variant}`)
+    }"></a><figcaption>${escapeHtml(variant.toUpperCase())}</figcaption></figure>`).join('');
+    const metrics = Object.values(measured.pairs).map(({ left, right, metric }) => {
+      const summary = metric.kind === 'dimension-mismatch'
+        ? `dimensions ${metric.left?.width ?? metric.baseline.width}×${metric.left?.height ?? metric.baseline.height} → ${metric.right?.width ?? metric.current.width}×${metric.right?.height ?? metric.current.height}`
+        : `RGB changed pixels ${metric.rgb.differentPixels}, peak ${metric.rgb.channelPeak}; alpha changed pixels ${metric.alpha.differentPixels}, peak ${metric.alpha.channelPeak}`;
+      return `<li><strong>${escapeHtml(left.toUpperCase())}→${escapeHtml(right.toUpperCase())}</strong>: ${escapeHtml(summary)}</li>`;
+    }).join('');
+    return `<article><h2>${escapeHtml(entry.candidate)}</h2><div class="captures">${figures}</div><ul>${metrics}</ul></article>`;
+  }).join('');
+  if (byCandidate.size !== index.candidates.length) {
+    throw new TypeError('Experiment response contains candidates outside the batch');
+  }
+  return `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Visual Lab current experiment</title><style>:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#11151b;color:#eaf0f7}body{margin:0 auto;max-width:1800px;padding:24px}article{background:#1b222c;border:1px solid #344252;border-radius:12px;padding:16px;margin:18px 0}.captures{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}figure{margin:0}img{display:block;width:100%;height:auto}figcaption{text-align:center;margin-top:5px}@media(max-width:760px){.captures{grid-template-columns:1fr}}</style></head><body><h1>Current experiment response</h1><p>OFF, A, and B captures from this batch. Hashes authenticate files within this package only. Measurements provide no score or verdict and do not pin visuals across revisions. Full response data is in <a href="./experiment-response.json">experiment-response.json</a>.</p><main>${cards}</main></body></html>\n`;
 }
 
 const assertCurrentCaptureContract = (report, executionPlan, hashes) => {
@@ -1434,7 +1489,7 @@ export async function verifyVisualLabBatchPackage(options = {}) {
   const allowed = new Set([
     'batchRoot', 'requireBrowserHostPlan', 'requireExecutionTuningPlan',
     'requireCaptureGeometry', 'requireComplete', 'requireOriginAttestation', 'requireRecipeSet',
-    'recipeSetSourcePath',
+    'recipeSetSourcePath', 'requireExperimentResponse',
   ]);
   const unexpected = Reflect.ownKeys(options).filter((key) => !allowed.has(key));
   if (unexpected.length > 0) {
@@ -1449,12 +1504,14 @@ export async function verifyVisualLabBatchPackage(options = {}) {
   const requireCaptureGeometry = options.requireCaptureGeometry ?? false;
   const requireOriginAttestation = options.requireOriginAttestation ?? false;
   const requireRecipeSet = options.requireRecipeSet ?? false;
+  const requireExperimentResponse = options.requireExperimentResponse ?? false;
   if (typeof requireComplete !== 'boolean'
     || typeof requireBrowserHostPlan !== 'boolean'
     || typeof requireExecutionTuningPlan !== 'boolean'
     || typeof requireCaptureGeometry !== 'boolean'
     || typeof requireOriginAttestation !== 'boolean'
-    || typeof requireRecipeSet !== 'boolean') {
+    || typeof requireRecipeSet !== 'boolean'
+    || typeof requireExperimentResponse !== 'boolean') {
     throw new TypeError('Visual Lab batch verification requirement flags must be booleans');
   }
 
@@ -1495,6 +1552,48 @@ export async function verifyVisualLabBatchPackage(options = {}) {
   }
   if (requireComplete && !canonical.complete) {
     throw new TypeError('Visual Lab batch package is incomplete');
+  }
+  const responsePath = path.join(batchRoot, 'experiment-response.json');
+  const experimentBoardPath = path.join(batchRoot, 'experiment-board.html');
+  const [responseDetails, boardDetails] = await Promise.all([
+    pathDetails(responsePath), pathDetails(experimentBoardPath),
+  ]);
+  if (Boolean(responseDetails) !== Boolean(boardDetails)) {
+    throw new TypeError('Visual Lab batch response JSON and board must be present together');
+  }
+  if (requireExperimentResponse && !responseDetails) {
+    throw new TypeError('Visual Lab batch package is missing current experiment response evidence');
+  }
+  let experimentResponse = null;
+  if (responseDetails) {
+    if (!canonical.complete) {
+      throw new TypeError('Incomplete Visual Lab batches cannot publish experiment response evidence');
+    }
+    const [responseSource, boardSource] = await Promise.all([
+      readStableRegularFile(
+        responsePath, 'Visual Lab experiment response', 'utf8', EXPERIMENT_EVIDENCE_MAX_BYTES,
+      ),
+      readStableRegularFile(
+        experimentBoardPath, 'Visual Lab experiment board', 'utf8',
+        EXPERIMENT_EVIDENCE_MAX_BYTES,
+      ),
+    ]);
+    const publishedResponse = parsePortableJson(responseSource, 'Visual Lab experiment response');
+    experimentResponse = await createVisualLabBatchExperimentResponse(
+      canonical,
+      async (candidate, variant) => readStableRegularFile(
+        path.join(batchRoot, canonical.candidates.find((entry) => (
+          entry.candidate === candidate
+        )).artifacts[variant]),
+        `Visual Lab ${candidate} ${variant} capture`,
+      ),
+    );
+    if (!isDeepStrictEqual(publishedResponse, experimentResponse)) {
+      throw new TypeError('Visual Lab experiment response does not match current captures');
+    }
+    if (boardSource !== renderVisualLabExperimentBoard(canonical, experimentResponse)) {
+      throw new TypeError('Visual Lab experiment board does not match current response evidence');
+    }
   }
   if (requireCaptureGeometry) {
     const missing = entries.filter((entry) => (
@@ -1588,6 +1687,9 @@ export async function verifyVisualLabBatchPackage(options = {}) {
     browserHostPlan,
     executionTuningPlan,
     originAttestation,
+    experimentResponse,
+    responsePath: responseDetails ? responsePath : null,
+    experimentBoardPath: boardDetails ? experimentBoardPath : null,
     captureDiagnostics: entries.flatMap((entry) => (
       entry.status === 'passed' ? [entry.captureDiagnostic] : []
     )),
@@ -1971,6 +2073,8 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   const candidateRoot = path.join(outputDirectory, 'candidates');
   const indexPath = path.join(outputDirectory, 'index.json');
   const contactSheetPath = path.join(outputDirectory, 'index.html');
+  const responsePath = path.join(outputDirectory, 'experiment-response.json');
+  const experimentBoardPath = path.join(outputDirectory, 'experiment-board.html');
   const recipeSetPath = path.join(outputDirectory, 'recipe-set.json');
   const browserHostPlanPath = path.join(outputDirectory, BROWSER_HOST_PLAN_FILE_NAME);
   const executionTuningPlanPath = path.join(
@@ -2028,8 +2132,9 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   // before new evidence can be aggregated. Remove only root files owned by
   // this tool; candidate logs remain available for diagnosis.
   await Promise.all([
-    indexPath, contactSheetPath, recipeSetPath,
-    `${indexPath}.tmp`, `${contactSheetPath}.tmp`, `${recipeSetPath}.tmp`,
+    indexPath, contactSheetPath, responsePath, experimentBoardPath, recipeSetPath,
+    `${indexPath}.tmp`, `${contactSheetPath}.tmp`, `${responsePath}.tmp`,
+    `${experimentBoardPath}.tmp`, `${recipeSetPath}.tmp`,
     ...(!indexOnly ? [
       browserHostPlanPath, `${browserHostPlanPath}.tmp`,
       executionTuningPlanPath, `${executionTuningPlanPath}.tmp`,
@@ -2444,6 +2549,26 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   });
   const timingSummary = summarizeEntryTimings(entries);
   const captureSubphaseSummary = summarizeEntryCaptureSubphases(entries);
+  let experimentResponse = null;
+  if (index.complete) {
+    experimentResponse = await createVisualLabBatchExperimentResponse(
+      index,
+      async (candidate, variant) => readStableRegularFile(
+        path.join(outputDirectory, index.candidates.find((entry) => (
+          entry.candidate === candidate
+        )).artifacts[variant]),
+        `Visual Lab ${candidate} ${variant} capture`,
+      ),
+    );
+    const responseSource = `${JSON.stringify(experimentResponse, null, 2)}\n`;
+    const experimentBoard = renderVisualLabExperimentBoard(index, experimentResponse);
+    if (Buffer.byteLength(responseSource) > EXPERIMENT_EVIDENCE_MAX_BYTES
+      || Buffer.byteLength(experimentBoard) > EXPERIMENT_EVIDENCE_MAX_BYTES) {
+      throw new Error('Visual Lab current experiment evidence exceeds the 1 MiB bound');
+    }
+    await publishFile(responsePath, responseSource);
+    await publishFile(experimentBoardPath, experimentBoard);
+  }
   // Publish the human sheet first and the machine-readable completion marker
   // last. A crash or sheet error therefore cannot leave complete:true without
   // its corresponding contact sheet.
@@ -2455,6 +2580,9 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
     index,
     indexPath,
     contactSheetPath,
+    response: experimentResponse,
+    responsePath: experimentResponse === null ? null : responsePath,
+    experimentBoardPath: experimentResponse === null ? null : experimentBoardPath,
     recipeSet,
     recipeSetPath,
     plan: executionPlan.inspection,

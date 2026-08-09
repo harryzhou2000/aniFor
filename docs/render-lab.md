@@ -52,12 +52,13 @@ so normal public showcase URLs retain their ordinary non-audit behavior.
 ## Completed-frame receipt audit
 
 For ordinary local visual iteration, prefer the thin developer launcher over
-assembling the capture, comparison, and verifier commands manually:
+assembling the capture and verifier commands manually. It is current-only by
+default; historical baseline comparison is an explicit ad-hoc choice:
 
 ```sh
 npm run visual-lab:review -- --candidate=water-motion
 npm run visual-lab:review -- \
-  --recipe-set=visual-lab/recipe-sets/liquid-motion.json
+  --cohort=liquid-motion
 ```
 
 It uses the existing trusted review-cycle implementation, chooses a unique
@@ -68,8 +69,20 @@ every sampled candidate, including a new candidate without accepted evidence.
 Its optional checkbox scratchpad only assembles a canonical `--candidates=`
 argument; it records no decision and never promotes. The response JSON and board
 are recomputed by the portable verifier and remain outside all frozen package
-identities. `visual-lab:review:reuse` skips only the build when `dist/` is already
-current; it does not weaken capture, provenance, or response checks.
+identities. PNG/result hashes establish only within-package integrity; visual
+preference comes from human/agent inspection of this board, not cross-revision
+hash equality. `--baseline-root=visual-baselines/accepted-v1` is available only
+for an explicit legacy/ad-hoc comparison and is not a CI or deploy gate.
+`visual-lab:review:reuse` skips only the build when `dist/` is already current;
+it does not weaken capture, renderer-health, integrity, or response checks.
+
+The declarative authoring guard keeps tracked cohort projections and static
+contract declarations synchronized without registering a new audit path:
+
+```sh
+npm run visual-lab:authoring:check
+npm run visual-lab:authoring:sync
+```
 
 The renderer exposes an audit-only, versioned GPU completion receipt for one
 exact full presentation. Normal WebGL inserts its non-blocking sync only after

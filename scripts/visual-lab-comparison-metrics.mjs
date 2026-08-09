@@ -11,6 +11,9 @@ export const VISUAL_LAB_COMPARISON_METRICS_SCHEMA = (
 export const VISUAL_LAB_EXPERIMENT_RESPONSE_SCHEMA = (
   'anifor.visual-lab.experiment-response/v1'
 );
+export const VISUAL_LAB_CURRENT_EXPERIMENT_RESPONSE_SCHEMA = (
+  'anifor.visual-lab.current-experiment-response/v1'
+);
 
 const COMPARISON_SCHEMA = 'anifor.visual-lab.comparison/v1';
 const BATCH_SCHEMA = 'anifor.visual-lab.batch/v1';
@@ -287,6 +290,59 @@ export async function createVisualLabExperimentResponse(comparison, readCapture)
   return deepFreeze({
     schema: VISUAL_LAB_EXPERIMENT_RESPONSE_SCHEMA,
     comparison: { schema: comparison.schema, id: comparison.id },
+    candidates,
+  });
+}
+
+/**
+ * Builds current-only response evidence directly from a complete batch. The
+ * ordered result IDs are the sole experiment binding; capture hashes only
+ * authenticate PNG bytes inside this package.
+ */
+export async function createVisualLabBatchExperimentResponse(batch, readCapture) {
+  if (batch?.schema !== BATCH_SCHEMA || batch.complete !== true
+    || !Array.isArray(batch.candidates) || batch.candidates.length === 0
+    || batch.candidates.some((entry) => entry?.status !== 'passed')) {
+    throw new TypeError(`batch experiment response requires a complete ${BATCH_SCHEMA}`);
+  }
+  if (typeof readCapture !== 'function') {
+    throw new TypeError('batch experiment response requires a capture reader');
+  }
+
+  const resultIds = [];
+  const seen = new Set();
+  const candidates = [];
+  for (const entry of batch.candidates) {
+    const result = entry.result;
+    if (result?.schema !== RESULT_SCHEMA || !SHA256_ID.test(result.id ?? '')) {
+      throw new TypeError(`batch experiment response requires a result for ${entry.candidate}`);
+    }
+    if (seen.has(result.id)) {
+      throw new TypeError(`batch experiment response received duplicate result ID ${result.id}`);
+    }
+    seen.add(result.id);
+    resultIds.push(result.id);
+    const images = {};
+    for (const variant of VARIANTS) {
+      const bytes = await readCapture(entry.candidate, variant);
+      assertPinnedCapture(
+        bytes, result.captureSha256?.[variant], `${entry.candidate} ${variant} current`,
+      );
+      images[variant] = decodeVisualLabPng(bytes, `${entry.candidate} ${variant} current`);
+    }
+    candidates.push({
+      candidate: entry.candidate,
+      result: { schema: result.schema, id: result.id },
+      pairs: {
+        offToA: { left: 'off', right: 'a', metric: measureDecodedVisualLabPngPair(images.off, images.a) },
+        offToB: { left: 'off', right: 'b', metric: measureDecodedVisualLabPngPair(images.off, images.b) },
+        aToB: { left: 'a', right: 'b', metric: measureDecodedVisualLabPngPair(images.a, images.b) },
+      },
+    });
+  }
+  return deepFreeze({
+    schema: VISUAL_LAB_CURRENT_EXPERIMENT_RESPONSE_SCHEMA,
+    batch: { schema: batch.schema, resultIds },
     candidates,
   });
 }

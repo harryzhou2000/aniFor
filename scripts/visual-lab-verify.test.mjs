@@ -37,6 +37,10 @@ const batchEvidence = {
     readiness: {},
     captures: {},
   },
+  experimentResponse: {
+    schema: 'anifor.visual-lab.current-experiment-response/v1',
+    candidates: [{ candidate: 'gas-showcase' }],
+  },
 };
 
 const comparisonEvidence = {
@@ -123,9 +127,9 @@ describe('Visual Lab portable package verifier', () => {
     expect(() => parseVisualLabVerifyArguments([
       '--batch-root=batch', '--require-experiment-response=yes',
     ])).toThrow('must be 0 or 1');
-    expect(() => parseVisualLabVerifyArguments([
+    expect(parseVisualLabVerifyArguments([
       '--batch-root=batch', '--require-experiment-response=1',
-    ])).toThrow('requires --baseline-root');
+    ])).toMatchObject({ requireExperimentResponse: true, baselineRoot: undefined });
     expect(() => parseVisualLabVerifyArguments([
       '--batch-root=batch', '--batch-root=again',
     ])).toThrow('only be provided once');
@@ -163,6 +167,7 @@ describe('Visual Lab portable package verifier', () => {
         requireBrowserHostPlan: true,
         requireCaptureGeometry: true,
         requireExecutionTuningPlan: true,
+        requireExperimentResponse: true,
         requireOriginAttestation: true,
         requireComplete: true,
         requireRecipeSet: true,
@@ -196,7 +201,7 @@ describe('Visual Lab portable package verifier', () => {
       captureSubphases: batchEvidence.captureSubphases,
       baselineCaptureProvenance: comparisonEvidence.baselineCaptureProvenance,
       experimentResponse: {
-        schema: 'anifor.visual-lab.experiment-response/v1',
+        schema: 'anifor.visual-lab.current-experiment-response/v1',
         candidateCount: 1,
       },
       comparison: comparisonEvidence.comparison,
@@ -217,7 +222,9 @@ describe('Visual Lab portable package verifier', () => {
     expect(batchOnly.executionTuningPlan).toBeNull();
     expect(batchOnly.originAttestation).toBeNull();
     expect(batchOnly.baselineCaptureProvenance).toBeNull();
-    expect(batchOnly.experimentResponse).toBeNull();
+    expect(batchOnly.experimentResponse).toEqual({
+      schema: 'anifor.visual-lab.current-experiment-response/v1', candidateCount: 1,
+    });
     expect(batchOnly.comparison).toBeNull();
 
     let legacyComparisonOptions;
@@ -240,9 +247,15 @@ describe('Visual Lab portable package verifier', () => {
     await expect(runVisualLabPackageVerification({
       batchRoot: 'batch', baselineRoot: 'accepted',
     })).rejects.toThrow('requires comparisonRoot');
-    await expect(runVisualLabPackageVerification({
+    const currentOnly = await runVisualLabPackageVerification({
       batchRoot: 'batch', requireExperimentResponse: true,
-    })).rejects.toThrow('requires baselineRoot');
+    }, { verifyBatch: async (options) => {
+      expect(options.requireExperimentResponse).toBe(true);
+      return batchEvidence;
+    } });
+    expect(currentOnly.experimentResponse).toEqual({
+      schema: 'anifor.visual-lab.current-experiment-response/v1', candidateCount: 1,
+    });
     await expect(runVisualLabPackageVerification({
       batchRoot: 'batch', mutation: true,
     })).rejects.toThrow('Unknown Visual Lab package verification option');
@@ -273,12 +286,13 @@ describe('Visual Lab portable package verifier', () => {
     expect(download).toBeGreaterThan(upload);
     expect(verify).toBeGreaterThan(download);
     expect(workflow).toContain('"--batch-root=${REVIEW_ROOT}"');
-    expect(workflow).toContain('--baseline-root=visual-baselines/accepted-v1');
-    expect(workflow).toContain('"--comparison-root=${REVIEW_ROOT}/comparison"');
+    expect(workflow).not.toContain('Compare with the accepted Visual Lab baseline');
+    expect(workflow).not.toContain('--baseline-root=visual-baselines/accepted-v1');
+    expect(workflow).not.toContain('"--comparison-root=${REVIEW_ROOT}/comparison"');
     expect(workflow).toContain('--require-complete=1');
     expect(workflow).toContain('--require-recipe-set=1');
     expect(workflow).toContain('--require-browser-host-plan=1');
-    expect(workflow).toContain('--require-baseline-capture-provenance=1');
+    expect(workflow).not.toContain('--require-baseline-capture-provenance=1');
     expect(workflow).toContain('--require-capture-geometry=1');
     expect(workflow).toContain('--require-execution-tuning-plan=1');
     expect(workflow).toContain('--require-experiment-response=1');

@@ -157,24 +157,25 @@ describe('deploy-verified CI workflow contract', () => {
   it('retains review artifact verification and exact live-revision verification order', () => {
     const review = indentedEntry(workflow, 'visual-lab-review', 2);
     const capture = namedStep(review, 'Capture deterministic Visual Lab review');
-    const comparison = review.indexOf('Compare with the accepted Visual Lab baseline');
     const upload = review.indexOf('Upload Visual Lab review evidence');
     const download = review.indexOf('Download uploaded Visual Lab review evidence');
     const verify = review.indexOf('node scripts/visual-lab-verify.mjs "${verify_args[@]}"');
-    expect(comparison).toBeGreaterThan(0);
-    expect(upload).toBeGreaterThan(comparison);
+    expect(upload).toBeGreaterThan(0);
     expect(download).toBeGreaterThan(upload);
     expect(verify).toBeGreaterThan(download);
     expect(review).toContain('name: anifortpt-visual-lab-${{ github.sha }}');
     expect(review).toContain('path: ${{ runner.temp }}/anifortpt-visual-lab-review');
     expect(review).toContain('"--batch-root=${REVIEW_ROOT}"');
-    expect(review).toContain('--baseline-root=visual-baselines/accepted-v1');
-    expect(review).toContain('"--comparison-root=${REVIEW_ROOT}/comparison"');
+    expect(review).not.toContain('Compare with the accepted Visual Lab baseline');
+    expect(review).not.toContain('--baseline-root=visual-baselines/accepted-v1');
+    expect(review).not.toContain('"--comparison-root=${REVIEW_ROOT}/comparison"');
     expect(review).toContain('--require-complete=1');
     expect(review).toContain('--require-recipe-set=1');
     expect(review).toContain('--require-browser-host-plan=1');
-    expect(review).toContain('--require-baseline-capture-provenance=1');
+    expect(review).not.toContain('--require-baseline-capture-provenance=1');
     expect(review).toContain('--require-capture-geometry=1');
+    expect(review).toContain('--require-execution-tuning-plan=1');
+    expect(review).toContain('--require-experiment-response=1');
     expect(capture).toContain('--browser-host=shared');
     expect(capture.match(/--browser-host=shared/g)).toHaveLength(1);
     expect(capture).toContain(

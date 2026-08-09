@@ -9,6 +9,8 @@ import {
   parseVisualLabReviewArguments,
   runVisualLabReviewCycle,
 } from './visual-lab-review.mjs';
+import { resolveVisualLabCohort } from './visual-lab-cohort-catalog.mjs';
+import { readVisualLabRecipeSet } from './visual-lab-recipe-set.mjs';
 
 const MODULE_PATH = fileURLToPath(import.meta.url);
 const REPOSITORY_ROOT = path.resolve(path.dirname(MODULE_PATH), '..');
@@ -18,13 +20,14 @@ const execFileAsync = promisify(execFile);
 
 const HELP = `Usage:
   node scripts/visual-lab-developer-review.mjs \\
-    (--candidate=<name> | --recipe-set=<recipe-set.json>) \\
+    (--candidate=<name> | --cohort=<kebab-name> | --recipe-set=<recipe-set.json>) \\
     [Visual Lab review capture options]
 
 Runs one local edit-to-review cycle through the existing trusted review API. It
 allocates a new ignored .artifacts/visual-lab-reviews directory, captures the
-selected recipe or cohort, compares it with the accepted baseline, verifies the
-portable package, and prints static file links only after verification succeeds.
+selected recipe or cohort, verifies the current-only portable package, and prints
+static file links only after verification succeeds. An explicit --baseline-root
+also enables the legacy accepted-baseline comparison.
 
 The developer defaults are dist/index.html, SwiftShader, completed-frame receipt,
 and a shared browser host on Linux (fresh elsewhere). --output-dir is deliberately
@@ -132,15 +135,15 @@ export function parseVisualLabDeveloperReviewArguments(
 
   if (hasOption(argv, 'candidates')) {
     throw new Error(
-      '--candidates is not supported by the developer launcher; use one --candidate or a tracked --recipe-set',
+      '--candidates is not supported by the developer launcher; use one --candidate, a catalog --cohort, or a tracked --recipe-set',
     );
   }
   const selectionArguments = argv.filter((argument) => (
-    ['candidate', 'recipe-set'].includes(optionName(argument))
+    ['candidate', 'cohort', 'recipe-set'].includes(optionName(argument))
   ));
   if (selectionArguments.length !== 1) {
     throw new Error(
-      'Visual Lab developer review requires exactly one of --candidate or --recipe-set',
+      'Visual Lab developer review requires exactly one of --candidate, --cohort, or --recipe-set',
     );
   }
   if (hasOption(argv, 'output-dir')) {
@@ -148,7 +151,18 @@ export function parseVisualLabDeveloperReviewArguments(
   }
 
   const repository = path.resolve(repositoryRoot);
+  let cohortName;
   const normalizedArguments = argv.map((argument) => {
+    if (optionName(argument) === 'cohort') {
+      const separator = argument.indexOf('=');
+      if (separator === -1) return argument;
+      const cohort = argument.slice(separator + 1);
+      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(cohort) || cohort.length > 64) {
+        throw new Error('--cohort must be a safe kebab-case name');
+      }
+      cohortName = cohort;
+      return `--recipe-set=${path.join(repository, 'visual-lab', 'recipe-sets', `${cohort}.json`)}`;
+    }
     if (optionName(argument) === 'recipe-set') {
       const separator = argument.indexOf('=');
       if (separator === -1) return argument;
@@ -167,15 +181,17 @@ export function parseVisualLabDeveloperReviewArguments(
     `--output-dir=${path.join(repository, '.artifacts', 'visual-lab-reviews', '.pending')}`,
     ...(hasOption(normalizedArguments, 'bundle') || hasOption(normalizedArguments, 'base-url')
       ? [] : [`--bundle=${path.join(repository, 'dist', 'index.html')}`]),
-    ...(hasOption(normalizedArguments, 'baseline-root')
-      ? [] : [`--baseline-root=${path.join(repository, 'visual-baselines', 'accepted-v1')}`]),
     ...(hasOption(normalizedArguments, 'gpu') ? [] : ['--gpu=swiftshader']),
     ...(hasOption(normalizedArguments, 'capture-proof')
       ? [] : ['--capture-proof=completed-frame-receipt']),
     ...(hasOption(normalizedArguments, 'browser-host')
       ? [] : [`--browser-host=${platform === 'linux' ? 'shared' : 'fresh'}`]),
   ];
-  return parseVisualLabReviewArguments([...normalizedArguments, ...defaults]);
+  const parsed = parseVisualLabReviewArguments([...normalizedArguments, ...defaults]);
+  return Object.freeze({
+    ...parsed,
+    ...(cohortName === undefined ? {} : { cohortName }),
+  });
 }
 
 const requireReviewArtifact = async (value, label, reviewRoot, filesystem) => {
@@ -217,11 +233,34 @@ export async function runVisualLabDeveloperReview(argv, runtime = {}) {
   const stderr = runtime.stderr ?? process.stderr;
   const createUuid = runtime.randomUUID ?? randomUUID;
   const runReviewCycle = runtime.runReviewCycle ?? runVisualLabReviewCycle;
+  const cohort = parsed.cohortName === undefined ? undefined : await (
+    runtime.resolveCohort ?? resolveVisualLabCohort
+  )(parsed.cohortName, {
+    catalogPath: path.join(repositoryRoot, 'visual-lab', 'cohorts.json'),
+    outputDirectory: path.join(repositoryRoot, 'visual-lab', 'recipe-sets'),
+  });
+  if (cohort !== undefined) {
+    const expectedSnapshotPath = path.join(
+      repositoryRoot, 'visual-lab', 'recipe-sets', `${parsed.cohortName}.json`,
+    );
+    if (cohort.name !== parsed.cohortName
+      || path.resolve(cohort.snapshotPath) !== expectedSnapshotPath) {
+      throw new Error('Visual Lab developer cohort resolver returned an unexpected tracked recipe set');
+    }
+  }
   if (parsed.recipeSetPath !== undefined) {
     await (runtime.assertTrackedRecipeSet ?? assertTrackedRecipeSet)(
-      parsed.recipeSetPath,
+      cohort?.snapshotPath ?? parsed.recipeSetPath,
       repositoryRoot,
     );
+  }
+  if (cohort !== undefined) {
+    const snapshot = await (runtime.readRecipeSet ?? readVisualLabRecipeSet)(
+      cohort.snapshotPath,
+    );
+    if (snapshot.id !== cohort.recipeSet?.id || snapshot.name !== cohort.name) {
+      throw new Error('Visual Lab developer cohort snapshot is stale; run npm run visual-lab:authoring:sync');
+    }
   }
   const reviewRoot = await reserveReviewRoot({
     repositoryRoot,
@@ -231,34 +270,42 @@ export async function runVisualLabDeveloperReview(argv, runtime = {}) {
   });
   stdout.write(`Visual Lab review root: ${reviewRoot}\n`);
 
-  const { help: _help, outputDir: _placeholderOutput, ...reviewOptions } = parsed;
+  const {
+    help: _help,
+    outputDir: _placeholderOutput,
+    cohortName: _cohortName,
+    ...reviewOptions
+  } = parsed;
   try {
     const result = await runReviewCycle({
       ...reviewOptions,
+      ...(cohort === undefined ? {} : { recipeSetPath: cohort.snapshotPath }),
       outputDir: reviewRoot,
       ...(runtime.signal === undefined ? {} : { signal: runtime.signal }),
     });
     if (result?.ok !== true) {
       throw new Error('Visual Lab developer review cycle did not report success');
     }
-    const [experimentBoard, board, brief, contactSheet] = await Promise.all([
+    const [experimentBoard, contactSheet] = await Promise.all([
       requireReviewArtifact(
-        result.comparison?.experimentBoard, 'the experiment response board', reviewRoot, filesystem,
-      ),
-      requireReviewArtifact(
-        result.comparison?.board, 'the review board', reviewRoot, filesystem,
-      ),
-      requireReviewArtifact(
-        result.comparison?.brief, 'the compact review brief', reviewRoot, filesystem,
+        result.batch?.experimentBoard, 'the experiment response board', reviewRoot, filesystem,
       ),
       requireReviewArtifact(
         result.batch?.contactSheet, 'the raw capture sheet', reviewRoot, filesystem,
       ),
     ]);
-    const links = Object.freeze({ experimentBoard, board, brief, contactSheet });
+    const legacyLinks = result.comparison == null ? {} : {
+      board: await requireReviewArtifact(
+        result.comparison.board, 'the review board', reviewRoot, filesystem,
+      ),
+      brief: await requireReviewArtifact(
+        result.comparison.brief, 'the compact review brief', reviewRoot, filesystem,
+      ),
+    };
+    const links = Object.freeze({ experimentBoard, ...legacyLinks, contactSheet });
     stdout.write(`Experiment response: ${links.experimentBoard}\n`);
-    stdout.write(`Review board: ${links.board}\n`);
-    stdout.write(`Compact brief: ${links.brief}\n`);
+    if (links.board !== undefined) stdout.write(`Review board: ${links.board}\n`);
+    if (links.brief !== undefined) stdout.write(`Compact brief: ${links.brief}\n`);
     stdout.write(`Raw captures: ${links.contactSheet}\n`);
     return Object.freeze({ ok: true, reviewRoot, links, result });
   } catch (error) {
