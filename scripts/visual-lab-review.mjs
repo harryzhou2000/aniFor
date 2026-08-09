@@ -215,6 +215,7 @@ export async function runVisualLabReviewCycle(options = {}, dependencies = {}) {
     baselineRoot,
     comparisonRoot,
     ...(recipeSetSourcePath === undefined ? {} : { recipeSetSourcePath }),
+    requireBaselineCaptureProvenance: true,
     requireBrowserHostPlan: true,
     requireCaptureGeometry: true,
     requireExecutionTuningPlan: true,

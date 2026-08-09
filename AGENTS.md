@@ -2,8 +2,17 @@
 
 ## Current direction
 
-Pause the detail-first E-number ladder. The active goal is framework leverage,
-not another isolated material treatment. The modular typed Visual Lab facade,
+Pause the detail-first E-number ladder. The active goal is practical framework
+leverage, not another isolated material treatment or another evidence schema
+without a clear authoring benefit. The next checkpoint is a thin developer
+launcher over the existing trusted review cycle: one explicit candidate or
+tracked recipe set, one automatically allocated ignored evidence root, useful
+SwiftShader/shared-host/receipt defaults, accepted-baseline provenance, and
+direct static review-board links. Keep the batch, comparison, verifier, and
+promotion implementations single-owned rather than creating a second capture
+pipeline. After that, prioritize current OFF/A/B response measurements for new
+experiments and declarative cohort/fixture authoring where it removes real
+registration work. The modular typed Visual Lab facade,
 executable capability profiles, named capture recipes, and content-addressed
 result records are deployed, as is the deterministic batch runner and static
 contact-sheet index. Renderer and capture descriptors share exact domain,

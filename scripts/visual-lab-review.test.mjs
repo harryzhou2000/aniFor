@@ -154,6 +154,7 @@ describe('Visual Lab review-cycle orchestration', () => {
         batchRoot: outputDir,
         baselineRoot,
         comparisonRoot,
+        requireBaselineCaptureProvenance: true,
         requireBrowserHostPlan: true,
         requireCaptureGeometry: true,
         requireExecutionTuningPlan: true,

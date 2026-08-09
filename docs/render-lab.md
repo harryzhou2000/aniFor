@@ -51,6 +51,20 @@ so normal public showcase URLs retain their ordinary non-audit behavior.
 
 ## Completed-frame receipt audit
 
+For ordinary local visual iteration, prefer the thin developer launcher over
+assembling the capture, comparison, and verifier commands manually:
+
+```sh
+npm run visual-lab:review -- --candidate=water-motion
+npm run visual-lab:review -- \
+  --recipe-set=visual-lab/recipe-sets/liquid-motion.json
+```
+
+It uses the existing trusted review-cycle implementation, chooses a unique
+ignored evidence root, and prints static review-board links after complete
+verification. `visual-lab:review:reuse` skips only the build when `dist/` is
+already current; it does not weaken capture or provenance checks.
+
 The renderer exposes an audit-only, versioned GPU completion receipt for one
 exact full presentation. Normal WebGL inserts its non-blocking sync only after
 the final HDR/default-framebuffer composite; true 8× attaches the ticket to its

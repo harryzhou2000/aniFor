@@ -201,7 +201,28 @@ Active priority order:
    authoritative; legacy omission stays compatible only when the explicit
    required gate is off. Bootstrap the current sidecar only from the original
    reviewed four-recipe source, prove its baseline index and twelve PNGs remain
-   byte-identical, then require it in portable CI verification.
+   byte-identical, then require it in portable CI verification. This checkpoint
+   is deployed at exact revision
+   `59c3f883f3704e4328fdcb2f4e43cb4be84d0db9` by workflow run
+   `31336719431`: the build restored 269/270 C++ compilations, the shared-host
+   review passed all four candidates encoded-identical, the downloaded package
+   verified provenance
+   `sha256:0a7dfe433b4b878c67812e116513c0647affff53c97a7e7905505d271af067f8`,
+   and Pages passed exact 19-resource closure plus the live receipt-bound Water
+   capture.
+15. Make the trusted framework pleasant enough to use for each visual iteration.
+   The current increment adds one thin developer launcher over the existing
+   review-cycle API, requires an explicit candidate selection or tracked recipe
+   set, allocates a unique ignored `.artifacts/visual-lab-reviews/` root, and
+   defaults local Linux work to
+   the production bundle, SwiftShader, one shared browser, completed-frame
+   receipt proof, baseline comparison, and provenance-required portable
+   verification. Print the retained root before capture and direct static file
+   links only after verified success; never auto-open a browser, reuse evidence,
+   clear an old root, or create another capture implementation. Once this
+   practical loop is checkpointed, add current-only OFF→A, OFF→B, and A→B
+   measurements for new candidates before adding further provenance ceremony or
+   isolated material styling.
 
 Continue improving the registration and evidence loop before spending the
 milestone on isolated shader detail. Visual preference may later accept a

@@ -23,6 +23,25 @@ available as `npm run build:wasm`, `npm run test`, and `npm run build`.
 
 Deploy `dist/` to GitHub Pages, Cloudflare Pages, or Netlify. Vite uses relative asset paths, so subdirectory hosting works. `.github/workflows/ci.yml` verifies ordinary pushes and pull requests, while pushes to `main_codex` are intentionally manual. Run the **verify-static-game** workflow on `main_codex` and choose `build`, `build-and-deploy`, or `deploy-verified`. The first two perform a fresh verified build; `deploy-verified` additionally requires the run ID of a prior successful build of the exact same commit and republishes that validated artifact without compiling again. Successful runs upload a current-run static artifact, and both deployment modes publish through the GitHub Pages environment. C++ recompilation is accelerated by a project-local ccache directory restored from GitHub Actions cache and saved only after a successful build. In the repository settings, choose **GitHub Actions** as the Pages source.
 
+## Fast Visual Lab review
+
+Use the developer launcher for ordinary edit-to-review work. It builds once,
+allocates a unique ignored evidence directory, captures the explicit selection,
+compares it with the accepted baseline, and runs the portable verifier:
+
+```sh
+npm run visual-lab:review -- --candidate=water-motion
+npm run visual-lab:review -- \
+  --recipe-set=visual-lab/recipe-sets/liquid-motion.json
+```
+
+On Linux it defaults to SwiftShader, one shared browser host, and completed-frame
+receipt proof. The command prints the retained evidence root before capture and
+prints clickable `file://` links to the review board, compact brief, and raw
+contact sheet only after the complete package verifies. It never clears an old
+review or opens a user browser. Use `npm run visual-lab:review:reuse -- ...` when
+`dist/index.html` is already current.
+
 ## Visual Lab planning and capture
 
 Inspect an immutable selected plan before a build exists, before opening Chrome,
