@@ -46,6 +46,18 @@ describe('Visual Lab result records', () => {
     expect(reordered).toEqual(canonical);
   });
 
+  it('keeps the five-field Powder result request independent of driver binding', () => {
+    const result = createVisualLabResultRecord('powder-style-atlas', {
+      domain: 'powder', target: 0, fixture: 'powder-style-atlas', gain: 1, renderScale: 2,
+    }, HASHES);
+    expect(result.id).toBe(
+      'sha256:faf19697effeb555f75824f3e6f3458edba5b67bc7029f869ece47a6fc7554a5',
+    );
+    expect(Reflect.ownKeys(result.request)).toEqual([
+      'domain', 'target', 'fixture', 'gain', 'renderScale',
+    ]);
+  });
+
   it('changes identity with candidate, request, or capture content', () => {
     const base = createVisualLabResultRecord('water-motion', REQUEST, HASHES);
     const ids = [

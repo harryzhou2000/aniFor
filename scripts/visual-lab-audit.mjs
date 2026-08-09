@@ -27,15 +27,17 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   buildVisualLabCaptureUrl, buildVisualLabStartupExpression,
-  resolveVisualCaptureDomain, resolveVisualCaptureFixture,
+  resolveVisualCaptureRequest,
   VISUAL_LAB_CAPTURE_PROTOCOL,
   visualCaptureDomainNames, visualCaptureFixtureNames, visualLabFixturePreparationLabel,
 } from './visual-lab-fixtures.mjs';
 import {
+  buildVisualCaptureDatasetProjectionExpression,
   buildVisualCaptureSelectionExpression,
-  resolveVisualCaptureDriver,
   visualCaptureDriverDatasetExpectation,
-  visualCaptureDriverReportDescriptor,
+  visualCaptureDriverReportFields,
+  visualCaptureDriverStartupFields,
+  visualCaptureVariantLabel,
 } from './visual-capture-drivers.mjs';
 import { buildVisualCaptureEvidenceReaderExpression } from './visual-capture-evidence.mjs';
 import {
@@ -123,14 +125,14 @@ function parseArguments(argv) {
   }
 
   const domain = candidate?.domain ?? values.get('domain') ?? 'gas';
-  const domainAdapter = resolveVisualCaptureDomain(domain);
-  const captureDriver = resolveVisualCaptureDriver(domainAdapter.driver);
   const target = candidate?.target ?? Number(values.get('target') ?? 0);
   if (!Number.isInteger(target) || target < 0 || target > 255) {
     throw new Error('--target must be an integer from 0 through 255');
   }
   const fixture = candidate?.fixture ?? values.get('fixture') ?? 'showcase';
-  const fixtureAdapter = resolveVisualCaptureFixture(fixture, domain, target);
+  const { domainAdapter, fixtureAdapter, captureDriver } = resolveVisualCaptureRequest({
+    domain, target, fixture,
+  });
   const gain = candidate?.gain ?? Number(values.get('gain') ?? 1);
   if (!Number.isFinite(gain) || gain <= 0 || gain > 2) {
     throw new Error('--gain must be greater than 0 and no greater than 2');
@@ -312,7 +314,7 @@ async function main() {
     // target over CDP can withhold its acknowledgement while SwiftShader is
     // compiling, making a healthy load indistinguishable from a protocol hang.
     const startupSelection = await stageVariantDuringStartup(cdp, options);
-    const startupDriverVariant = options.captureDriver.variants.find(({ name }) => name === 'b');
+    const startupDriverFields = visualCaptureDriverStartupFields(options.captureDriver, 2);
     assert(startupSelection.backendBeforeSelection === 'canvas2d'
       && startupSelection.backendReasonBeforeSelection === 'webgl-starting'
       && startupSelection.stagedBeforeWebGL === true
@@ -321,9 +323,9 @@ async function main() {
       && startupSelection.scene === options.fixtureAdapter.scene
       && startupSelection.preparation
         === visualLabFixturePreparationLabel(options.fixtureAdapter)
-      && (options.captureDriver.name === 'normal-hdr'
-        || (startupSelection.captureDriver === options.captureDriver.name
-          && startupSelection.selection === startupDriverVariant.selection)),
+      && Object.entries(startupDriverFields).every(([name, value]) => (
+        startupSelection[name] === value
+      )),
     `Visual capture selector was not staged during bounded Canvas startup: ${JSON.stringify(startupSelection)}`);
     await waitForPage(cdp, options, 2);
 
@@ -393,12 +395,16 @@ async function main() {
       dataset: captures[name].state.dataset,
     }]));
     const warnings = [];
+    const offLabel = visualCaptureVariantLabel(options.captureDriver, 'off');
+    const aLabel = visualCaptureVariantLabel(options.captureDriver, 'a');
+    const bLabel = visualCaptureVariantLabel(options.captureDriver, 'b');
     if (!compactCaptures.a.distinctFromOff && !compactCaptures.b.distinctFromOff) {
-      warnings.push('A and B PNGs are byte-identical to off; check target ownership or gain');
+      warnings.push(
+        `${aLabel} and ${bLabel} PNGs are byte-identical to ${offLabel};`
+        + ' check target ownership or gain',
+      );
     }
     if (compactCaptures.a.sha256 === compactCaptures.b.sha256) {
-      const aLabel = options.captureDriver.variants.find(({ name }) => name === 'a').label;
-      const bLabel = options.captureDriver.variants.find(({ name }) => name === 'b').label;
       warnings.push(`${aLabel} and ${bLabel} PNGs are byte-identical at this Detail scale`);
     }
     const result = createVisualLabResultRecord(options.candidate, {
@@ -414,9 +420,7 @@ async function main() {
     });
     const report = {
       tool: 'visual-lab-audit-v1',
-      ...(options.captureDriver.name === 'normal-hdr' ? {} : {
-        captureDriver: visualCaptureDriverReportDescriptor(options.captureDriver),
-      }),
+      ...visualCaptureDriverReportFields(options.captureDriver),
       result,
       url: url.href,
       domain: options.domain,
@@ -573,6 +577,9 @@ async function waitForPage(cdp, options, expectedVariant) {
   const expectedDriverState = visualCaptureDriverDatasetExpectation(
     options.captureDriver, options, expectedVariant,
   );
+  const observedDriverState = buildVisualCaptureDatasetProjectionExpression(
+    options.captureDriver,
+  );
   const readinessExpression = `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     const canvas = document.querySelector('.semantic-field-canvas');
@@ -593,9 +600,7 @@ async function waitForPage(cdp, options, expectedVariant) {
       visualLabVariant: dataset.visualLabVariant,
       visualLabTarget: dataset.visualLabTarget,
       visualLabGain: dataset.visualLabGain,
-      ...(${JSON.stringify(options.captureDriver.name)} === 'powder-render-style'
-        ? { powderRenderStyle: audit.powderRenderStyle?.() }
-        : {}),
+      ...${observedDriverState},
     };
     const expectedDriverState = ${JSON.stringify(expectedDriverState)};
     return backend.backend === executionProfile.backend
@@ -645,6 +650,9 @@ async function captureVariant(cdp, options, variant) {
   const expectedDriverState = visualCaptureDriverDatasetExpectation(
     options.captureDriver, options, variant.value,
   );
+  const observedDriverState = buildVisualCaptureDatasetProjectionExpression(
+    options.captureDriver,
+  );
   await evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     const selection = ${selectionExpression};
@@ -663,9 +671,7 @@ async function captureVariant(cdp, options, variant) {
       visualLabVariant: dataset.visualLabVariant,
       visualLabTarget: dataset.visualLabTarget,
       visualLabGain: dataset.visualLabGain,
-      ...(${JSON.stringify(options.captureDriver.name)} === 'powder-render-style'
-        ? { powderRenderStyle: audit.powderRenderStyle?.() }
-        : {}),
+      ...${observedDriverState},
     };
     const expectedDriverState = ${JSON.stringify(expectedDriverState)};
     return Object.entries(expectedDriverState).every(([name, value]) => (
@@ -766,6 +772,7 @@ function assertVariantState(state, options, variant) {
 
 async function snapshotState(cdp, evidencePlane, captureDriver = 'normal-hdr') {
   const evidenceReaderExpression = buildVisualCaptureEvidenceReaderExpression(evidencePlane);
+  const observedDriverState = buildVisualCaptureDatasetProjectionExpression(captureDriver);
   return evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     const canvas = document.querySelector('.semantic-field-canvas');
@@ -819,9 +826,7 @@ async function snapshotState(cdp, evidencePlane, captureDriver = 'normal-hdr') {
         visualLabVariant: canvas.dataset.visualLabVariant,
         visualLabTarget: canvas.dataset.visualLabTarget,
         visualLabGain: canvas.dataset.visualLabGain,
-        ...(${JSON.stringify(captureDriver)} === 'powder-render-style'
-          ? { powderRenderStyle: audit.powderRenderStyle?.() }
-          : {}),
+        ...${observedDriverState},
       },
       semantic: { hash: material.hash, occupied: material.occupied, countHash },
       fieldAlpha,

@@ -1,7 +1,4 @@
-import {
-  resolveVisualCaptureDomain,
-  resolveVisualCaptureFixture,
-} from './visual-lab-fixtures.mjs';
+import { resolveVisualCaptureRequest } from './visual-lab-fixtures.mjs';
 import { VISUAL_CAPTURE_STATIC_CONTRACT } from '../src/shared/visual-capture-static-contract.js';
 import { VISUAL_LAB_STATIC_CONTRACT } from '../src/shared/visual-lab-static-contract.js';
 
@@ -61,18 +58,15 @@ const validateRecipe = (entry, index, names) => {
     throw new Error(`${context} gain must be a finite number greater than 0 and at most 2`);
   }
 
-  let domainAdapter;
+  let resolvedRequest;
   try {
-    domainAdapter = resolveVisualCaptureDomain(entry.domain);
+    resolvedRequest = resolveVisualCaptureRequest(entry);
   } catch (error) {
-    throw new Error(`${context} has an unknown domain: ${error.message}`, { cause: error });
+    const category = String(error?.message).startsWith('--domain must be')
+      ? 'unknown domain' : 'incompatible fixture';
+    throw new Error(`${context} has an ${category}: ${error.message}`, { cause: error });
   }
-
-  try {
-    resolveVisualCaptureFixture(entry.fixture, domainAdapter.name, entry.target);
-  } catch (error) {
-    throw new Error(`${context} has an incompatible fixture: ${error.message}`, { cause: error });
-  }
+  const { domainAdapter } = resolvedRequest;
 
   const supportedScales = domainAdapter.executionProfile.detailScales;
   if (!supportedScales.includes(entry.renderScale)) {

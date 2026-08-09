@@ -22,11 +22,8 @@ import {
   resolveVisualLabCaptureRecipe,
   visualLabCaptureRecipeNames,
 } from './visual-lab-recipes.mjs';
-import { resolveVisualCaptureDomain } from './visual-lab-fixtures.mjs';
-import {
-  resolveVisualCaptureDriver,
-  resolveVisualCaptureVariant,
-} from './visual-capture-drivers.mjs';
+import { resolveVisualCaptureRequest } from './visual-lab-fixtures.mjs';
+import { visualCaptureVariantLabel as resolveCaptureVariantLabel } from './visual-capture-drivers.mjs';
 import { createVisualLabResultRecord } from './visual-lab-result.mjs';
 
 export const VISUAL_LAB_BASELINE_SCHEMA = 'anifor.visual-lab.accepted-baseline/v1';
@@ -481,11 +478,10 @@ const formatMetricRms = (squaredSum, samples) => (
 const visualCaptureVariantLabel = (entry, variant) => {
   const request = entry.currentResult?.request ?? entry.baselineResult?.request;
   try {
-    const domain = resolveVisualCaptureDomain(request?.domain);
-    const driver = resolveVisualCaptureDriver(domain.driver);
-    return resolveVisualCaptureVariant(driver, variant).label;
+    const { captureDriver } = resolveVisualCaptureRequest(request);
+    return resolveCaptureVariantLabel(captureDriver, variant);
   } catch {
-    return variant.toUpperCase();
+    return resolveCaptureVariantLabel('normal-hdr', variant);
   }
 };
 

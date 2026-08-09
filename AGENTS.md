@@ -116,17 +116,25 @@ normal-HDR reports retain their exact shape. The closed evidence-plane bridge
 is deployed at revision `9d3e091e406b67d5d95614bb33fdaaa75ef1abda` by workflow
 run `31303706661`: serialized metadata names only data planes, one fixed typed
 browser method dispatches them, and historical `readerMethod` labels are
-scripts-owned report projections with no execution authority. The active
-direction is now framework execution leverage. Prefer an exact-SHA,
-artifact-reusing `deploy-verified` CI operation over rebuilding an already
-successful static site, but require same-repository/current-workflow provenance,
-one successful source `build` job, one nonexpired artifact ID and canonical
-digest, exact embedded revision, a symlink-free regular tree, stable aliases,
-and full asset closure. Download into a fresh runner-temporary directory and
-never execute artifact content. Retain `build-and-deploy` for a fresh build and
-keep the optional Visual Lab consumer on a current-run re-upload. Then make
-driver selection fixture/request-owned so a domain can host multiple
-presentation controls without runner branches or frozen-ABI changes.
+scripts-owned report projections with no execution authority. Exact-SHA
+artifact reuse is deployed at revision
+`356df7585d0bc94f1478e0361ed075f251819594`: source run `31304595644` built
+normally, while `deploy-verified` run `31304756262` skipped `build`, validated
+and republished the artifact in 12 seconds, deployed, and passed live closure;
+all 26 extracted files were byte-identical. Preserve same-repository/workflow/
+SHA provenance, exactly one successful source `build` job, immutable artifact
+ID/digest pinning, fresh runner-temporary extraction, a symlink-free regular
+tree, exact revision/stable aliases/asset closure, provider XOR, the fresh-build
+escape path, optional-review reuse, and live verification. Fixture/request-owned
+driver selection, exhaustive executable adapters, and registry-owned labels are
+the current deployment checkpoint: production consumers must resolve the
+fixture-owned tuple and must not dispatch from `domain.driver` or a driver-name
+branch. Preserve the synthetic same-domain/multiple-driver proof, startup/report
+metadata exposure policy, `OFF/A/B` and `Smooth/Local/Grains` labels, frozen
+identities, and real Gas+Powder portable batch. The next direction is authoring
+and execution throughput: one immutable execution plan, a pre-Chrome catalog
+inspection gate, and evidence-based safe batch-session reuse. Adding a control
+must not require edits to audit, batch, baseline, review, CI, or sheet dispatch.
 Preserve `anifor.visual-lab.static-contract/v1`, every result/batch/baseline/
 comparison/recipe-set identity, and the generic WebGL capture path throughout.
 
@@ -138,12 +146,11 @@ motion is an accepted E08 baseline and uses the moving-Oil fixture with liquid
 target `8`; E65 Water surface motion is an accepted E08 baseline and uses the
 retained moving-Water fixture with liquid target `2`. Their legacy resolvers,
 uniforms, queries, datasets, and bespoke verifier paths are removed. E65 is also
-deployed. The latest fully verified release base for the active increment is
-revision `6eff691b50f00ffd0f3366b66a089779439e39ee`, deployed by release-set
-workflow run `31298776917`: 1,436 source and 105 tooling tests passed with
-269/270 ccache hits, all four named recipes were encoded-identical, the freshly
-downloaded package verified its board, brief, metrics, captures, and recipe set,
-and live closure passed all 19 resources on its first attempt.
+deployed. Historical revision `6eff691b50f00ffd0f3366b66a089779439e39ee`
+and release-set run `31298776917` remain the accepted four-recipe visual
+baseline seed; they are not the current deployment head. At that checkpoint,
+1,436 source and 105 tooling tests passed with 269/270 ccache hits, all four
+named recipes were encoded-identical, and portable plus live closure passed.
 
 `anifor.visual-lab.accepted-baseline/v1` contains only
 catalog-ordered candidate names and their existing content-addressed result
@@ -213,9 +220,9 @@ variants must reuse live
 presenter textures or already-computed compositor values, remain RGB-only, add
 no field/texture/target/pass/time resource, and resolve inert for Classic,
 Canvas, failed HDR, and true 8×. Variant zero is the pixel-preserving default.
-Keep reserved but unimplemented domains, currently Powder, resolved fully off
-so they do not compile or bind the expanded lab compositor. Powder's safe proof
-exists only in the source-stage settled-Smooth branch; do not fracture the
+Keep reserved but unimplemented HDR domains, currently Powder, resolved fully
+off so they do not compile or bind the expanded lab compositor. Powder capture
+is supported by the source-stage `powder-render-style` driver; do not fracture the
 fixed HDR seam merely to claim domain coverage.
 The rejected Powder-concavity idea must not be revived by misnaming directional
 slope or adding an unbudgeted sample. Continue material breadth, native material
@@ -2162,8 +2169,8 @@ The accepted-v1 package is the complete four-candidate result from run
 Keep variant zero pixel-preserving, the direct true-8× fragment untouched, and
 the generic CDP harness domain-branch-free. Do not clone workflow, renderer, or
 CDP paths for this comparison layer.
-Defer E66 and Powder until their resource/stability proof fits the existing
-facade.
+Defer E66 until its resource/stability proof fits the existing facade. Keep
+Powder in the existing source-stage driver rather than moving it into HDR.
 
 Ordinary pages compile the original five-sampler HDR compositor; only an
 explicit lab session compiles the eight-sampler gas/emission permutation. Use

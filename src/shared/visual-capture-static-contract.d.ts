@@ -42,6 +42,7 @@ export declare const VISUAL_CAPTURE_STATIC_CONTRACT: Readonly<{
   fixtures: readonly [Readonly<{
     name: 'powder-style-atlas';
     scene: 'showcase';
+    driver: 'powder-render-style';
     constraints: readonly [Readonly<{ domain: 'powder'; targets: readonly [0] }>];
     preparationReportLabel: 'preparePowderStyleAtlasFixture';
     requirement: '--domain=powder --target=0';

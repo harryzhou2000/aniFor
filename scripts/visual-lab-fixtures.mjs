@@ -8,6 +8,8 @@ import { VISUAL_CAPTURE_STATIC_CONTRACT } from '../src/shared/visual-capture-sta
 import { VISUAL_LAB_STATIC_CONTRACT } from '../src/shared/visual-lab-static-contract.js';
 import {
   buildVisualCaptureSelectionExpression,
+  resolveVisualCaptureDriver,
+  visualCaptureDriverPublishesReportDescriptor,
   visualCaptureDriverUrlValues,
 } from './visual-capture-drivers.mjs';
 import { normalizeVisualCaptureEvidence } from './visual-capture-evidence.mjs';
@@ -72,10 +74,11 @@ const freezePreparation = (reportLabel = 'prepareVisualLabFixture') => Object.fr
 });
 
 const freezeAdapter = ({
-  name, scene, constraints, preparation = null, requirement = null,
+  name, scene, captureDriver, constraints, preparation = null, requirement = null,
 }) => Object.freeze({
   name,
   scene,
+  ...(captureDriver === undefined ? {} : { captureDriver }),
   constraints: Object.freeze(constraints),
   preparation,
   requirement,
@@ -144,15 +147,14 @@ export const VISUAL_CAPTURE_DOMAIN_ADAPTERS = Object.freeze([
 export function buildVisualLabCaptureUrl(baseUrl, request) {
   const url = new URL(baseUrl);
   const parameters = url.searchParams;
+  const { domainAdapter, fixtureAdapter, captureDriver } = resolveVisualCaptureRequest(request);
   for (const [name, value] of Object.entries(VISUAL_LAB_CAPTURE_PROTOCOL.fixedUrlParameters)) {
     parameters.set(name, value);
   }
 
-  const driverValues = visualCaptureDriverUrlValues(
-    request.domainAdapter.driver ?? 'normal-hdr', request,
-  );
+  const driverValues = visualCaptureDriverUrlValues(captureDriver, request);
   const dynamicValues = {
-    scene: request.fixtureAdapter.scene,
+    scene: fixtureAdapter.scene,
     renderScale: String(request.renderScale),
     ...driverValues,
     renderer: null,
@@ -170,9 +172,9 @@ export function buildVisualLabCaptureUrl(baseUrl, request) {
   }
 
   assertFixedUrlParametersDoNotCollide(
-    request.domainAdapter.name, request.domainAdapter.fixedUrlParameters,
+    domainAdapter.name, domainAdapter.fixedUrlParameters,
   );
-  for (const [name, value] of Object.entries(request.domainAdapter.fixedUrlParameters)) {
+  for (const [name, value] of Object.entries(domainAdapter.fixedUrlParameters)) {
     parameters.set(name, value);
   }
   return url;
@@ -196,17 +198,23 @@ const VISUAL_CAPTURE_EXTENSION_FIXTURE_ADAPTERS = Object.freeze(
   VISUAL_CAPTURE_STATIC_CONTRACT.fixtures.map((fixture) => freezeAdapter({
     name: fixture.name,
     scene: fixture.scene,
+    captureDriver: fixture.driver,
     constraints: fixture.constraints.map(({ domain, targets }) => (
       freezeConstraint(domain, targets)
     )),
-    preparation: freezePreparation(fixture.preparationReportLabel),
+    preparation: fixture.preparationReportLabel === null
+      ? null
+      : freezePreparation(fixture.preparationReportLabel),
     requirement: fixture.requirement,
   })),
 );
 
 /** All fixtures understood by the generic capture runner. */
 export const VISUAL_CAPTURE_FIXTURE_ADAPTERS = Object.freeze([
-  ...VISUAL_LAB_FIXTURE_ADAPTERS,
+  ...VISUAL_LAB_FIXTURE_ADAPTERS.map((fixture) => freezeAdapter({
+    ...fixture,
+    captureDriver: 'normal-hdr',
+  })),
   ...VISUAL_CAPTURE_EXTENSION_FIXTURE_ADAPTERS,
 ]);
 
@@ -225,6 +233,100 @@ const FIXTURE_BY_NAME = new Map(
 const CAPTURE_FIXTURE_BY_NAME = new Map(
   VISUAL_CAPTURE_FIXTURE_ADAPTERS.map((adapter) => [adapter.name, adapter]),
 );
+
+const resolveFixtureCompatibility = (adapter, domain, target, fixtureNames) => {
+  if (!adapter) {
+    throw new Error(`--fixture must be ${formatAlternatives(fixtureNames)}`);
+  }
+  const constraint = adapter.constraints.find((candidate) => candidate.domain === domain);
+  if (!constraint) {
+    if (adapter.requirement) {
+      throw new Error(`--fixture=${adapter.name} requires ${adapter.requirement}`);
+    }
+    const domains = adapter.constraints.map((candidate) => candidate.domain).join(', ');
+    throw new Error(`--fixture=${adapter.name} requires --domain to be one of: ${domains}`);
+  }
+  if (constraint.targets !== anyTarget && !constraint.targets.includes(target)) {
+    if (adapter.requirement) {
+      throw new Error(`--fixture=${adapter.name} requires ${adapter.requirement}`);
+    }
+    throw new Error(
+      `--fixture=${adapter.name} requires --domain=${domain} --target=${constraint.targets.join('|')}`,
+    );
+  }
+  return adapter;
+};
+
+/**
+ * Builds a request resolver whose fixture owns executable driver selection.
+ * Catalog construction fails before capture if any fixture references an
+ * unknown domain/driver or a driver that does not support its constrained
+ * domain. Different fixtures may intentionally select different drivers for
+ * the same domain.
+ */
+export function createVisualCaptureRequestResolver({
+  domainAdapters, fixtureAdapters, driverResolver = resolveVisualCaptureDriver,
+}) {
+  if (!Array.isArray(domainAdapters) || !Array.isArray(fixtureAdapters)
+    || typeof driverResolver !== 'function') {
+    throw new TypeError('Visual capture request resolver requires domain and fixture catalogs');
+  }
+  const domainByName = new Map();
+  for (const adapter of domainAdapters) {
+    if (typeof adapter?.name !== 'string' || domainByName.has(adapter.name)) {
+      throw new TypeError(
+        `Invalid or duplicate visual capture domain ${JSON.stringify(adapter?.name)}`,
+      );
+    }
+    domainByName.set(adapter.name, adapter);
+  }
+  const fixtureByName = new Map();
+  const driverByFixture = new Map();
+  for (const adapter of fixtureAdapters) {
+    if (typeof adapter?.name !== 'string' || fixtureByName.has(adapter.name)) {
+      throw new TypeError(
+        `Invalid or duplicate visual capture fixture ${JSON.stringify(adapter?.name)}`,
+      );
+    }
+    const driver = driverResolver(adapter.captureDriver);
+    if (!Array.isArray(driver?.domains) || !Array.isArray(adapter.constraints)
+      || adapter.constraints.length === 0) {
+      throw new TypeError(`Visual capture fixture ${adapter.name} has an invalid driver binding`);
+    }
+    for (const constraint of adapter.constraints) {
+      if (!domainByName.has(constraint.domain) || !driver.domains.includes(constraint.domain)) {
+        throw new TypeError(
+          `Visual capture fixture ${adapter.name} driver ${driver.name}`
+          + ` does not support domain ${JSON.stringify(constraint.domain)}`,
+        );
+      }
+    }
+    fixtureByName.set(adapter.name, adapter);
+    driverByFixture.set(adapter.name, driver);
+  }
+  const domainNames = Object.freeze([...domainByName.keys()]);
+  const fixtureNames = Object.freeze([...fixtureByName.keys()]);
+
+  return Object.freeze((request) => {
+    const domainAdapter = domainByName.get(request?.domain);
+    if (!domainAdapter) {
+      throw new Error(`--domain must be ${formatAlternatives(domainNames)}`);
+    }
+    const fixtureAdapter = resolveFixtureCompatibility(
+      fixtureByName.get(request?.fixture), request.domain, request.target, fixtureNames,
+    );
+    return Object.freeze({
+      domainAdapter,
+      fixtureAdapter,
+      captureDriver: driverByFixture.get(fixtureAdapter.name),
+    });
+  });
+}
+
+export const resolveVisualCaptureRequest = createVisualCaptureRequestResolver({
+  domainAdapters: VISUAL_CAPTURE_DOMAIN_ADAPTERS,
+  fixtureAdapters: VISUAL_CAPTURE_FIXTURE_ADAPTERS,
+});
 
 export function visualLabFixtureNames() {
   return VISUAL_LAB_FIXTURE_ADAPTERS.map(({ name }) => name);
@@ -285,37 +387,29 @@ export function resolveVisualLabFixture(name, domain, target) {
 }
 
 export function resolveVisualCaptureFixture(name, domain, target) {
-  const adapter = CAPTURE_FIXTURE_BY_NAME.get(name);
-  if (!adapter) {
-    throw new Error(`--fixture must be ${formatAlternatives(visualCaptureFixtureNames())}`);
-  }
-  const constraint = adapter.constraints.find((candidate) => candidate.domain === domain);
-  if (!constraint) {
-    if (adapter.requirement) throw new Error(`--fixture=${name} requires ${adapter.requirement}`);
-    const domains = adapter.constraints.map((candidate) => candidate.domain).join(', ');
-    throw new Error(`--fixture=${name} requires --domain to be one of: ${domains}`);
-  }
-  if (constraint.targets !== anyTarget && !constraint.targets.includes(target)) {
-    if (adapter.requirement) throw new Error(`--fixture=${name} requires ${adapter.requirement}`);
-    throw new Error(
-      `--fixture=${name} requires --domain=${domain} --target=${constraint.targets.join('|')}`,
-    );
-  }
-  return adapter;
+  return resolveFixtureCompatibility(
+    CAPTURE_FIXTURE_BY_NAME.get(name), domain, target, visualCaptureFixtureNames(),
+  );
 }
 
 /**
  * Serializes the only page-owned startup transaction used by every fixture:
  * observe the Canvas warm-up, prepare optional app state, then stage variant B.
  */
-export function buildVisualLabStartupExpression(adapter, variant = 2, captureDriver = 'normal-hdr') {
-  const selectionExpression = buildVisualCaptureSelectionExpression(captureDriver, variant);
+export function buildVisualLabStartupExpression(
+  adapter, variant = 2, captureDriver = adapter.captureDriver ?? 'normal-hdr',
+) {
+  const driver = typeof captureDriver === 'string'
+    ? resolveVisualCaptureDriver(captureDriver) : resolveVisualCaptureDriver(captureDriver?.name);
+  const selectionExpression = buildVisualCaptureSelectionExpression(driver, variant);
+  const includeDriverFields = visualCaptureDriverPublishesReportDescriptor(driver);
   const descriptor = JSON.stringify({
     name: adapter.name,
     scene: adapter.scene,
     prepareFixture: adapter.preparation !== null,
     preparationLabel: visualLabFixturePreparationLabel(adapter),
-    captureDriver,
+    captureDriver: driver.name,
+    includeDriverFields,
   });
   return `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
@@ -360,10 +454,10 @@ export function buildVisualLabStartupExpression(adapter, variant = 2, captureDri
     }
     return {
       ...result,
-      ...(adapter.captureDriver === 'normal-hdr' ? {} : {
+      ...(adapter.includeDriverFields ? {
         captureDriver: adapter.captureDriver,
         selection: selection.selection,
-      }),
+      } : {}),
       fixturePrepared: true,
       stagedBeforeWebGL: true,
     };

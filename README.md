@@ -23,6 +23,38 @@ available as `npm run build:wasm`, `npm run test`, and `npm run build`.
 
 Deploy `dist/` to GitHub Pages, Cloudflare Pages, or Netlify. Vite uses relative asset paths, so subdirectory hosting works. `.github/workflows/ci.yml` verifies ordinary pushes and pull requests, while pushes to `main_codex` are intentionally manual. Run the **verify-static-game** workflow on `main_codex` and choose `build`, `build-and-deploy`, or `deploy-verified`. The first two perform a fresh verified build; `deploy-verified` additionally requires the run ID of a prior successful build of the exact same commit and republishes that validated artifact without compiling again. Successful runs upload a current-run static artifact, and both deployment modes publish through the GitHub Pages environment. C++ recompilation is accelerated by a project-local ccache directory restored from GitHub Actions cache and saved only after a successful build. In the repository settings, choose **GitHub Actions** as the Pages source.
 
+## Visual experiment workflow
+
+Build once, then capture a named experiment without rebuilding:
+
+```sh
+npm run build
+npm run audit:visual-lab:capture -- --candidate=gas-showcase
+npm run audit:visual-lab:capture -- --candidate=powder-style-atlas
+```
+
+For a portable cohort and static contact sheet, run:
+
+```sh
+npm run audit:visual-lab:batch:capture -- \
+  --bundle=dist/index.html \
+  --candidates=gas-showcase,powder-style-atlas \
+  --output-dir=/tmp/anifor-visual-review
+node scripts/visual-lab-verify.mjs \
+  --batch-root=/tmp/anifor-visual-review \
+  --require-complete=1 --require-recipe-set=1
+```
+
+Each recipe keeps the stable six fields `name/domain/target/fixture/gain/renderScale`.
+The resolved fixture—not the material domain—selects its capture driver, so one
+domain can host multiple independent controls. Add declarative driver, fixture,
+and recipe data in `src/shared/visual-capture-static-contract.js`, and add the
+driver's executable adapter in `scripts/visual-capture-drivers.mjs`; the module
+fails at startup if the static and executable registries differ. Audit, batch,
+baseline, review, and contact-sheet code consume the shared resolved request and
+must not gain driver-name branches. Canonical review labels are `OFF/A/B` for
+normal HDR and `Smooth/Local/Grains` for the Powder style driver.
+
 ## Save files
 
 **Save / share** passes a real file to the system share sheet when file sharing is available, otherwise it downloads it. The native engine's serialized bytes use TPT's `.cps` extension: modern files begin with `OPS1` and can be opened by desktop TPT. **Open file** accepts those files as well as the legacy TPT formats that the pinned engine supports. This avoids expanding a full world into the URL or clipboard. Older AniforTPT hash links remain importable for backward compatibility, but the interface no longer generates them. If startup falls back to the compact compatibility engine, export uses a clearly separate `.anifortpt` format rather than claiming TPT compatibility. Files are capped at 32 MiB before parsing.

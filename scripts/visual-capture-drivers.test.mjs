@@ -1,12 +1,18 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
+  buildVisualCaptureDatasetProjectionExpression,
   buildVisualCaptureSelectionExpression,
+  createVisualCaptureDriverRegistry,
   resolveVisualCaptureDriver,
   resolveVisualCaptureVariant,
   VISUAL_CAPTURE_DRIVER_NAMES,
   visualCaptureDriverDatasetExpectation,
+  visualCaptureDriverReportFields,
   visualCaptureDriverReportDescriptor,
+  visualCaptureDriverStartupFields,
   visualCaptureDriverUrlValues,
+  visualCaptureVariantLabel,
 } from './visual-capture-drivers.mjs';
 
 const runSelection = (driver, variant, audit) => Function(
@@ -20,6 +26,7 @@ describe('typed visual capture drivers', () => {
     expect(driver.variants.map(({ name, selection }) => [name, selection])).toEqual([
       ['off', 'smooth'], ['a', 'local'], ['b', 'grains'],
     ]);
+    expect(resolveVisualCaptureVariant(driver, 1).name).toBe('a');
     expect(resolveVisualCaptureVariant(driver, 2).selection).toBe('grains');
 
     let style = 'smooth';
@@ -69,11 +76,96 @@ describe('typed visual capture drivers', () => {
     });
   });
 
+  it('owns observed state, startup/report metadata, and labels in one registry', () => {
+    const normalObserved = Function(
+      'audit', `return ${buildVisualCaptureDatasetProjectionExpression('normal-hdr')};`,
+    )({});
+    const powderObserved = Function(
+      'audit', `return ${buildVisualCaptureDatasetProjectionExpression('powder-render-style')};`,
+    )({ powderRenderStyle: () => 'grains' });
+
+    expect(normalObserved).toEqual({});
+    expect(powderObserved).toEqual({ powderRenderStyle: 'grains' });
+    expect(JSON.stringify(visualCaptureDriverStartupFields('normal-hdr', 2))).toBe('{}');
+    expect(JSON.stringify(visualCaptureDriverStartupFields('powder-render-style', 2)))
+      .toBe('{"captureDriver":"powder-render-style","selection":"grains"}');
+    expect(visualCaptureDriverReportFields('normal-hdr')).toEqual({});
+    expect(Object.keys(visualCaptureDriverReportFields('powder-render-style')))
+      .toEqual(['captureDriver']);
+    expect(['off', 'a', 'b'].map((variant) => (
+      visualCaptureVariantLabel('normal-hdr', variant)
+    ))).toEqual(['OFF', 'A', 'B']);
+    expect(['off', 'a', 'b'].map((variant) => (
+      visualCaptureVariantLabel('powder-render-style', variant)
+    ))).toEqual(['Smooth', 'Local', 'Grains']);
+  });
+
+  it('fails module-style registry construction on missing, orphan, reordered, or invalid adapters', () => {
+    const declarations = [Object.freeze({ name: 'first' }), Object.freeze({ name: 'second' })];
+    const adapter = () => ({
+      urlValues: () => ({}),
+      datasetExpectation: () => ({}),
+      selectionExpression: () => 'true',
+      datasetProjectionExpression: () => '({})',
+      publishesReportDescriptor: true,
+      reportMismatch: 'mismatch',
+    });
+
+    expect(() => createVisualCaptureDriverRegistry(declarations, { first: adapter() }))
+      .toThrow('missing second');
+    expect(() => createVisualCaptureDriverRegistry(declarations, {
+      first: adapter(), second: adapter(), orphan: adapter(),
+    })).toThrow('undeclared orphan');
+    expect(() => createVisualCaptureDriverRegistry(declarations, {
+      second: adapter(), first: adapter(),
+    })).toThrow('adapter order differs');
+    expect(() => createVisualCaptureDriverRegistry(declarations, {
+      first: { ...adapter(), extra: true }, second: adapter(),
+    })).toThrow('invalid executable adapter');
+    expect(() => createVisualCaptureDriverRegistry(declarations, {
+      first: Object.fromEntries(Object.entries(adapter()).reverse()), second: adapter(),
+    })).toThrow('invalid executable adapter');
+    const nonEnumerable = {};
+    for (const [name, value] of Object.entries(adapter())) {
+      Object.defineProperty(nonEnumerable, name, { value });
+    }
+    expect(() => createVisualCaptureDriverRegistry(declarations, {
+      first: nonEnumerable, second: adapter(),
+    })).toThrow('invalid executable adapter');
+    expect(() => createVisualCaptureDriverRegistry(declarations, {
+      first: { ...adapter(), selectionExpression: null }, second: adapter(),
+    })).toThrow('invalid executable adapter');
+
+    const registry = createVisualCaptureDriverRegistry(declarations, {
+      first: adapter(), second: adapter(),
+    });
+    expect(registry.names).toEqual(['first', 'second']);
+    expect(Object.isFrozen(registry)).toBe(true);
+    expect(Object.isFrozen(registry.names)).toBe(true);
+  });
+
+  it('keeps request consumers free of domain-owned or driver-name dispatch', () => {
+    for (const file of [
+      'visual-lab-audit.mjs',
+      'visual-lab-batch.mjs',
+      'visual-lab-baseline.mjs',
+      'visual-lab-recipes.mjs',
+    ]) {
+      const source = readFileSync(new URL(`./${file}`, import.meta.url), 'utf8');
+      expect(source).not.toMatch(/(?:captureDriver|driver)\.name\s*===/);
+      expect(source).not.toMatch(/(?:domainAdapter|domain)\.driver/);
+      expect(source).not.toMatch(/===\s*['"]powder-render-style['"]/);
+    }
+  });
+
   it('rejects unknown drivers, variants, and dynamic audit identifiers', () => {
     expect(() => resolveVisualCaptureDriver('arbitrary')).toThrow('Unknown visual capture driver');
     expect(() => resolveVisualCaptureVariant('normal-hdr', 8)).toThrow('Unknown normal-hdr');
     expect(() => buildVisualCaptureSelectionExpression('normal-hdr', 0, 'audit.call()'))
       .toThrow('Unsafe visual capture audit identifier');
+    expect(() => buildVisualCaptureDatasetProjectionExpression(
+      'normal-hdr', 'audit.call()',
+    )).toThrow('Unsafe visual capture audit identifier');
     expect(runSelection('powder-render-style', 0, {}))
       .toEqual({ ok: false, failure: 'missing-selector' });
   });

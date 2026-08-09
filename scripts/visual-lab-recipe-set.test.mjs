@@ -188,6 +188,11 @@ describe('Visual Lab recipe-set/v1', () => {
       expect(recipeSet.name).toBe(name);
       expect(recipeSet.recipes.map((recipe) => recipe.name)).toEqual(candidates);
       expect(recipeSet.id).toBe(recipeSetId(recipeSet));
+      if (name === 'release') {
+        expect(recipeSet.id).toBe(
+          'sha256:28b2d27f44c54ba5de933addbbc1c99358428a79b2ed8da05df9c7c121fec463',
+        );
+      }
     }
   });
 

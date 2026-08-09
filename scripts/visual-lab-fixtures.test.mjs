@@ -14,9 +14,11 @@ import { isDetachedProcessGroupAlive } from './detached-process.mjs';
 import {
   buildVisualLabCaptureUrl,
   buildVisualLabStartupExpression,
+  createVisualCaptureRequestResolver,
   createVisualLabDomainCatalog,
   resolveVisualCaptureDomain,
   resolveVisualCaptureFixture,
+  resolveVisualCaptureRequest,
   resolveVisualLabDomain,
   resolveVisualLabFixture,
   VISUAL_CAPTURE_DOMAIN_ADAPTERS,
@@ -32,7 +34,7 @@ import {
 } from './visual-lab-fixtures.mjs';
 
 const runStartupExpression = (
-  adapter, audit, scene = 'showcase', driver = 'normal-hdr',
+  adapter, audit, scene = 'showcase', driver = adapter.captureDriver ?? 'normal-hdr',
 ) => Function(
   'window', 'document', `return ${buildVisualLabStartupExpression(adapter, 2, driver)};`,
 )({ __ANIFOR_INPUT_AUDIT__: audit }, {
@@ -122,6 +124,7 @@ describe('Visual Lab fixture adapters', () => {
     expect(resolveVisualCaptureFixture('powder-style-atlas', 'powder', 0))
       .toMatchObject({
         scene: 'showcase',
+        captureDriver: 'powder-render-style',
         preparation: { reportLabel: 'preparePowderStyleAtlasFixture' },
       });
     expect(() => resolveVisualLabDomain('powder'))
@@ -156,12 +159,9 @@ describe('Visual Lab fixture adapters', () => {
       + '&visualLab=powder&visualVariant=2&visualTarget=255&visualGain=2'
       + '&renderer=canvas&liquidBodyVfx=0&liquidSurfaceVfx=0',
     );
-    const domainAdapter = resolveVisualLabDomain('liquid');
-    const fixtureAdapter = resolveVisualLabFixture('water-motion', 'liquid', 2);
     const url = buildVisualLabCaptureUrl(baseUrl, {
-      fixtureAdapter,
-      domainAdapter,
       domain: 'liquid',
+      fixture: 'water-motion',
       target: 2,
       gain: 1.25,
       renderScale: 4,
@@ -228,14 +228,16 @@ describe('Visual Lab fixture adapters', () => {
   });
 
   it('drives Powder Smooth/Local/Grains without activating the HDR lab domain', () => {
-    const adapter = resolveVisualCaptureFixture('powder-style-atlas', 'powder', 0);
+    const resolved = resolveVisualCaptureRequest({
+      domain: 'powder', target: 0, fixture: 'powder-style-atlas',
+    });
+    const adapter = resolved.fixtureAdapter;
     const baseUrl = new URL(
       'https://example.test/app?visualLab=gas&visualVariant=2&visualTarget=4&visualGain=2',
     );
     const url = buildVisualLabCaptureUrl(baseUrl, {
-      fixtureAdapter: adapter,
-      domainAdapter: resolveVisualCaptureDomain('powder'),
-      domain: 'powder', target: 0, gain: 1, renderScale: 2,
+      domain: 'powder', fixture: 'powder-style-atlas',
+      target: 0, gain: 1, renderScale: 2,
     });
     expect(Object.fromEntries(['visualLab', 'visualVariant', 'visualTarget', 'visualGain']
       .map((name) => [name, url.searchParams.get(name)]))).toEqual({
@@ -249,12 +251,60 @@ describe('Visual Lab fixture adapters', () => {
       prepareVisualLabFixture: (fixture) => calls.push(`prepare:${fixture}`),
       setPowderRenderStyle: (next) => { style = next; calls.push(`style:${next}`); },
       powderRenderStyle: () => style,
-    }, 'showcase', 'powder-render-style');
+    }, 'showcase');
     expect(calls).toEqual(['prepare:powder-style-atlas', 'style:grains']);
     expect(result).toMatchObject({
       captureDriver: 'powder-render-style', selection: 'grains',
       fixturePrepared: true, stagedBeforeWebGL: true,
     });
+  });
+
+  it('selects drivers by fixture when one domain hosts multiple controls', () => {
+    const drivers = new Map([
+      ['first-control', Object.freeze({ name: 'first-control', domains: ['shared'] })],
+      ['second-control', Object.freeze({ name: 'second-control', domains: ['shared'] })],
+    ]);
+    const resolveRequest = createVisualCaptureRequestResolver({
+      domainAdapters: [Object.freeze({ name: 'shared' })],
+      fixtureAdapters: [
+        Object.freeze({
+          name: 'first-fixture', captureDriver: 'first-control',
+          constraints: [Object.freeze({ domain: 'shared', targets: null })],
+          requirement: null,
+        }),
+        Object.freeze({
+          name: 'second-fixture', captureDriver: 'second-control',
+          constraints: [Object.freeze({ domain: 'shared', targets: null })],
+          requirement: null,
+        }),
+      ],
+      driverResolver: (name) => {
+        const driver = drivers.get(name);
+        if (!driver) throw new Error(`unknown ${name}`);
+        return driver;
+      },
+    });
+
+    expect(resolveRequest({ domain: 'shared', target: 0, fixture: 'first-fixture' })
+      .captureDriver.name).toBe('first-control');
+    expect(resolveRequest({ domain: 'shared', target: 0, fixture: 'second-fixture' })
+      .captureDriver.name).toBe('second-control');
+  });
+
+  it('resolves each production request to one frozen fixture-owned driver tuple', () => {
+    for (const [request, driver] of [
+      [{ domain: 'gas', target: 0, fixture: 'showcase' }, 'normal-hdr'],
+      [{ domain: 'liquid', target: 2, fixture: 'water-motion' }, 'normal-hdr'],
+      [{ domain: 'powder', target: 0, fixture: 'powder-style-atlas' },
+        'powder-render-style'],
+    ]) {
+      const resolved = resolveVisualCaptureRequest(request);
+      expect(resolved.domainAdapter.name).toBe(request.domain);
+      expect(resolved.fixtureAdapter.name).toBe(request.fixture);
+      expect(resolved.fixtureAdapter.captureDriver).toBe(driver);
+      expect(resolved.captureDriver.name).toBe(driver);
+      expect(Object.isFrozen(resolved)).toBe(true);
+    }
   });
 
   it('rejects unknown fixtures and incompatible domain/target pairs early', () => {
@@ -352,6 +402,8 @@ describe('Visual Lab fixture adapters', () => {
     });
     expect(showcaseCalls).toEqual(['backend', 'variant:2']);
     expect(showcase).toMatchObject({ scene: 'showcase', preparation: 'scene' });
+    expect(showcase).not.toHaveProperty('captureDriver');
+    expect(showcase).not.toHaveProperty('selection');
 
     const missingCalls = [];
     const missing = runStartupExpression(resolveVisualLabFixture('oil-motion', 'liquid', 8), {

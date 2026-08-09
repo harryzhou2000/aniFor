@@ -50,6 +50,7 @@ describe('visual capture driver static contract', () => {
     expect(VISUAL_CAPTURE_STATIC_CONTRACT.fixtures[0]).toEqual({
       name: 'powder-style-atlas',
       scene: 'showcase',
+      driver: 'powder-render-style',
       constraints: [{ domain: 'powder', targets: [0] }],
       preparationReportLabel: 'preparePowderStyleAtlasFixture',
       requirement: '--domain=powder --target=0',

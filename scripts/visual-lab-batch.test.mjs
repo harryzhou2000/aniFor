@@ -19,15 +19,14 @@ import {
   VISUAL_LAB_BATCH_SCHEMA,
 } from './visual-lab-batch.mjs';
 import {
-  resolveVisualCaptureDomain,
-  resolveVisualCaptureFixture,
+  resolveVisualCaptureRequest,
   VISUAL_LAB_CAPTURE_PROTOCOL,
   visualLabFixturePreparationLabel,
 } from './visual-lab-fixtures.mjs';
 import {
-  resolveVisualCaptureDriver,
   visualCaptureDriverDatasetExpectation,
-  visualCaptureDriverReportDescriptor,
+  visualCaptureDriverReportFields,
+  visualCaptureDriverStartupFields,
 } from './visual-capture-drivers.mjs';
 import { resolveVisualLabCaptureRecipe } from './visual-lab-recipes.mjs';
 import { createVisualLabRecipeSet } from './visual-lab-recipe-set.mjs';
@@ -211,9 +210,11 @@ const compressedTailPng = (width, height) => {
 const writeValidCapture = async (directory, candidate, options = {}) => {
   await mkdir(directory, { recursive: true });
   const recipe = resolveVisualLabCaptureRecipe(candidate);
-  const domain = resolveVisualCaptureDomain(recipe.domain);
-  const driver = resolveVisualCaptureDriver(domain.driver);
-  const fixture = resolveVisualCaptureFixture(recipe.fixture, recipe.domain, recipe.target);
+  const {
+    domainAdapter: domain,
+    fixtureAdapter: fixture,
+    captureDriver: driver,
+  } = resolveVisualCaptureRequest(requestFor(candidate));
   const seed = createHash('sha256')
     .update(`${candidate}:${options.salt ?? 'default'}`).digest()[0];
   const buffers = Object.fromEntries(['off', 'a', 'b'].map((variant, index) => {
@@ -235,9 +236,7 @@ const writeValidCapture = async (directory, candidate, options = {}) => {
   const fixturePreparation = visualLabFixturePreparationLabel(fixture);
   const report = {
     tool: 'visual-lab-audit-v1',
-    ...(driver.name === 'normal-hdr' ? {} : {
-      captureDriver: visualCaptureDriverReportDescriptor(driver),
-    }),
+    ...visualCaptureDriverReportFields(driver),
     result,
     domain: recipe.domain,
     target: recipe.target,
@@ -263,10 +262,7 @@ const writeValidCapture = async (directory, candidate, options = {}) => {
       backendBeforeSelection: 'canvas2d',
       backendReasonBeforeSelection: 'webgl-starting',
       stagedBeforeWebGL: true,
-      ...(driver.name === 'normal-hdr' ? {} : {
-        captureDriver: driver.name,
-        selection: driver.variants[2].selection,
-      }),
+      ...visualCaptureDriverStartupFields(driver, 2),
     },
     backend: domain.executionProfile.backend,
     hdrPipeline: VISUAL_LAB_CAPTURE_PROTOCOL.datasetRequirements.hdrPipeline,
@@ -411,7 +407,19 @@ describe('Visual Lab batch index', () => {
     expect(off).toBeGreaterThan(0);
     expect(off).toBeLessThan(a);
     expect(a).toBeLessThan(b);
+    expect(html).toContain('<figcaption>OFF</figcaption>');
+    expect(html).toContain('<figcaption>A</figcaption>');
+    expect(html).toContain('<figcaption>B</figcaption>');
+    expect(html).not.toContain('<figcaption>Off</figcaption>');
     expect(renderVisualLabContactSheet(index)).toBe(html);
+
+    const powder = renderVisualLabContactSheet(createVisualLabBatchIndex([{
+      candidate: 'powder-style-atlas', status: 'passed',
+      result: stableResult('powder-style-atlas'), warnings: [],
+    }]));
+    expect(powder).toContain('<figcaption>Smooth</figcaption>');
+    expect(powder).toContain('<figcaption>Local</figcaption>');
+    expect(powder).toContain('<figcaption>Grains</figcaption>');
   });
 });
 
@@ -933,6 +941,42 @@ describe('Visual Lab batch runner', () => {
     });
     expect(await readFile(path.join(candidateDirectory, 'failure.log'), 'utf8'))
       .toContain('capture dataset does not match the requested driver state');
+  });
+
+  it('enforces registry-owned report and startup metadata exposure', async () => {
+    const root = await makeTemporaryDirectory();
+    const outputDirectory = path.join(root, 'batch');
+    const candidateRoot = path.join(outputDirectory, 'candidates');
+    await writeValidCapture(path.join(candidateRoot, 'gas-showcase'), 'gas-showcase', {
+      mutateReport: (report) => { report.captureDriver = { hostile: true }; },
+    });
+    await writeValidCapture(
+      path.join(candidateRoot, 'oxygen-showcase'), 'oxygen-showcase', {
+        mutateReport: (report) => {
+          report.startupSelection.captureDriver = 'normal-hdr';
+          report.startupSelection.selection = 2;
+        },
+      },
+    );
+    await writeValidCapture(
+      path.join(candidateRoot, 'powder-style-atlas'), 'powder-style-atlas', {
+        mutateReport: (report) => { delete report.captureDriver; },
+      },
+    );
+
+    const result = await runVisualLabBatch({
+      candidates: ['powder-style-atlas', 'oxygen-showcase', 'gas-showcase'],
+      outputDir: outputDirectory,
+      indexOnly: true,
+    });
+    expect(result.index.candidates.every(({ status }) => status === 'failed')).toBe(true);
+    expect(await readFile(path.join(candidateRoot, 'gas-showcase', 'failure.log'), 'utf8'))
+      .toContain('normal-HDR reports must not add a capture-driver descriptor');
+    expect(await readFile(path.join(candidateRoot, 'oxygen-showcase', 'failure.log'), 'utf8'))
+      .toContain('startup selection was not staged');
+    expect(await readFile(
+      path.join(candidateRoot, 'powder-style-atlas', 'failure.log'), 'utf8',
+    )).toContain('capture-driver descriptor does not match the current typed driver');
   });
 
   it('validates PNG signatures, canonical IHDR, nonzero size, and consistent dimensions', async () => {

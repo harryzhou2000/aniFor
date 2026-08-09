@@ -108,19 +108,45 @@ compatibility projection with no execution authority. A fresh production Gas
 plus Powder batch passed both WebGL/HDR invariants and the portable verifier,
 and the deployed live revision and all 19 resources passed.
 
-The active objective is CI/framework execution leverage, not another isolated
-visual-detail pass. Eliminate duplicated deploy builds with a fail-closed
-`deploy-verified` operation that reuses one successful, unexpired exact-SHA
-static-site artifact only after current/source repository, workflow, run,
-successful build job, artifact ID/digest/uniqueness, embedded revision,
-symlink-free tree, stable-entry aliases, and resource-closure validation.
-Downloaded content remains data in a fresh runner-temporary directory and is
-never executed. Keep a fresh `build-and-deploy` escape path and preserve the
-optional review consumer through a current-run re-upload. After that, move
-driver binding from a one-driver-per-domain restriction to a single
-fixture/request resolver so one material family can host multiple independent
-presentation controls without adding runner branches or changing the frozen
-six-field recipe ABI.
+The exact-SHA artifact-reuse framework is complete and deployed at revision
+`356df7585d0bc94f1478e0361ed075f251819594`. Push run `31304595644` built the
+site normally in 3m30s with `verified_build` skipped. Manual run `31304756262`
+then selected `deploy-verified`, skipped `build`, validated and republished the
+same artifact in 12 seconds, deployed Pages, and passed exact live revision plus
+19-resource closure. All 26 extracted source/re-published files were
+byte-identical (`sha256:3247f1bdee1079ede95cdac5c014fcf13b89690755fd4a0f393166f2063f066c`
+for the sorted per-file manifest). A real stale-SHA source was rejected before
+writing any workflow output. Preserve this source-job provenance, immutable
+artifact-ID/digest pinning, fresh temporary extraction, symlink-free regular
+tree, exact embedded revision, stable aliases, resource closure, provider XOR,
+optional-review reuse, fresh-build escape path, and live verification contract.
+
+The fixture/request-owned driver milestone is complete locally and is the next
+deployment checkpoint. Static extension fixtures now select a driver, while the
+legacy domain `driver` field remains compatibility metadata with no production
+selection authority. One fail-fast resolver returns the frozen domain, fixture,
+and driver tuple; its synthetic acceptance case resolves two fixtures in one
+domain to different drivers. URL construction, CLI argument handling, recipe
+validation, report verification, comparison labels, and contact-sheet captions
+all consume that tuple. One exhaustive executable registry owns URL state,
+expected and observed dataset state, browser selection, metadata exposure, and
+labels, and module initialization rejects missing, orphaned, reordered, or
+malformed adapters. The six-field recipe ABI, five-field result request,
+normal-HDR report omission, Powder descriptor, fixed Powder result identity,
+and release recipe-set identity remain unchanged. The 1,445-source/193-tooling
+test gates, production build, and a real portable Gas+Powder WebGL/HDR batch all
+pass; its sheet renders `OFF/A/B` and `Smooth/Local/Grains` from the registry.
+
+The next objective is authoring and execution throughput, not visual-detail
+volume. Promote the resolved tuple into one immutable capture execution plan so
+new experiments declare fixture, driver, state projection, and review labels
+once; add a dry-run/catalog inspection surface that proves every named recipe
+has a complete executable plan before Chrome starts; and measure safe process or
+page reuse for compatible batch candidates without weakening fixture reset,
+bounded lifecycle cleanup, content identities, or portable verification. A new
+same-domain control should require a static declaration plus one executable
+adapter and optional typed fixture preparer—not edits to audit, batch, baseline,
+review, CI, or contact-sheet dispatch.
 
 ### Cross-runtime static-contract acceptance
 
@@ -142,9 +168,12 @@ fixture-preparation, and Node-adapter tests; TypeScript and the production Vite
 build; and a real built-bundle batch spanning at least one volume-field fixture
 and one prepared liquid-surface fixture. The batch must be complete under
 WebGL/HDR with semantic, authoritative-field alpha, and framebuffer-alpha/support
-invariants preserved. Existing CLI help, URL construction, diagnostic report
-labels, catalog order, and content identities must remain byte-compatible. CI
-must verify the freshly downloaded exact uploaded artifact before deployment.
+invariants preserved. Existing CLI help, URL semantics, historical report
+fields, catalog order, frozen schemas, and content identities must remain
+compatible. Human-facing sheet and warning captions come from the canonical
+driver label registry and may correct a legacy capitalization mismatch without
+entering any frozen identity. CI must verify the freshly downloaded exact
+uploaded artifact before deployment.
 
 The sibling visual-capture contract has a separate v1 schema and must never be
 folded into the renderer's implemented-domain set. Its driver metadata contains
@@ -170,12 +199,11 @@ declarative fixture startup, and production-bundle off/A/B route already form
 the base. E62 Oxygen, E69 Oil motion, and E65 Water motion have been folded into
 their accepted parent baselines and their one-off selector/telemetry/verifier
 plumbing removed. The batch/index, CI review, promotion, and recipe-set framework
-checkpoints are complete and deployed. `main_codex` and Pages serve declarative
-shader-assembly revision `6abece4f43710a4547650bd93af4ca8834f77224` after gated
-workflow run `31294986555`: the build passed with 269/270 ccache hits; the named
-four-recipe release set and brief passed the fresh artifact download and shared
-verifier; deploy, exact live revision, 36 PNG copies, and first-attempt
-19-resource closure all passed. The accepted visual manifest remains
+checkpoints are complete and deployed. Before the current fixture-owned-driver
+checkpoint, `main_codex` and Pages serve exact-SHA artifact-reuse revision
+`356df7585d0bc94f1478e0361ed075f251819594`, built by run `31304595644` and
+republished without rebuilding by run `31304756262`; exact live revision and all
+19 resources passed. The accepted visual manifest remains
 `sha256:b95e09ecb1df93c2b9ae718d205159b17dc56379723f2d1ad904458e16c5653c`.
 
 That deployed checkpoint adds a separate
@@ -3822,12 +3850,13 @@ is deployed at `3400a5db92d587d9b68e0abcd0052839702dc678` by run `31294286484`.
 Declarative shader assembly is deployed at
 `6abece4f43710a4547650bd93af4ca8834f77224` by run `31294986555`. The shared
 static contract, capture ABI, metrics, filterable review board, and local review
-cycle are deployed. The current milestone is the additive typed capture-driver
-boundary described above. It may not widen frozen result/batch/baseline/
-comparison v1 records, add compositor inputs, or reinterpret Powder as an HDR
-leaf. E66 remains deferred until its extra samples fit the established shader
-budget; Powder style comparison now belongs to the source-stage driver rather
-than a second experiment framework.
+cycle are deployed. The typed capture-driver boundary and fixture-owned request
+resolver are now closed; the next framework milestone is one inspectable,
+immutable execution plan plus measured safe batch reuse. Neither may widen
+frozen result/batch/baseline/comparison v1 records, add compositor inputs, or
+reinterpret Powder as an HDR leaf. E66 remains deferred until its extra samples
+fit the established shader budget; Powder style comparison remains a
+source-stage driver inside the common framework.
 
 ### Visual Lab framework checkpoint
 
@@ -4003,7 +4032,7 @@ sidecar are deployed at `294f8e09226c39fc09b56c8270c9b8a6a3edfc59` by run
 `31290360459`, so recurring cohorts no longer depend on copied CLI strings or
 workflow dispatch history. The read-only portable batch/comparison verifier and
 exact same-run artifact round trip are deployed at
-`76e82301f9824126814653a400a10895f675e81a` by run `31292298196`. The active
+`76e82301f9824126814653a400a10895f675e81a` by run `31292298196`. The historical
 typed fixture-preparation bridge is deployed at
 `83894aa6fe98fc5a537cd4c23c9b2400dc37081f` by run `31293472696`, with the
 release set and portable verification again passing before first-attempt live
@@ -4019,12 +4048,17 @@ measurement-only integer RGB/alpha evidence derived from pinned changed PNGs;
 the shared verifier recomputes it when present. It stays outside all frozen v1
 identities, never gates or promotes aesthetics, and remains optional for legacy
 packages. Extend this shared path rather than cloning the verifier or workflow.
-Defer E66 and
-Powder until the fixed HDR
-seam can receive their stability/body proof without a second experiment
-framework.
+E66 remains deferred until its sample budget fits the fixed HDR seam. Powder is
+already supported through the source-stage `powder-render-style` driver and
+must not be reinterpreted as an HDR domain or split into another framework.
 
-## Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
+## Deferred long-term visual roadmap
+
+The older phase plan below is design background only. It does not override the
+current execution-plan, catalog-inspection, and safe batch-reuse objective, and
+none of its multi-pass resource expansion is authorized by the active goal.
+
+### Phase 1 — HDR pipeline & lighting core (biggest visual payoff)
 
 **Goal:** everything downstream needs light and dynamic range; build the chassis first.
 
@@ -4034,7 +4068,7 @@ framework.
 - **Screen-space bloom:** threshold at HDR >1.0, downsampled mip chain (à la Call of Duty / Unity bloom), additive combine before ACES tonemapping. This alone transforms fire/plasma/ELEC.
 - **2D deferred-ish lighting:** you already reconstruct contour normals — light them. Global key light + per-pixel normals → diffuse/specular. Then **local dynamic lights**: fire, plasma, explosions, LIGH emit point lights. Cap at ~16–32 active lights via a light grid/texture, fallback to emissive-only beyond that.
 
-## Phase 2 — Fluid & gas realism
+### Phase 2 — Fluid & gas realism
 
 **Goal:** liquids read as one continuous body with a surface; gases read as volumetric media.
 
@@ -4044,7 +4078,7 @@ framework.
 - **Gases as participating media:** extend your density/colour field with a **noise-animated volume** — FBM curl noise advected by the velocity field, modulated by density, lit by the dynamic lights (light shafts through smoke are extremely high-impact). Approximate with 2–3 octave noise at half res, upsampled.
 - **Fire:** E67 now adds an exact-owner temperature-stratified body and velocity-shaped tongue on the normal HDR path. Its procedural flow remains subordinate to authentic temperature/velocity state, sparse Fire stays discrete, and compact true 8× keeps the established generic Energy presentation. Persistent advected flame volume, ember/spray support, and dynamic light transport remain separate future experiments.
 
-## Phase 3 — Material delicacy
+### Phase 3 — Material delicacy
 
 **Goal:** each optical class gets a signature response instead of a shared treatment.
 
@@ -4057,7 +4091,7 @@ framework.
 - **Caustics-lite** under water/oil bodies: animated light patterns on the floor beneath translucent liquid, driven by the same noise field as the surface.
 - **Velocity-aware effects:** short motion-smear along velocity for fast powders/liquids, streak rendering for PHOT/ELEC/LIGH.
 
-## Phase 4 — Tech-direction decisions
+### Phase 4 — Tech-direction decisions
 
 - **WebGPU via Pixi v8** is worth prototyping on a branch: compute shaders would let you do fluid smoothing, light accumulation, and noise advection in compute, with WebGL2 as the fallback path. Pixi 8's architecture supports both. If that's too much churn, WebGL2 + MRT + float targets gets you 90% there.
 - **Half-res and temporal tricks:** bloom, AO, and volumetrics at half or quarter res; temporal accumulation/jitter for the volumetric noise to hide the low res.

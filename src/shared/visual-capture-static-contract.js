@@ -56,6 +56,7 @@ const contract = {
     {
       name: 'powder-style-atlas',
       scene: 'showcase',
+      driver: 'powder-render-style',
       constraints: [{ domain: 'powder', targets: [0] }],
       preparationReportLabel: 'preparePowderStyleAtlasFixture',
       requirement: '--domain=powder --target=0',
@@ -94,9 +95,11 @@ const validateContract = (candidate) => {
     }
   }
 
+  const knownDomains = new Set([
+    ...VISUAL_LAB_STATIC_CONTRACT.captureDomainOrder,
+    ...candidate.extensionDomains.map(({ name }) => name),
+  ]);
   const driverNames = new Set();
-  const driverDomains = new Set();
-  const driverByDomain = new Map();
   for (const driver of candidate.drivers) {
     if (!SAFE_NAME.test(driver.name) || driverNames.has(driver.name)) {
       throw new TypeError(`invalid or duplicate visual capture driver ${JSON.stringify(driver.name)}`);
@@ -107,14 +110,21 @@ const validateContract = (candidate) => {
     if (driver.variants.map(({ name }) => name).join(',') !== CAPTURE_VARIANTS.join(',')) {
       throw new TypeError(`visual capture driver ${driver.name} must define off, a, b in order`);
     }
+    const supportedDomains = new Set();
     for (const domain of driver.domains) {
-      if (driverDomains.has(domain)) {
-        throw new TypeError(`visual capture domain ${domain} has more than one driver`);
+      if (!SAFE_NAME.test(domain) || !knownDomains.has(domain) || supportedDomains.has(domain)) {
+        throw new TypeError(
+          `visual capture driver ${driver.name} has an invalid or duplicate domain`,
+        );
       }
-      driverDomains.add(domain);
-      driverByDomain.set(domain, driver.name);
+      supportedDomains.add(domain);
     }
     driverNames.add(driver.name);
+  }
+  const normalDriver = candidate.drivers.find(({ name }) => name === 'normal-hdr');
+  if (!normalDriver
+    || normalDriver.variants.some(({ selection }, index) => selection !== index)) {
+    throw new TypeError('normal-HDR capture must map off/A/B to exact selections 0/1/2');
   }
   const powderDriver = candidate.drivers.find(({ name }) => name === 'powder-render-style');
   if (!powderDriver
@@ -124,9 +134,9 @@ const validateContract = (candidate) => {
 
   const extensionDomains = new Set();
   for (const domain of candidate.extensionDomains) {
+    const defaultDriver = candidate.drivers.find(({ name }) => name === domain.driver);
     if (!SAFE_NAME.test(domain.name) || extensionDomains.has(domain.name)
-      || !driverNames.has(domain.driver) || !driverDomains.has(domain.name)
-      || driverByDomain.get(domain.name) !== domain.driver
+      || !defaultDriver?.domains.includes(domain.name)
       || domain.executionProfile !== VISUAL_LAB_STATIC_CONTRACT.normalHdrExecutionProfile
       || domain.evidence === null
       || Reflect.ownKeys(domain.evidence).length !== 1
@@ -148,19 +158,21 @@ const validateContract = (candidate) => {
 
   const fixtureNames = new Set();
   for (const fixture of candidate.fixtures) {
-    if (!SAFE_NAME.test(fixture.name) || fixtureNames.has(fixture.name)) {
+    const driver = candidate.drivers.find(({ name }) => name === fixture.driver);
+    if (!SAFE_NAME.test(fixture.name) || fixtureNames.has(fixture.name) || !driver) {
       throw new TypeError(`invalid or duplicate visual capture fixture ${JSON.stringify(fixture.name)}`);
     }
     for (const constraint of fixture.constraints) {
-      if (!extensionDomains.has(constraint.domain)) {
-        throw new TypeError(`visual capture fixture ${fixture.name} uses an unknown extension domain`);
+      if (!knownDomains.has(constraint.domain)
+        || !driver.domains.includes(constraint.domain)) {
+        throw new TypeError(`visual capture fixture ${fixture.name} uses an unsupported domain`);
       }
     }
     fixtureNames.add(fixture.name);
   }
 
   for (const recipe of candidate.captureRecipes) {
-    if (!fixtureNames.has(recipe.fixture) || !extensionDomains.has(recipe.domain)) {
+    if (!fixtureNames.has(recipe.fixture) || !knownDomains.has(recipe.domain)) {
       throw new TypeError(`visual capture recipe ${recipe.name} is not backed by an extension fixture`);
     }
     const fixture = candidate.fixtures.find(({ name }) => name === recipe.fixture);

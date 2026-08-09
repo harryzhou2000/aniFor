@@ -19,15 +19,15 @@ import {
   readVisualLabRecipeSet,
 } from './visual-lab-recipe-set.mjs';
 import {
-  resolveVisualCaptureDomain,
-  resolveVisualCaptureFixture,
+  resolveVisualCaptureRequest,
   VISUAL_LAB_CAPTURE_PROTOCOL,
   visualLabFixturePreparationLabel,
 } from './visual-lab-fixtures.mjs';
 import {
-  resolveVisualCaptureDriver,
+  assertVisualCaptureDriverReportDescriptor,
   visualCaptureDriverDatasetExpectation,
-  visualCaptureDriverReportDescriptor,
+  visualCaptureDriverStartupFields,
+  visualCaptureVariantLabel,
 } from './visual-capture-drivers.mjs';
 import { createVisualLabResultRecord } from './visual-lab-result.mjs';
 import {
@@ -430,6 +430,7 @@ const escapeHtml = (value) => String(value)
 
 const renderPassedCard = (entry) => {
   const { request } = entry.result;
+  const { captureDriver } = resolveVisualCaptureRequest(request);
   const warnings = entry.warnings.length === 0 ? '' : `
         <ul class="warnings">${entry.warnings.map((warning) => (
     `<li>${escapeHtml(warning)}</li>`
@@ -439,7 +440,7 @@ const renderPassedCard = (entry) => {
             <img src="./${escapeHtml(entry.artifacts[variant])}" loading="lazy" alt="${
   escapeHtml(`${entry.candidate} ${variant}`)
 }">
-            <figcaption>${variant === 'off' ? 'Off' : variant.toUpperCase()}</figcaption>
+            <figcaption>${escapeHtml(visualCaptureVariantLabel(captureDriver, variant))}</figcaption>
           </figure>`).join('');
   return `
       <article class="candidate passed">
@@ -521,9 +522,11 @@ export function renderVisualLabContactSheet(index) {
 
 const assertCurrentCaptureContract = (report, recipe, hashes) => {
   const request = requestForRecipe(recipe);
-  const domain = resolveVisualCaptureDomain(recipe.domain);
-  const driver = resolveVisualCaptureDriver(domain.driver);
-  const fixture = resolveVisualCaptureFixture(recipe.fixture, recipe.domain, recipe.target);
+  const {
+    domainAdapter: domain,
+    fixtureAdapter: fixture,
+    captureDriver: driver,
+  } = resolveVisualCaptureRequest(request);
   const expectedPreparation = visualLabFixturePreparationLabel(fixture);
   const expectedBacking = `${WORLD_WIDTH * recipe.renderScale}x${WORLD_HEIGHT * recipe.renderScale}`;
   const expectedCapability = {
@@ -547,15 +550,7 @@ const assertCurrentCaptureContract = (report, recipe, hashes) => {
   if (!isDeepStrictEqual(report.captureProtocol, VISUAL_LAB_CAPTURE_PROTOCOL)) {
     throw new Error('capture protocol does not match the current protocol');
   }
-  if (driver.name === 'normal-hdr') {
-    if (report.captureDriver !== undefined) {
-      throw new Error('normal-HDR reports must not add a capture-driver descriptor');
-    }
-  } else if (!isDeepStrictEqual(
-    report.captureDriver, visualCaptureDriverReportDescriptor(driver),
-  )) {
-    throw new Error('capture-driver descriptor does not match the current typed driver');
-  }
+  assertVisualCaptureDriverReportDescriptor(driver, report.captureDriver);
   if (report.backend !== domain.executionProfile.backend
     || report.hdrPipeline !== VISUAL_LAB_CAPTURE_PROTOCOL.datasetRequirements.hdrPipeline) {
     throw new Error('report did not complete on canonical WebGL with active HDR');
@@ -565,6 +560,12 @@ const assertCurrentCaptureContract = (report, recipe, hashes) => {
   }
 
   const startup = report.startupSelection;
+  const expectedStartupDriverFields = visualCaptureDriverStartupFields(driver, 2);
+  const actualStartupDriverFields = Object.fromEntries(
+    ['captureDriver', 'selection']
+      .filter((name) => Object.hasOwn(startup ?? {}, name))
+      .map((name) => [name, startup[name]]),
+  );
   if (startup?.requestedVariant !== 2
     || startup.fixture !== recipe.fixture
     || startup.scene !== fixture.scene
@@ -573,9 +574,7 @@ const assertCurrentCaptureContract = (report, recipe, hashes) => {
     || startup.backendBeforeSelection !== 'canvas2d'
     || startup.backendReasonBeforeSelection !== 'webgl-starting'
     || startup.stagedBeforeWebGL !== true
-    || (driver.name !== 'normal-hdr'
-      && (startup.captureDriver !== driver.name
-        || startup.selection !== driver.variants[2].selection))) {
+    || !isDeepStrictEqual(actualStartupDriverFields, expectedStartupDriverFields)) {
     throw new Error('startup selection was not staged through bounded Canvas promotion');
   }
 
