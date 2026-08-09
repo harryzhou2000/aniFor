@@ -378,18 +378,28 @@ describe('Visual Lab fixture adapters', () => {
 
   it('observes Canvas startup before preparing and staging a fixture', () => {
     const calls = [];
+    let selectedVariant = 0;
     const audit = {
       backend: () => {
         calls.push('backend');
         return { backend: 'canvas2d', reason: 'webgl-starting' };
       },
       prepareVisualLabFixture: (fixture) => calls.push(`prepare:${fixture}`),
-      setVisualLabVariant: (variant) => calls.push(`variant:${variant}`),
+      setPreparedVisualCaptureVariant: (fixture, variant) => {
+        selectedVariant = variant;
+        calls.push(`select:${fixture}:${variant}`);
+      },
+      preparedVisualCaptureVariant: (fixture) => {
+        calls.push(`observe:${fixture}`);
+        return selectedVariant;
+      },
     };
     const result = runStartupExpression(
       resolveVisualLabFixture('oil-motion', 'liquid', 8), audit,
     );
-    expect(calls).toEqual(['backend', 'prepare:oil-motion', 'variant:2']);
+    expect(calls).toEqual([
+      'backend', 'prepare:oil-motion', 'select:oil-motion:2', 'observe:oil-motion',
+    ]);
     expect(result).toMatchObject({
       fixture: 'oil-motion', scene: 'showcase', fixturePrepared: true,
       preparation: 'prepareOilMotionVfxFixture',
@@ -407,10 +417,13 @@ describe('Visual Lab fixture adapters', () => {
       resolveVisualLabFixture('water-motion', 'liquid', 2), {
         backend: audit.backend,
         prepareVisualLabFixture: (fixture) => calls.push(`prepare:${fixture}`),
-        setVisualLabVariant: audit.setVisualLabVariant,
+        setPreparedVisualCaptureVariant: audit.setPreparedVisualCaptureVariant,
+        preparedVisualCaptureVariant: audit.preparedVisualCaptureVariant,
       },
     );
-    expect(calls).toEqual(['backend', 'prepare:water-motion', 'variant:2']);
+    expect(calls).toEqual([
+      'backend', 'prepare:water-motion', 'select:water-motion:2', 'observe:water-motion',
+    ]);
     expect(waterResult).toMatchObject({
       fixture: 'water-motion', scene: 'showcase', fixturePrepared: true,
       preparation: 'prepareLiquidMotionVfxFixture',
@@ -420,14 +433,25 @@ describe('Visual Lab fixture adapters', () => {
 
   it('uses the mounted scene for no-op fixtures and fails before mutation on bad adapters', () => {
     const showcaseCalls = [];
+    let showcaseVariant = 0;
     const showcase = runStartupExpression(resolveVisualLabFixture('showcase', 'gas', 1), {
       backend: () => {
         showcaseCalls.push('backend');
         return { backend: 'canvas2d', reason: 'webgl-starting' };
       },
-      setVisualLabVariant: (variant) => showcaseCalls.push(`variant:${variant}`),
+      prepareVisualLabFixture: (fixture) => showcaseCalls.push(`prepare:${fixture}`),
+      setPreparedVisualCaptureVariant: (fixture, variant) => {
+        showcaseVariant = variant;
+        showcaseCalls.push(`select:${fixture}:${variant}`);
+      },
+      preparedVisualCaptureVariant: (fixture) => {
+        showcaseCalls.push(`observe:${fixture}`);
+        return showcaseVariant;
+      },
     });
-    expect(showcaseCalls).toEqual(['backend', 'variant:2']);
+    expect(showcaseCalls).toEqual([
+      'backend', 'prepare:showcase', 'select:showcase:2', 'observe:showcase',
+    ]);
     expect(showcase).toMatchObject({ scene: 'showcase', preparation: 'scene' });
     expect(showcase).not.toHaveProperty('captureDriver');
     expect(showcase).not.toHaveProperty('selection');
@@ -438,7 +462,7 @@ describe('Visual Lab fixture adapters', () => {
         missingCalls.push('backend');
         return { backend: 'canvas2d', reason: 'webgl-starting' };
       },
-      setVisualLabVariant: () => missingCalls.push('variant'),
+      setPreparedVisualCaptureVariant: () => missingCalls.push('variant'),
     });
     expect(missingCalls).toEqual(['backend']);
     expect(missing).toMatchObject({ failure: 'missing-preparer', fixturePrepared: false });
@@ -453,7 +477,7 @@ describe('Visual Lab fixture adapters', () => {
         throwingCalls.push('prepare');
         throw new Error('fixture rejected');
       },
-      setVisualLabVariant: () => throwingCalls.push('variant'),
+      setPreparedVisualCaptureVariant: () => throwingCalls.push('variant'),
     });
     expect(throwingCalls).toEqual(['backend', 'prepare']);
     expect(throwing).toMatchObject({

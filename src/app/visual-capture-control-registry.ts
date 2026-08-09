@@ -1,7 +1,7 @@
 import type { PowderRenderStyle } from '../renderer/powder-render-style';
 import {
-  VISUAL_LAB_PREPARED_FIXTURE_IDS,
-  type VisualLabPreparedFixtureId,
+  VISUAL_LAB_FIXTURE_IDS,
+  type VisualLabFixtureId,
 } from './visual-lab-fixture-preparation';
 
 export type VisualCaptureControlVariant = 0 | 1 | 2;
@@ -9,6 +9,8 @@ export type VisualCaptureControlVariant = 0 | 1 | 2;
 export interface VisualCaptureControlHost {
   setPowderRenderStyle(style: PowderRenderStyle): void;
   getPowderRenderStyle(): PowderRenderStyle;
+  setVisualLabVariant(variant: VisualCaptureControlVariant): void;
+  getVisualLabVariant(): VisualCaptureControlVariant;
 }
 
 const POWDER_STYLE_BY_VARIANT = Object.freeze({
@@ -18,7 +20,7 @@ const POWDER_STYLE_BY_VARIANT = Object.freeze({
 } satisfies Record<VisualCaptureControlVariant, PowderRenderStyle>);
 
 interface VisualCaptureControlDescriptor {
-  readonly fixture: VisualLabPreparedFixtureId;
+  readonly fixture: VisualLabFixtureId;
   set(host: VisualCaptureControlHost, variant: VisualCaptureControlVariant): void;
   get(host: VisualCaptureControlHost): VisualCaptureControlVariant;
 }
@@ -28,6 +30,27 @@ interface VisualCaptureControlDescriptor {
  * experiments add one descriptor here; the browser bridge remains unchanged.
  */
 const VISUAL_CAPTURE_CONTROL_DESCRIPTORS = Object.freeze([
+  Object.freeze({
+    fixture: 'showcase',
+    set: (host: VisualCaptureControlHost, variant: VisualCaptureControlVariant) => {
+      host.setVisualLabVariant(variant);
+    },
+    get: (host: VisualCaptureControlHost) => host.getVisualLabVariant(),
+  }),
+  Object.freeze({
+    fixture: 'oil-motion',
+    set: (host: VisualCaptureControlHost, variant: VisualCaptureControlVariant) => {
+      host.setVisualLabVariant(variant);
+    },
+    get: (host: VisualCaptureControlHost) => host.getVisualLabVariant(),
+  }),
+  Object.freeze({
+    fixture: 'water-motion',
+    set: (host: VisualCaptureControlHost, variant: VisualCaptureControlVariant) => {
+      host.setVisualLabVariant(variant);
+    },
+    get: (host: VisualCaptureControlHost) => host.getVisualLabVariant(),
+  }),
   Object.freeze({
     fixture: 'powder-style-atlas',
     set: (host: VisualCaptureControlHost, variant: VisualCaptureControlVariant) => {
@@ -44,11 +67,11 @@ export const VISUAL_CAPTURE_CONTROL_FIXTURE_IDS = Object.freeze(
   VISUAL_CAPTURE_CONTROL_DESCRIPTORS.map(({ fixture }) => fixture),
 );
 
-const CONTROL_BY_FIXTURE = new Map<VisualLabPreparedFixtureId, VisualCaptureControlDescriptor>();
+const CONTROL_BY_FIXTURE = new Map<VisualLabFixtureId, VisualCaptureControlDescriptor>();
 for (const descriptor of VISUAL_CAPTURE_CONTROL_DESCRIPTORS) {
-  if (!VISUAL_LAB_PREPARED_FIXTURE_IDS.some((prepared) => prepared === descriptor.fixture)) {
+  if (!VISUAL_LAB_FIXTURE_IDS.some((known) => known === descriptor.fixture)) {
     throw new TypeError(
-      `Visual capture control fixture ${JSON.stringify(descriptor.fixture)} is not a prepared fixture`,
+      `Visual capture control fixture ${JSON.stringify(descriptor.fixture)} is not a known fixture`,
     );
   }
   if (CONTROL_BY_FIXTURE.has(descriptor.fixture)) {
@@ -58,6 +81,10 @@ for (const descriptor of VISUAL_CAPTURE_CONTROL_DESCRIPTORS) {
   }
   CONTROL_BY_FIXTURE.set(descriptor.fixture, descriptor);
 }
+if (CONTROL_BY_FIXTURE.size !== VISUAL_LAB_FIXTURE_IDS.length
+  || VISUAL_LAB_FIXTURE_IDS.some((fixture) => !CONTROL_BY_FIXTURE.has(fixture))) {
+  throw new TypeError('Visual capture control registry does not match the fixture catalog');
+}
 
 /**
  * App-owned, fixture-scoped same-page capture controls.
@@ -66,23 +93,23 @@ for (const descriptor of VISUAL_CAPTURE_CONTROL_DESCRIPTORS) {
  * mutate whichever unrelated scene happens to be mounted in the page.
  */
 export class VisualCaptureControlRegistry {
-  private activeFixture?: VisualLabPreparedFixtureId;
+  private activeFixture?: VisualLabFixtureId;
 
   constructor(private readonly host: VisualCaptureControlHost) {}
 
-  markFixturePrepared(fixture: VisualLabPreparedFixtureId): void {
-    assertKnownPreparedFixture(fixture);
+  markFixturePrepared(fixture: VisualLabFixtureId): void {
+    assertKnownFixture(fixture);
     this.activeFixture = fixture;
   }
 
   setVariant(
-    fixture: VisualLabPreparedFixtureId,
+    fixture: VisualLabFixtureId,
     variant: VisualCaptureControlVariant,
   ): void {
     const control = this.requireActiveFixture(fixture);
     assertVisualCaptureControlVariant(variant);
     control.set(this.host, variant);
-    const observedVariant = control.get(this.host);
+    const observedVariant = this.readVariant(control);
     if (observedVariant !== variant) {
       throw new Error(
         `Visual capture control host did not apply ${JSON.stringify(fixture)} variant ${variant}`,
@@ -90,14 +117,20 @@ export class VisualCaptureControlRegistry {
     }
   }
 
-  getVariant(fixture: VisualLabPreparedFixtureId): VisualCaptureControlVariant {
-    return this.requireActiveFixture(fixture).get(this.host);
+  getVariant(fixture: VisualLabFixtureId): VisualCaptureControlVariant {
+    return this.readVariant(this.requireActiveFixture(fixture));
+  }
+
+  private readVariant(control: VisualCaptureControlDescriptor): VisualCaptureControlVariant {
+    const observed = control.get(this.host);
+    assertVisualCaptureControlVariant(observed);
+    return observed;
   }
 
   private requireActiveFixture(
-    fixture: VisualLabPreparedFixtureId,
+    fixture: VisualLabFixtureId,
   ): VisualCaptureControlDescriptor {
-    assertKnownPreparedFixture(fixture);
+    assertKnownFixture(fixture);
     if (this.activeFixture === undefined) {
       throw new Error('Visual capture control fixture has not been prepared');
     }
@@ -114,11 +147,11 @@ export class VisualCaptureControlRegistry {
   }
 }
 
-function assertKnownPreparedFixture(
-  fixture: VisualLabPreparedFixtureId,
-): asserts fixture is VisualLabPreparedFixtureId {
-  if (!VISUAL_LAB_PREPARED_FIXTURE_IDS.some((prepared) => prepared === fixture)) {
-    throw new Error(`Unknown prepared Visual Lab fixture ${JSON.stringify(fixture)}`);
+function assertKnownFixture(
+  fixture: VisualLabFixtureId,
+): asserts fixture is VisualLabFixtureId {
+  if (!VISUAL_LAB_FIXTURE_IDS.some((known) => known === fixture)) {
+    throw new Error(`Unknown Visual Lab fixture ${JSON.stringify(fixture)}`);
   }
 }
 

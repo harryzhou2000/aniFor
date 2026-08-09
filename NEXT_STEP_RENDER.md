@@ -47,21 +47,38 @@ Active priority order:
    Gas and Oxygen preserved their strict-v1 result IDs and all PNG hashes,
    every candidate/variant took exactly one evidence snapshot, and both shared
    legs used one host with zero restart.
-4. Treat the fixture-owned same-page A/B control registry as the current local
-   framework checkpoint. Powder now prepares and marks its exact fixture, then
-   selects `0|1|2` through one generic browser bridge; its driver translates the
-   readback to stable Smooth/Local/Grains report data. Real built fresh/shared
-   captures under both v1 and v2 proof reproduced result
+4. Treat the initial fixture-owned same-page A/B control registry as deployed
+   infrastructure. Revision `a24ed55c528065c0582b0045c43e47af7e048f6d`
+   was built and deployed by workflow run `31324069052`; live Pages passed its
+   exact revision and 19-resource closure with 269/270 ccache hits. Powder
+   prepares and marks its exact fixture, then selects `0|1|2` through one
+   generic browser bridge; its driver translates the readback to stable
+   Smooth/Local/Grains report data. Real built fresh/shared captures under both
+   v1 and v2 proof reproduced result
    `sha256:2acec1e8b41ed7f499e230a59db2816850979c4668dbb82053de56aa326e2889`
    and all three prior PNG hashes exactly, and every package passed portable
    verification with no Chrome residue.
-5. Extend that registry to the next powder, liquid, gas, and solid experiments
-   through one typed controller descriptor plus fixture/recipe data, not another
-   browser method or harness branch. Use the framework to compare and checkpoint
-   material experiments. Visual
-   preference may accept a candidate without broad unit-test expansion, but it
-   must retain topology, renderer lifecycle, portable evidence, and deployment
-   contracts.
+5. Treat all-fixture control convergence as the current stable local framework
+   checkpoint. Exact resolver-owned fixture IDs now flow through selection
+   compilation; `showcase` activates through the existing preparation bridge as
+   a validated no-op; Oil, Water, and Powder report whether they actually
+   mutate; and Game reconciles only those authored scenes. Normal-HDR and Powder
+   share the same fixture-owned numeric set/readback ABI, while private plan IDs
+   rotate intentionally. The frozen full execution-plan ID is now
+   `sha256:846378d9998da05c2bfbeb11f8bd367fcf1f1239ecf374b360246a90dee31972`.
+   A built shared SwiftShader v2 batch drove showcase Gas, prepared Water, and
+   Powder through one host and nine completed-frame captures with zero failures;
+   semantic, authoritative-field, framebuffer-alpha, lifecycle, and portable
+   verification all passed. Water reproduced parent revision `a24ed55` exactly
+   at result `sha256:b107a9841f693139043fd2705eb658c6c3ff8a50f403032a3d79217cd92ea9fd`;
+   its difference from the older accepted baseline therefore predates this
+   control migration. A separate fresh-host default-v1 Water batch reproduced
+   the same result and all three PNG hashes through the two-snapshot path.
+   Continue improving the registration and evidence
+   loop before spending the milestone on isolated shader detail. Visual
+   preference may later accept a candidate without broad unit-test expansion,
+   but topology, renderer lifecycle, portable evidence, and deployment remain
+   protected.
 
 Do not spend the active milestone on another isolated highlight, texture, or
 material-specific shader branch. The intended leverage is a faster, observable,
@@ -298,7 +315,7 @@ Index-only aggregation preserves an existing sidecar byte-for-byte and never
 invents one for legacy output. The generic Powder-control bridge intentionally
 rotates the private content-addressed driver plan while retaining public capture
 results. The accepted two-candidate SwiftShader tuning ID is now
-`sha256:0af69b62b866a004a0b52390082b66f555a99083d22c26811112dadebdeadd32`.
+`sha256:27091b1afe4f9d3072a5ff0a3a0458591fa9d9c06586e7a970a249cbabdc9a9a`.
 
 The first profile-preserving efficiency changes are accepted locally. WebGL
 Powder style selection now owns exactly one causal presenter frame; Canvas

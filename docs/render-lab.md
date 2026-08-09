@@ -1007,17 +1007,20 @@ support exact. Framebuffer alpha is explicitly style-owned but must remain
 nonempty at fixed geometry, because Smooth and Grains deliberately make
 different presentation-only silhouette decisions.
 
-Same-page controls now use an app-owned, fixture-scoped registry. Preparation
-marks the exact active fixture; the generic browser bridge accepts only that
-fixture plus variant `0|1|2` and requires matching readback. The Powder driver
-maps the numeric readback back to its stable Smooth/Local/Grains dataset and
-report values. Unknown, unprepared, unsupported, mismatched, invalid, or
-misapplied controls fail before evidence capture. Future material controls add
-one typed registry descriptor without adding another browser method or branch
-to the audit, batch, baseline, review, or CI layers. The migration intentionally
-changes its private content-addressed execution/tuning plans, while built fresh
-and shared captures under both stable-snapshot and completed-receipt proof retain
-the exact established Powder result ID and all three PNG hashes.
+Same-page controls now use one app-owned, fixture-scoped registry for every
+capture fixture. The existing preparation bridge validates and activates the
+exact fixture; `showcase` is an explicit typed no-op, while Oil, Water, and
+Powder run their authored preparers. The renderer reconciles its material plane
+only when that activation actually mutated the scene. The generic browser
+bridge then accepts only the active fixture plus variant `0|1|2` and requires
+matching host readback. Normal-HDR maps the value directly; the Powder driver
+maps it back to stable Smooth/Local/Grains dataset and report values. Unknown,
+unactivated, mismatched, invalid, or misapplied controls fail before evidence
+capture. Future material controls add one typed registry descriptor without
+adding another browser method or branch to the audit, batch, baseline, review,
+or CI layers. This migration intentionally changes only private executable and
+execution/tuning-plan identities; public report shape and result identity remain
+owned by the existing capture contract.
 
 Capture the canonical 2× recipe from a production bundle with:
 

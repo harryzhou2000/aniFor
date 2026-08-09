@@ -202,17 +202,23 @@ require edits to audit, batch, baseline, review, CI, or sheet dispatch.
 Preserve `anifor.visual-lab.static-contract/v1`, every result/batch/baseline/
 comparison/recipe-set identity, and the generic WebGL capture path throughout.
 
-Same-page capture controls are fixture-owned app authority. Add a closed
-descriptor to `VisualCaptureControlRegistry`, prepare and mark the exact fixture,
-then cross the browser boundary only through
+Same-page capture controls are fixture-owned app authority. Every static capture
+fixture must have exactly one closed descriptor in `VisualCaptureControlRegistry`.
+Activate and mark the exact fixture through the existing
+`prepareVisualLabFixture` bridge first: `showcase` is an explicit typed no-op,
+while authored Oil, Water, and Powder fixtures return that they mutated so Game
+alone reconciles the material plane. Then cross the browser boundary only through
 `setPreparedVisualCaptureVariant(fixture, 0|1|2)` and the matching readback.
-Unknown, unprepared, unsupported, mismatched, invalid, or misapplied controls
+Normal-HDR uses the renderer's promotion-safe desired-variant getter; Powder
+maps numeric variants to Smooth/Local/Grains. Unknown, unactivated, unsupported,
+mismatched, invalid, or misapplied controls
 must fail before evidence capture. Driver adapters may translate that numeric
 variant back to their stable public selection label, but must not add another
 browser method name, free-form argument list, audit/batch branch, or serialized
-executable hook. The Powder migration is the reference: Smooth/Local/Grains,
-datasets, pixels, and result identity remain exact even though the private
-content-addressed execution/tuning plan rotates with its new expression.
+executable hook. Selection-expression construction must receive the exact
+resolver-owned fixture ID as closed private context; never hardcode one fixture
+inside a reusable driver. Public result/report shapes remain exact even though
+the private content-addressed execution/tuning plan rotates with a new expression.
 
 The tuning-plan increment is now the protected capture contract. The exhaustive
 scripts-side driver capability registry feeds disjoint content-addressed
@@ -227,9 +233,9 @@ full post-completion snapshot, and a same-ticket/submission completed-state read
 after that snapshot. Batch children receive a plan path plus entry ID, reports
 carry the plan/entry proof, portable verification reconstructs the matching v1
 or v2 capabilities, CI requires the sidecar, and index-only preserves existing
-bytes without inventing legacy provenance. The accepted generic-control
-SwiftShader Gas+Powder v1 plan ID is
-`sha256:0af69b62b866a004a0b52390082b66f555a99083d22c26811112dadebdeadd32`.
+bytes without inventing legacy provenance. The accepted all-fixture-control
+SwiftShader Gas+Powder v1 tuning-plan ID is
+`sha256:27091b1afe4f9d3072a5ff0a3a0458591fa9d9c06586e7a970a249cbabdc9a9a`.
 
 Keep the WebGL Powder style selector single-owner: the presenter submits its
 uniform-only frame, while Canvas/no-presenter retains contour invalidation and

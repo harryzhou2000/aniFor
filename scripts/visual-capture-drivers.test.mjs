@@ -59,10 +59,20 @@ describe('typed visual capture drivers', () => {
 
   it('keeps normal HDR selection and URL state byte-compatible', () => {
     const calls = [];
+    let selectedVariant = 0;
     expect(runSelection('normal-hdr', 2, {
-      setVisualLabVariant: (variant) => calls.push(variant),
+      setPreparedVisualCaptureVariant: (fixture, variant) => {
+        calls.push(['set', fixture, variant]);
+        selectedVariant = variant;
+      },
+      preparedVisualCaptureVariant: (fixture) => {
+        calls.push(['read', fixture]);
+        return selectedVariant;
+      },
     })).toEqual({ ok: true, selection: 2 });
-    expect(calls).toEqual([2]);
+    expect(calls).toEqual([
+      ['set', 'showcase', 2], ['read', 'showcase'],
+    ]);
     const request = { domain: 'gas', target: 4, gain: 1.25 };
     expect(visualCaptureDriverUrlValues('normal-hdr', request)).toEqual({
       visualLab: 'gas', visualVariant: '0', visualTarget: '4', visualGain: '1.25',
@@ -75,18 +85,30 @@ describe('typed visual capture drivers', () => {
 
   it('binds selection generation to exact known showcase, Oil, Water, and Powder fixtures', () => {
     const normalCalls = [];
+    let normalVariant = 0;
     const normalAudit = {
-      setVisualLabVariant: (variant) => normalCalls.push(variant),
+      setPreparedVisualCaptureVariant: (fixtureId, variant) => {
+        normalCalls.push(['set', fixtureId, variant]);
+        normalVariant = variant;
+      },
+      preparedVisualCaptureVariant: (fixtureId) => {
+        normalCalls.push(['read', fixtureId]);
+        return normalVariant;
+      },
     };
     const expressions = ['showcase', 'oil-motion', 'water-motion'].map((fixtureId) => (
       buildVisualCaptureSelectionExpression('normal-hdr', 2, { fixtureId })
     ));
-    expect(new Set(expressions).size).toBe(1);
+    expect(new Set(expressions).size).toBe(3);
     for (const fixtureId of ['showcase', 'oil-motion', 'water-motion']) {
       expect(runSelection('normal-hdr', 2, normalAudit, fixtureId))
         .toEqual({ ok: true, selection: 2 });
     }
-    expect(normalCalls).toEqual([2, 2, 2]);
+    expect(normalCalls).toEqual([
+      ['set', 'showcase', 2], ['read', 'showcase'],
+      ['set', 'oil-motion', 2], ['read', 'oil-motion'],
+      ['set', 'water-motion', 2], ['read', 'water-motion'],
+    ]);
 
     const powderCalls = [];
     expect(runSelection('powder-render-style', 1, {
@@ -153,7 +175,7 @@ describe('typed visual capture drivers', () => {
     ))).toEqual(['Smooth', 'Local', 'Grains']);
   });
 
-  it('fails the fixture-owned Powder selector closed for unknown, unprepared, or mismatched state', () => {
+  it('fails fixture-owned selectors closed for unknown, unprepared, or mismatched state', () => {
     const unknownFixture = {
       setPreparedVisualCaptureVariant: (fixture) => {
         throw new Error(`Unknown prepared Visual Lab fixture ${fixture}`);
@@ -178,6 +200,9 @@ describe('typed visual capture drivers', () => {
     };
     expect(runSelection('powder-render-style', 1, mismatchedFixture)).toEqual({
       ok: false, failure: 'selection-mismatch', selection: 'grains',
+    });
+    expect(runSelection('normal-hdr', 1, mismatchedFixture, 'water-motion')).toEqual({
+      ok: false, failure: 'selection-mismatch', selection: 2,
     });
 
     const project = (audit) => Function(
@@ -405,7 +430,7 @@ describe('typed visual capture drivers', () => {
     })).toThrow('optional auditIdentifier only');
     expect(buildVisualCaptureSelectionExpression('normal-hdr', 0, {
       fixtureId: 'showcase', auditIdentifier: '$safeAudit',
-    })).toContain('$safeAudit.setVisualLabVariant(0)');
+    })).toContain('$safeAudit.setPreparedVisualCaptureVariant("showcase", 0)');
     expect(() => buildVisualCaptureSelectionExpression('normal-hdr', 0, {
       fixtureId: 'showcase', auditIdentifier: 'audit.call()',
     })).toThrow('Unsafe visual capture audit identifier');

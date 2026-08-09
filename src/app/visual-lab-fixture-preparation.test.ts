@@ -6,10 +6,18 @@ import { prepareOilMotionVfxFixture } from './oil-motion-vfx-audit';
 import { preparePowderStyleAtlasFixture } from './powder-style-atlas-fixture';
 import {
   prepareVisualLabFixture,
+  VISUAL_LAB_FIXTURE_IDS,
   VISUAL_LAB_PREPARED_FIXTURE_IDS,
 } from './visual-lab-fixture-preparation';
 
 describe('Visual Lab fixture preparation registry', () => {
+  it('exposes the exact frozen closed activation IDs', () => {
+    expect(VISUAL_LAB_FIXTURE_IDS).toEqual([
+      'showcase', 'oil-motion', 'water-motion', 'powder-style-atlas',
+    ]);
+    expect(Object.isFrozen(VISUAL_LAB_FIXTURE_IDS)).toBe(true);
+  });
+
   it('exposes the exact frozen closed preparation IDs', () => {
     expect(VISUAL_LAB_PREPARED_FIXTURE_IDS).toEqual([
       'oil-motion', 'water-motion', 'powder-style-atlas',
@@ -25,12 +33,27 @@ describe('Visual Lab fixture preparation registry', () => {
     const generic = new RenderLabBackend();
     const direct = new RenderLabBackend();
 
-    prepareVisualLabFixture(generic, id);
+    expect(prepareVisualLabFixture(generic, id)).toBe(true);
     prepareDirect(direct);
 
     expect(equalBytes(generic.cells(), direct.cells())).toBe(true);
     expect(equalBytes(generic.walls(), direct.walls())).toBe(true);
     expect(equalBytes(generic.velocity(), direct.velocity())).toBe(true);
+  });
+
+  it('acknowledges showcase without mutating a seeded backend', () => {
+    const simulation = new RenderLabBackend();
+    simulation.paint(12, 18, Material.Fire, 2);
+    simulation.paintWall(20, 24, 1, 0);
+    simulation.setFixtureVelocityRect(28, 32, 3, 2, 47, -53);
+    const cells = simulation.cells().slice();
+    const walls = simulation.walls().slice();
+    const velocity = simulation.velocity().slice();
+
+    expect(prepareVisualLabFixture(simulation, 'showcase')).toBe(false);
+    expect(equalBytes(simulation.cells(), cells)).toBe(true);
+    expect(equalBytes(simulation.walls(), walls)).toBe(true);
+    expect(equalBytes(simulation.velocity(), velocity)).toBe(true);
   });
 
   it('rejects an invalid runtime ID before mutating a seeded backend', () => {
@@ -43,7 +66,7 @@ describe('Visual Lab fixture preparation registry', () => {
     const velocity = simulation.velocity().slice();
 
     expect(() => prepareVisualLabFixture(simulation, 'not-a-fixture' as never))
-      .toThrow('Unknown prepared Visual Lab fixture');
+      .toThrow('Unknown Visual Lab fixture');
 
     expect(equalBytes(simulation.cells(), cells)).toBe(true);
     expect(equalBytes(simulation.walls(), walls)).toBe(true);

@@ -220,15 +220,19 @@ describe('field renderer layout scheduling', () => {
       desiredVisualLabVariant?: 0 | 1 | 2;
       presenter?: { setVisualLabVariant(variant: 0 | 1 | 2): void };
       setVisualLabVariant(variant: 0 | 1 | 2): void;
+      getVisualLabVariant(): 0 | 1 | 2;
     };
 
     renderer.presenter = undefined;
+    expect(renderer.getVisualLabVariant()).toBe(0);
     renderer.setVisualLabVariant(2);
     expect(renderer.desiredVisualLabVariant).toBe(2);
+    expect(renderer.getVisualLabVariant()).toBe(2);
 
     renderer.presenter = { setVisualLabVariant };
     renderer.setVisualLabVariant(1);
     expect(renderer.desiredVisualLabVariant).toBe(1);
+    expect(renderer.getVisualLabVariant()).toBe(1);
     expect(setVisualLabVariant).toHaveBeenCalledOnce();
     expect(setVisualLabVariant).toHaveBeenCalledWith(1);
   });

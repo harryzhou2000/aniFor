@@ -432,7 +432,6 @@ export function buildVisualLabStartupExpression(
   const descriptor = JSON.stringify({
     name: adapter.name,
     scene: adapter.scene,
-    prepareFixture: adapter.preparation !== null,
     preparationLabel: visualLabFixturePreparationLabel(adapter),
     captureDriver: driver.name,
     includeDriverFields,
@@ -460,19 +459,19 @@ export function buildVisualLabStartupExpression(
     if (before.backend !== 'canvas2d' || before.reason !== 'webgl-starting') {
       return { ...result, failure: 'startup-window-missed' };
     }
-    if (adapter.prepareFixture) {
-      if (typeof audit.prepareVisualLabFixture !== 'function') {
-        return { ...result, failure: 'missing-preparer' };
-      }
-      try {
-        audit.prepareVisualLabFixture(adapter.name);
-      } catch (error) {
-        return {
-          ...result,
-          failure: 'preparer-threw',
-          preparationError: String(error?.message ?? error),
-        };
-      }
+    if (typeof audit.prepareVisualLabFixture !== 'function') {
+      return { ...result, failure: 'missing-preparer' };
+    }
+    try {
+      // This is also the closed fixture-activation boundary. Fixtures without
+      // authored preparation (currently showcase) acknowledge an exact no-op.
+      audit.prepareVisualLabFixture(adapter.name);
+    } catch (error) {
+      return {
+        ...result,
+        failure: 'preparer-threw',
+        preparationError: String(error?.message ?? error),
+      };
     }
     const selection = ${selectionExpression};
     if (!selection.ok) {

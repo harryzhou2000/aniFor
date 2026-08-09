@@ -87,13 +87,13 @@ describe('Visual Lab execution tuning plan', () => {
     expect(JSON.stringify(capturePlan)).toBe(before);
     expect(plan).toMatchObject({
       schema: VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
-      id: 'sha256:0af69b62b866a004a0b52390082b66f555a99083d22c26811112dadebdeadd32',
+      id: 'sha256:27091b1afe4f9d3072a5ff0a3a0458591fa9d9c06586e7a970a249cbabdc9a9a',
       capturePlan: { schema: VISUAL_LAB_EXECUTION_PLAN_SCHEMA, id: captureId },
       gpuMode: 'swiftshader',
     });
     expect(plan.entries.map(({ id }) => id)).toEqual([
-      'sha256:5b096688fbd70626d718a09ea2dec759fe4c313a61b3ed862caca42df331912f',
-      'sha256:cee3fa81fa3b722cf45a2713dac18b464b6e4954bbf5e81c5feb3e0bd390fc01',
+      'sha256:927129d6f6dbdbb30505d575208a227b5cdeaa7e1572bebe8502f8d877c0c296',
+      'sha256:3031409fc055d2b995bff37cf1e589073831439dbf43d59e65a4cde7658ae655',
     ]);
     expect(plan.entries.map(({ sequence, captureEntryId, driver }) => [sequence, captureEntryId, driver]))
       .toEqual(capturePlan.inspection.entries.map(({ id, driver }, sequence) => [sequence, id, driver.name]));

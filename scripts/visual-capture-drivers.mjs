@@ -34,6 +34,32 @@ const powderStyleCaptureVariantValue = (variant) => {
   return descriptor.value;
 };
 
+/** Shared fail-closed browser control ABI for every prepared capture fixture. */
+const preparedControlSelectionExpression = (
+  auditIdentifier, fixtureId, variantValue, selectionSource, expectedSelection,
+) => {
+  const fixture = JSON.stringify(fixtureId);
+  const value = JSON.stringify(variantValue);
+  const expected = JSON.stringify(expectedSelection);
+  return `(() => {
+      if (typeof ${auditIdentifier}.setPreparedVisualCaptureVariant !== 'function'
+        || typeof ${auditIdentifier}.preparedVisualCaptureVariant !== 'function') {
+        return { ok: false, failure: 'missing-selector' };
+      }
+      let observed;
+      try {
+        ${auditIdentifier}.setPreparedVisualCaptureVariant(${fixture}, ${value});
+        observed = ${auditIdentifier}.preparedVisualCaptureVariant(${fixture});
+      } catch {
+        return { ok: false, failure: 'selector-threw' };
+      }
+      const selection = ${selectionSource};
+      return observed === ${value} && selection === ${expected}
+        ? { ok: true, selection }
+        : { ok: false, failure: 'selection-mismatch', selection };
+    })()`;
+};
+
 const EXECUTABLE_DRIVER_ADAPTERS = Object.freeze({
   'normal-hdr': Object.freeze({
     urlValues: (request) => Object.freeze({
@@ -52,15 +78,11 @@ const EXECUTABLE_DRIVER_ADAPTERS = Object.freeze({
         visualLabGain: String(request.gain),
       });
     },
-    selectionExpression: (variant, auditIdentifier) => {
-      const value = JSON.stringify(normalHdrVariantValue(variant));
-      return `(() => {
-      if (typeof ${auditIdentifier}.setVisualLabVariant !== 'function') {
-        return { ok: false, failure: 'missing-selector' };
-      }
-      ${auditIdentifier}.setVisualLabVariant(${value});
-      return { ok: true, selection: ${value} };
-    })()`;
+    selectionExpression: (variant, auditIdentifier, fixtureId) => {
+      const value = normalHdrVariantValue(variant);
+      return preparedControlSelectionExpression(
+        auditIdentifier, fixtureId, value, 'observed', value,
+      );
     },
     datasetProjectionExpression: () => '({})',
     publishesReportDescriptor: false,
@@ -82,27 +104,14 @@ const EXECUTABLE_DRIVER_ADAPTERS = Object.freeze({
       powderRenderStyle: variant.selection,
     }),
     selectionExpression: (variant, auditIdentifier, fixtureId) => {
-      const fixture = JSON.stringify(fixtureId);
-      const value = JSON.stringify(powderStyleCaptureVariantValue(variant));
-      const style = JSON.stringify(variant.selection);
-      const styles = JSON.stringify(POWDER_STYLE_BY_CAPTURE_VARIANT);
-      return `(() => {
-      if (typeof ${auditIdentifier}.setPreparedVisualCaptureVariant !== 'function'
-        || typeof ${auditIdentifier}.preparedVisualCaptureVariant !== 'function') {
-        return { ok: false, failure: 'missing-selector' };
-      }
-      let observed;
-      try {
-        ${auditIdentifier}.setPreparedVisualCaptureVariant(${fixture}, ${value});
-        observed = ${auditIdentifier}.preparedVisualCaptureVariant(${fixture});
-      } catch {
-        return { ok: false, failure: 'selector-threw' };
-      }
-      const selection = ${styles}[observed];
-      return observed === ${value} && selection === ${style}
-        ? { ok: true, selection }
-        : { ok: false, failure: 'selection-mismatch', selection };
-    })()`;
+      const value = powderStyleCaptureVariantValue(variant);
+      return preparedControlSelectionExpression(
+        auditIdentifier,
+        fixtureId,
+        value,
+        `${JSON.stringify(POWDER_STYLE_BY_CAPTURE_VARIANT)}[observed]`,
+        variant.selection,
+      );
     },
     datasetProjectionExpression: (auditIdentifier) => (
       `(() => {

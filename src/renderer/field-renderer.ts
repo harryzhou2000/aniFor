@@ -1000,6 +1000,11 @@ export class MaterialRenderer {
     this.presenter?.setVisualLabVariant(variant);
   }
 
+  /** Current same-page Visual Lab choice, including pre-promotion Canvas state. */
+  getVisualLabVariant(): VisualLabVariant {
+    return this.desiredVisualLabVariant ?? 0;
+  }
+
   /** Native DLAY countdown is a state-owned RGB cue, never a JavaScript timer. */
   setDlayStateStylingEnabled(enabled: boolean): void {
     if (enabled === this.dlayStateStylingEnabled) return;

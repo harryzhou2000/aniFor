@@ -528,6 +528,8 @@ export class Game {
     this.renderer.enableWebGLPresentationTiming();
     this.root.dataset.inputAudit = 'ready';
     const visualCaptureControls = new VisualCaptureControlRegistry({
+      setVisualLabVariant: (variant) => this.renderer.setVisualLabVariant(variant),
+      getVisualLabVariant: () => this.renderer.getVisualLabVariant(),
       setPowderRenderStyle: (style) => this.renderer.setPowderRenderStyle(style),
       getPowderRenderStyle: () => this.renderer.getPowderRenderStyle(),
     });
@@ -918,10 +920,10 @@ export class Game {
         this.renderer.invalidateDynamicPresentation();
       },
       prepareVisualLabFixture: (fixture) => {
-        prepareVisualLabFixture(this.simulation, fixture);
-        // The registry owns all fixture arguments. Reconcile the authored
-        // material plane once; this also invalidates retained dynamic fields.
-        this.renderer.synchronizeFixtureMaterialPlane();
+        const didMutate = prepareVisualLabFixture(this.simulation, fixture);
+        // The registry owns all fixture arguments. Reconcile only an authored
+        // fixture; the showcase activation is an explicit, validated no-op.
+        if (didMutate) this.renderer.synchronizeFixtureMaterialPlane();
         visualCaptureControls.markFixturePrepared(fixture);
       },
       setPreparedVisualCaptureVariant: (fixture, variant) => {
