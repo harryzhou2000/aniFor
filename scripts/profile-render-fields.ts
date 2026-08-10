@@ -79,7 +79,7 @@ for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
 const atmosphere = new AtmosphereField(
   width, height, gasByMaterial, colorByMaterial, gasIdentityStyleByMaterial,
 );
-const liquid = new LiquidDensityField(width, height, liquidByMaterial, colorByMaterial);
+const liquid = new LiquidDensityField(width, height, liquidByMaterial, paletteBytes);
 // Models the already allocated phase-exclusive presenter byte, not a new
 // LiquidDensityField allocation.
 const liquidAuxiliary = new Uint8Array(width * height);
@@ -119,7 +119,7 @@ for (let y = 1; y < height - 1; y++) for (let x = 1; x < width - 1; x++) {
   if ((x + y * 3) % 5 < 2) suspensionMaterials[y * width + x] = Material.Sand;
 }
 const suspensionLiquid = new LiquidDensityField(
-  width, height, liquidByMaterial, colorByMaterial,
+  width, height, liquidByMaterial, paletteBytes,
 );
 suspensionLiquid.update(suspensionMaterials);
 const suspension = new SuspensionField(width, height, styleBytes, paletteBytes);
@@ -141,7 +141,7 @@ for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
 }
 const contourLiquidPixels = seedPixels(contourLiquidMaterials);
 const contourLiquidField = new LiquidDensityField(
-  width, height, liquidByMaterial, colorByMaterial,
+  width, height, liquidByMaterial, paletteBytes,
 );
 contourLiquidField.update(contourLiquidMaterials);
 // Profile the exact Canvas contour branch that validates reconstructed liquid
@@ -300,8 +300,8 @@ const splitLiquidMaterials = new Uint8Array(width * height);
 for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
   splitLiquidMaterials[y * width + x] = x < width / 2 ? Material.Water : Material.Oil;
 }
-const denseLiquidField = new LiquidDensityField(width, height, liquidByMaterial, colorByMaterial);
-const splitLiquidField = new LiquidDensityField(width, height, liquidByMaterial, colorByMaterial);
+const denseLiquidField = new LiquidDensityField(width, height, liquidByMaterial, paletteBytes);
+const splitLiquidField = new LiquidDensityField(width, height, liquidByMaterial, paletteBytes);
 denseLiquidField.update(denseLiquidMaterials);
 splitLiquidField.update(splitLiquidMaterials);
 const denseLiquidSeed = seedPixels(denseLiquidMaterials, liquidByMaterial);

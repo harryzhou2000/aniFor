@@ -406,9 +406,11 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).not.toContain('gasCompactMacroRelief(fieldPosition)');
     expect(normal).toContain('liquidBodyFinishDepth(\n        liquidDepth, liquidOpticalDepth');
     expect(eight).toContain('liquidBodyFinishDepth(\n        smoothstep(0.54, 0.90');
-    expect(normal).toContain('texture(uLiquidIdentityTexture, fieldUv)');
+    expect(normal).toContain('texture(uLiquidOpticsTexture, fieldUv)');
+    expect(normal).not.toContain('reconstructedMaterial');
     expect(normal).toContain('1.0, liquidFinishOptics, uMaterialBodyFinish');
-    expect(eight).toContain('texture(uLiquidIdentityTexture, uv)');
+    expect(eight).toContain('texture(uLiquidOpticsTexture, uv)');
+    expect(eight).not.toContain('reconstructedMaterial');
     expect(eight).toContain('1.0, reconstructedOptics, uMaterialBodyFinish');
     expect(normal).toContain('uniform float uGasBodyVfx;');
     expect(normal).toContain('uniform float uGasMotionVfx;');
@@ -6991,7 +6993,7 @@ describe('Pixi presenter startup configuration', () => {
     for (const textureSource of [
       'this.fieldSource', 'this.wallSource', 'this.photonStateSource',
       'this.atmosphereSource', 'this.atmosphereStyleSource', 'gasIdentityMotifSource',
-      'this.emissionSource', 'this.liquidSource', 'this.liquidIdentitySource',
+      'this.emissionSource', 'this.liquidSource', 'this.liquidOpticsSource',
       'this.boundaryStabilitySource',
       'this.powderSurfaceSource', 'this.suspensionSource',
       'paletteTexture.source', 'styleTexture.source',

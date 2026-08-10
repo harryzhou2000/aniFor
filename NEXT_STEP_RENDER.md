@@ -4415,17 +4415,18 @@ reconstructed gas and liquid volumes. Reconstructed pixels remain presentation
 support rather than semantic particles. Gas resolves its optics from the
 already propagated clean/sooty atmosphere style through one generated closed
 mapping. Liquid carries a separate native-resolution nearest-filtered R8
-identity field because the existing boundary byte is depth/topology data and
-cannot safely carry a material ID. Exact or uniquely supported reconstructed
-liquid writes that identity; absent or tied support writes zero. Normal WebGL
-and direct true 8x use that identity only to select the common body finish:
+optical-class field because the existing boundary byte is depth/topology data
+and cannot safely carry another meaning. Exact or uniquely supported
+reconstructed liquid writes its canonical `RenderOptics` class; absent or tied
+support writes zero. Normal WebGL and direct true 8x use that class directly to
+select the common body finish without another palette lookup:
 they must not overwrite semantic material/family, synthesize semantic vertical
 depth, widen alpha, bridge unlike species, close cavities, alter contacts, or
 change physics. Exact semantic liquid retains palette optics and its existing
 vertical depth, while reconstructed support uses connected liquid-field depth.
 
 Keep the gas and liquid work RGB-only and branch-guarded. The added liquid
-identity plane is one fixed native-world R8 texture, never an output-scale or
+optical-class plane is one fixed native-world R8 texture, never an output-scale or
 8x-sized resource; direct 8x still owns one output target and initializes every
 source explicitly. Current acceptance is a focused Water/Oil visual pass plus
 normal and true-8x renderer-owned completed-frame receipts, compact liquid/gas

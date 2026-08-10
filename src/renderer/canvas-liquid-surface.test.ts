@@ -15,7 +15,7 @@ describe('Canvas liquid surface reconstruction', () => {
       Material.Water, Material.Empty, Material.Water,
       Material.Water, Material.Water, Material.Water,
     ]);
-    const field = new LiquidDensityField(width, height, lookup.liquidByMaterial, lookup.colorByMaterial);
+    const field = new LiquidDensityField(width, height, lookup.liquidByMaterial, lookup.paletteBytes);
     field.update(materials);
     const pixels = seedLiquidPixels(materials);
     reconstruct(pixels, materials, field.bytes, width, height);
@@ -29,7 +29,7 @@ describe('Canvas liquid surface reconstruction', () => {
     const height = 3;
     const materials = new Uint8Array(9).fill(Material.Water);
     materials[4] = Material.Sand;
-    const field = new LiquidDensityField(width, height, lookup.liquidByMaterial, lookup.colorByMaterial);
+    const field = new LiquidDensityField(width, height, lookup.liquidByMaterial, lookup.paletteBytes);
     field.update(materials);
     const pixels = seedLiquidPixels(materials);
     reconstruct(pixels, materials, field.bytes, width, height);
@@ -41,7 +41,7 @@ describe('Canvas liquid surface reconstruction', () => {
     const height = 5;
     const materials = new Uint8Array(width * height);
     materials[12] = Material.Water;
-    const field = new LiquidDensityField(width, height, lookup.liquidByMaterial, lookup.colorByMaterial);
+    const field = new LiquidDensityField(width, height, lookup.liquidByMaterial, lookup.paletteBytes);
     field.update(materials);
     const pixels = seedLiquidPixels(materials);
     reconstruct(pixels, materials, field.bytes, width, height);
@@ -69,7 +69,7 @@ describe('Canvas liquid surface reconstruction', () => {
       Material.Oil, Material.Empty, Material.Oil,
       Material.Water, Material.Empty, Material.Empty,
     ]);
-    const field = new LiquidDensityField(width, height, lookup.liquidByMaterial, lookup.colorByMaterial);
+    const field = new LiquidDensityField(width, height, lookup.liquidByMaterial, lookup.paletteBytes);
     field.update(materials);
     const pixels = seedLiquidPixels(materials);
     for (let index = 0; index < materials.length; index++) {
@@ -98,7 +98,7 @@ describe('Canvas liquid surface reconstruction', () => {
       Material.Oil, Material.Empty, Material.Oil,
       Material.Empty, Material.Water, Material.Empty,
     ]);
-    const field = new LiquidDensityField(width, height, lookup.liquidByMaterial, lookup.colorByMaterial);
+    const field = new LiquidDensityField(width, height, lookup.liquidByMaterial, lookup.paletteBytes);
     field.update(materials);
     const pixels = seedLiquidPixels(materials);
     reconstruct(pixels, materials, field.bytes, width, height);
@@ -110,7 +110,7 @@ describe('Canvas liquid surface reconstruction', () => {
     const height = 3;
     const materials = new Uint8Array(9).fill(Material.Water);
     materials[4] = Material.Empty;
-    const field = new LiquidDensityField(width, height, lookup.liquidByMaterial, lookup.colorByMaterial);
+    const field = new LiquidDensityField(width, height, lookup.liquidByMaterial, lookup.paletteBytes);
     field.update(materials);
     const pixels = seedLiquidPixels(materials);
     for (let index = 0; index < materials.length; index++) {
@@ -131,7 +131,7 @@ describe('Canvas liquid surface reconstruction', () => {
       Material.Empty, Material.Empty, Material.Empty,
       Material.Water, Material.Empty, Material.Water,
     ]);
-    const field = new LiquidDensityField(width, height, lookup.liquidByMaterial, lookup.colorByMaterial);
+    const field = new LiquidDensityField(width, height, lookup.liquidByMaterial, lookup.paletteBytes);
     field.update(materials);
     const pixels = seedLiquidPixels(materials);
     for (let index = 0; index < materials.length; index++) {

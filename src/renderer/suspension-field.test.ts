@@ -224,7 +224,7 @@ function forceGenericEvenPath(field: SuspensionField): void {
 
 function liquidField(width: number, height: number, materials: Uint8Array): LiquidDensityField {
   const field = new LiquidDensityField(
-    width, height, lookups.liquidByMaterial, lookups.colorByMaterial,
+    width, height, lookups.liquidByMaterial, lookups.paletteBytes,
   );
   field.update(materials);
   return field;

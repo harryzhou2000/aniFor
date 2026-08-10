@@ -109,7 +109,7 @@ function contourOutputsEqual(
 function liquidField(value: Fixture): Uint8Array {
   const field = new LiquidDensityField(
     value.input.worldWidth, value.input.worldHeight,
-    lookups.liquidByMaterial, lookups.colorByMaterial,
+    lookups.liquidByMaterial, lookups.paletteBytes,
   );
   field.update(value.materials);
   return field.bytes;

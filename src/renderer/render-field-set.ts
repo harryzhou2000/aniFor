@@ -93,7 +93,7 @@ export class RenderFieldSet {
       this.lookups.gasIdentityStyleByMaterial,
     );
     this.liquid = new LiquidDensityField(
-      width, height, this.lookups.liquidByMaterial, this.lookups.colorByMaterial,
+      width, height, this.lookups.liquidByMaterial, this.lookups.paletteBytes,
     );
     this.emission = new EmissionField(width, height, this.lookups.emissiveByMaterial, this.lookups.colorByMaterial);
     this.powderSurface = new PowderSurfaceField(width, height, this.lookups.styleBytes);

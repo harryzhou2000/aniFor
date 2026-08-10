@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { ALL_MATERIALS, Material } from '../shared/materials';
 import { LiquidDensityField } from './liquid-density-field';
 import { createRenderLookups } from './render-field-set';
+import { RenderOptics } from './render-optics';
 
 function fixture(width = 9, height = 9): { field: LiquidDensityField; materials: Uint8Array } {
   const lookup = createRenderLookups(ALL_MATERIALS);
   return {
-    field: new LiquidDensityField(width, height, lookup.liquidByMaterial, lookup.colorByMaterial),
+    field: new LiquidDensityField(width, height, lookup.liquidByMaterial, lookup.paletteBytes),
     materials: new Uint8Array(width * height),
   };
 }
@@ -20,8 +21,8 @@ function colorAt(field: LiquidDensityField, x: number, y: number): number[] {
   return Array.from(field.bytes.slice(offset, offset + 3));
 }
 
-function identityAt(field: LiquidDensityField, x: number, y: number): number {
-  return field.identityBytes[y * field.width + x];
+function opticsAt(field: LiquidDensityField, x: number, y: number): number {
+  return field.opticsBytes[y * field.width + x];
 }
 
 describe('liquid density field', () => {
@@ -113,7 +114,25 @@ describe('liquid density field', () => {
     field.update(materials);
     expect(densityAt(field, 1, 1)).toBeGreaterThan(0);
     expect(colorAt(field, 1, 1)).toEqual([0x8f, 0x70, 0x40]);
-    expect(identityAt(field, 1, 1)).toBe(Material.Oil);
+    expect(opticsAt(field, 1, 1)).toBe(RenderOptics.Oily);
+  });
+
+  it.each([
+    [Material.Water, RenderOptics.Aqueous],
+    [Material.Oil, RenderOptics.Oily],
+    [Material.Acid, RenderOptics.Corrosive],
+    [Material.Lava, RenderOptics.Molten],
+    [Material.LiquidNitrogen, RenderOptics.CryogenicLiquid],
+    [Material.Mercury, RenderOptics.MetallicLiquid],
+    [Material.Soap, RenderOptics.ViscousLiquid],
+  ])('projects optical class %s into exact and uniquely supported cells', (material, optics) => {
+    const { field, materials } = fixture(3, 3);
+    materials[4] = material;
+    field.update(materials);
+
+    expect(opticsAt(field, 1, 1)).toBe(optics);
+    expect(densityAt(field, 1, 0)).toBeGreaterThan(0);
+    expect(opticsAt(field, 1, 0)).toBe(optics);
   });
 
   it('leaves an exact mixed-species tie transparent', () => {
@@ -126,7 +145,7 @@ describe('liquid density field', () => {
     field.update(materials);
     expect(densityAt(field, 1, 1)).toBe(0);
     expect(colorAt(field, 1, 1)).toEqual([0, 0, 0]);
-    expect(identityAt(field, 1, 1)).toBe(Material.Empty);
+    expect(opticsAt(field, 1, 1)).toBe(0);
   });
 
   it('clears stale density and ignores gas', () => {
@@ -136,6 +155,6 @@ describe('liquid density field', () => {
     materials.fill(Material.Smoke);
     field.update(materials);
     expect(field.bytes.some(Boolean)).toBe(false);
-    expect(field.identityBytes.some(Boolean)).toBe(false);
+    expect(field.opticsBytes.some(Boolean)).toBe(false);
   });
 });

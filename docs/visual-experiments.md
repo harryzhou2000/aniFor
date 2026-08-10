@@ -30,20 +30,21 @@ Evidence:
 
 ## Reconstructed liquid body finish
 
-Liquids need an exact local identity for their optical finish even where the
+Liquids need an exact local optical family for their finish even where the
 connected liquid field supplies the smooth coverage. That information cannot
 share the existing auxiliary R8 bytes: their compact-path interpretations are
 already reserved for powder projection/stability and semantic contact data.
-The presentation layer therefore carries one nearest-filtered liquid identity
-plane alongside the established liquid density field. It is cleared on every
-field refresh, contains only field-supported liquid material IDs, and is read
-only by an eligible liquid body finish.
+The presentation layer therefore carries one nearest-filtered liquid optics
+plane alongside the established liquid density field. CPU reconstruction still
+selects a unique supported species, but writes only its canonical `RenderOptics`
+class. The plane is cleared on every field refresh and read only by an eligible
+liquid body finish, so neither WebGL path needs a dependent palette lookup.
 
 The plane does not change material/family ownership, optical-depth generation,
 support, silhouette, contacts, or alpha. Both normal WebGL and compact true-8×
 derive their RGB-only finish from the pre-existing connected interior; exact
-semantic cells additionally retain vertical depth. The new identity is solely
-the optical-family selection input. This deliberately bounded new resource is
+semantic cells additionally retain vertical depth. The new class is solely the
+optical-family selection input. This deliberately bounded new resource is
 preferable to overloading a byte whose different compact interpretation could
 corrupt a projected powder exterior.
 

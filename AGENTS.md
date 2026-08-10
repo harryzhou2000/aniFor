@@ -247,12 +247,14 @@ The current reconstructed-volume increment carries those authored optics past
 semantic particle centres without granting reconstructed pixels semantic
 ownership. Gas reuses the existing propagated clean/sooty style plane and one
 generated closed style-to-optics mapping. Liquid uses a dedicated
-native-resolution nearest-filtered R8 identity plane: never multiplex material
-identity into the boundary/depth byte, overwrite semantic material/family, or
+native-resolution nearest-filtered R8 optical-class plane: never multiplex the
+class into the boundary/depth byte, overwrite semantic material/family, or
 invent vertical optical depth for reconstructed support. Exact semantic cells
 retain palette optics and semantic depth; uniquely supported reconstructed
-liquid receives only the connected-field body finish selected by its identity.
-Tied or absent support remains identity zero. Keep both bridges RGB-only and
+liquid receives only the connected-field body finish selected by its class.
+Tied or absent support remains class zero. Store `RenderOptics` directly rather
+than an exact material ID so normal and true 8x avoid a dependent palette
+lookup. Keep both bridges RGB-only and
 guard sampler work behind eligible volume/body-finish branches. Normal WebGL
 and direct true 8x consume the same generated finish response while preserving
 alpha, support, holes, chimneys, strands, unlike contacts, walls, Canvas

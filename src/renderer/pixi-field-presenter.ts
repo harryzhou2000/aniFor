@@ -224,7 +224,7 @@ uniform sampler2D uAtmosphereTexture;
 uniform sampler2D uAtmosphereStyleTexture;
 uniform sampler2D uEmissionTexture;
 uniform sampler2D uLiquidTexture;
-uniform sampler2D uLiquidIdentityTexture;
+uniform sampler2D uLiquidOpticsTexture;
 uniform sampler2D uSuspensionTexture;
 uniform sampler2D uBoundaryStabilityTexture;
 uniform sampler2D uPowderSurfaceTexture;
@@ -1857,13 +1857,9 @@ void main() {
     if (liquid.a > 0.28) {
       vec3 reconstructedLiquid = liquid.rgb;
       if (uMaterialBodyFinish > 0.5) {
-        float reconstructedMaterial = floor(
-          texture(uLiquidIdentityTexture, uv).r * 255.0 + 0.5
+        float reconstructedOptics = floor(
+          texture(uLiquidOpticsTexture, uv).r * 255.0 + 0.5
         );
-        float reconstructedOptics = reconstructedMaterial > 0.5
-          ? floor(texture(
-            uPaletteTexture, vec2((reconstructedMaterial + 0.5) / 256.0, 0.5)
-          ).a * 255.0 + 0.5) : 0.0;
         float liquidLeft = texture(uLiquidTexture, uv - vec2(uTexel.x, 0.0)).a;
         float liquidRight = texture(uLiquidTexture, uv + vec2(uTexel.x, 0.0)).a;
         float liquidTop = texture(uLiquidTexture, uv - vec2(0.0, uTexel.y)).a;
@@ -3449,7 +3445,7 @@ uniform sampler2D uAtmosphereStyleTexture;
 uniform sampler2D uGasIdentityMotifTexture;
 uniform sampler2D uEmissionTexture;
 uniform sampler2D uLiquidTexture;
-uniform sampler2D uLiquidIdentityTexture;
+uniform sampler2D uLiquidOpticsTexture;
 uniform sampler2D uBoundaryStabilityTexture;
 uniform sampler2D uPowderSurfaceTexture;
 uniform sampler2D uSuspensionTexture;
@@ -8313,14 +8309,9 @@ void main() {
       && dot(liquidSpeciesSlope, liquidSpeciesSlope) < 0.0004) {
       float liquidFinishOptics = optics;
       if (liquidOnly > 0.5) {
-        float reconstructedMaterial = floor(
-          texture(uLiquidIdentityTexture, fieldUv).r * 255.0 + 0.5
+        liquidFinishOptics = floor(
+          texture(uLiquidOpticsTexture, fieldUv).r * 255.0 + 0.5
         );
-        if (reconstructedMaterial > 0.5) {
-          liquidFinishOptics = floor(texture(
-            uPaletteTexture, vec2((reconstructedMaterial + 0.5) / 256.0, 0.5)
-          ).a * 255.0 + 0.5);
-        }
       }
       float liquidFinishEligibility = smoothstep(
         0.34, 0.82, min(liquidDepth, liquidNeighbourMean)
@@ -11873,7 +11864,7 @@ export class PixiFieldPresenter {
   private readonly atmosphereStyleSource: BufferImageSource;
   private readonly emissionSource: BufferImageSource;
   private readonly liquidSource: BufferImageSource;
-  private readonly liquidIdentitySource: BufferImageSource;
+  private readonly liquidOpticsSource: BufferImageSource;
   private readonly boundaryStabilityBytes: Uint8Array;
   private readonly boundaryStabilityOwners: Uint8Array;
   private readonly boundaryStabilitySource: BufferImageSource;
@@ -12026,8 +12017,8 @@ export class PixiFieldPresenter {
       scaleMode: 'linear',
       autoGarbageCollect: false,
     });
-    this.liquidIdentitySource = new BufferImageSource({
-      resource: this.fieldSet.liquid.identityBytes,
+    this.liquidOpticsSource = new BufferImageSource({
+      resource: this.fieldSet.liquid.opticsBytes,
       width,
       height,
       format: 'r8unorm',
@@ -12630,8 +12621,8 @@ export class PixiFieldPresenter {
       uEmissionSampler: this.emissionSource.style,
       uLiquidTexture: this.liquidSource,
       uLiquidSampler: this.liquidSource.style,
-      uLiquidIdentityTexture: this.liquidIdentitySource,
-      uLiquidIdentitySampler: this.liquidIdentitySource.style,
+      uLiquidOpticsTexture: this.liquidOpticsSource,
+      uLiquidOpticsSampler: this.liquidOpticsSource.style,
       uBoundaryStabilityTexture: this.boundaryStabilitySource,
       uBoundaryStabilitySampler: this.boundaryStabilitySource.style,
       uPowderSurfaceTexture: this.powderSurfaceSource,
@@ -12658,7 +12649,7 @@ export class PixiFieldPresenter {
       for (const source of [
         this.fieldSource, this.wallSource, this.photonStateSource,
         this.atmosphereSource, this.atmosphereStyleSource, gasIdentityMotifSource,
-        this.emissionSource, this.liquidSource, this.liquidIdentitySource,
+        this.emissionSource, this.liquidSource, this.liquidOpticsSource,
         this.boundaryStabilitySource,
         this.powderSurfaceSource, this.suspensionSource,
         paletteTexture.source, styleTexture.source,
@@ -14348,7 +14339,7 @@ export class PixiFieldPresenter {
       if (gasMotionActive) this.atmosphereMotionHydrated = true;
     } else if (volumeField === 'liquid') {
       this.liquidSource.update();
-      this.liquidIdentitySource.update();
+      this.liquidOpticsSource.update();
     } else if (volumeField === 'emission') {
       this.emissionSource.update();
     }

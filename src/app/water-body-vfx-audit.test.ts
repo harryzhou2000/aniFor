@@ -29,7 +29,7 @@ describe('Water body VFX audit fixture', () => {
     const simulation = preparedFixture();
     const lookups = createRenderLookups(ALL_MATERIALS);
     const field = new LiquidDensityField(
-      WORLD_WIDTH, WORLD_HEIGHT, lookups.liquidByMaterial, lookups.colorByMaterial,
+      WORLD_WIDTH, WORLD_HEIGHT, lookups.liquidByMaterial, lookups.paletteBytes,
     );
     const depth = new Uint8Array(WORLD_WIDTH * WORLD_HEIGHT);
     field.writeVerticalOpticalDepth(simulation.cells(), depth, simulation.walls());

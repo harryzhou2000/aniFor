@@ -29,7 +29,7 @@ describe('DEUT body VFX audit wrapper', () => {
   it('keeps all vertical calibration bands exact, wall-free, and aligned to the shared depth plane', () => {
     const simulation = preparedBody();
     const lookups = createRenderLookups(ALL_MATERIALS);
-    const field = new LiquidDensityField(WIDTH, HEIGHT, lookups.liquidByMaterial, lookups.colorByMaterial);
+    const field = new LiquidDensityField(WIDTH, HEIGHT, lookups.liquidByMaterial, lookups.paletteBytes);
     const depth = new Uint8Array(WIDTH * HEIGHT);
     field.writeVerticalOpticalDepth(simulation.cells(), depth, simulation.walls());
     for (const entry of DEUT_BODY_VFX_AUDIT.cards) {
