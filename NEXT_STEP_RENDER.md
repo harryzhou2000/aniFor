@@ -302,9 +302,17 @@ Active priority order:
    sampler, field, upload, target, pass, or material-ID branch. A five-candidate
    current-only release review passed portable verification and direct plus
    independent visual inspection; the true 4896×3072 Powder audit passed with
-   zero browser errors. Continue from this shared scale-safe seam toward larger
-   fluid-volume and gas-depth improvements rather than resuming the isolated
-   E-number ladder.
+   zero browser errors. The next retained local increment extends that same
+   source with one sample-free mesoscopic fluid lobe. Normal and compact gas
+   and liquid paths pass their already-live centre density, cardinal mean,
+   field-native curvature, depth, and slope; the helper adds a broad convex
+   crown plus concave/deep coloured absorption without touching alpha, support,
+   topology, contacts, or species ownership. The corrected five-candidate
+   release cohort passed portable verification and direct inspection, and the
+   compact shader again passed the true 4896×3072 audit with zero browser
+   errors and a 5.363-second GPU-fence sample. Continue from this shared
+   scale-safe seam toward stronger fluid continuity and powder scale parity
+   rather than resuming the isolated E-number ladder.
 
 Items 17 and 18 are deployed; continue item 19 and the unfinished material and
 graphics goals in this document. Visual preference may accept a candidate

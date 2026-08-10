@@ -37,6 +37,21 @@ field, upload, target, pass, or per-element selector. The five-candidate
 current-only release review and portable verifier passed, an independent visual
 pass found no clipping or topology regression, and the true 4896×3072 Powder
 audit completed with zero browser errors and a 5.596-second GPU fence sample.
+The following local framework increment extends the same shared GLSL source
+with a sample-free liquid/gas volume lobe. All four normal/compact call sites
+reuse their existing centre/cardinal field state and pass field-native
+curvature explicitly so semantic coverage cannot steer a reconstructed fringe.
+The five-candidate current-only release cohort passed portable verification and
+direct inspection; true 8× passed again with a 4896×3072 backing, zero browser
+errors, and a 5.363-second GPU fence. Keep the lobe RGB-only and preserve its
+zero-new-sampler, zero-new-field/pass/target, no-material-branch contract.
+Workflow run `31345304767` for the preceding body-finish revision built and
+captured successfully for three candidates but did not deploy: heavily loaded
+SwiftShader caused the Gas and Oxygen OFF completed-frame receipts to exceed
+their 30-second audit deadline, so the portable gate correctly rejected the
+incomplete five-candidate package. This is a review-host load failure, not an
+asset-closure or renderer-source failure; a stable deployment may use the
+manual no-review path after equivalent local current-only evidence passes.
 Keep one capture implementation;
 do not replace integrity hashing, path containment, lifecycle checks, or runtime
 closure. Visual preference needs a retained board and human/agent inspection,

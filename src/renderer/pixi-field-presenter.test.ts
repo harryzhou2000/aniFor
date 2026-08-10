@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { PixiFieldPresenter } from './pixi-field-presenter';
+import { MATERIAL_BODY_FINISH_GLSL } from './material-body-finish';
 import { powderRenderStyleValue } from './powder-render-style';
 import {
   WEBGL_COMPLETED_FRAME_RECEIPT_TIMEOUT_MS,
@@ -372,10 +373,13 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).toContain('uniform float uVolumeVfx;');
     expect(normal).toContain('uniform float uMaterialBodyFinish;');
     expect(eight).toContain('uniform float uMaterialBodyFinish;');
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain('vec3 applyFluidVolumeLobe(');
     expect(normal).toContain('${MATERIAL_BODY_FINISH_GLSL}');
     expect(eight).toContain('${MATERIAL_BODY_FINISH_GLSL}');
     expect(normal.match(/applyMaterialBodyFinish\(/g)).toHaveLength(3);
     expect(eight.match(/applyMaterialBodyFinish\(/g)).toHaveLength(3);
+    expect(normal.match(/applyFluidVolumeLobe\(/g)).toHaveLength(2);
+    expect(eight.match(/applyFluidVolumeLobe\(/g)).toHaveLength(2);
     expect(normal).toContain('uniform float uGasBodyVfx;');
     expect(normal).toContain('uniform float uGasMotionVfx;');
     expect(normal).toContain('uniform float uCflmColdFlameVfx;');

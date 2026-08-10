@@ -60,4 +60,57 @@ vec3 applyMaterialBodyFinish(
   color += (color - vec3(luminance)) * pigment;
   return max(color, vec3(0.0));
 }
+
+// Mesoscopic liquid/gas relief shared by normal WebGL and the direct true-8x
+// compositor. Callers pass the centre and cardinal mean they already sampled;
+// this deliberately adds no texture read, target, field, or scale-dependent
+// allocation. The response is RGB-only and therefore cannot grow support or
+// blur a species/contact boundary.
+vec3 applyFluidVolumeLobe(
+  vec3 color,
+  float phase,
+  float density,
+  float neighbourMean,
+  float curvature,
+  float depth,
+  vec2 slope,
+  float eligibility,
+  float enabled
+) {
+  if (enabled < 0.5 || eligibility <= 0.0001) return color;
+
+  float gas = step(1.5, phase);
+  float liquid = 1.0 - gas;
+  float fieldBody = smoothstep(0.055 - gas * 0.045, 0.52 - gas * 0.28,
+    min(density, max(neighbourMean, density * 0.62))) * eligibility;
+  float signedCurvature = clamp(curvature, -1.0, 1.0);
+  float crown = max(signedCurvature, 0.0);
+  float pocket = max(-signedCurvature, 0.0);
+  float slopeLength2 = dot(slope, slope);
+  float facing = 0.0;
+  if (slopeLength2 > 0.00001) {
+    vec2 outward = -slope * inversesqrt(slopeLength2);
+    facing = dot(outward, normalize(vec2(-0.58, -0.815)));
+  }
+  float shoulder = (1.0 - smoothstep(0.54 - gas * 0.30, 0.94 - gas * 0.28, density))
+    * fieldBody;
+  float core = smoothstep(0.28, 0.88, depth) * fieldBody;
+
+  // A broad convex crown and directional shoulder supply a coherent reflected
+  // lobe. Concave/deep regions retain pigment through restrained absorption;
+  // the two phase palettes share one light direction without erasing identity.
+  float key = (crown * mix(0.038, 0.052, gas)
+      + max(facing, 0.0) * shoulder * mix(0.026, 0.034, gas))
+    * (1.0 - core * mix(0.24, 0.36, gas));
+  float shade = (pocket * mix(0.030, 0.038, gas)
+      + max(-facing, 0.0) * shoulder * mix(0.010, 0.014, gas)
+      + core * mix(0.010, 0.007, gas)) * fieldBody;
+  vec3 keyTint = liquid * vec3(0.58, 0.82, 1.00)
+    + gas * vec3(0.70, 0.82, 1.00);
+  vec3 absorptionTint = liquid * vec3(0.34, 0.48, 0.64)
+    + gas * vec3(0.40, 0.46, 0.58);
+  color += (vec3(1.08) - clamp(color, 0.0, 1.08)) * keyTint * key;
+  color *= vec3(1.0) - absorptionTint * shade;
+  return max(color, vec3(0.0));
+}
 `;

@@ -1995,10 +1995,17 @@ void main() {
       float gasBottom = texture(uAtmosphereTexture,
         clamp(uv + vec2(0.0, uAtmosphereTexel.y), atmosphereMin, atmosphereMax)).a;
       color += gasEightXVolumeRelief(gasDensity, gasLeft, gasRight, gasTop, gasBottom);
+      float gasNeighbourMean = (gasLeft + gasRight + gasTop + gasBottom) * 0.25;
       vec2 gasFinishSlope = vec2(gasRight - gasLeft, gasBottom - gasTop);
       color = applyMaterialBodyFinish(
         color, 2.0, gasDensity, smoothstep(0.035, 0.62, gasDensity),
         gasFinishSlope, 1.0, uMaterialBodyFinish
+      );
+      color = applyFluidVolumeLobe(
+        color, 2.0, gasDensity, gasNeighbourMean,
+        clamp((atmosphere.a - gasNeighbourMean) * 8.0, -1.0, 1.0),
+        smoothstep(0.035, 0.62, gasDensity), gasFinishSlope,
+        smoothstep(0.020, 0.12, atmosphere.a), uMaterialBodyFinish
       );
     }
     if (uGasIdentityStyling > 0.5) {
@@ -2887,6 +2894,14 @@ void main() {
           + step(0.48, liquidTop.a) + step(0.48, liquidBottom.a));
       color = applyMaterialBodyFinish(
         color, 1.0, density, depth, liquidSlope,
+        liquidFinishEligibility, uMaterialBodyFinish
+      );
+      float liquidFinishNeighbourMean =
+        (liquidLeft.a + liquidRight.a + liquidTop.a + liquidBottom.a) * 0.25;
+      color = applyFluidVolumeLobe(
+        color, 1.0, density, liquidFinishNeighbourMean,
+        clamp((liquid.a - liquidFinishNeighbourMean) * 5.5, -1.0, 1.0),
+        depth, liquidSlope,
         liquidFinishEligibility, uMaterialBodyFinish
       );
     }
@@ -6531,6 +6546,10 @@ void main() {
       color, 2.0, gasShadeDensity, opticalDepth, volumeSlope,
       1.0, uMaterialBodyFinish
     );
+    color = applyFluidVolumeLobe(
+      color, 2.0, gasShadeDensity, cloudNeighbourMean, gasCurvature, opticalDepth,
+      volumeSlope, gasInterior, uMaterialBodyFinish
+    );
     // E04: turn the existing field normal and curvature into a readable
     // connected billow without inventing particle-scale noise. The shared
     // atmosphere remains the sole owner of mass, colour mixture, support, and
@@ -8211,6 +8230,12 @@ void main() {
       );
       color = applyMaterialBodyFinish(
         color, 1.0, liquidSurfaceDensity, liquidDepth,
+        semanticSlope + volumeSlope, liquidFinishEligibility,
+        uMaterialBodyFinish
+      );
+      color = applyFluidVolumeLobe(
+        color, 1.0, liquidSurfaceDensity, liquidNeighbourMean,
+        clamp((liquidDensity - liquidNeighbourMean) * 5.5, -1.0, 1.0), liquidDepth,
         semanticSlope + volumeSlope, liquidFinishEligibility,
         uMaterialBodyFinish
       );
