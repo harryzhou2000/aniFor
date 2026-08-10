@@ -1818,10 +1818,7 @@ void main() {
     float candidateFamily = candidate > 0.5
       ? floor(texture(uStyleTexture, vec2((candidate + 0.5) / 256.0, 0.5)).r * 255.0 + 0.5)
       : 0.0;
-    float verticalShare = abs(candidateShape.z)
-      / (abs(candidateShape.y) + abs(candidateShape.z) + 0.000001);
-    float fieldContour = smoothstep(0.42, 0.70, verticalShare)
-      * smoothstep(0.004, 0.027, abs(candidateShape.z))
+    float fieldContour = powderSmoothDirectionalSignal(candidateShape)
       * smoothstep(5.5, 8.0, candidateShape.w)
       * smoothstep(0.075, 0.26, candidateShape.x);
     // The candidate-family and shared-field gates make these three style
@@ -2129,7 +2126,8 @@ void main() {
     // shallow slope has one monotone composed edge rather than a different
     // mineral key at each subpixel. The settled semantic interior retains the
     // complete world-anchored grain vocabulary below.
-    float powderContourGrain = powderGrain * (1.0 - powderFieldBlend);
+    float powderContourGrain = powderGrain
+      * powderSmoothTextureRetention(density, powderFieldBlend);
     color *= vec3(1.02 + powderOpticalDensity * 0.07 + powderContourGrain * powderMicro)
       - powderDepth * vec3(0.10, 0.07, 0.04);
     if (traits < 0.5 && !materialEmissive) {
@@ -2176,8 +2174,10 @@ void main() {
         mix(q01 - q00, q11 - q10, blend.x)
       );
       powderSlope = mix(powderSlope, powderFieldSlope, powderFieldBlend);
+      float powderContourFinish = powderSmoothContourFinish(density, powderFieldBlend);
       color = mix(color,
-        applySurfaceContourEightX(color, density, powderSlope, optics, 1.0, 0.0), powderSupport);
+        applySurfaceContourEightX(color, density, powderSlope, optics, 1.0, 0.0),
+        powderSupport * powderContourFinish);
     }
     // Keep explosive powders legible as discrete native materials even in the
     // compact compositor. This is strictly RGB-only and owner-local; Grains,
@@ -8942,8 +8942,9 @@ void main() {
       if (uPowderStyle > 1.5) {
         float smoothContourAlpha = powderSmoothCoverage(widePowderShape.x);
         heapAlpha = mix(heapAlpha, smoothContourAlpha, smoothContourTransfer);
-        powderContourTextureRetention = 1.0 - smoothContourTransfer
-          * (1.0 - smoothstep(0.72, 1.00, widePowderShape.x));
+        powderContourTextureRetention = powderSmoothTextureRetention(
+          widePowderShape.x, smoothContourTransfer
+        );
         powderContourTextureRetention = mix(
           powderContourTextureRetention, 0.22, bglaClusterCalm
         );
@@ -9580,6 +9581,9 @@ void main() {
         ? surfaceChromaResponse(density, widePowderShape.yz, optics)
           * powderChromaCohesion * uSurfaceContourLighting
         : 0.0;
+      powderContourChroma *= powderSmoothContourFinish(
+        widePowderShape.x, boundaryStability * powderSurfaceBlend
+      );
       color = applySurfaceChroma(
         color, clamp(powderContourChroma + powderBodyChroma, -0.085, 0.090), optics
       );

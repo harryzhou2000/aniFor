@@ -56,6 +56,15 @@ threshold, rank, or promote them. It never clears an old review or opens a user
 browser. Use `npm run visual-lab:review:reuse -- ...` when `dist/index.html` is
 already current.
 
+The current `powder-style` scene is also the practical Smooth-boundary review:
+Smooth uses a curved settled-field silhouette with a narrow texture-free alpha
+crossing, Local keeps rounded per-particle contours, and Grains keeps exact
+square particle cells. Review the diagonal Sand/Clay piles together with the
+thin lines, isolated particles, authored hole, unlike-powder contact, and small
+material blocks before accepting a powder change. For the compact direct mesh,
+run `npm run audit:powder:8x`; it exercises the same Smooth transfers at a true
+4896×3072 backing and waits for the renderer-owned GPU fence.
+
 Hashes in a completed package protect its own files from tampering. They are
 not a cross-revision visual requirement: changing pixels is reviewed by a human
 or agent from the current board, while missing, unsafe, incomplete, or

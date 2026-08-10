@@ -376,6 +376,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight).toContain('uniform float uMaterialBodyFinish;');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('vec3 applyFluidVolumeLobe(');
     expect(POWDER_SMOOTH_COVERAGE_GLSL).toContain('float powderSmoothCoverage(');
+    expect(POWDER_SMOOTH_COVERAGE_GLSL).toContain('float powderSmoothContourFinish(');
+    expect(POWDER_SMOOTH_COVERAGE_GLSL).toContain('float powderSmoothTextureRetention(');
     expect(normal).toContain('${MATERIAL_BODY_FINISH_GLSL}');
     expect(eight).toContain('${MATERIAL_BODY_FINISH_GLSL}');
     expect(normal).toContain('${POWDER_SMOOTH_COVERAGE_GLSL}');
@@ -5695,9 +5697,11 @@ describe('Pixi presenter startup configuration', () => {
       'float smoothPowderCoverage = powderSmoothCoverage(smoothPowderShape.x);',
     );
     expect(modes).toContain('float localPowderFieldBlend = powderSmoothDirectionalSignal(smoothPowderShape)');
+    expect(eight).toContain('float fieldContour = powderSmoothDirectionalSignal(candidateShape)');
     expect(modes).toContain('float localPowderStability = smoothstep(192.0 / 255.0, 224.0 / 255.0, depth);');
     expect(modes).toContain('powderFieldBlend = max(projectedSmoothPowder, localPowderFieldBlend);');
     expect(modes).toContain('density = mix(density, smoothPowderCoverage, powderFieldBlend);');
+    expect(eight).toContain('powderSmoothTextureRetention(density, powderFieldBlend)');
     expect(modes).not.toContain('uTime');
     expect(modes).not.toMatch(/\balpha\s*[+*]?=/);
   });
@@ -6987,6 +6991,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(powder).toContain('localPowderShape.x < 0.92');
     expect(powder).toContain('density, widePowderShape.yz, optics');
     expect(powder).toContain('* powderChromaCohesion * uSurfaceContourLighting');
+    expect(powder).toContain('powderSmoothContourFinish(');
     expect(powder).toContain('powderContourChroma + powderBodyChroma');
     expect(`${solid}${powder}`).not.toMatch(/\balpha\s*[+*]?=/);
     expect(`${solid}${powder}`).not.toContain('texture(');
@@ -7013,6 +7018,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(powder).toContain('smoothstep(1.0, 2.0, q00 + q10 + q01 + q11)');
     expect(powder).toContain('uSurfaceContourLighting > 0.5 && uPowderStyle > 1.5');
     expect(powder).toContain('applySurfaceContourEightX(color, density, powderSlope, optics, 1.0, 0.0)');
+    expect(powder).toContain('powderSmoothContourFinish(density, powderFieldBlend)');
     expect(solid).toContain('color, density, solidSurfaceSlope, optics, 0.0, solidAirFacing');
     expect(`${helper}${powder}${solid}`).not.toContain('texture(');
     expect(`${helper}${powder}${solid}`).not.toMatch(/\balpha\s*[+*]?=/);
@@ -7471,7 +7477,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('float smoothContourAlpha = powderSmoothCoverage(widePowderShape.x);');
     expect(source).toContain('heapAlpha = mix(heapAlpha, smoothContourAlpha, smoothContourTransfer);');
     expect(source).toContain('float powderContourTextureRetention = 1.0;');
-    expect(source).toContain('powderContourTextureRetention = 1.0 - smoothContourTransfer');
+    expect(source).toContain('powderContourTextureRetention = powderSmoothTextureRetention(');
+    expect(source).toContain('widePowderShape.x, smoothContourTransfer');
     expect(source).toContain('color *= mix(1.0, powderMineralFactor, powderContourTextureRetention);');
     expect(source).toContain('mix(1.0, 1.70, settledMineralRetention)');
     expect(source).toContain('float detailEstimate = min(');

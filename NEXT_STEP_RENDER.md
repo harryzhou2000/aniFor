@@ -321,6 +321,23 @@ Active priority order:
    Focused presenter checks, production closure, and the true 4896×3072 Powder
    audit pass with zero browser errors. Local, square Grains, fine topology,
    semantic support, and the sampler budget remain unchanged.
+   The active powder increment now admits gravity-facing diagonal slopes with a
+   shared `0.24..0.56` directional transfer instead of reserving the wide field
+   mainly for horizontal crowns. Vertical columns remain an exact zero because
+   their vertical gradient share is zero. Coverage and finish are deliberately
+   separate: one shared inward contour factor attenuates the old highlight only
+   where the field owns the edge, and one shared `0.50..0.78` texture-retention
+   ramp keeps the first alpha crossing quiet while restoring mineral variation
+   before it can become a broad gel-like bevel. Normal and compact true-8× use
+   the same helpers. The current powder-style atlas keeps Local and Grains
+   byte-for-byte unchanged, preserves isolated particles, thin L/vertical
+   strokes, authored holes, unlike-powder contact, and small blocks, and was
+   accepted by direct plus independent inspection. The true 4896×3072 gate
+   completed with WebGL, zero browser errors, a 5.527-second GPU-fence sample,
+   and Smooth continuity better than its two reference modes (`0.366` RMS,
+   `0.069` tangent error, `0.073` curvature energy). Treat this as the powder
+   silhouette/material-boundary checkpoint; a small apex highlight remains
+   optional polish rather than a release blocker.
 
 Items 17 and 18 are deployed; continue item 19 and the unfinished material and
 graphics goals in this document. Visual preference may accept a candidate
