@@ -13,6 +13,8 @@ export interface VisualCaptureControlHost {
   getPowderRenderStyle(): PowderRenderStyle;
   setVisualLabVariant(variant: VisualCaptureControlVariant): void;
   getVisualLabVariant(): VisualCaptureControlVariant;
+  setMaterialLightingVariant(variant: VisualCaptureControlVariant): void;
+  getMaterialLightingVariant(): VisualCaptureControlVariant;
 }
 
 const POWDER_STYLE_BY_VARIANT = Object.freeze({
@@ -49,6 +51,12 @@ const VISUAL_CAPTURE_CONTROL_DESCRIPTORS = Object.freeze({
     get: (host: VisualCaptureControlHost) => (
       variantForPowderStyle(host.getPowderRenderStyle())
     ),
+  }),
+  'material-lighting-profile': Object.freeze({
+    set: (host: VisualCaptureControlHost, variant: VisualCaptureControlVariant) => {
+      host.setMaterialLightingVariant(variant);
+    },
+    get: (host: VisualCaptureControlHost) => host.getMaterialLightingVariant(),
   }),
 } satisfies Record<VisualCaptureControlDriver, VisualCaptureControlDescriptor>);
 

@@ -29,6 +29,15 @@
       "candidates": []
     },
     {
+      "name": "material-lighting",
+      "includes": [],
+      "selectors": {
+        "domains": ["material-lighting"],
+        "fixtures": []
+      },
+      "candidates": []
+    },
+    {
       "name": "material-optics",
       "includes": [
         "atmosphere",

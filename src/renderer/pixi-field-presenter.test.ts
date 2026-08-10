@@ -416,6 +416,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).toContain('uniform float uGasMotionVfx;');
     expect(normal).toContain('uniform float uCflmColdFlameVfx;');
     expect(normal).toContain('uniform float uGasLightVfx;');
+    expect(normal).toContain('uniform float uMaterialLightingVariant;');
     expect(normal).toContain('uniform float uGasCoreDepthVfx;');
     expect(normal).toContain('uniform float uPlasmaCoreVfx;');
     expect(normal).toContain('uniform float uLiquidBodyVfx;');
@@ -433,6 +434,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight).not.toContain('cflmColdFlameVfx');
     expect(eight).not.toContain('uGasLightVfx');
     expect(eight).not.toContain('gasLightVfx');
+    expect(eight).not.toContain('uMaterialLightingVariant');
     expect(canvasSource).not.toContain('gasLightVfx');
     expect(eight).not.toContain('uGasCoreDepthVfx');
     expect(eight).not.toContain('gasCoreDepthVfx');
@@ -790,6 +792,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(source.match(/this\.uniforms\.uniforms\.uGasMotionVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uCflmColdFlameVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uGasLightVfx = 0;/g)).toHaveLength(2);
+    expect(source.match(/this\.uniforms\.uniforms\.uMaterialLightingVariant = 0;/g))
+      .toHaveLength(3);
     expect(source.match(/this\.uniforms\.uniforms\.uGasCoreDepthVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uSmokeSoftnessVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uSmokeBillowDepthVfx = 0;/g)).toHaveLength(2);

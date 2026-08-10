@@ -1,0 +1,15 @@
+{
+  "schema": "anifor.visual-lab.recipe-set/v1",
+  "id": "sha256:7df3d0132079a316f4e8a7aaa0ed271d807789cfa159abc13ff8632b783780d7",
+  "name": "material-lighting",
+  "recipes": [
+    {
+      "name": "material-lighting-atlas",
+      "domain": "material-lighting",
+      "target": 0,
+      "fixture": "material-lighting-atlas",
+      "gain": 1,
+      "renderScale": 2
+    }
+  ]
+}

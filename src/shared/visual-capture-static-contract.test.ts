@@ -14,7 +14,7 @@ const visit = (value: unknown, visitor: (nested: object) => void): void => {
 };
 
 describe('visual capture driver static contract', () => {
-  it('keeps the normal HDR registry closed while adding a source-stage Powder driver', () => {
+  it('keeps the normal HDR registry closed while adding source-stage drivers', () => {
     expect(VISUAL_CAPTURE_STATIC_CONTRACT.evidencePlanes).toEqual([
       'atmosphere-alpha', 'liquid-alpha', 'emission-alpha', 'powder-surface-alpha',
     ]);
@@ -44,25 +44,52 @@ describe('visual capture driver static contract', () => {
           { name: 'b', selection: 'grains', label: 'Grains' },
         ],
       },
+      {
+        name: 'material-lighting-profile',
+        domains: ['material-lighting'],
+        framebufferAlphaPolicy: 'exact',
+        variants: [
+          { name: 'off', selection: 0, label: 'Off' },
+          { name: 'a', selection: 1, label: 'Balanced' },
+          { name: 'b', selection: 2, label: 'Volumetric' },
+        ],
+      },
     ]);
   });
 
-  it('declares one typed Powder fixture and stable six-field recipe', () => {
-    expect(VISUAL_CAPTURE_STATIC_CONTRACT.extensionDomains[0]).toMatchObject({
-      name: 'powder', targetKind: 'none', driver: 'powder-render-style',
-      evidence: { plane: 'powder-surface-alpha' },
-    });
-    expect(VISUAL_CAPTURE_STATIC_CONTRACT.fixtures[0]).toEqual({
-      name: 'powder-style-atlas',
-      scene: 'showcase',
-      driver: 'powder-render-style',
-      constraints: [{ domain: 'powder', targets: [0] }],
-      preparationReportLabel: 'preparePowderStyleAtlasFixture',
-      requirement: '--domain=powder --target=0',
-    });
-    expect(Reflect.ownKeys(VISUAL_CAPTURE_STATIC_CONTRACT.captureRecipes[0])).toEqual([
-      'name', 'domain', 'target', 'fixture', 'gain', 'renderScale',
+  it('declares typed Powder and material-lighting fixtures with stable six-field recipes', () => {
+    expect(VISUAL_CAPTURE_STATIC_CONTRACT.extensionDomains.map((domain) => ({
+      name: domain.name, targetKind: domain.targetKind, driver: domain.driver,
+      evidence: domain.evidence,
+    }))).toEqual([
+      {
+        name: 'powder', targetKind: 'none', driver: 'powder-render-style',
+        evidence: { plane: 'powder-surface-alpha' },
+      },
+      {
+        name: 'material-lighting', targetKind: 'none', driver: 'material-lighting-profile',
+        evidence: { plane: 'emission-alpha' },
+      },
     ]);
+    expect(VISUAL_CAPTURE_STATIC_CONTRACT.fixtures).toEqual([
+      {
+        name: 'powder-style-atlas', scene: 'showcase', driver: 'powder-render-style',
+        constraints: [{ domain: 'powder', targets: [0] }],
+        preparationReportLabel: 'preparePowderStyleAtlasFixture',
+        requirement: '--domain=powder --target=0',
+      },
+      {
+        name: 'material-lighting-atlas', scene: 'showcase', driver: 'material-lighting-profile',
+        constraints: [{ domain: 'material-lighting', targets: [0] }],
+        preparationReportLabel: 'prepareMaterialLightingAtlasFixture',
+        requirement: '--domain=material-lighting --target=0',
+      },
+    ]);
+    for (const recipe of VISUAL_CAPTURE_STATIC_CONTRACT.captureRecipes) {
+      expect(Reflect.ownKeys(recipe)).toEqual([
+        'name', 'domain', 'target', 'fixture', 'gain', 'renderScale',
+      ]);
+    }
   });
 
   it('is recursively frozen, JSON-safe, and contains no executable bridge metadata', () => {
@@ -78,7 +105,7 @@ describe('visual capture driver static contract', () => {
     }
   });
 
-  it('provides one frozen capture-facing fixture and recipe projection', () => {
+  it('provides frozen capture-facing fixture and recipe projections', () => {
     expect(VISUAL_CAPTURE_STATIC_CATALOG.schema)
       .toBe('anifor.visual-capture.static-catalog/v1');
     expect(VISUAL_CAPTURE_STATIC_FIXTURES.map(({ name, driver }) => [name, driver])).toEqual([
@@ -86,9 +113,11 @@ describe('visual capture driver static contract', () => {
       ['oil-motion', 'normal-hdr'],
       ['water-motion', 'normal-hdr'],
       ['powder-style-atlas', 'powder-render-style'],
+      ['material-lighting-atlas', 'material-lighting-profile'],
     ]);
     expect(VISUAL_CAPTURE_STATIC_RECIPES.map(({ name }) => name)).toEqual([
       'gas-showcase', 'oxygen-showcase', 'oil-motion', 'water-motion', 'powder-style-atlas',
+      'material-lighting-atlas',
     ]);
     visit(VISUAL_CAPTURE_STATIC_CATALOG, (nested) => expect(Object.isFrozen(nested)).toBe(true));
   });

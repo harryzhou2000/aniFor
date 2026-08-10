@@ -44,10 +44,14 @@ describe('Visual Lab capture recipes', () => {
         name: 'powder-style-atlas', domain: 'powder', target: 0,
         fixture: 'powder-style-atlas', gain: 1, renderScale: 2,
       },
+      {
+        name: 'material-lighting-atlas', domain: 'material-lighting', target: 0,
+        fixture: 'material-lighting-atlas', gain: 1, renderScale: 2,
+      },
     ]);
     expect(visualLabCaptureRecipeNames()).toEqual([
       'gas-showcase', 'oxygen-showcase', 'oil-motion', 'water-motion',
-      'powder-style-atlas',
+      'powder-style-atlas', 'material-lighting-atlas',
     ]);
     expect(resolveVisualLabCaptureRecipe('water-motion'))
       .toBe(VISUAL_LAB_CAPTURE_RECIPES[3]);
@@ -74,7 +78,7 @@ describe('Visual Lab capture recipes', () => {
 
     const names = visualLabCaptureRecipeNames();
     names.pop();
-    expect(visualLabCaptureRecipeNames()).toHaveLength(5);
+    expect(visualLabCaptureRecipeNames()).toHaveLength(6);
   });
 
   it('requires an array of exact data objects', () => {
@@ -126,7 +130,7 @@ describe('Visual Lab capture recipes', () => {
 
   it('resolves only existing domains and compatible fixtures and targets', () => {
     expect(() => createOne({ domain: 'unknown' }))
-      .toThrow('has an unknown domain: --domain must be gas, liquid, emission, or powder');
+      .toThrow('has an unknown domain: --domain must be gas, liquid, emission, powder, or material-lighting');
     expect(() => createOne({ domain: 'powder' }))
       .toThrow('has an incompatible fixture: --fixture=showcase requires --domain');
     expect(createOne({
@@ -135,7 +139,7 @@ describe('Visual Lab capture recipes', () => {
     expect(() => createOne({ fixture: 'missing' }))
       .toThrow(
         'has an incompatible fixture: --fixture must be showcase, oil-motion, water-motion,'
-        + ' or powder-style-atlas',
+        + ' powder-style-atlas, or material-lighting-atlas',
       );
     expect(() => createOne({ fixture: 'oil-motion', domain: 'gas', target: 8 }))
       .toThrow('--fixture=oil-motion requires --domain=liquid --target=8');
@@ -161,7 +165,7 @@ describe('Visual Lab capture recipes', () => {
     expect(() => resolveVisualLabCaptureRecipe('missing'))
       .toThrow(
         'Unknown Visual Lab capture candidate "missing"; --candidate must be one of: '
-        + 'gas-showcase, oxygen-showcase, oil-motion, water-motion, powder-style-atlas',
+        + 'gas-showcase, oxygen-showcase, oil-motion, water-motion, powder-style-atlas, material-lighting-atlas',
       );
     expect(() => resolveVisualLabCaptureRecipe(undefined))
       .toThrow('Unknown Visual Lab capture candidate undefined');

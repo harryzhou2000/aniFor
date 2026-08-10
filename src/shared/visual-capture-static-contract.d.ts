@@ -58,6 +58,30 @@ export declare const VISUAL_CAPTURE_STATIC_CONTRACT: Readonly<{
         }>,
       ];
     }>,
+    Readonly<{
+      readonly "name": "material-lighting-profile";
+      readonly "domains": readonly [
+        "material-lighting",
+      ];
+      readonly "framebufferAlphaPolicy": "exact";
+      readonly "variants": readonly [
+        Readonly<{
+          readonly "name": "off";
+          readonly "selection": 0;
+          readonly "label": "Off";
+        }>,
+        Readonly<{
+          readonly "name": "a";
+          readonly "selection": 1;
+          readonly "label": "Balanced";
+        }>,
+        Readonly<{
+          readonly "name": "b";
+          readonly "selection": 2;
+          readonly "label": "Volumetric";
+        }>,
+      ];
+    }>,
   ];
   readonly "extensionDomains": readonly [
     Readonly<{
@@ -85,6 +109,31 @@ export declare const VISUAL_CAPTURE_STATIC_CONTRACT: Readonly<{
       }>;
       readonly "fixedUrlParameters": Readonly<Record<string, never>>;
     }>,
+    Readonly<{
+      readonly "name": "material-lighting";
+      readonly "targetKind": "none";
+      readonly "driver": "material-lighting-profile";
+      readonly "executionProfile": Readonly<{
+        readonly "detailScales": readonly [
+          1,
+          2,
+          4,
+        ];
+        readonly "backend": "webgl";
+        readonly "pipeline": "normal-hdr";
+        readonly "variantZero": "pixel-preserving-baseline";
+        readonly "fallbacks": Readonly<{
+          readonly "classic": "disabled-preserve-baseline";
+          readonly "canvas2d": "disabled-preserve-baseline";
+          readonly "hdrUnavailable": "disabled-preserve-baseline";
+          readonly "detail8x": "disabled-preserve-baseline";
+        }>;
+      }>;
+      readonly "evidence": Readonly<{
+        readonly "plane": "emission-alpha";
+      }>;
+      readonly "fixedUrlParameters": Readonly<Record<string, never>>;
+    }>,
   ];
   readonly "fixtures": readonly [
     Readonly<{
@@ -102,6 +151,21 @@ export declare const VISUAL_CAPTURE_STATIC_CONTRACT: Readonly<{
       readonly "preparationReportLabel": "preparePowderStyleAtlasFixture";
       readonly "requirement": "--domain=powder --target=0";
     }>,
+    Readonly<{
+      readonly "name": "material-lighting-atlas";
+      readonly "scene": "showcase";
+      readonly "driver": "material-lighting-profile";
+      readonly "constraints": readonly [
+        Readonly<{
+          readonly "domain": "material-lighting";
+          readonly "targets": readonly [
+            0,
+          ];
+        }>,
+      ];
+      readonly "preparationReportLabel": "prepareMaterialLightingAtlasFixture";
+      readonly "requirement": "--domain=material-lighting --target=0";
+    }>,
   ];
   readonly "captureRecipes": readonly [
     Readonly<{
@@ -109,6 +173,14 @@ export declare const VISUAL_CAPTURE_STATIC_CONTRACT: Readonly<{
       readonly "domain": "powder";
       readonly "target": 0;
       readonly "fixture": "powder-style-atlas";
+      readonly "gain": 1;
+      readonly "renderScale": 2;
+    }>,
+    Readonly<{
+      readonly "name": "material-lighting-atlas";
+      readonly "domain": "material-lighting";
+      readonly "target": 0;
+      readonly "fixture": "material-lighting-atlas";
       readonly "gain": 1;
       readonly "renderScale": 2;
     }>,

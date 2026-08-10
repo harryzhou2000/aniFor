@@ -36,6 +36,12 @@ const powderStyleCaptureVariantValue = (variant) => {
   return descriptor.value;
 };
 
+const numericCaptureVariantValue = (variant, label) => {
+  const descriptor = VISUAL_LAB_CAPTURE_VARIANTS.find(({ name }) => name === variant.name);
+  if (!descriptor) throw new TypeError(`${label} variant ${variant.name} is outside the capture ABI`);
+  return descriptor.value;
+};
+
 /** Shared fail-closed browser control ABI for every prepared capture fixture. */
 const preparedControlSelectionExpression = (
   auditIdentifier, fixtureId, variantValue, selectionSource, expectedSelection,
@@ -135,6 +141,46 @@ const EXECUTABLE_DRIVER_ADAPTERS = Object.freeze({
     },
     publishesReportDescriptor: true,
     reportMismatch: 'capture-driver descriptor does not match the current typed driver',
+  }),
+  'material-lighting-profile': Object.freeze({
+    urlValues: () => Object.freeze({
+      visualLab: null,
+      visualVariant: null,
+      visualTarget: null,
+      visualGain: null,
+    }),
+    datasetExpectation: (_request, variant) => Object.freeze({
+      visualLab: 'inactive',
+      visualLabDomain: 'off',
+      visualLabVariant: '0',
+      visualLabTarget: '0',
+      visualLabGain: '1',
+      materialLightingVariant: String(numericCaptureVariantValue(variant, 'Material lighting')),
+    }),
+    selectionExpression: (variant, auditIdentifier, fixtureId) => {
+      const value = numericCaptureVariantValue(variant, 'Material lighting');
+      return preparedControlSelectionExpression(
+        auditIdentifier, fixtureId, value, 'observed', value,
+      );
+    },
+    datasetProjectionExpression: (auditIdentifier, fixtureId) => {
+      const fixture = JSON.stringify(fixtureId);
+      return (
+      `(() => {
+      if (typeof ${auditIdentifier}.preparedVisualCaptureVariant !== 'function') {
+        return { materialLightingVariant: undefined };
+      }
+      try {
+        const observed = ${auditIdentifier}.preparedVisualCaptureVariant(${fixture});
+        return { materialLightingVariant: String(observed) };
+      } catch {
+        return { materialLightingVariant: undefined };
+      }
+    })()`
+      );
+    },
+    publishesReportDescriptor: true,
+    reportMismatch: 'material-lighting driver descriptor does not match the typed driver',
   }),
 });
 

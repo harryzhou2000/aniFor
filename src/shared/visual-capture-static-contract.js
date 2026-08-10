@@ -41,6 +41,16 @@ const contract = {
         { name: 'b', selection: 'grains', label: 'Grains' },
       ],
     },
+    {
+      name: 'material-lighting-profile',
+      domains: ['material-lighting'],
+      framebufferAlphaPolicy: 'exact',
+      variants: [
+        { name: 'off', selection: 0, label: 'Off' },
+        { name: 'a', selection: 1, label: 'Balanced' },
+        { name: 'b', selection: 2, label: 'Volumetric' },
+      ],
+    },
   ],
   extensionDomains: [
     {
@@ -49,6 +59,14 @@ const contract = {
       driver: 'powder-render-style',
       executionProfile: VISUAL_LAB_STATIC_CONTRACT.normalHdrExecutionProfile,
       evidence: { plane: 'powder-surface-alpha' },
+      fixedUrlParameters: {},
+    },
+    {
+      name: 'material-lighting',
+      targetKind: 'none',
+      driver: 'material-lighting-profile',
+      executionProfile: VISUAL_LAB_STATIC_CONTRACT.normalHdrExecutionProfile,
+      evidence: { plane: 'emission-alpha' },
       fixedUrlParameters: {},
     },
   ],
@@ -61,6 +79,14 @@ const contract = {
       preparationReportLabel: 'preparePowderStyleAtlasFixture',
       requirement: '--domain=powder --target=0',
     },
+    {
+      name: 'material-lighting-atlas',
+      scene: 'showcase',
+      driver: 'material-lighting-profile',
+      constraints: [{ domain: 'material-lighting', targets: [0] }],
+      preparationReportLabel: 'prepareMaterialLightingAtlasFixture',
+      requirement: '--domain=material-lighting --target=0',
+    },
   ],
   captureRecipes: [
     {
@@ -68,6 +94,14 @@ const contract = {
       domain: 'powder',
       target: 0,
       fixture: 'powder-style-atlas',
+      gain: 1,
+      renderScale: 2,
+    },
+    {
+      name: 'material-lighting-atlas',
+      domain: 'material-lighting',
+      target: 0,
+      fixture: 'material-lighting-atlas',
       gain: 1,
       renderScale: 2,
     },
@@ -131,6 +165,13 @@ const validateContract = (candidate) => {
     || powderDriver.variants.map(({ selection }) => selection).join(',') !== POWDER_STYLES.join(',')) {
     throw new TypeError('powder render-style capture must map off/A/B to Smooth/Local/Grains');
   }
+  const materialLightingDriver = candidate.drivers.find(
+    ({ name }) => name === 'material-lighting-profile',
+  );
+  if (!materialLightingDriver
+    || materialLightingDriver.variants.some(({ selection }, index) => selection !== index)) {
+    throw new TypeError('material-lighting capture must map off/A/B to exact selections 0/1/2');
+  }
 
   const extensionDomains = new Set();
   for (const domain of candidate.extensionDomains) {
@@ -145,12 +186,12 @@ const validateContract = (candidate) => {
     }
     extensionDomains.add(domain.name);
   }
-  const referencedEvidencePlanes = [
+  const referencedEvidencePlanes = [...new Set([
     ...VISUAL_LAB_STATIC_CONTRACT.captureDomainOrder.map((domainName) => (
       VISUAL_LAB_STATIC_CONTRACT.domains.find(({ name }) => name === domainName).evidence.plane
     )),
     ...candidate.extensionDomains.map(({ evidence }) => evidence.plane),
-  ];
+  ])];
   if (candidate.evidencePlanes.length !== referencedEvidencePlanes.length
     || candidate.evidencePlanes.some((plane, index) => plane !== referencedEvidencePlanes[index])) {
     throw new TypeError('visual capture evidence planes must exactly match referenced domain order');

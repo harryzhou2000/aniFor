@@ -109,13 +109,15 @@ describe('Visual Lab fixture adapters', () => {
     expect(capture).toEqual(renderer);
   });
 
-  it('adds Powder only to the generic capture-facing catalogs', () => {
+  it('adds source-stage Powder and material-lighting domains only to generic capture-facing catalogs', () => {
     expect(visualLabDomainNames()).toEqual(['gas', 'liquid', 'emission']);
-    expect(visualCaptureDomainNames()).toEqual(['gas', 'liquid', 'emission', 'powder']);
-    expect(visualCaptureFixtureNames()).toEqual([
-      'showcase', 'oil-motion', 'water-motion', 'powder-style-atlas',
+    expect(visualCaptureDomainNames()).toEqual([
+      'gas', 'liquid', 'emission', 'powder', 'material-lighting',
     ]);
-    expect(VISUAL_CAPTURE_DOMAIN_ADAPTERS).toHaveLength(4);
+    expect(visualCaptureFixtureNames()).toEqual([
+      'showcase', 'oil-motion', 'water-motion', 'powder-style-atlas', 'material-lighting-atlas',
+    ]);
+    expect(VISUAL_CAPTURE_DOMAIN_ADAPTERS).toHaveLength(5);
     expect(resolveVisualCaptureDomain('powder')).toMatchObject({
       targetKind: 'none',
       driver: 'powder-render-style',
@@ -128,6 +130,17 @@ describe('Visual Lab fixture adapters', () => {
         scene: 'showcase',
         captureDriver: 'powder-render-style',
         preparation: { reportLabel: 'preparePowderStyleAtlasFixture' },
+      });
+    expect(resolveVisualCaptureDomain('material-lighting')).toMatchObject({
+      targetKind: 'none',
+      driver: 'material-lighting-profile',
+      evidence: { readerMethod: 'emissionFieldAlpha', plane: 'emission-alpha' },
+    });
+    expect(resolveVisualCaptureFixture('material-lighting-atlas', 'material-lighting', 0))
+      .toMatchObject({
+        scene: 'showcase',
+        captureDriver: 'material-lighting-profile',
+        preparation: { reportLabel: 'prepareMaterialLightingAtlasFixture' },
       });
     expect(() => resolveVisualLabDomain('powder'))
       .toThrow('--domain must be gas, liquid, or emission');
@@ -348,6 +361,8 @@ describe('Visual Lab fixture adapters', () => {
       [{ domain: 'liquid', target: 2, fixture: 'water-motion' }, 'normal-hdr'],
       [{ domain: 'powder', target: 0, fixture: 'powder-style-atlas' },
         'powder-render-style'],
+      [{ domain: 'material-lighting', target: 0, fixture: 'material-lighting-atlas' },
+        'material-lighting-profile'],
     ]) {
       const resolved = resolveVisualCaptureRequest(request);
       expect(resolved.domainAdapter.name).toBe(request.domain);
@@ -512,7 +527,8 @@ describe('Visual Lab fixture adapters', () => {
   it('keeps CLI validation fail-fast and compatibility audit aliases intact', () => {
     const auditScript = new URL('./visual-lab-audit.mjs', import.meta.url);
     for (const [argument, message] of [
-      ['--domain=unknown', '--domain must be gas, liquid, emission, or powder'],
+      ['--domain=unknown',
+        '--domain must be gas, liquid, emission, powder, or material-lighting'],
       ['--target=256', '--target must be an integer from 0 through 255'],
       ['--domain=gas --render-scale=8',
         '--render-scale for gas must be 1, 2, 4; unsupported paths preserve the baseline'],

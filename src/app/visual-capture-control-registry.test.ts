@@ -9,6 +9,7 @@ import {
 } from './visual-capture-control-registry';
 
 const POWDER_FIXTURE = 'powder-style-atlas' as const;
+const MATERIAL_LIGHTING_FIXTURE = 'material-lighting-atlas' as const;
 const NORMAL_FIXTURES = VISUAL_LAB_STATIC_CONTRACT.fixtures.map(({ name }) => name);
 
 describe('Visual capture control registry', () => {
@@ -35,6 +36,20 @@ describe('Visual capture control registry', () => {
       expect(fake.style).toBe(style);
       expect(registry.getVariant(POWDER_FIXTURE)).toBe(variant);
     }
+  });
+
+  it('maps material-lighting variants directly through its fixture-owned host control', () => {
+    const fake = new PowderStyleHost();
+    const registry = new VisualCaptureControlRegistry(fake);
+    registry.markFixturePrepared(MATERIAL_LIGHTING_FIXTURE);
+
+    for (const variant of [0, 1, 2] as const) {
+      registry.setVariant(MATERIAL_LIGHTING_FIXTURE, variant);
+      expect(fake.materialLightingVariant).toBe(variant);
+      expect(registry.getVariant(MATERIAL_LIGHTING_FIXTURE)).toBe(variant);
+    }
+    expect(fake.visualLabVariant).toBe(0);
+    expect(fake.style).toBe('smooth');
   });
 
   it.each(NORMAL_FIXTURES)(
@@ -131,6 +146,7 @@ class PowderStyleHost implements VisualCaptureControlHost {
     private readonly ignoreWrites = false,
     public visualLabVariant: 0 | 1 | 2 = 0,
     private readonly ignoreVisualLabWrites = false,
+    public materialLightingVariant: 0 | 1 | 2 = 0,
   ) {}
 
   setPowderRenderStyle(style: PowderRenderStyle): void {
@@ -147,5 +163,13 @@ class PowderStyleHost implements VisualCaptureControlHost {
 
   getVisualLabVariant(): 0 | 1 | 2 {
     return this.visualLabVariant;
+  }
+
+  setMaterialLightingVariant(variant: 0 | 1 | 2): void {
+    this.materialLightingVariant = variant;
+  }
+
+  getMaterialLightingVariant(): 0 | 1 | 2 {
+    return this.materialLightingVariant;
   }
 }

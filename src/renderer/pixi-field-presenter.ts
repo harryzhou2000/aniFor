@@ -3463,6 +3463,7 @@ uniform float uGasBodyVfx;
 uniform float uGasMotionVfx;
 uniform float uCflmColdFlameVfx;
 uniform float uGasLightVfx;
+uniform float uMaterialLightingVariant;
 uniform float uGasCoreDepthVfx;
 uniform float uHydrogenBodyVfx;
 uniform float uCarbonDioxideBodyVfx;
@@ -6598,6 +6599,20 @@ void main() {
           vec3(0.72, 0.54, 0.36), vec3(0.34, 0.50, 0.72), gasLightFog
         );
         color *= vec3(1.0) - gasAbsorptionTint * gasSpectralAbsorption;
+        // Shared material-lighting experiment: preserve E13's exact gas owner,
+        // transport, and spectral proof while comparing a restrained balanced
+        // lift against a deeper cinematic shoulder. This is RGB-only arithmetic
+        // over already-live values and is absent from the compact true-8x shader.
+        if (uMaterialLightingVariant > 0.5) {
+          float materialLightingB = step(1.5, uMaterialLightingVariant);
+          float materialGasGain = gasLightTransport
+            * mix(0.040, 0.075, materialLightingB)
+            * (0.46 + gasLightFacing * 0.54);
+          color += (vec3(1.10) - clamp(color, 0.0, 1.10))
+            * gasSpectralKey * materialGasGain;
+          color *= vec3(1.0) - gasAbsorptionTint * gasLightTransport
+            * opticalDepth * mix(0.006, 0.014, materialLightingB);
+        }
       }
     }
     // The atmosphere's existing cardinal field samples also supply a signed
@@ -7685,6 +7700,19 @@ void main() {
             * mix(0.74, 1.0, liquidVfxBody);
           color += (vec3(1.35) - clamp(color, 0.0, 1.35))
             * mix(liquidFresnelKey, edgeTint, 0.18) * liquidVfxSurface;
+          // The shared lighting profile compares two bounded liquid responses
+          // inside E03's connected-species/depth proof. It changes RGB only:
+          // silhouette, meniscus ownership, contacts, and optical-depth bytes
+          // remain authoritative and true 8x keeps its compact compositor.
+          if (uMaterialLightingVariant > 0.5) {
+            float materialLightingB = step(1.5, uMaterialLightingVariant);
+            float materialLiquidCrown = liquidVfxSurface
+              * mix(0.22, 0.42, materialLightingB);
+            color += (vec3(1.28) - clamp(color, 0.0, 1.28))
+              * mix(liquidFresnelKey, edgeTint, 0.30) * materialLiquidCrown;
+            color *= exp(-liquidVfxAbsorption * liquidVfxColumn
+              * mix(0.010, 0.024, materialLightingB));
+          }
           // E24: the broad production Water pool read as an opaque cyan slab
           // crossed by two coherent diagonal bands. Recombine those same
           // already-live sheen/caustic carriers into an interference roll:
@@ -11567,10 +11595,15 @@ void main() {
       // so strong that display tonemapping compresses Concrete's fine pigment.
       float powderLightReach = mix(lightReach, sqrt(lightReach), 0.65);
       float powderLightTransport = min(
-        0.082,
+        uMaterialLightingVariant > 0.5
+          ? mix(0.094, 0.112, step(1.5, uMaterialLightingVariant))
+          : 0.082,
         powderLightReach * (
           mix(0.052, 0.030, powderLightBodyDepth)
             + powderLightCrown * 0.036
+            + (uMaterialLightingVariant > 0.5
+              ? mix(0.010, 0.022, step(1.5, uMaterialLightingVariant))
+              : 0.0)
         )
       );
       vec3 powderLightSpectrum = max(
@@ -12099,6 +12132,10 @@ export class PixiFieldPresenter {
     // The protected compact shader retains its one established emission sample.
     const powderLightVfxEnabled = outputScale < 8
       && resolvePowderLightVfxEnabled(renderLook);
+    // Shared normal-WebGL material-lighting variants are selected only through
+    // the typed same-page capture driver. Production begins at exact no-op;
+    // compact true 8x declares neither this uniform nor parallel arithmetic.
+    const materialLightingVariant = 0;
     // E09 is arithmetic over the normal shader's existing packed stability
     // sample. The protected compact true-8x shader deliberately
     // declares neither its selector nor its contact-depth branch.
@@ -12401,6 +12438,7 @@ export class PixiFieldPresenter {
       uGasMotionVfx: { value: gasMotionVfxEnabled ? 1 : 0, type: 'f32' },
       uCflmColdFlameVfx: { value: cflmColdFlameVfxEnabled ? 1 : 0, type: 'f32' },
       uGasLightVfx: { value: gasLightVfxEnabled ? 1 : 0, type: 'f32' },
+      uMaterialLightingVariant: { value: materialLightingVariant, type: 'f32' },
       uGasCoreDepthVfx: { value: gasCoreDepthVfxEnabled ? 1 : 0, type: 'f32' },
       uHydrogenBodyVfx: { value: hydrogenBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uCarbonDioxideBodyVfx: {
@@ -12728,6 +12766,7 @@ export class PixiFieldPresenter {
       this.uniforms.uniforms.uGasMotionVfx = 0;
       this.uniforms.uniforms.uCflmColdFlameVfx = 0;
       this.uniforms.uniforms.uGasLightVfx = 0;
+      this.uniforms.uniforms.uMaterialLightingVariant = 0;
       this.uniforms.uniforms.uGasCoreDepthVfx = 0;
       this.uniforms.uniforms.uHydrogenBodyVfx = 0;
       this.uniforms.uniforms.uCarbonDioxideBodyVfx = 0;
@@ -12939,6 +12978,9 @@ export class PixiFieldPresenter {
     ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.gasLightVfx = Number(presenter.uniforms.uniforms.uGasLightVfx) > 0.5
       ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.materialLightingVariant = String(
+      Number(presenter.uniforms.uniforms.uMaterialLightingVariant),
+    );
     presenter.app.canvas.dataset.gasCoreDepthVfx = Number(
       presenter.uniforms.uniforms.uGasCoreDepthVfx
     ) > 0.5 ? 'active' : 'inactive';
@@ -13746,6 +13788,21 @@ export class PixiFieldPresenter {
     this.hdrVfxPipeline?.setVisualLabState(next);
     this.publishVisualLabDataset();
     if (render && this.hdrVfxPipeline) this.renderApplication();
+  }
+
+  /** Generic normal-WebGL material-lighting comparison; compact 8x is inert. */
+  setMaterialLightingVariant(variant: 0 | 1 | 2, render = true): void {
+    if (variant !== 0 && variant !== 1 && variant !== 2) {
+      throw new Error(`Invalid material-lighting variant ${JSON.stringify(variant)}`);
+    }
+    if (this.outputScale >= 8 || !this.hdrPipelineInfo.active) {
+      this.uniforms.uniforms.uMaterialLightingVariant = 0;
+      this.app.canvas.dataset.materialLightingVariant = '0';
+      return;
+    }
+    this.uniforms.uniforms.uMaterialLightingVariant = variant;
+    this.app.canvas.dataset.materialLightingVariant = String(variant);
+    if (render) this.renderApplication();
   }
 
   private publishVisualLabDataset(): void {
@@ -14953,6 +15010,7 @@ export class PixiFieldPresenter {
         this.uniforms.uniforms.uGasMotionVfx = 0;
         this.uniforms.uniforms.uCflmColdFlameVfx = 0;
         this.uniforms.uniforms.uGasLightVfx = 0;
+        this.uniforms.uniforms.uMaterialLightingVariant = 0;
         this.uniforms.uniforms.uGasCoreDepthVfx = 0;
         this.uniforms.uniforms.uHydrogenBodyVfx = 0;
         this.uniforms.uniforms.uCarbonDioxideBodyVfx = 0;
@@ -15029,6 +15087,7 @@ export class PixiFieldPresenter {
         this.app.canvas.dataset.gasMotionVfx = 'inactive';
         this.app.canvas.dataset.cflmColdFlameVfx = 'inactive';
         this.app.canvas.dataset.gasLightVfx = 'inactive';
+        this.app.canvas.dataset.materialLightingVariant = '0';
         this.app.canvas.dataset.gasCoreDepthVfx = 'inactive';
         this.app.canvas.dataset.hydrogenBodyVfx = 'inactive';
         this.app.canvas.dataset.carbonDioxideBodyVfx = 'inactive';

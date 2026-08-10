@@ -533,6 +533,10 @@ export class Game {
       getVisualLabVariant: () => this.renderer.getVisualLabVariant(),
       setPowderRenderStyle: (style) => this.renderer.setPowderRenderStyle(style),
       getPowderRenderStyle: () => this.renderer.getPowderRenderStyle(),
+      setMaterialLightingVariant: (variant) => (
+        this.renderer.setMaterialLightingVariant(variant)
+      ),
+      getMaterialLightingVariant: () => this.renderer.getMaterialLightingVariant(),
     });
     window.__ANIFOR_INPUT_AUDIT__ = {
       version: 1,

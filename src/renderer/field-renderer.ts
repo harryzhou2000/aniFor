@@ -389,6 +389,8 @@ export class MaterialRenderer {
   private presentationRefreshAudit?: PresentationRefreshAudit;
   /** Latest same-page A/B choice, retained across asynchronous WebGL startup. */
   private desiredVisualLabVariant?: VisualLabVariant;
+  /** Latest shared material-lighting choice, retained across WebGL startup. */
+  private desiredMaterialLightingVariant?: 0 | 1 | 2;
   // Detail navigation creates a fresh page with a different-sized WebGL
   // backing. Relinquish the outgoing presenter before that navigation so its
   // colour target cannot contend with the next true-8x candidate.
@@ -1010,6 +1012,19 @@ export class MaterialRenderer {
   /** Current same-page Visual Lab choice, including pre-promotion Canvas state. */
   getVisualLabVariant(): VisualLabVariant {
     return this.desiredVisualLabVariant ?? 0;
+  }
+
+  /** Normal-WebGL cross-phase lighting profile; Canvas and true 8x stay inert. */
+  setMaterialLightingVariant(variant: 0 | 1 | 2): void {
+    if (variant !== 0 && variant !== 1 && variant !== 2) {
+      throw new Error(`Invalid material-lighting variant ${JSON.stringify(variant)}`);
+    }
+    this.desiredMaterialLightingVariant = variant;
+    this.presenter?.setMaterialLightingVariant(variant);
+  }
+
+  getMaterialLightingVariant(): 0 | 1 | 2 {
+    return this.desiredMaterialLightingVariant ?? 0;
   }
 
   /** Native DLAY countdown is a state-owned RGB cue, never a JavaScript timer. */
@@ -1659,6 +1674,9 @@ export class MaterialRenderer {
     // later calls route through this.presenter and render normally.
     if (this.desiredVisualLabVariant !== undefined) {
       presenter.setVisualLabVariant(this.desiredVisualLabVariant, false);
+    }
+    if (this.desiredMaterialLightingVariant !== undefined) {
+      presenter.setMaterialLightingVariant(this.desiredMaterialLightingVariant, false);
     }
     // Route subsequent dirty cells to the candidate while its first expensive
     // frame is in flight. The known-good Canvas remains mounted underneath;

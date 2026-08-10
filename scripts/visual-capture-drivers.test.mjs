@@ -18,8 +18,10 @@ import {
 
 const runSelection = (
   driver, variant, audit,
-  fixtureId = (typeof driver === 'string' ? driver : driver.name) === 'powder-render-style'
-    ? 'powder-style-atlas' : 'showcase',
+  fixtureId = ({
+    'powder-render-style': 'powder-style-atlas',
+    'material-lighting-profile': 'material-lighting-atlas',
+  })[typeof driver === 'string' ? driver : driver.name] ?? 'showcase',
 ) => Function(
   'audit', `return ${buildVisualCaptureSelectionExpression(
     driver, variant, { fixtureId },
@@ -28,7 +30,9 @@ const runSelection = (
 
 describe('typed visual capture drivers', () => {
   it('maps the real Powder styles through the stable off/A/B capture ABI', () => {
-    expect(VISUAL_CAPTURE_DRIVER_NAMES).toEqual(['normal-hdr', 'powder-render-style']);
+    expect(VISUAL_CAPTURE_DRIVER_NAMES).toEqual([
+      'normal-hdr', 'powder-render-style', 'material-lighting-profile',
+    ]);
     const driver = resolveVisualCaptureDriver('powder-render-style');
     expect(driver.variants.map(({ name, selection }) => [name, selection])).toEqual([
       ['off', 'smooth'], ['a', 'local'], ['b', 'grains'],
@@ -193,6 +197,38 @@ describe('typed visual capture drivers', () => {
     });
   });
 
+  it('keeps material-lighting outside HDR state and binds its profile values to the typed fixture', () => {
+    const request = { domain: 'material-lighting', target: 0, gain: 1 };
+    expect(visualCaptureDriverUrlValues('material-lighting-profile', request)).toEqual({
+      visualLab: null, visualVariant: null, visualTarget: null, visualGain: null,
+    });
+    expect(visualCaptureDriverDatasetExpectation('material-lighting-profile', request, 'b'))
+      .toEqual({
+        visualLab: 'inactive', visualLabDomain: 'off', visualLabVariant: '0',
+        visualLabTarget: '0', visualLabGain: '1', materialLightingVariant: '2',
+      });
+    let selectedVariant = 0;
+    expect(runSelection('material-lighting-profile', 2, {
+      setPreparedVisualCaptureVariant: (fixture, variant) => {
+        expect(fixture).toBe('material-lighting-atlas');
+        selectedVariant = variant;
+      },
+      preparedVisualCaptureVariant: (fixture) => {
+        expect(fixture).toBe('material-lighting-atlas');
+        return selectedVariant;
+      },
+    })).toEqual({ ok: true, selection: 2 });
+    expect(visualCaptureDriverReportDescriptor('material-lighting-profile')).toEqual({
+      name: 'material-lighting-profile',
+      framebufferAlphaPolicy: 'exact',
+      variants: {
+        off: { selection: 0, label: 'Off' },
+        a: { selection: 1, label: 'Balanced' },
+        b: { selection: 2, label: 'Volumetric' },
+      },
+    });
+  });
+
   it('owns observed state, startup/report metadata, and labels in one registry', () => {
     const normalObserved = Function(
       'audit', `return ${buildVisualCaptureDatasetProjectionExpression(
@@ -209,14 +245,22 @@ describe('typed visual capture drivers', () => {
         return 2;
       },
     });
+    const lightingObserved = Function(
+      'audit', `return ${buildVisualCaptureDatasetProjectionExpression(
+        'material-lighting-profile', { fixtureId: 'material-lighting-atlas' },
+      )};`,
+    )({ preparedVisualCaptureVariant: () => 1 });
 
     expect(normalObserved).toEqual({});
     expect(powderObserved).toEqual({ powderRenderStyle: 'grains' });
+    expect(lightingObserved).toEqual({ materialLightingVariant: '1' });
     expect(JSON.stringify(visualCaptureDriverStartupFields('normal-hdr', 2))).toBe('{}');
     expect(JSON.stringify(visualCaptureDriverStartupFields('powder-render-style', 2)))
       .toBe('{"captureDriver":"powder-render-style","selection":"grains"}');
     expect(visualCaptureDriverReportFields('normal-hdr')).toEqual({});
     expect(Object.keys(visualCaptureDriverReportFields('powder-render-style')))
+      .toEqual(['captureDriver']);
+    expect(Object.keys(visualCaptureDriverReportFields('material-lighting-profile')))
       .toEqual(['captureDriver']);
     expect(['off', 'a', 'b'].map((variant) => (
       visualCaptureVariantLabel('normal-hdr', variant)
@@ -224,6 +268,9 @@ describe('typed visual capture drivers', () => {
     expect(['off', 'a', 'b'].map((variant) => (
       visualCaptureVariantLabel('powder-render-style', variant)
     ))).toEqual(['Smooth', 'Local', 'Grains']);
+    expect(['off', 'a', 'b'].map((variant) => (
+      visualCaptureVariantLabel('material-lighting-profile', variant)
+    ))).toEqual(['Off', 'Balanced', 'Volumetric']);
   });
 
   it('fails fixture-owned selectors closed for unknown, unprepared, or mismatched state', () => {

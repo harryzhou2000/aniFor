@@ -237,6 +237,27 @@ describe('field renderer layout scheduling', () => {
     expect(setVisualLabVariant).toHaveBeenCalledWith(1);
   });
 
+  it('retains a material-lighting choice across asynchronous WebGL startup', () => {
+    const setMaterialLightingVariant = vi.fn();
+    const renderer = Object.create(MaterialRenderer.prototype) as {
+      desiredMaterialLightingVariant?: 0 | 1 | 2;
+      presenter?: { setMaterialLightingVariant(variant: 0 | 1 | 2): void };
+      setMaterialLightingVariant(variant: 0 | 1 | 2): void;
+      getMaterialLightingVariant(): 0 | 1 | 2;
+    };
+
+    renderer.presenter = undefined;
+    expect(renderer.getMaterialLightingVariant()).toBe(0);
+    renderer.setMaterialLightingVariant(2);
+    expect(renderer.desiredMaterialLightingVariant).toBe(2);
+    expect(renderer.getMaterialLightingVariant()).toBe(2);
+
+    renderer.presenter = { setMaterialLightingVariant };
+    renderer.setMaterialLightingVariant(1);
+    expect(setMaterialLightingVariant).toHaveBeenCalledWith(1);
+    expect(renderer.getMaterialLightingVariant()).toBe(1);
+  });
+
   it('forwards completed-frame tickets only through an active WebGL presenter', () => {
     const receipt = {
       schema: 'anifor.renderer.completed-frame-receipt/v1' as const,
