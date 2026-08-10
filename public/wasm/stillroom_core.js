@@ -5806,6 +5806,7 @@ function checkIncomingModuleAPI() {
 
 // Imports from the Wasm binary.
 var _powder_init = Module['_powder_init'] = makeInvalidEarlyAccess('_powder_init');
+var _powder_newtonian_gravity_supported = Module['_powder_newtonian_gravity_supported'] = makeInvalidEarlyAccess('_powder_newtonian_gravity_supported');
 var _powder_width = Module['_powder_width'] = makeInvalidEarlyAccess('_powder_width');
 var _powder_height = Module['_powder_height'] = makeInvalidEarlyAccess('_powder_height');
 var _powder_cells = Module['_powder_cells'] = makeInvalidEarlyAccess('_powder_cells');
@@ -5866,6 +5867,7 @@ var wasmTable = makeInvalidEarlyAccess('wasmTable');
 
 function assignWasmExports(wasmExports) {
   assert(typeof wasmExports['powder_init'] != 'undefined', 'missing Wasm export: powder_init');
+  assert(typeof wasmExports['powder_newtonian_gravity_supported'] != 'undefined', 'missing Wasm export: powder_newtonian_gravity_supported');
   assert(typeof wasmExports['powder_width'] != 'undefined', 'missing Wasm export: powder_width');
   assert(typeof wasmExports['powder_height'] != 'undefined', 'missing Wasm export: powder_height');
   assert(typeof wasmExports['powder_cells'] != 'undefined', 'missing Wasm export: powder_cells');
@@ -5922,6 +5924,7 @@ function assignWasmExports(wasmExports) {
   assert(typeof wasmExports['memory'] != 'undefined', 'missing Wasm export: memory');
   assert(typeof wasmExports['__indirect_function_table'] != 'undefined', 'missing Wasm export: __indirect_function_table');
   _powder_init = Module['_powder_init'] = createExportWrapper('powder_init', wasmExports['powder_init'], 0);
+  _powder_newtonian_gravity_supported = Module['_powder_newtonian_gravity_supported'] = createExportWrapper('powder_newtonian_gravity_supported', wasmExports['powder_newtonian_gravity_supported'], 0);
   _powder_width = Module['_powder_width'] = createExportWrapper('powder_width', wasmExports['powder_width'], 0);
   _powder_height = Module['_powder_height'] = createExportWrapper('powder_height', wasmExports['powder_height'], 0);
   _powder_cells = Module['_powder_cells'] = createExportWrapper('powder_cells', wasmExports['powder_cells'], 0);

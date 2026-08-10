@@ -57,6 +57,7 @@ export type CatalogTool = ElementToolInfo | WallToolInfo | SimToolInfo | SourceT
 export interface ToolCapabilities {
   readonly walls?: boolean;
   readonly fanWalls?: boolean;
+  readonly newtonianGravity?: boolean;
   readonly simulationTools?: boolean;
   readonly configuredSources?: boolean;
   readonly lifePresets?: boolean;
@@ -85,12 +86,8 @@ const FAN_WALL_DEFINITION = [
   5, 'Fan wall', 'Paint a connected fan body, then drag from it to set native air direction and strength', '#5d8b9d', '➜',
 ] as const;
 
-// These native wall IDs need an extra configuration gesture which the current
-// wall brush ABI does not expose.  Keep them discoverable in the catalog, but
-// deliberately outside WALL_DEFINITIONS: enabling native walls must never turn
-// an explanatory tile into a partially-functional brush.
-const UNSUPPORTED_WALL_DEFINITIONS = [
-  [14, 'Gravity wall', 'Native gravity wall; its field configuration is not available in this build', '#70598c', '⌁', 'native-gravity-wall-configuration-unavailable'],
+const GRAVITY_WALL_DEFINITION = [
+  14, 'Gravity wall', 'Blocks native Newtonian gravity across a closed boundary', '#70598c', '⌁',
 ] as const;
 
 const SOURCE_DEFINITIONS = [
@@ -129,20 +126,18 @@ export function semanticTools(capabilities: ToolCapabilities = {}): readonly Exc
     category: 'walls',
     ...unsupported(Boolean(capabilities.walls && capabilities.fanWalls), 'native-fan-wall-configuration-unavailable'),
   });
-  const unsupportedWalls: WallToolInfo[] = UNSUPPORTED_WALL_DEFINITIONS.map(([
-    nativeWall, name, description, color, icon, limitation,
-  ]) => ({
-    key: `wall:${nativeWall}`,
+  const [gravityWall, gravityName, gravityDescription, gravityColor, gravityIcon] = GRAVITY_WALL_DEFINITION;
+  walls.push({
+    key: `wall:${gravityWall}`,
     kind: 'wall',
-    nativeWall,
-    name,
-    description,
-    color,
-    icon,
+    nativeWall: gravityWall,
+    name: gravityName,
+    description: gravityDescription,
+    color: gravityColor,
+    icon: gravityIcon,
     category: 'walls',
-    available: false,
-    limitations: [limitation],
-  }));
+    ...unsupported(Boolean(capabilities.walls && capabilities.newtonianGravity), 'native-newtonian-gravity-unavailable'),
+  });
   const sources: SourceToolInfo[] = SOURCE_DEFINITIONS.map(([key, emitter, name, description, color, icon]) => ({
     key: `source:${key}`,
     kind: 'source',
@@ -169,7 +164,6 @@ export function semanticTools(capabilities: ToolCapabilities = {}): readonly Exc
   }));
   return [
     ...walls,
-    ...unsupportedWalls,
     ...sources,
     ...lifePresets,
     {
@@ -206,7 +200,7 @@ export function semanticTools(capabilities: ToolCapabilities = {}): readonly Exc
 }
 
 export function buildToolCatalog(materials: readonly MaterialInfo[], capabilities: ToolCapabilities = {}): readonly CatalogTool[] {
-  return [...materialTools(materials), ...semanticTools(capabilities)];
+  return [...materialTools(materials, capabilities), ...semanticTools(capabilities)];
 }
 
 export interface CatalogFilterState {
@@ -216,7 +210,9 @@ export interface CatalogFilterState {
   readonly recent: readonly string[];
 }
 
-export function materialTools(materials: readonly MaterialInfo[]): readonly ElementToolInfo[] {
+export function materialTools(
+  materials: readonly MaterialInfo[], capabilities: Pick<ToolCapabilities, 'newtonianGravity'> = {},
+): readonly ElementToolInfo[] {
   return materials.map((material) => {
     const metadata = material as MaterialInfo & { readonly hazard?: 'caution' | 'danger'; readonly available?: boolean; readonly limitations?: readonly string[] };
     // Render-only products have stable identities in imported/native worlds,
@@ -224,6 +220,11 @@ export function materialTools(materials: readonly MaterialInfo[]): readonly Elem
     // and searchable rather than silently hiding them, while disabling their
     // tile before it can become a misleading brush selection.
     const nativeProductOnly = !material.selectable;
+    const gravityEnabled = capabilities.newtonianGravity === true
+      && metadata.limitations?.includes('newtonian-gravity-unavailable');
+    const limitations = gravityEnabled
+      ? metadata.limitations?.filter((limitation) => limitation !== 'newtonian-gravity-unavailable')
+      : metadata.limitations;
     return {
       key: `material:${material.id}`,
       kind: 'element',
@@ -234,8 +235,8 @@ export function materialTools(materials: readonly MaterialInfo[]): readonly Elem
       icon: material.icon,
       category: material.category,
       hazard: metadata.hazard,
-      available: nativeProductOnly ? false : metadata.available,
-      limitations: nativeProductOnly ? ['native-product-only'] : metadata.limitations,
+      available: nativeProductOnly ? false : gravityEnabled ? true : metadata.available,
+      limitations: nativeProductOnly ? ['native-product-only'] : limitations?.length ? limitations : undefined,
     };
   });
 }

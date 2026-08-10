@@ -480,6 +480,7 @@ export class Game {
     }, buildToolCatalog(BROWSE_MATERIALS, {
       walls: Boolean(this.simulation.paintWall && this.simulation.eraseWall),
       fanWalls: Boolean(this.simulation.paintWall && this.simulation.eraseWall && this.simulation.configureFanWall),
+      newtonianGravity: this.simulation.newtonianGravity === true,
       simulationTools: Boolean(this.simulation.applySimulationTool),
       configuredSources: Boolean(
         this.simulation.paintConfiguredSource && this.simulation.canConfigureSource

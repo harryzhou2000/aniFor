@@ -288,6 +288,12 @@ int ToPowderType(int material)
 	}
 }
 
+bool RequiresNewtonianGravity(int type)
+{
+	return type == PT_GRVT || type == PT_GBMB || type == PT_NBHL
+		|| type == PT_NWHL || type == PT_GPMP;
+}
+
 bool IsConfiguredSourceType(int type)
 {
 	return type == PT_CLNE || type == PT_BCLN || type == PT_PCLN
@@ -855,6 +861,7 @@ void ExtractFields()
 
 extern "C" {
 __attribute__((visibility("default"))) int powder_init() { EnsureSimulation(); ExtractFields(); return 1; }
+__attribute__((visibility("default"))) int powder_newtonian_gravity_supported() { return 1; }
 __attribute__((visibility("default"))) int powder_width() { return XRES; }
 __attribute__((visibility("default"))) int powder_height() { return YRES; }
 __attribute__((visibility("default"))) uint8_t *powder_cells() { EnsureSimulation(); ExtractFields(); return materialField; }
@@ -883,7 +890,13 @@ __attribute__((visibility("default"))) void powder_set(int x, int y, int materia
 	EnsureSimulation();
 	if (x < CELL || y < CELL || x >= XRES - CELL || y >= YRES - CELL) return;
 	if (material == 0) simulation->delete_part(x, y);
-	else simulation->create_part(-2, x, y, ToPowderType(material));
+	else
+	{
+		auto const type = ToPowderType(material);
+		if (RequiresNewtonianGravity(type) && !simulation->grav)
+			simulation->EnableNewtonianGravity(true);
+		simulation->create_part(-2, x, y, type);
+	}
 }
 __attribute__((visibility("default"))) int powder_set_life(int x, int y, int preset)
 {
@@ -908,6 +921,8 @@ __attribute__((visibility("default"))) int powder_set_configured_source(int x, i
 	auto const &sourceElement = simulationData->elements[sourceType];
 	if (!sourceElement.Enabled || !sourceElement.CtypeDraw || !simulationData->elements[targetType].Enabled) return -1;
 	if (!CanConfigureSourceType(sourceType, targetType)) return 0;
+	if (RequiresNewtonianGravity(targetType) && !simulation->grav)
+		simulation->EnableNewtonianGravity(true);
 
 	auto const packed = simulation->pmap[y][x];
 	int sourceIndex = -1;
@@ -948,9 +963,11 @@ __attribute__((visibility("default"))) void powder_set_wall(int x, int y, int wa
 {
 	EnsureSimulation();
 	if (x < 0 || y < 0 || x >= XRES || y >= YRES) return;
-	// Gravity wall still requires its separate native field-configuration UI.
-	// Fan direction is configured through powder_configure_fan below.
-	if (wall < WL_ERASE || wall >= UI_WALLCOUNT || wall == WL_GRAV || wall == WL_ERASEALL) return;
+	// Fan direction is configured through powder_configure_fan below. Gravity
+	// walls are ordinary mask geometry once the native solver is active.
+	if (wall < WL_ERASE || wall >= UI_WALLCOUNT || wall == WL_ERASEALL) return;
+	if (wall == WL_GRAV && !simulation->grav)
+		simulation->EnableNewtonianGravity(true);
 	auto const cellRadius = std::max(0, radius) / CELL;
 	auto const centerX = x / CELL;
 	auto const centerY = y / CELL;
@@ -958,6 +975,8 @@ __attribute__((visibility("default"))) void powder_set_wall(int x, int y, int wa
 	{
 		for (int wallX = std::max(0, centerX - cellRadius); wallX <= std::min(XCELLS - 1, centerX + cellRadius); ++wallX)
 		{
+			if (wall == WL_GRAV || simulation->bmap[wallY][wallX] == WL_GRAV)
+				simulation->gravWallChanged = true;
 			if (wall != WL_FAN)
 			{
 				simulation->fvx[wallY][wallX] = 0.0f;
@@ -1196,6 +1215,9 @@ __attribute__((visibility("default"))) int powder_load_commit()
 	{
 		GameSave save(loadBuffer, false);
 		auto candidate = Simulation::Factory();
+		// Load imports gravity maps only when a native gravity owner already exists;
+		// preserve the authored TPT option without changing ordinary legacy worlds.
+		if (save.gravityEnable) candidate->EnableNewtonianGravity(true);
 		candidate->Load(&save, true, { 0, 0 });
 		candidate->frameCount = save.frameCount;
 		candidate->currentTick = int(save.frameCount & 0x7FFFFFFF);

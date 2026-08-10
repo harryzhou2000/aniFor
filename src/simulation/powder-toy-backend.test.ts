@@ -1527,6 +1527,62 @@ describe('direct Powder Toy backend', () => {
     expect(centroidX(simulation)).toBeGreaterThan(centroidX(control) + 1);
   });
 
+  it('applies native Newtonian gravity and masks it with a closed Gravity wall', async () => {
+    const control = await PowderToyBackend.load(moduleArtifact.href);
+    const exposed = await PowderToyBackend.load(moduleArtifact.href);
+    const shielded = await PowderToyBackend.load(moduleArtifact.href);
+    expect(exposed.newtonianGravity).toBe(true);
+
+    for (const target of [control, exposed, shielded]) {
+      for (let y = 160; y < 181; y++) {
+        for (let x = 210; x < 231; x++) target.paint(x, y, Material.Water, 0);
+      }
+    }
+    for (const target of [exposed, shielded]) {
+      for (let y = 155; y < 186; y++) {
+        for (let x = 360; x < 391; x++) target.paint(x, y, Material.NBHL, 0);
+      }
+    }
+    for (let x = 180; x <= 260; x += 4) {
+      shielded.paintWall(x, 130, 14, 0);
+      shielded.paintWall(x, 210, 14, 0);
+    }
+    for (let y = 130; y <= 210; y += 4) {
+      shielded.paintWall(180, y, 14, 0);
+      shielded.paintWall(260, y, 14, 0);
+    }
+    for (let step = 0; step < 40; step++) {
+      control.step();
+      exposed.step();
+      shielded.step();
+    }
+
+    const waterMotion = (backend: PowderToyBackend): { readonly averageX: number; readonly centroidY: number } => {
+      const cells = backend.cells();
+      const velocity = backend.velocity();
+      let count = 0;
+      let totalX = 0;
+      let totalY = 0;
+      for (let index = 0; index < cells.length; index++) {
+        if (cells[index] !== Material.Water) continue;
+        count++;
+        totalX += velocity[index * 2];
+        totalY += Math.floor(index / backend.width);
+      }
+      return { averageX: totalX / count, centroidY: totalY / count };
+    };
+    const controlMotion = waterMotion(control);
+    const exposedMotion = waterMotion(exposed);
+    const shieldedMotion = waterMotion(shielded);
+    expect(exposedMotion.averageX).toBeGreaterThan(controlMotion.averageX + 1.5);
+    expect(shieldedMotion.averageX).toBeLessThan(exposedMotion.averageX * 0.35);
+    const exposedVerticalDeflection = Math.abs(exposedMotion.centroidY - controlMotion.centroidY);
+    const shieldedVerticalDeflection = Math.abs(shieldedMotion.centroidY - controlMotion.centroidY);
+    expect(exposedVerticalDeflection).toBeGreaterThan(5);
+    expect(shieldedVerticalDeflection).toBeLessThan(exposedVerticalDeflection * 0.5);
+    expect(shielded.walls()[130 * shielded.width + 180]).toBe(14);
+  }, 15000);
+
   it('passes Wind through native air-wall blocking before particle advection', async () => {
     const openWind = await PowderToyBackend.load(moduleArtifact.href);
     const blockedWind = await PowderToyBackend.load(moduleArtifact.href);

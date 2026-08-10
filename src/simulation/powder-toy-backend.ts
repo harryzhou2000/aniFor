@@ -10,6 +10,7 @@ interface PowderToyModule {
   HEAP8: Int8Array;
   HEAPU16: Uint16Array;
   _powder_init(): number;
+  _powder_newtonian_gravity_supported?(): number;
   _powder_width(): number;
   _powder_height(): number;
   _powder_cells(): number;
@@ -57,6 +58,7 @@ const SIGN_TEXT_DECODER = new TextDecoder();
 /** Owns the official Powder Toy Emscripten module and its curated field ABI. */
 export class PowderToyBackend implements SimulationBackend {
   readonly name = 'The Powder Toy 100.0 (direct WebAssembly)';
+  readonly newtonianGravity: boolean;
   readonly width: number;
   readonly height: number;
   private readonly shadow: Uint8Array;
@@ -67,6 +69,7 @@ export class PowderToyBackend implements SimulationBackend {
 
   private constructor(private readonly module: PowderToyModule) {
     if (module._powder_init() !== 1) throw new Error('Powder Toy initialization failed');
+    this.newtonianGravity = module._powder_newtonian_gravity_supported?.() === 1;
     this.width = module._powder_width();
     this.height = module._powder_height();
     if (this.width !== 612 || this.height !== 384) throw new Error('Unexpected Powder Toy field dimensions');

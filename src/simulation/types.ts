@@ -276,6 +276,8 @@ export interface SimulationBackend {
   readonly width: number;
   readonly height: number;
   readonly name: string;
+  /** Native long-range gravity solver and gravity-mask wall support. */
+  readonly newtonianGravity?: boolean;
   /** Whether temperature/velocity may change without a material dirty-cell update. */
   readonly presentationFieldsDynamic?: boolean;
   step(): void;

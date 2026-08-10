@@ -35,6 +35,7 @@ elif ! git -C "${TPT_DIR}" apply --reverse --check "${PROJECT_ROOT}/patches/the-
 fi
 
 cp "${PROJECT_ROOT}/native/tpt/tpt_adapter.cpp" "${TPT_DIR}/src/StillroomAdapter.cpp"
+cp "${PROJECT_ROOT}/native/tpt/headless_gravity.cpp" "${TPT_DIR}/src/StillroomGravity.cpp"
 cp "${PROJECT_ROOT}/native/tpt/headless_renderer_tables.cpp" "${TPT_DIR}/src/StillroomRendererTables.cpp"
 cp "${PROJECT_ROOT}/native/tpt/headless_sign_metrics.cpp" "${TPT_DIR}/src/StillroomSignMetrics.cpp"
 

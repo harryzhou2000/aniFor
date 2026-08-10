@@ -892,9 +892,10 @@ bounded RGB-only response, and protected topology. The equivalent
 
 GBMB now has a separate exact-owner deep-blue containment-body grammar for
 Canvas, normal WebGL, and the direct true-8× mesh. This makes its powder body
-read as a distinctive material without asserting a force direction or any
-gravity state: native Newtonian gravity is unavailable in this build and the
-renderer does not fabricate it. The bounded world-anchored RGB arithmetic adds
+read as a distinctive material without using force direction or gravity state
+as a rendering input. Native Newtonian gravity now comes from the simulation's
+synchronous FFT solver; this RGB identity layer still does not fabricate or
+sample it. The bounded world-anchored RGB arithmetic adds
 no state, clock, field, sampler, pass, or output-scale resource. Its fixture
 protects authored voids, thin/isolated powder, co-located walls, Water/Metal
 contacts, and the neighbouring force powder DMG as the strict wrong-owner

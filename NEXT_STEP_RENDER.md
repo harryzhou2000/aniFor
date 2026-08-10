@@ -4333,6 +4333,31 @@ columns and isolated grains stay on their local route, and body texture remains
 unchanged away from the outline. The normal current-only board and true 8×
 powder gate are the review pair for subsequent contour changes.
 
+The retained powder checkpoint is live at exact revision
+`5ca6b28b171799d8a240b8d509fa70a3c6b81371` through workflow run
+`31361196564`: build, Pages deployment, exact 19-resource closure, hosted Water
+capture, and portable verification passed. The following material-catalog audit
+found no missing public entries: all ordinary TPT brushes, native phase/reaction
+products, sources, radioactive materials, and growing life are already exposed
+and production-renderable. The next high-leverage capability is therefore the
+native Newtonian-gravity seam rather than more duplicate tiles.
+
+Use a project-owned synchronous single-threaded adaptation of the pinned TPT
+FFTW gravity solver in the headless WASM target. Preserve its padded convolution
+kernel, gravity mask, scale, and one-exchange publication latency, but avoid the
+desktop worker thread so Pages requires no pthreads or cross-origin isolation.
+The project-local prebuilt package supplies `fftw3f`. Plan/allocate lazily only
+after native gravity mass exists, and activate the solver only when a user
+places GRVT/GBMB/NBHL/NWHL/GPMP, configures one as a source target, paints
+Gravity wall 14, or imports an OPS world whose gravity option is enabled; normal
+worlds must retain their established deterministic physics. Surface one backend
+capability through the catalog so those five elements and Gravity wall become
+usable only on the direct TPT backend. Prove the production ABI, not only menu
+metadata: an external NBHL body must deflect a Water block, while a closed
+Gravity-wall box must strongly suppress both horizontal velocity and vertical
+trajectory change. Retain the existing Wind, Seed-growth, save/load, focused
+catalog, production build, and exact resource-closure checks.
+
 ### E80 — accepted dense-body ambient floor
 
 E80 is the final bounded normal-WebGL floor for deep ordinary bodies. It runs

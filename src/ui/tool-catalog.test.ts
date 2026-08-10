@@ -53,7 +53,7 @@ describe('tool catalog view model', () => {
       },
       {
         key: 'wall:14', nativeWall: 14, name: 'Gravity wall', available: false,
-        limitations: ['native-gravity-wall-configuration-unavailable'],
+        limitations: ['native-newtonian-gravity-unavailable'],
       },
     ]);
     const withFan = buildToolCatalog(MATERIALS, { walls: true, fanWalls: true });
@@ -62,8 +62,17 @@ describe('tool catalog view model', () => {
     });
     expect(withFan.find((tool) => tool.key === 'wall:14')).toMatchObject({
       kind: 'wall', nativeWall: 14, available: false,
-      limitations: ['native-gravity-wall-configuration-unavailable'],
+      limitations: ['native-newtonian-gravity-unavailable'],
     });
+    const withGravity = buildToolCatalog(MATERIALS, { walls: true, newtonianGravity: true });
+    expect(withGravity.find((tool) => tool.key === 'wall:14')).toMatchObject({
+      kind: 'wall', nativeWall: 14, available: true,
+    });
+    for (const id of [Material.GRVT, Material.GBMB, Material.NBHL, Material.NWHL, Material.GPMP]) {
+      expect(withGravity.find((tool) => tool.kind === 'element' && tool.id === id)).toMatchObject({
+        available: true, limitations: undefined,
+      });
+    }
     expect(catalog.find((tool) => tool.kind === 'element' && tool.id === Material.Wall)?.name).toBe('Diamond');
   });
 

@@ -177,6 +177,30 @@ review prefers the cleaner apex and slopes with unchanged interior grain. The
 true 4896×3072 powder gate passes with zero browser errors and a 6.079-second
 GPU fence; Smooth reports tangent error `0.069` and curvature energy `0.073`
 versus `0.073/0.080` for Grains and `0.114/0.172` for Local.
+That implicit-surface checkpoint is deployed at exact revision
+`5ca6b28b171799d8a240b8d509fa70a3c6b81371` by workflow run `31361196564`;
+the build, Pages deployment, exact 19-resource closure, hosted Water capture,
+and portable verification all passed.
+
+The catalog-completion audit confirms that ordinary TPT brushes, all native
+reaction products, six configured sources, every radioactive family member,
+and Wood/Plant/Seed/Yeast/Vine growth are already browse-visible and use the
+production renderer. Do not duplicate them. The real remaining catalog gap is
+native Newtonian gravity: GRVT, GBMB, NBHL, NWHL, GPMP, and Gravity wall 14.
+The headless build now owns a synchronous single-threaded adaptation of TPT's
+FFTW solver so GitHub Pages needs neither pthreads nor cross-origin isolation.
+Keep its padded kernel, gravity mask, scale, and one-exchange publication delay
+equivalent to upstream. Initialize the FFT lazily only after gravity mass is
+present; ordinary worlds must retain their previous physics and startup cost.
+Painting one of the five gravity-dependent particles, configuring one as a
+source target, drawing Gravity wall, or loading an OPS save whose authored
+gravity option is enabled may activate the solver. Capability-driven catalog
+projection then enables those five tiles and wall only for the rebuilt direct
+TPT backend; fallback backends remain honestly disabled. The production-ABI
+runtime proof compares identical Water worlds and requires external NBHL to
+produce horizontal/vertical deflection while a closed Gravity-wall mask
+suppresses both. Preserve that functional proof and ordinary Wind/Seed/OPS
+regressions before deployment.
 Keep one capture implementation;
 do not replace integrity hashing, path containment, lifecycle checks, or runtime
 closure. Visual preference needs a retained board and human/agent inspection,
