@@ -1,5 +1,63 @@
 ## Current execution objective — framework leverage
 
+### Active goal (updated 2026-08-10)
+
+Build an efficient, reusable visual-development loop for AniforTPT, then use it
+to deliver substantial powder, liquid, gas, lighting, and material-style
+improvements. WebGL is the canonical presentation path; Canvas2D remains a
+permissive, non-gating compatibility companion. Preserve correct viewport/input
+geometry and robust 1×–8× rendering, including the dedicated compact true-8×
+compositor, while avoiding renderer branches that duplicate material semantics.
+
+The immediate framework checkpoint is deployed at
+`7f65cd57e096581ff4f6c1a5da4db4257012aa68` by workflow run `31376684405`:
+one current-only command composes the normal WebGL OFF/A/B review, the
+established true-8× audit, and an optional forced-Canvas fixture companion.
+Build, Pages deployment, exact live revision/resource closure, and the hosted
+WebGL fixture package all passed; ccache restored 269/270 compilation hits.
+Canvas evidence is diagnostic only (`canonical: false`, `comparison: none`),
+carries no image-hash acceptance policy, and cannot fail the canonical WebGL
+checkpoint. The next active increment is to use this retained
+multi-backend/scale board to make and review higher-leverage material
+experiments, starting with shared optical and lighting structure that benefits
+powder, liquid, and gas without changing their semantic topology or expanding
+exact-visual unit tests.
+
+Success means:
+
+- adding a normal visual experiment requires declarative/static-contract data,
+  one domain implementation, and at most one typed fixture preparer—not new
+  audit, batch, CI, baseline, or deployment branches;
+- WebGL remains visually canonical and healthy from 1× through 4×, with true
+  8× using its bounded compact path instead of timing out or silently becoming
+  a different material grammar;
+- Canvas2D remains usable for ordinary play and supplies a bounded comparison
+  image when requested, but visual parity with WebGL is neither claimed nor
+  gated;
+- powder retains small structures and grain variation while bulk boundaries
+  read smoothly; liquids gain coherent depth, transparency, highlights, and
+  restrained reflection; gases read as continuous lit volume rather than
+  isolated points;
+- aesthetic choices are made from current screenshots/contact sheets plus
+  renderer health and topology evidence; historical PNG identities never block
+  iteration or deployment;
+- every stable checkpoint builds reproducibly with project-local tooling,
+  preserves ccache-backed CI and GitHub Pages deployment, and leaves no browser
+  processes behind.
+
+Priority order from this checkpoint:
+
+1. Reduce experiment-authoring friction further where the retained board still
+   requires duplicated registration or lifecycle code.
+2. Run shared optical/lighting experiments across representative powder,
+   liquid, and atmosphere fixtures; retain visually preferred checkpoints after
+   a lightweight human/agent review.
+3. Harden only regressions that threaten geometry, semantic/topology
+   correctness, WebGL lifecycle, true-8× completion, package integrity, or live
+   Pages loading. Do not grow exact-pixel tests for evolving aesthetics.
+4. Resume the wider material/element and responsive-UI roadmap after the
+   renderer loop makes those additions cheap to author and compare.
+
 Prioritize finishing the current design goals through an effective
 rendering-experiment framework over further evidence ceremony or isolated
 visual-detail work. The modular typed Visual Lab facade, executable capability
