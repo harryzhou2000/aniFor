@@ -57,6 +57,14 @@ than a production default, and it is deliberately absent from compact true 8×.
 Keep `material-optics` and `release` byte-stable until this focused profile is
 intentionally promoted into their composition.
 
+The follow-up atlas-only checkpoint `9f4a1ca` replaces the dense rectangular
+Smoke/FOG controls with deterministic overlapping lobes. Direct compositor
+inspection now reads two distinct soft-edged clouds while retaining their
+authored hole/channel, emitters, sparse wisps, and surrounding blank control.
+This is review-scene geometry, not a new gas renderer path or material rule;
+keep it as the more representative shared-lighting diagnostic for later
+volumetric experiments.
+
 Success means:
 
 - adding a normal visual experiment requires declarative/static-contract data,
