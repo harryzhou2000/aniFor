@@ -12830,14 +12830,25 @@ async function auditGasIdentityGraphics(cdp, mode) {
   `${mode}: gas identity fixture lost authored semantics (${JSON.stringify(semanticState)})`);
   stage('fixture-ready');
 
+  // Normal-scale identity captures can wait for two byte-identical screenshots
+  // inside the generic eight-second settle window. A true-8x framebuffer is
+  // 4896x3072 and already has a dedicated contract: request one renderer-owned
+  // completion fence, allow the independently bounded compositor transfer, and
+  // compare the returned off/on/off images below. Reusing the normal helper at
+  // 8x timed out before the first flat image even in Classic mode, so it proved
+  // neither renderer health nor identity styling.
+  const captureIdentityFrame = renderScaleArgument === '8' && mode === 'webgl'
+    ? (label) => captureSettledPage(cdp, label, 450)
+    : (label) => waitForStablePageCapture(cdp, label);
+
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasIdentityStyling(false); true');
-  const flat = await waitForStablePageCapture(cdp, `${mode} flat gas-identity framebuffer`);
+  const flat = await captureIdentityFrame(`${mode} flat gas-identity framebuffer`);
   const flatBacking = await sampleGasIdentityBackingTopology(cdp);
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasIdentityStyling(true); true');
-  const styled = await waitForStablePageCapture(cdp, `${mode} styled gas-identity framebuffer`);
+  const styled = await captureIdentityFrame(`${mode} styled gas-identity framebuffer`);
   const styledBacking = await sampleGasIdentityBackingTopology(cdp);
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasIdentityStyling(false); true');
-  const repeated = await waitForStablePageCapture(cdp, `${mode} repeated flat gas-identity framebuffer`);
+  const repeated = await captureIdentityFrame(`${mode} repeated flat gas-identity framebuffer`);
   const repeatedBacking = await sampleGasIdentityBackingTopology(cdp);
   for (const [state, backing] of [
     ['flat', flatBacking], ['styled', styledBacking], ['repeated-flat', repeatedBacking],

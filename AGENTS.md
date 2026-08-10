@@ -82,10 +82,13 @@ gas increment belongs in the same `applyFluidVolumeLobe`: use the already-
 computed gas `core` to form a parabolic translucent middle and squared deep
 absorption. Keep it phase-gated, RGB-only, sampler-free, identity-agnostic, and
 shared by normal/compact compositors. Do not add more smoothsteps to this hot
-true-8x path. The broad and focused true-8x gas audits currently time out before
-their flat framebuffer on this software-GPU host, and the identical Classic
-control does too; retain this as an 8x audit/runtime-budget issue rather than a
-claimed Realistic visual regression.
+true-8x path. The focused gas-identity gate must route 8x off/on/off mutations
+through `captureSettledPage`, which owns a renderer completion fence and a
+separate compositor-transfer deadline; normal scale keeps byte-identical stable
+captures. The real 4896×3072 gate passed all 17 gases, exact repeated-off,
+identical alpha/support hashes, and zero browser errors in 80.9 seconds. Use
+`npm run audit:gas-identity:8x`; never solve this by extending the normal
+eight-second stable-screenshot window or weakening the renderer watchdog.
 Keep one capture implementation;
 do not replace integrity hashing, path containment, lifecycle checks, or runtime
 closure. Visual preference needs a retained board and human/agent inspection,

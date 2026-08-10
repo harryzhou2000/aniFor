@@ -57,11 +57,14 @@ squared core add only multiplies—no additional smoothstep, sampler, field,
 identity branch, alpha decision, or output-scale allocation—and therefore keep
 normal and compact true 8x on one phase-level grammar. Current atmosphere
 OFF/A/B capture passes WebGL/HDR with zero browser errors and unchanged alpha.
-The broad true-8x and focused gas-identity harnesses still time out before their
-flat frame on this software-GPU host; the identical Classic control times out
-at the same point, so do not attribute that existing audit/runtime-budget issue
-to the Realistic-only shared finish. Resolving the 8x gas audit budget remains
-part of the WebGL hardening phase.
+The focused true-8x identity gate now uses the established renderer-fence plus
+independently bounded compositor-transfer path instead of normal-scale's two
+byte-identical screenshots inside eight seconds. The real 4896x3072 run passed
+all 17 gases, 34,799 cloud cells, 6,596 halo samples, sparse wisps, voids,
+Water/Metal contacts, exact repeated-off, identical alpha/support hashes, and
+zero browser errors in 80.9 seconds. Keep `npm run audit:gas-identity:8x` as the
+reproducible compact-gas proof; do not weaken the renderer's 30-second fence
+watchdog or use a fixed sleep as a substitute.
 
 Active priority order:
 
