@@ -71,9 +71,12 @@ import {
 } from './render-look';
 
 describe('resolveRenderLook', () => {
-  it('retains the established renderer as the experiment control', () => {
+  it('uses the styled product look while retaining Classic for implicit audits', () => {
+    expect(DEFAULT_RENDER_LOOK).toBe('realistic');
     expect(resolveRenderLook('')).toBe(DEFAULT_RENDER_LOOK);
     expect(resolveRenderLook('?renderLook=unknown')).toBe(DEFAULT_RENDER_LOOK);
+    expect(resolveRenderLook('?inputAudit=1')).toBe('classic');
+    expect(resolveRenderLook('?inputAudit=1&renderLook=realistic')).toBe('realistic');
   });
 
   it.each(['classic', 'realistic', 'neon-lab'] as const)(

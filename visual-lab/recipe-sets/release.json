@@ -1,6 +1,6 @@
 {
   "schema": "anifor.visual-lab.recipe-set/v1",
-  "id": "sha256:28b2d27f44c54ba5de933addbbc1c99358428a79b2ed8da05df9c7c121fec463",
+  "id": "sha256:2f7824673c315358416b802283d3d3333f0b22cd908699cbe512da8b38f6c5e2",
   "name": "release",
   "recipes": [
     {
@@ -32,6 +32,14 @@
       "domain": "liquid",
       "target": 2,
       "fixture": "water-motion",
+      "gain": 1,
+      "renderScale": 2
+    },
+    {
+      "name": "powder-style-atlas",
+      "domain": "powder",
+      "target": 0,
+      "fixture": "powder-style-atlas",
       "gain": 1,
       "renderScale": 2
     }

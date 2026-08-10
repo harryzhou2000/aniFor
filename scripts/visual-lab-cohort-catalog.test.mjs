@@ -148,30 +148,33 @@ describe('Visual Lab declarative cohort catalog', () => {
     await expect(readdir(external)).resolves.toEqual([]);
   });
 
-  it('preserves all three tracked recipe-set bytes and IDs exactly', async () => {
+  it('preserves all tracked recipe-set bytes and IDs exactly', async () => {
     const catalogPath = fileURLToPath(new URL('../visual-lab/cohorts.json', import.meta.url));
     const output = fileURLToPath(new URL('../visual-lab/recipe-sets', import.meta.url));
     const input = await readVisualLabCohortCatalog(catalogPath);
     await expect(checkVisualLabCohortOutputs(input, output)).resolves.toEqual({
-      checked: 3,
-      names: ['atmosphere.json', 'liquid-motion.json', 'release.json'],
+      checked: 4,
+      names: ['atmosphere.json', 'liquid-motion.json', 'powder-style.json', 'release.json'],
     });
     const compiled = compileVisualLabCohortCatalog(input);
     expect(compiled.map(({ id }) => id)).toEqual([
       'sha256:6fa70067d092a16e1b8d2e77283b33bd10067ce5485ae8c79239775eb7cb1e3c',
       'sha256:7fd140a5fef7cb4e692d8db08e35b3bb3da7835451a92289ba2941efe7fab380',
-      'sha256:28b2d27f44c54ba5de933addbbc1c99358428a79b2ed8da05df9c7c121fec463',
+      'sha256:f5053916b82e8907f840ae6e334a159bedecc69b0777e2700f0383917b58a4e0',
+      'sha256:2f7824673c315358416b802283d3d3333f0b22cd908699cbe512da8b38f6c5e2',
     ]);
   });
 
   it('exposes launcher-safe names and resolution with tracked snapshot metadata', async () => {
-    expect(await visualLabCohortNames()).toEqual(['atmosphere', 'liquid-motion', 'release']);
+    expect(await visualLabCohortNames()).toEqual([
+      'atmosphere', 'liquid-motion', 'powder-style', 'release',
+    ]);
     const resolved = await resolveVisualLabCohort('release');
     expect(resolved.name).toBe('release');
     expect(resolved.fileName).toBe('release.json');
     expect(resolved.snapshotPath).toMatch(/visual-lab\/recipe-sets\/release\.json$/);
     expect(resolved.recipeSet.id).toBe(
-      'sha256:28b2d27f44c54ba5de933addbbc1c99358428a79b2ed8da05df9c7c121fec463',
+      'sha256:2f7824673c315358416b802283d3d3333f0b22cd908699cbe512da8b38f6c5e2',
     );
     expect(Object.isFrozen(resolved)).toBe(true);
     expect(() => resolveVisualLabCohortFromCatalog(catalog([leaf('air', ['gas-showcase'])]), 'missing'))

@@ -17,13 +17,18 @@ developer review and CI must move to current-only evidence by default.
 The portable current-only OFF→A, OFF→B, and A→B response checkpoint is deployed
 at revision `073ca8863a14c5b231b479a8b0466751d5703d8c` by workflow run
 `31339455780`; build, downloaded-package verification, Pages deployment, exact
-19-resource closure, and live Water capture passed. The current local checkpoint
-adds names-only declarative cohort composition, generated static-contract
-declarations, catalog-backed `--cohort` review, and current-only developer/CI
-review without default baseline or provenance dependencies. A real built
-`liquid-motion` cohort review produced and portably verified Oil and Water
-OFF/A/B response evidence; no Chrome process remained. This increment is not
-deployed yet. Keep one capture implementation;
+19-resource closure, and live Water capture passed. Declarative cohort
+composition, generated static-contract declarations, catalog-backed
+`--cohort` review, and current-only developer/CI review without default baseline
+or provenance dependencies are deployed at revision
+`19a0cc0da882472042630f9fd7af63d5b19a5fa7` by workflow run `31342528626`.
+That run restored 269/270 ccache compilations, verified the current-only
+four-candidate package, deployed the exact 19-resource closure, and passed a
+live hosted Water capture. The active visual phase makes Realistic the ordinary
+product look while retaining explicit Classic and implicit-audit compatibility,
+adds a tracked Powder Smooth/Local/Grains review cohort, and aligns true-8×
+Smooth-powder coverage with the normal WebGL field crossing without enabling
+the memory-heavy HDR pipeline at 8×. Keep one capture implementation;
 do not replace integrity hashing, path containment, lifecycle checks, or runtime
 closure. Visual preference needs a retained board and human/agent inspection,
 not broad unit-test expansion. The modular typed Visual Lab facade,
@@ -2699,8 +2704,10 @@ WebGL-only audit must prove its own native state, topology, RGB-only, fence,
 and recovery contract directly; it must not fail merely because Canvas was not
 also sampled.
 
-The first HDR experiment is explicit and opt-in through
-`?renderLook=realistic|neon-lab`; `classic` remains the default control. At
+The first HDR experiment is the ordinary product presentation through the
+default `realistic` look; `?renderLook=classic|realistic|neon-lab` remains the
+explicit selector, and an input-audit URL with no explicit look retains Classic
+for historical fixture compatibility. At
 1×–4× it may allocate one full-resolution `RGBA16F` scene target and two
 half-resolution bloom targets only after the actual Pixi context proves WebGL2,
 float-colour framebuffer completeness, and MRT limits. It is deliberately

@@ -253,8 +253,9 @@ Active priority order:
    execution, tuning, host, and provenance identities. Legacy packages may omit
    them; new developer and CI review packages require them through the portable
    verifier.
-17. Declarative authoring is implemented locally and awaiting checkpoint
-   deployment. The runtime JavaScript static contracts are now the sole source
+17. Declarative authoring is deployed at revision
+   `19a0cc0da882472042630f9fd7af63d5b19a5fa7` by workflow run `31342528626`.
+   The runtime JavaScript static contracts are now the sole source
    for their exhaustive TypeScript declarations. Cohort membership is defined
    once with names and composition, then deterministically checked/synchronized
    into the existing portable `recipe-set/v1` snapshots without changing their
@@ -266,8 +267,9 @@ Active priority order:
    `npm run visual-lab:authoring:check`, typecheck, and the focused framework
    suite pass. A real `--cohort=liquid-motion` production-bundle review resolved
    through the catalog and produced a verified two-candidate current response.
-18. Exact visual pinning is deprecated locally and awaiting checkpoint
-   deployment. Developer and CI review are current-only by default: retain current
+18. Exact visual pinning is deprecated in the deployed developer and CI paths
+   at revision `19a0cc0da882472042630f9fd7af63d5b19a5fa7`. Developer and CI
+   review are current-only by default: retain current
    OFF/A/B PNGs, experiment response, topology/alpha evidence, renderer health,
    revision/resource closure, and portable tamper checks, but do not require a
    checked-in baseline, baseline provenance, encoded-identical result, fixed
@@ -279,9 +281,23 @@ Active priority order:
    focused lifecycle/topology checks and a real screenshot review are enough.
    The real liquid cohort emitted both current experiment and raw contact-sheet
    links without constructing a comparison; all six OFF/A/B captures were
-   inspected directly, and the portable verifier accepted the package.
+   inspected directly, and the portable verifier accepted the package. The
+   deployed workflow then verified four current candidates, published Pages,
+   proved the exact 19-resource closure, and passed its hosted Water capture.
 
-Complete items 17 and 18 before returning effort to the unfinished material and
+19. Resume material presentation with scale-safe product defaults before adding
+   another isolated material effect. Realistic is the ordinary no-query look;
+   explicit Classic remains the control and implicit input-audit URLs remain
+   Classic for historical fixture compatibility. Keep full HDR transport at
+   1×–4× only. True 8× must retain the compact direct mesh, but its existing
+   powder/liquid/gas fields should use matching surface vocabulary where that
+   requires no new target or upload. The current local increment aligns the
+   true-8× settled Smooth-powder coverage crossing with normal WebGL, leaves
+   Local rounded and Grains square, and adds a tracked `powder-style` cohort for
+   direct Smooth/Local/Grains review. Continue from this shared scale-safe seam
+   toward reusable material finish, fluid volume, gas depth, and lighting.
+
+Items 17 and 18 are deployed; continue item 19 and the unfinished material and
 graphics goals in this document. Visual preference may accept a candidate
 without broad unit-test expansion or hash churn, but topology, renderer
 lifecycle, portable integrity, and deployment remain protected.

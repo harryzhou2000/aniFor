@@ -5677,7 +5677,10 @@ describe('Pixi presenter startup configuration', () => {
     expect(modes).toContain('else if (uPowderStyle < 1.5)');
     expect(modes).toContain('float grainDistance = length(fract(grid + 0.5) - 0.5 - grainCentre);');
     expect(modes).toContain('else if (uPowderSurfaceActive > 0.5)');
-    expect(modes).toContain('density = mix(density, smoothPowderShape.x, powderFieldBlend);');
+    expect(modes).toContain(
+      'float smoothPowderCoverage = smoothstep(0.36, 0.64, smoothPowderShape.x);',
+    );
+    expect(modes).toContain('density = mix(density, smoothPowderCoverage, powderFieldBlend);');
     expect(modes).not.toContain('uTime');
     expect(modes).not.toMatch(/\balpha\s*[+*]?=/);
   });
@@ -7494,8 +7497,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('* smoothstep(0.72, 0.95, semanticDensity);');
     expect(source).toContain('color = max(color - vec3(50.0, 45.0, 27.0) / 255.0 * sandInteriorExposure, vec3(0.0));');
     expect(source).toContain('float sandInteriorPigment = (powderGrain * 0.365 + powderFacet * 0.285)');
-    expect(source).toContain('if (family == 4.0 && uPowderStyle > 1.5 && powderFieldBlend > 0.001)');
-    expect(source).toContain('density = smoothstep(0.04, 0.96, density);');
+    expect(source).toContain('float smoothPowderCoverage = smoothstep(0.36, 0.64, smoothPowderShape.x);');
+    expect(source).not.toContain('density = smoothstep(0.04, 0.96, density);');
   });
 
   it('coalesces only auxiliary powder settling between true-8x semantic frames', () => {

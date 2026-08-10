@@ -1957,7 +1957,15 @@ void main() {
       // The field supplies only the settled outer volume. Semantic density
       // remains the colour/mesostructure owner in the powder branch below, so
       // a Smooth pile gains one curved silhouette without becoming airbrushed.
-      density = mix(density, smoothPowderShape.x, powderFieldBlend);
+      // Match the normal compositor's field-owned coverage transfer here. The
+      // previous 0.04..0.96 post-transfer made true 8x visibly softer at one
+      // shoulder and more stair-stepped at another because semantic density
+      // was remapped after it had already been mixed with the wide field.
+      // Applying the shared 0.36..0.64 crossing only to the admitted field leg
+      // preserves Local/Grains, moving particles, holes, fine columns, and
+      // unlike contacts while keeping Smooth geometry scale-independent.
+      float smoothPowderCoverage = smoothstep(0.36, 0.64, smoothPowderShape.x);
+      density = mix(density, smoothPowderCoverage, powderFieldBlend);
     }
   }
   // Preserve exact material coverage before a liquid/gas volume may replace
@@ -3242,12 +3250,10 @@ void main() {
       }
     }
   }
-  // The settled powder field has already supplied the curved outer volume.
-  // Keep its conservative original endpoint transfer: the stronger RGB-only
-  // surface key above now owns visual separation without shrinking support.
-  if (family == 4.0 && uPowderStyle > 1.5 && powderFieldBlend > 0.001) {
-    density = smoothstep(0.04, 0.96, density);
-  }
+  // Smooth's settled field leg already crossed the same 0.36..0.64 coverage
+  // band as normal WebGL. Do not remap the combined semantic/field density a
+  // second time here: that scale-specific transfer was the remaining source of
+  // true-8x silhouette drift.
   float alpha = family == 1.0 ? smoothstep(0.006, 0.26, density) * 0.48
     : (family == 3.0 ? smoothstep(0.18, 0.82, density) : density);
   if (family == 0.0 && optics == 12.0) {

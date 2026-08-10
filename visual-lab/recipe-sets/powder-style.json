@@ -1,0 +1,15 @@
+{
+  "schema": "anifor.visual-lab.recipe-set/v1",
+  "id": "sha256:f5053916b82e8907f840ae6e334a159bedecc69b0777e2700f0383917b58a4e0",
+  "name": "powder-style",
+  "recipes": [
+    {
+      "name": "powder-style-atlas",
+      "domain": "powder",
+      "target": 0,
+      "fixture": "powder-style-atlas",
+      "gain": 1,
+      "renderScale": 2
+    }
+  ]
+}

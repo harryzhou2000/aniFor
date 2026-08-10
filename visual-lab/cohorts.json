@@ -18,10 +18,18 @@
       ]
     },
     {
+      "name": "powder-style",
+      "includes": [],
+      "candidates": [
+        "powder-style-atlas"
+      ]
+    },
+    {
       "name": "release",
       "includes": [
         "atmosphere",
-        "liquid-motion"
+        "liquid-motion",
+        "powder-style"
       ],
       "candidates": []
     }

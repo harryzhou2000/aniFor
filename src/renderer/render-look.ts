@@ -1,19 +1,23 @@
 export type RenderLook = 'classic' | 'realistic' | 'neon-lab';
 
-export const DEFAULT_RENDER_LOOK: RenderLook = 'classic';
+export const DEFAULT_RENDER_LOOK: RenderLook = 'realistic';
 
 /**
- * Selects an explicit visual experiment without changing simulation, camera,
- * or backing-scale semantics. Classic remains the comparison/control while
- * the HDR pipeline is being measured across real browsers.
+ * Selects the product's visual presentation without changing simulation,
+ * camera, or backing-scale semantics. Realistic is the ordinary product look;
+ * Classic remains an explicit comparison/control. Audit URLs that omit a look
+ * retain the historical Classic default so old focused fixtures cannot inherit
+ * newly enabled presentation effects by accident.
  */
 export function resolveRenderLook(
   search = globalThis.location?.search ?? '',
 ): RenderLook {
-  const requested = new URLSearchParams(search).get('renderLook');
+  const parameters = new URLSearchParams(search);
+  const requested = parameters.get('renderLook');
   if (requested === 'realistic' || requested === 'neon-lab' || requested === 'classic') {
     return requested;
   }
+  if (parameters.get('inputAudit') === '1') return 'classic';
   return DEFAULT_RENDER_LOOK;
 }
 

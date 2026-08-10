@@ -9,6 +9,12 @@ npm install
 npm run dev
 ```
 
+Ordinary URLs use the `realistic` WebGL/HDR presentation when supported.
+`?renderLook=classic` keeps the lean comparison look and
+`?renderLook=neon-lab` selects the alternate styled preset. Canvas2D remains a
+permissive semantic fallback, and true 8× keeps its resource-bounded direct
+WebGL path instead of allocating the normal HDR target chain.
+
 Production output is fully static:
 
 ```sh
@@ -34,6 +40,8 @@ does not compare with a historical baseline by default:
 npm run visual-lab:review -- --candidate=water-motion
 npm run visual-lab:review -- \
   --cohort=liquid-motion
+npm run visual-lab:review -- \
+  --cohort=powder-style
 ```
 
 On Linux it defaults to SwiftShader, one shared browser host, and completed-frame
