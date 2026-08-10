@@ -6606,12 +6606,12 @@ void main() {
         if (uMaterialLightingVariant > 0.5) {
           float materialLightingB = step(1.5, uMaterialLightingVariant);
           float materialGasGain = gasLightTransport
-            * mix(0.040, 0.075, materialLightingB)
+            * mix(0.120, 0.260, materialLightingB)
             * (0.46 + gasLightFacing * 0.54);
           color += (vec3(1.10) - clamp(color, 0.0, 1.10))
             * gasSpectralKey * materialGasGain;
           color *= vec3(1.0) - gasAbsorptionTint * gasLightTransport
-            * opticalDepth * mix(0.006, 0.014, materialLightingB);
+            * opticalDepth * mix(0.014, 0.036, materialLightingB);
         }
       }
     }
@@ -7707,11 +7707,11 @@ void main() {
           if (uMaterialLightingVariant > 0.5) {
             float materialLightingB = step(1.5, uMaterialLightingVariant);
             float materialLiquidCrown = liquidVfxSurface
-              * mix(0.22, 0.42, materialLightingB);
+              * mix(0.58, 1.18, materialLightingB);
             color += (vec3(1.28) - clamp(color, 0.0, 1.28))
               * mix(liquidFresnelKey, edgeTint, 0.30) * materialLiquidCrown;
             color *= exp(-liquidVfxAbsorption * liquidVfxColumn
-              * mix(0.010, 0.024, materialLightingB));
+              * mix(0.024, 0.070, materialLightingB));
           }
           // E24: the broad production Water pool read as an opaque cyan slab
           // crossed by two coherent diagonal bands. Recombine those same
@@ -11596,13 +11596,13 @@ void main() {
       float powderLightReach = mix(lightReach, sqrt(lightReach), 0.65);
       float powderLightTransport = min(
         uMaterialLightingVariant > 0.5
-          ? mix(0.094, 0.112, step(1.5, uMaterialLightingVariant))
+          ? mix(0.124, 0.184, step(1.5, uMaterialLightingVariant))
           : 0.082,
         powderLightReach * (
           mix(0.052, 0.030, powderLightBodyDepth)
             + powderLightCrown * 0.036
             + (uMaterialLightingVariant > 0.5
-              ? mix(0.010, 0.022, step(1.5, uMaterialLightingVariant))
+              ? mix(0.034, 0.082, step(1.5, uMaterialLightingVariant))
               : 0.0)
         )
       );
