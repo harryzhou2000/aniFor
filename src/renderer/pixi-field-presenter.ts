@@ -38,6 +38,7 @@ import {
 import { canvasAtmosphereAlphaAtWorldCell } from './canvas-atmosphere-relief';
 import { sampleCanvasFieldAlpha } from './canvas-surface-light';
 import { HDRVfxPipeline, type HDRPipelineInfo } from './hdr-vfx-pipeline';
+import { MATERIAL_BODY_FINISH_GLSL } from './material-body-finish';
 import { resolveCeramicBlackbodyVfxEnabled } from './ceramic-blackbody-vfx';
 import {
   isVisualLabExecutionSupported, resolveVisualLabState,
@@ -234,6 +235,7 @@ uniform float uNativeWallsActive;
 uniform float uPowderStyle;
 uniform float uPowderSurfaceActive;
 uniform float uPowderBodyDepth;
+uniform float uMaterialBodyFinish;
 uniform float uSuspensionActive;
 uniform float uLiquidOpticalDepth;
 uniform float uSolidOpticalDepth;
@@ -294,6 +296,7 @@ uniform float uSwchStateStyling;
 uniform float uDlayStateStyling;
 uniform float uWifiStateStyling;
 uniform float uPhotonActive;
+${MATERIAL_BODY_FINISH_GLSL}
 float materialAt(vec2 uv) {
   return floor(texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)).r * 255.0 + 0.5);
 }
@@ -1992,6 +1995,11 @@ void main() {
       float gasBottom = texture(uAtmosphereTexture,
         clamp(uv + vec2(0.0, uAtmosphereTexel.y), atmosphereMin, atmosphereMax)).a;
       color += gasEightXVolumeRelief(gasDensity, gasLeft, gasRight, gasTop, gasBottom);
+      vec2 gasFinishSlope = vec2(gasRight - gasLeft, gasBottom - gasTop);
+      color = applyMaterialBodyFinish(
+        color, 2.0, gasDensity, smoothstep(0.035, 0.62, gasDensity),
+        gasFinishSlope, 1.0, uMaterialBodyFinish
+      );
     }
     if (uGasIdentityStyling > 0.5) {
       float gasIdentityStyle = floor(texture(uAtmosphereStyleTexture, uv).r * 255.0 + 0.5);
@@ -2214,6 +2222,14 @@ void main() {
       float sandInteriorPigment = (powderGrain * 0.365 + powderFacet * 0.285)
         * powderFacetInterior;
       color = clamp(color + vec3(1.00, 0.78, 0.46) * sandInteriorPigment, 0.0, 1.0);
+    }
+    if (uPowderStyle > 1.5 && traits < 0.5 && !materialEmissive) {
+      float powderFinishEligibility = step(0.001, powderFieldBlend)
+        * smoothstep(0.70, 0.96, depth);
+      color = applyMaterialBodyFinish(
+        color, 0.0, density, depth, powderFieldSlope,
+        powderFinishEligibility, uMaterialBodyFinish
+      );
     }
   }
   // Deep rigid bodies reuse the existing exact-species occupancy, auxiliary
@@ -2864,6 +2880,16 @@ void main() {
       && density > 0.72 && liquidSpeciesDifference < 0.035) {
       color *= 0.50;
     }
+    if (connectedBodyLiquid && traits < 0.5 && !materialEmissive
+      && liquidSpeciesDifference < 0.035) {
+      float liquidFinishEligibility = smoothstep(1.5, 3.0,
+        step(0.48, liquidLeft.a) + step(0.48, liquidRight.a)
+          + step(0.48, liquidTop.a) + step(0.48, liquidBottom.a));
+      color = applyMaterialBodyFinish(
+        color, 1.0, density, depth, liquidSlope,
+        liquidFinishEligibility, uMaterialBodyFinish
+      );
+    }
   }
   // The shared suspension field is powder-authored, so use it only for
   // ordinary Smooth granular powder and exact aqueous liquid. This restores
@@ -3340,6 +3366,7 @@ uniform vec2 uEmissionTexel;
 uniform float uTime;
 uniform float uHDRVfx;
 uniform float uVolumeVfx;
+uniform float uMaterialBodyFinish;
 uniform float uGasBodyVfx;
 uniform float uGasMotionVfx;
 uniform float uCflmColdFlameVfx;
@@ -3479,6 +3506,7 @@ uniform float uPhotonActive;
 uniform float uPowderStyle;
 uniform float uPowderBodyDepth;
 uniform float uSuspensionActive;
+${MATERIAL_BODY_FINISH_GLSL}
 vec4 field(vec2 uv) { return texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)); }
 vec4 wallField(vec2 uv) { return texture(uWallTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)); }
 float materialAt(vec2 uv) { return floor(field(uv).r * 255.0 + 0.5); }
@@ -6499,6 +6527,10 @@ void main() {
     ) * smoothstep(0.025, 0.50, gasShadeDensity)
       * (1.0 - opticalDepth * 0.30) * uGasVolumeChroma;
     color *= 1.0 + gasVolumeExposure;
+    color = applyMaterialBodyFinish(
+      color, 2.0, gasShadeDensity, opticalDepth, volumeSlope,
+      1.0, uMaterialBodyFinish
+    );
     // E04: turn the existing field normal and curvature into a readable
     // connected billow without inventing particle-scale noise. The shared
     // atmosphere remains the sole owner of mass, colour mixture, support, and
@@ -8170,6 +8202,18 @@ void main() {
         * smoothstep(0.56, 0.90, liquidNeighbourMean);
       float liquidAmbientLift = min(5.0 / 255.0, liquidAmbientBody * 5.0 / 255.0);
       color *= 1.0 + liquidAmbientLift;
+    }
+    if (family == 2.0 && traits < 0.5 && !materialEmissive && molten < 0.5
+      && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5
+      && dot(liquidSpeciesSlope, liquidSpeciesSlope) < 0.0004) {
+      float liquidFinishEligibility = smoothstep(
+        0.34, 0.82, min(liquidDepth, liquidNeighbourMean)
+      );
+      color = applyMaterialBodyFinish(
+        color, 1.0, liquidSurfaceDensity, liquidDepth,
+        semanticSlope + volumeSlope, liquidFinishEligibility,
+        uMaterialBodyFinish
+      );
     }
   } else {
     float powderVisualCohesion = 0.0;
@@ -11284,6 +11328,14 @@ void main() {
       color += carrierTint * (0.012 + carrierPulse * 0.038) * (0.40 + traitEdge * 0.60);
     }
   }
+  if (family == 4.0 && traits < 0.5 && !materialEmissive
+    && powderLightBodyGate > 0.001) {
+    color = applyMaterialBodyFinish(
+      color, 0.0, density, powderLightBodyDepth,
+      widePowderShape.yz, powderLightBodyGate,
+      uMaterialBodyFinish
+    );
+  }
   // E11: Wax and genuinely hydrated PLNT carry a shallow, coloured
   // subsurface wrap through a proven broad body. The existing exact-species
   // depth byte rejects exposed cells, the first inner layer, fine strokes,
@@ -12208,6 +12260,7 @@ export class PixiFieldPresenter {
         type: 'f32',
       },
       uVolumeVfx: { value: volumeVfxEnabled ? 1 : 0, type: 'f32' },
+      uMaterialBodyFinish: { value: volumeVfxEnabled ? 1 : 0, type: 'f32' },
       uGasBodyVfx: { value: gasBodyVfxEnabled ? 1 : 0, type: 'f32' },
       uGasMotionVfx: { value: gasMotionVfxEnabled ? 1 : 0, type: 'f32' },
       uCflmColdFlameVfx: { value: cflmColdFlameVfxEnabled ? 1 : 0, type: 'f32' },
@@ -12735,6 +12788,9 @@ export class PixiFieldPresenter {
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.volumeVfx = Number(presenter.uniforms.uniforms.uVolumeVfx) > 0.5
       ? 'active' : 'inactive';
+    presenter.app.canvas.dataset.materialBodyFinish = Number(
+      presenter.uniforms.uniforms.uMaterialBodyFinish
+    ) > 0.5 ? 'active' : 'inactive';
     presenter.app.canvas.dataset.gasBodyVfx = Number(presenter.uniforms.uniforms.uGasBodyVfx) > 0.5
       ? 'active' : 'inactive';
     presenter.app.canvas.dataset.gasMotionVfx = Number(presenter.uniforms.uniforms.uGasMotionVfx) > 0.5

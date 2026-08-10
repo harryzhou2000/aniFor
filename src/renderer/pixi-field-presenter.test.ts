@@ -370,6 +370,12 @@ describe('Pixi presenter startup configuration', () => {
     expect(liquidStart).toBeGreaterThan(gasStart);
     expect(powderStart).toBeGreaterThan(liquidStart);
     expect(normal).toContain('uniform float uVolumeVfx;');
+    expect(normal).toContain('uniform float uMaterialBodyFinish;');
+    expect(eight).toContain('uniform float uMaterialBodyFinish;');
+    expect(normal).toContain('${MATERIAL_BODY_FINISH_GLSL}');
+    expect(eight).toContain('${MATERIAL_BODY_FINISH_GLSL}');
+    expect(normal.match(/applyMaterialBodyFinish\(/g)).toHaveLength(3);
+    expect(eight.match(/applyMaterialBodyFinish\(/g)).toHaveLength(3);
     expect(normal).toContain('uniform float uGasBodyVfx;');
     expect(normal).toContain('uniform float uGasMotionVfx;');
     expect(normal).toContain('uniform float uCflmColdFlameVfx;');

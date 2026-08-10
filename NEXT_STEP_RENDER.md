@@ -294,8 +294,17 @@ Active priority order:
    requires no new target or upload. The current local increment aligns the
    true-8× settled Smooth-powder coverage crossing with normal WebGL, leaves
    Local rounded and Grains square, and adds a tracked `powder-style` cohort for
-   direct Smooth/Local/Grains review. Continue from this shared scale-safe seam
-   toward reusable material finish, fluid volume, gas depth, and lighting.
+   direct Smooth/Local/Grains review. The following local increment establishes
+   one reusable `MaterialBodyFinish` GLSL source injected into both normal and
+   compact true-8× shaders. It consumes only each phase's already-live density,
+   depth, slope, and topology eligibility, and adds bounded RGB key/fill, core
+   absorption, and pigment retention without changing alpha or introducing a
+   sampler, field, upload, target, pass, or material-ID branch. A five-candidate
+   current-only release review passed portable verification and direct plus
+   independent visual inspection; the true 4896×3072 Powder audit passed with
+   zero browser errors. Continue from this shared scale-safe seam toward larger
+   fluid-volume and gas-depth improvements rather than resuming the isolated
+   E-number ladder.
 
 Items 17 and 18 are deployed; continue item 19 and the unfinished material and
 graphics goals in this document. Visual preference may accept a candidate

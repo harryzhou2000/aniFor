@@ -28,7 +28,16 @@ live hosted Water capture. The active visual phase makes Realistic the ordinary
 product look while retaining explicit Classic and implicit-audit compatibility,
 adds a tracked Powder Smooth/Local/Grains review cohort, and aligns true-8×
 Smooth-powder coverage with the normal WebGL field crossing without enabling
-the memory-heavy HDR pipeline at 8×. Keep one capture implementation;
+the memory-heavy HDR pipeline at 8×. The next retained local increment adds one
+shared `MaterialBodyFinish` GLSL source to both the normal and compact shaders.
+It applies only bounded RGB key/fill, core absorption, and pigment retention to
+already-proven powder, liquid, and gas bodies; phase callers continue to own
+support, alpha, topology, contacts, and material identity. It adds no sampler,
+field, upload, target, pass, or per-element selector. The five-candidate
+current-only release review and portable verifier passed, an independent visual
+pass found no clipping or topology regression, and the true 4896×3072 Powder
+audit completed with zero browser errors and a 5.596-second GPU fence sample.
+Keep one capture implementation;
 do not replace integrity hashing, path containment, lifecycle checks, or runtime
 closure. Visual preference needs a retained board and human/agent inspection,
 not broad unit-test expansion. The modular typed Visual Lab facade,
