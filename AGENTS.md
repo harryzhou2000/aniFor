@@ -14,6 +14,18 @@ visual requirement or deploy gate. Keep `accepted-v1`, baseline comparison, and
 promotion readable only for legacy packages or an explicit ad-hoc reference;
 developer review and CI must move to current-only evidence by default.
 
+Capture-facing fixture and recipe ownership has one data-only join point:
+`src/shared/visual-capture-static-catalog.js`. It projects the frozen
+normal-HDR and source-stage contracts into ordered fixture/driver bindings and
+recipes for both browser and Node consumers. Do not concatenate those two
+contracts or re-infer `normal-hdr` fixture ownership in another consumer. Keep
+the catalog JSON-safe, recursively frozen, free of renderer/app/script imports,
+and outside every result/batch/baseline/comparison identity. Executable fixture
+preparers and driver adapters remain in their existing typed registries. Use
+the tracked `material-optics` cohort for one current-only Powder/liquid/gas
+review board; it is composition only and grants no new selector or lifecycle
+authority.
+
 The portable current-only OFF→A, OFF→B, and A→B response checkpoint is deployed
 at revision `073ca8863a14c5b231b479a8b0466751d5703d8c` by workflow run
 `31339455780`; build, downloaded-package verification, Pages deployment, exact

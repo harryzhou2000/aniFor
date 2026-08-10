@@ -5,8 +5,10 @@
  */
 
 import { isDeepStrictEqual } from 'node:util';
+import {
+  VISUAL_CAPTURE_STATIC_FIXTURES,
+} from '../src/shared/visual-capture-static-catalog.js';
 import { VISUAL_CAPTURE_STATIC_CONTRACT } from '../src/shared/visual-capture-static-contract.js';
-import { VISUAL_LAB_STATIC_CONTRACT } from '../src/shared/visual-lab-static-contract.js';
 import { VISUAL_LAB_CAPTURE_VARIANTS } from './visual-lab-capture-abi.mjs';
 
 const JS_IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
@@ -359,11 +361,7 @@ export function createVisualCaptureFixtureBoundExpressions(fixtureDriverBindings
 }
 
 const CANONICAL_FIXTURE_DRIVER_BINDINGS = Object.freeze([
-  ...VISUAL_LAB_STATIC_CONTRACT.fixtures.map(({ name }) => Object.freeze({
-    fixtureId: name,
-    driver: 'normal-hdr',
-  })),
-  ...VISUAL_CAPTURE_STATIC_CONTRACT.fixtures.map(({ name, driver }) => Object.freeze({
+  ...VISUAL_CAPTURE_STATIC_FIXTURES.map(({ name, driver }) => Object.freeze({
     fixtureId: name,
     driver,
   })),

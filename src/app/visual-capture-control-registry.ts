@@ -1,6 +1,6 @@
 import type { PowderRenderStyle } from '../renderer/powder-render-style';
+import { VISUAL_CAPTURE_STATIC_FIXTURES } from '../shared/visual-capture-static-catalog.js';
 import { VISUAL_CAPTURE_STATIC_CONTRACT } from '../shared/visual-capture-static-contract.js';
-import { VISUAL_LAB_STATIC_CONTRACT } from '../shared/visual-lab-static-contract.js';
 import {
   VISUAL_LAB_FIXTURE_IDS,
   type VisualLabFixtureId,
@@ -53,11 +53,7 @@ const VISUAL_CAPTURE_CONTROL_DESCRIPTORS = Object.freeze({
 } satisfies Record<VisualCaptureControlDriver, VisualCaptureControlDescriptor>);
 
 const VISUAL_CAPTURE_CONTROL_FIXTURES = Object.freeze([
-  ...VISUAL_LAB_STATIC_CONTRACT.fixtures.map(({ name }) => Object.freeze({
-    fixture: name,
-    driver: 'normal-hdr' as const,
-  })),
-  ...VISUAL_CAPTURE_STATIC_CONTRACT.fixtures.map(({ name, driver }) => Object.freeze({
+  ...VISUAL_CAPTURE_STATIC_FIXTURES.map(({ name, driver }) => Object.freeze({
     fixture: name,
     driver,
   })),

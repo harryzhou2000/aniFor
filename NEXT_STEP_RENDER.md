@@ -23,6 +23,19 @@ experiments, starting with shared optical and lighting structure that benefits
 powder, liquid, and gas without changing their semantic topology or expanding
 exact-visual unit tests.
 
+The next authoring increment centralizes the capture-facing projection of the
+normal-HDR and source-stage static contracts. One pure, recursively frozen
+`anifor.visual-capture.static-catalog/v1` now owns the ordered fixture/driver
+bindings and capture recipes consumed by the app registry, fixture resolver,
+driver expression compiler, and recipe catalog. It contains no executable
+preparer, browser method, renderer import, or lifecycle authority. Preserve the
+two underlying v1 contracts and their independent ownership; consumers must use
+this catalog instead of rebuilding their union or inferring `normal-hdr`
+fixture ownership. The tracked `material-optics` cohort composes the existing
+atmosphere, liquid-motion, and powder-style cohorts into one current-only
+five-candidate board without changing their recipes, result identities, or
+capture lifecycle.
+
 Success means:
 
 - adding a normal visual experiment requires declarative/static-contract data,
@@ -47,11 +60,12 @@ Success means:
 
 Priority order from this checkpoint:
 
-1. Reduce experiment-authoring friction further where the retained board still
-   requires duplicated registration or lifecycle code.
-2. Run shared optical/lighting experiments across representative powder,
+1. Use the consolidated `material-optics` board for shared optical/lighting
+   experiments across representative powder,
    liquid, and atmosphere fixtures; retain visually preferred checkpoints after
    a lightweight human/agent review.
+2. Reduce experiment-authoring friction further only where a new experiment
+   still requires duplicated registration or lifecycle code.
 3. Harden only regressions that threaten geometry, semantic/topology
    correctness, WebGL lifecycle, true-8× completion, package integrity, or live
    Pages loading. Do not grow exact-pixel tests for evolving aesthetics.

@@ -29,6 +29,19 @@
       "candidates": []
     },
     {
+      "name": "material-optics",
+      "includes": [
+        "atmosphere",
+        "liquid-motion",
+        "powder-style"
+      ],
+      "selectors": {
+        "domains": [],
+        "fixtures": []
+      },
+      "candidates": []
+    },
+    {
       "name": "release",
       "includes": [
         "atmosphere",

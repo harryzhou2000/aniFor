@@ -25,6 +25,7 @@ test('check reports drift and sync replaces it atomically with stable bytes', as
     const targets = [
       { name: 'visualLab', path: join(root, 'visual-lab.d.ts') },
       { name: 'visualCapture', path: join(root, 'visual-capture.d.ts') },
+      { name: 'visualCaptureCatalog', path: join(root, 'visual-capture-catalog.d.ts') },
     ];
     const declarations = renderVisualStaticContractDeclarations();
     await writeFile(targets[0].path, 'stale\n');
@@ -32,12 +33,16 @@ test('check reports drift and sync replaces it atomically with stable bytes', as
     assert.deepEqual(await checkVisualStaticContractDeclarations(targets, declarations), [
       targets[0].path,
       targets[1].path,
+      targets[2].path,
     ]);
     await syncVisualStaticContractDeclarations(targets, declarations);
     assert.deepEqual(await checkVisualStaticContractDeclarations(targets, declarations), []);
     assert.equal(await readFile(targets[0].path, 'utf8'), declarations.visualLab);
     assert.equal(await readFile(targets[1].path, 'utf8'), declarations.visualCapture);
-    assert.deepEqual((await readdir(root)).sort(), ['visual-capture.d.ts', 'visual-lab.d.ts']);
+    assert.equal(await readFile(targets[2].path, 'utf8'), declarations.visualCaptureCatalog);
+    assert.deepEqual((await readdir(root)).sort(), [
+      'visual-capture-catalog.d.ts', 'visual-capture.d.ts', 'visual-lab.d.ts',
+    ]);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -51,4 +56,5 @@ test('renderer is deterministic and preserves literal readonly tuples', () => {
   assert.match(first.visualLab, /readonly "implemented": false/);
   assert.match(first.visualCapture, /readonly "selection": "grains"/);
   assert.match(first.visualCapture, /Readonly<Record<string, never>>/);
+  assert.match(first.visualCaptureCatalog, /"powder-render-style"/);
 });

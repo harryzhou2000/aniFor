@@ -1,13 +1,11 @@
 import type { SimulationBackend } from '../simulation';
-import { VISUAL_CAPTURE_STATIC_CONTRACT } from '../shared/visual-capture-static-contract.js';
-import { VISUAL_LAB_STATIC_CONTRACT } from '../shared/visual-lab-static-contract.js';
+import { VISUAL_CAPTURE_STATIC_FIXTURES } from '../shared/visual-capture-static-catalog.js';
 import { prepareLiquidMotionVfxFixture } from './liquid-motion-vfx-audit';
 import { prepareOilMotionVfxFixture } from './oil-motion-vfx-audit';
 import { preparePowderStyleAtlasFixture } from './powder-style-atlas-fixture';
 
 type VisualLabFixturePreparer = (simulation: SimulationBackend) => void;
-type StaticVisualLabFixture = (typeof VISUAL_LAB_STATIC_CONTRACT.fixtures)[number]
-  | (typeof VISUAL_CAPTURE_STATIC_CONTRACT.fixtures)[number];
+type StaticVisualLabFixture = (typeof VISUAL_CAPTURE_STATIC_FIXTURES)[number];
 type PreparedStaticVisualLabFixture = Extract<
   StaticVisualLabFixture,
   { readonly preparationReportLabel: string }
@@ -17,10 +15,7 @@ type PreparedStaticVisualLabFixture = Extract<
 export type VisualLabFixtureId = StaticVisualLabFixture['name'];
 export type VisualLabPreparedFixtureId = PreparedStaticVisualLabFixture['name'];
 
-const STATIC_VISUAL_CAPTURE_FIXTURES: readonly StaticVisualLabFixture[] = [
-  ...VISUAL_LAB_STATIC_CONTRACT.fixtures,
-  ...VISUAL_CAPTURE_STATIC_CONTRACT.fixtures,
-];
+const STATIC_VISUAL_CAPTURE_FIXTURES: readonly StaticVisualLabFixture[] = VISUAL_CAPTURE_STATIC_FIXTURES;
 
 /** Closed all-fixture domain; `showcase` deliberately activates as a no-op. */
 export const VISUAL_LAB_FIXTURE_IDS = Object.freeze(

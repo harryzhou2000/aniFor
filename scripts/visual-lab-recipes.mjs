@@ -1,6 +1,5 @@
 import { resolveVisualCaptureRequest } from './visual-lab-fixtures.mjs';
-import { VISUAL_CAPTURE_STATIC_CONTRACT } from '../src/shared/visual-capture-static-contract.js';
-import { VISUAL_LAB_STATIC_CONTRACT } from '../src/shared/visual-lab-static-contract.js';
+import { VISUAL_CAPTURE_STATIC_RECIPES } from '../src/shared/visual-capture-static-catalog.js';
 
 const RECIPE_FIELDS = Object.freeze([
   'name', 'domain', 'target', 'fixture', 'gain', 'renderScale',
@@ -103,10 +102,7 @@ export function createVisualLabCaptureRecipeCatalog(entries) {
 }
 
 export const VISUAL_LAB_CAPTURE_RECIPES = createVisualLabCaptureRecipeCatalog(
-  [
-    ...VISUAL_LAB_STATIC_CONTRACT.captureRecipes,
-    ...VISUAL_CAPTURE_STATIC_CONTRACT.captureRecipes,
-  ],
+  VISUAL_CAPTURE_STATIC_RECIPES,
 );
 
 const RECIPE_BY_NAME = new Map(

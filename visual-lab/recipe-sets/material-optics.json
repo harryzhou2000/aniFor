@@ -1,0 +1,47 @@
+{
+  "schema": "anifor.visual-lab.recipe-set/v1",
+  "id": "sha256:8dde43c5d5fbef7eb1bdaa4d2d3cd9f0abbd41fe6af8d606956d7f7acba0fb95",
+  "name": "material-optics",
+  "recipes": [
+    {
+      "name": "gas-showcase",
+      "domain": "gas",
+      "target": 0,
+      "fixture": "showcase",
+      "gain": 1,
+      "renderScale": 2
+    },
+    {
+      "name": "oxygen-showcase",
+      "domain": "gas",
+      "target": 4,
+      "fixture": "showcase",
+      "gain": 1,
+      "renderScale": 2
+    },
+    {
+      "name": "oil-motion",
+      "domain": "liquid",
+      "target": 8,
+      "fixture": "oil-motion",
+      "gain": 1,
+      "renderScale": 2
+    },
+    {
+      "name": "water-motion",
+      "domain": "liquid",
+      "target": 2,
+      "fixture": "water-motion",
+      "gain": 1,
+      "renderScale": 2
+    },
+    {
+      "name": "powder-style-atlas",
+      "domain": "powder",
+      "target": 0,
+      "fixture": "powder-style-atlas",
+      "gain": 1,
+      "renderScale": 2
+    }
+  ]
+}

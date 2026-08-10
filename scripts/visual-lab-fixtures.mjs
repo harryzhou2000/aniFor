@@ -4,6 +4,7 @@
  * harness must not grow another fixture-specific branch.
  */
 
+import { VISUAL_CAPTURE_STATIC_FIXTURES } from '../src/shared/visual-capture-static-catalog.js';
 import { VISUAL_CAPTURE_STATIC_CONTRACT } from '../src/shared/visual-capture-static-contract.js';
 import { VISUAL_LAB_STATIC_CONTRACT } from '../src/shared/visual-lab-static-contract.js';
 import {
@@ -199,7 +200,8 @@ export function buildVisualLabCaptureUrl(baseUrl, request) {
 }
 
 export const VISUAL_LAB_FIXTURE_ADAPTERS = Object.freeze(
-  VISUAL_LAB_STATIC_CONTRACT.fixtures.map((fixture) => freezeAdapter({
+  VISUAL_CAPTURE_STATIC_FIXTURES.filter(({ driver }) => driver === 'normal-hdr')
+    .map((fixture) => freezeAdapter({
     name: fixture.name,
     scene: fixture.scene,
     constraints: fixture.constraints.map(({ domain, targets }) => (
@@ -209,11 +211,12 @@ export const VISUAL_LAB_FIXTURE_ADAPTERS = Object.freeze(
       ? null
       : freezePreparation(fixture.preparationReportLabel),
     requirement: fixture.requirement,
-  })),
+    })),
 );
 
-const VISUAL_CAPTURE_EXTENSION_FIXTURE_ADAPTERS = Object.freeze(
-  VISUAL_CAPTURE_STATIC_CONTRACT.fixtures.map((fixture) => freezeAdapter({
+/** All fixtures understood by the generic capture runner. */
+export const VISUAL_CAPTURE_FIXTURE_ADAPTERS = Object.freeze(
+  VISUAL_CAPTURE_STATIC_FIXTURES.map((fixture) => freezeAdapter({
     name: fixture.name,
     scene: fixture.scene,
     captureDriver: fixture.driver,
@@ -226,15 +229,6 @@ const VISUAL_CAPTURE_EXTENSION_FIXTURE_ADAPTERS = Object.freeze(
     requirement: fixture.requirement,
   })),
 );
-
-/** All fixtures understood by the generic capture runner. */
-export const VISUAL_CAPTURE_FIXTURE_ADAPTERS = Object.freeze([
-  ...VISUAL_LAB_FIXTURE_ADAPTERS.map((fixture) => freezeAdapter({
-    ...fixture,
-    captureDriver: 'normal-hdr',
-  })),
-  ...VISUAL_CAPTURE_EXTENSION_FIXTURE_ADAPTERS,
-]);
 
 const DOMAIN_BY_NAME = new Map(
   VISUAL_LAB_DOMAIN_ADAPTERS.map((adapter) => [adapter.name, adapter]),

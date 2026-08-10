@@ -210,11 +210,14 @@ describe('Visual Lab declarative cohort catalog', () => {
     const output = fileURLToPath(new URL('../visual-lab/recipe-sets', import.meta.url));
     const input = await readVisualLabCohortCatalog(catalogPath);
     await expect(checkVisualLabCohortOutputs(input, output)).resolves.toEqual({
-      checked: 4,
-      names: ['atmosphere.json', 'liquid-motion.json', 'powder-style.json', 'release.json'],
+      checked: 5,
+      names: [
+        'atmosphere.json', 'liquid-motion.json', 'material-optics.json',
+        'powder-style.json', 'release.json',
+      ],
     });
     const compiled = compileVisualLabCohortCatalog(input);
-    expect(compiled.map(({ id }) => id)).toEqual([
+    expect(compiled.filter(({ name }) => name !== 'material-optics').map(({ id }) => id)).toEqual([
       'sha256:6fa70067d092a16e1b8d2e77283b33bd10067ce5485ae8c79239775eb7cb1e3c',
       'sha256:7fd140a5fef7cb4e692d8db08e35b3bb3da7835451a92289ba2941efe7fab380',
       'sha256:f5053916b82e8907f840ae6e334a159bedecc69b0777e2700f0383917b58a4e0',
@@ -224,7 +227,7 @@ describe('Visual Lab declarative cohort catalog', () => {
 
   it('exposes launcher-safe names and resolution with tracked snapshot metadata', async () => {
     expect(await visualLabCohortNames()).toEqual([
-      'atmosphere', 'liquid-motion', 'powder-style', 'release',
+      'atmosphere', 'liquid-motion', 'powder-style', 'material-optics', 'release',
     ]);
     const resolved = await resolveVisualLabCohort('release');
     expect(resolved.name).toBe('release');

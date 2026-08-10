@@ -181,6 +181,9 @@ describe('Visual Lab recipe-set/v1', () => {
       ]],
       ['atmosphere', ['gas-showcase', 'oxygen-showcase']],
       ['liquid-motion', ['oil-motion', 'water-motion']],
+      ['material-optics', [
+        'gas-showcase', 'oxygen-showcase', 'oil-motion', 'water-motion', 'powder-style-atlas',
+      ]],
       ['powder-style', ['powder-style-atlas']],
     ]);
     for (const [name, candidates] of expected) {

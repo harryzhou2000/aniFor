@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { VISUAL_LAB_STATIC_CONTRACT } from './visual-lab-static-contract.js';
 import { VISUAL_CAPTURE_STATIC_CONTRACT } from './visual-capture-static-contract.js';
+import {
+  VISUAL_CAPTURE_STATIC_CATALOG,
+  VISUAL_CAPTURE_STATIC_FIXTURES,
+  VISUAL_CAPTURE_STATIC_RECIPES,
+} from './visual-capture-static-catalog.js';
 
 const visit = (value: unknown, visitor: (nested: object) => void): void => {
   if (value === null || typeof value !== 'object') return;
@@ -71,5 +76,20 @@ describe('visual capture driver static contract', () => {
     for (const forbidden of ['method', 'args', 'expression', 'script', 'function']) {
       expect(serialized).not.toContain(`"${forbidden}"`);
     }
+  });
+
+  it('provides one frozen capture-facing fixture and recipe projection', () => {
+    expect(VISUAL_CAPTURE_STATIC_CATALOG.schema)
+      .toBe('anifor.visual-capture.static-catalog/v1');
+    expect(VISUAL_CAPTURE_STATIC_FIXTURES.map(({ name, driver }) => [name, driver])).toEqual([
+      ['showcase', 'normal-hdr'],
+      ['oil-motion', 'normal-hdr'],
+      ['water-motion', 'normal-hdr'],
+      ['powder-style-atlas', 'powder-render-style'],
+    ]);
+    expect(VISUAL_CAPTURE_STATIC_RECIPES.map(({ name }) => name)).toEqual([
+      'gas-showcase', 'oxygen-showcase', 'oil-motion', 'water-motion', 'powder-style-atlas',
+    ]);
+    visit(VISUAL_CAPTURE_STATIC_CATALOG, (nested) => expect(Object.isFrozen(nested)).toBe(true));
   });
 });

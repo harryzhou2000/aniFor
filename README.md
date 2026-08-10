@@ -42,6 +42,8 @@ npm run visual-lab:review -- \
   --cohort=liquid-motion
 npm run visual-lab:review -- \
   --cohort=powder-style
+npm run visual-lab:review -- \
+  --cohort=material-optics
 ```
 
 On Linux it defaults to SwiftShader, one shared browser host, and completed-frame
@@ -78,6 +80,11 @@ checkpoint:
 | Powder boundaries/styles | `npm run visual-lab:review -- --cohort=powder-style` | `npm run audit:powder:8x` |
 | Gas volumes | `npm run visual-lab:review -- --cohort=atmosphere` | `npm run audit:gas-identity:8x` |
 | Liquid bodies | `npm run visual-lab:review -- --cohort=liquid-motion` | `npm run audit:distilled-diesel-liquid:8x` |
+
+Use `material-optics` for one current-only board spanning all five tracked
+Powder, liquid, and atmosphere candidates. It composes the existing cohorts and
+does not add a renderer selector, browser lifecycle, comparison baseline, or
+result identity.
 
 The liquid row uses its focused compact scene because Visual Lab deliberately
 stops at Detail 4×. Do not imply that the normal OFF/A/B board covers Detail
