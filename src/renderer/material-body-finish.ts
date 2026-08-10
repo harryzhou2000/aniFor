@@ -25,9 +25,38 @@ float liquidBodyFinishDepth(
   return connectedBody * mix(0.34, 1.0, columnDepth);
 }
 
+// Compact optical response shared by every body-finish stage. The four lanes
+// are key/reflection, fill/absorption, pigment retention, and transmission.
+// Callers evaluate this once and reuse it, which matters when SwiftShader must
+// shade roughly fifteen million true-8x fragments. The closed numeric values
+// are RenderOptics classes, never exact material IDs.
+vec4 materialBodyFinishParameters(float phase, float optics, float enabled) {
+  if (enabled < 0.5 || optics < 0.5) return vec4(1.0);
+  if (phase < 0.5) {
+    if (abs(optics - 13.0) < 0.5) return vec4(1.24, 0.82, 1.04, 1.22);
+    if (abs(optics - 14.0) < 0.5) return vec4(0.72, 1.30, 1.26, 0.64);
+    if (abs(optics - 15.0) < 0.5) return vec4(1.32, 1.08, 0.92, 0.58);
+    return vec4(0.90, 1.10, 1.08, 0.80);
+  }
+  if (phase < 1.5) {
+    if (abs(optics - 1.0) < 0.5) return vec4(1.10, 0.86, 0.82, 1.18);
+    if (abs(optics - 2.0) < 0.5) return vec4(0.94, 1.12, 1.24, 0.72);
+    if (abs(optics - 3.0) < 0.5) return vec4(1.16, 1.02, 1.16, 1.02);
+    if (abs(optics - 4.0) < 0.5) return vec4(0.78, 0.82, 1.30, 0.54);
+    if (abs(optics - 16.0) < 0.5) return vec4(1.26, 0.74, 0.78, 1.28);
+    if (abs(optics - 17.0) < 0.5) return vec4(1.34, 1.10, 0.92, 0.58);
+    if (abs(optics - 18.0) < 0.5) return vec4(0.86, 1.16, 1.22, 0.66);
+    return vec4(1.0);
+  }
+  if (abs(optics - 5.0) < 0.5) return vec4(0.74, 1.28, 1.12, 0.64);
+  if (abs(optics - 6.0) < 0.5) return vec4(1.16, 0.76, 0.76, 1.28);
+  return vec4(1.0);
+}
+
 vec3 applyMaterialBodyFinish(
   vec3 color,
   float phase,
+  vec4 finishResponse,
   float density,
   float depth,
   vec2 slope,
@@ -53,6 +82,13 @@ vec3 applyMaterialBodyFinish(
   vec3 shadowTint = powder * vec3(0.74, 0.54, 0.34)
     + liquid * vec3(0.58, 0.68, 0.80)
     + gas * vec3(0.54, 0.60, 0.72);
+  // Pull the key and fill gently toward the live material pigment. Optical
+  // classes control the response strength while palette RGB preserves actual
+  // species identity, avoiding one generic orange/blue finish for all matter.
+  float identityPeak = max(max(color.r, color.g), max(color.b, 0.12));
+  vec3 identityTint = clamp(color / identityPeak, 0.0, 1.0);
+  keyTint = mix(keyTint, mix(vec3(0.92), identityTint, 0.42), 0.38);
+  shadowTint = mix(shadowTint, mix(vec3(0.50), identityTint, 0.26), 0.28);
 
   // One restrained key/fill model gives all reconstructed bodies the same
   // light direction. Gas favours a broad shoulder, liquid a grazing lip, and
@@ -63,8 +99,8 @@ vec3 applyMaterialBodyFinish(
     + liquid * grazing * shell * 0.010;
   float fill = max(-facing, 0.0) * (0.012 + powder * 0.010 + gas * 0.008)
     + core * (0.010 + powder * 0.010 + gas * 0.006);
-  key *= bodySupport * (1.0 - core * (0.18 + gas * 0.18));
-  fill *= bodySupport;
+  key *= bodySupport * finishResponse.x * (1.0 - core * (0.18 + gas * 0.18));
+  fill *= bodySupport * finishResponse.y;
 
   color += (vec3(1.08) - clamp(color, 0.0, 1.08)) * keyTint * key;
   color *= vec3(1.0) - shadowTint * fill;
@@ -72,7 +108,8 @@ vec3 applyMaterialBodyFinish(
   // Dense volumes keep their pigment instead of collapsing toward grey. This
   // is a bounded saturation lift over existing RGB and cannot affect alpha.
   float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
-  float pigment = bodySupport * core * (0.018 + powder * 0.018 + liquid * 0.010);
+  float pigment = bodySupport * core
+    * (0.018 + powder * 0.018 + liquid * 0.010) * finishResponse.z;
   color += (color - vec3(luminance)) * pigment;
   return max(color, vec3(0.0));
 }
@@ -99,6 +136,7 @@ float gasCompactMacroRelief(vec2 position) {
 vec3 applyFluidVolumeLobe(
   vec3 color,
   float phase,
+  vec4 finishResponse,
   float density,
   float neighbourMean,
   float curvature,
@@ -112,6 +150,14 @@ vec3 applyFluidVolumeLobe(
 
   float gas = step(1.5, phase);
   float liquid = 1.0 - gas;
+  vec3 keyTint = liquid * vec3(0.58, 0.82, 1.00)
+    + gas * vec3(0.70, 0.82, 1.00);
+  vec3 absorptionTint = liquid * vec3(0.34, 0.48, 0.64)
+    + gas * vec3(0.40, 0.46, 0.58);
+  float identityPeak = max(max(color.r, color.g), max(color.b, 0.12));
+  vec3 identityTint = clamp(color / identityPeak, 0.0, 1.0);
+  keyTint = mix(keyTint, mix(vec3(0.94), identityTint, 0.36), 0.42);
+  absorptionTint = mix(absorptionTint, mix(vec3(0.46), identityTint, 0.30), 0.32);
   float fieldBody = smoothstep(0.055 - gas * 0.045, 0.52 - gas * 0.28,
     min(density, max(neighbourMean, density * 0.62))) * eligibility;
   float signedCurvature = clamp(curvature, -1.0, 1.0);
@@ -146,7 +192,7 @@ vec3 applyFluidVolumeLobe(
   float gasDeepAbsorption = gas * core * core;
   float gasMacroBody = gas * fieldBody * smoothstep(0.14, 0.64, density)
     * (1.0 - core * 0.22);
-  float liquidTransmissionCrest = transmittedShoulder
+  float liquidTransmissionCrest = transmittedShoulder * finishResponse.w
     * (0.060 + max(facing, 0.0) * 0.045);
 
   // A broad convex crown and directional shoulder supply a coherent reflected
@@ -156,18 +202,16 @@ vec3 applyFluidVolumeLobe(
       + max(facing, 0.0) * shoulder * mix(0.026, 0.034, gas))
     * (1.0 - core * mix(0.24, 0.36, gas));
   key += liquidTransmissionCrest;
-  key += gasMidTransmission * 0.036;
+  key += gasMidTransmission * 0.036 * finishResponse.w;
   key += max(macroRelief, 0.0) * gasMacroBody * 0.052;
+  key *= finishResponse.x;
   float shade = (pocket * mix(0.030, 0.038, gas)
       + max(-facing, 0.0) * shoulder * mix(0.010, 0.014, gas)
       + core * mix(0.010, 0.007, gas)) * fieldBody;
   shade += deepColumn * 0.032;
   shade += gasDeepAbsorption * 0.024;
   shade += max(-macroRelief, 0.0) * gasMacroBody * 0.036;
-  vec3 keyTint = liquid * vec3(0.58, 0.82, 1.00)
-    + gas * vec3(0.70, 0.82, 1.00);
-  vec3 absorptionTint = liquid * vec3(0.34, 0.48, 0.64)
-    + gas * vec3(0.40, 0.46, 0.58);
+  shade *= finishResponse.y;
   color += (vec3(1.08) - clamp(color, 0.0, 1.08)) * keyTint * key;
   color *= vec3(1.0) - absorptionTint * shade;
   return max(color, vec3(0.0));

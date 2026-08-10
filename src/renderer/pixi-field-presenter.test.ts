@@ -375,6 +375,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).toContain('uniform float uMaterialBodyFinish;');
     expect(eight).toContain('uniform float uMaterialBodyFinish;');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('vec3 applyFluidVolumeLobe(');
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'vec4 materialBodyFinishParameters(float phase, float optics, float enabled)',
+    );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('float gasCompactMacroRelief(vec2 position)');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('float liquidBodyFinishDepth(');
     expect(POWDER_SMOOTH_COVERAGE_GLSL).toContain(
@@ -390,6 +393,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight.match(/applyMaterialBodyFinish\(/g)).toHaveLength(3);
     expect(normal.match(/applyFluidVolumeLobe\(/g)).toHaveLength(2);
     expect(eight.match(/applyFluidVolumeLobe\(/g)).toHaveLength(2);
+    expect(normal.match(/materialBodyFinishParameters\(/g)).toHaveLength(3);
+    expect(eight.match(/materialBodyFinishParameters\(/g)).toHaveLength(3);
     expect(eight).toContain('gasCompactMacroRelief(grid)');
     expect(normal).not.toContain('gasCompactMacroRelief(fieldPosition)');
     expect(normal).toContain('liquidBodyFinishDepth(\n        liquidDepth, liquidOpticalDepth');

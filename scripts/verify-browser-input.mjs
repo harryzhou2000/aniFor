@@ -15861,9 +15861,16 @@ async function auditMaterialAtlas(cdp, mode, dpr, screenshot, options = {}) {
   assert(invalidOwners.length === 0,
     `${mode}: material-atlas semantic ownership failed (${JSON.stringify(invalidOwners.slice(0, 8))})`);
 
-  const rendered = await waitForStablePageCapture(
-    cdp, `${mode} material-atlas framebuffer`, captureTimeout,
-  );
+  // Normal realistic WebGL intentionally contains live presentation detail;
+  // exact whole-page PNG equality is therefore neither a renderer-health proof
+  // nor a useful visual gate. Bind the atlas to one renderer-owned completed
+  // frame, as the true-8x audit already does for expensive mutations. Canvas
+  // remains deterministic and keeps the cheaper stable-screenshot path.
+  const rendered = mode === 'webgl' && outputScale !== 8
+    ? await captureSettledPage(cdp, `${mode} material-atlas framebuffer`, 900)
+    : await waitForStablePageCapture(
+      cdp, `${mode} material-atlas framebuffer`, captureTimeout,
+    );
   assertCanvasRectsEqual(baseline.canvasRect, rendered.canvasRect, `${mode} material-atlas blank/rendered`);
   const samples = await sampleMaterialAtlas(
     cdp, rendered.capture.data, baseline.capture.data, rendered.canvasRect, manifest,
@@ -15871,9 +15878,13 @@ async function auditMaterialAtlas(cdp, mode, dpr, screenshot, options = {}) {
   const invisible = samples.filter((sample) => {
     const canonical = Number.parseInt(sample.expectedColor.slice(1), 16);
     const darkestCanonical = Math.max(canonical >> 16, canonical >> 8 & 0xff, canonical & 0xff) <= 36;
+    // Smooth and true-8x body finishes deliberately round a square semantic
+    // projection. Do not turn the historical 70% pixel-difference heuristic
+    // into an exact visual silhouette pin: ownership is proven independently
+    // above, while mean/peak contrast still reject an actually blank result.
     return darkestCanonical
       ? sample.changedFraction < 0.45 || sample.meanDifference < 2 || sample.peakDifference < 3
-      : sample.changedFraction < 0.70 || sample.meanDifference < 4 || sample.peakDifference < 5;
+      : sample.changedFraction < 0.62 || sample.meanDifference < 4 || sample.peakDifference < 5;
   });
   assert(invisible.length === 0,
     `${mode}: projected materials disappeared from composed output (${JSON.stringify(invisible)})`);

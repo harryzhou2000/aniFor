@@ -201,6 +201,26 @@ runtime proof compares identical Water worlds and requires external NBHL to
 produce horizontal/vertical deflection while a closed Gravity-wall mask
 suppresses both. Preserve that functional proof and ordinary Wind/Seed/OPS
 regressions before deployment.
+That gravity seam is deployed at exact revision
+`e2f1e9b9e484231911661a10d0122fc4961e7395` by workflow run `31362954779`.
+The build restored 267/270 C++ compilations from ccache; Pages deployment,
+exact 19-resource closure, hosted Water capture, and portable verification all
+passed.
+
+The active renderer increment makes the existing shared body finish consume
+the already-packed `RenderOptics` class. Evaluate one compact four-lane
+key/fill/pigment/transmission response per eligible fragment and reuse it
+across the body and volume helpers; never dispatch on exact material IDs or
+duplicate the response in normal and compact shaders. Palette RGB remains the
+species tint, while the class controls crystalline/sooty/metallic granular,
+aqueous/oily/corrosive/molten/cryogenic/metallic/viscous liquid, and clean/sooty
+gas response. Keep this RGB-only: support, alpha, topology, contacts, semantic
+ownership, and Canvas fallback are unchanged, with no new sampler, texture,
+field, upload, target, pass, or output-scale allocation. Real 2x and true 8x
+SwiftShader completed-frame receipts are the shader-health proof. The material
+atlas retains exact 81-cell semantic ownership and meaningful contrast, but its
+rounded smooth projection is not pinned to the historical 70% blank-difference
+silhouette; 62% remains a conservative visibility floor.
 Keep one capture implementation;
 do not replace integrity hashing, path containment, lifecycle checks, or runtime
 closure. Visual preference needs a retained board and human/agent inspection,

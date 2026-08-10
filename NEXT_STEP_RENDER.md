@@ -4358,6 +4358,33 @@ Gravity-wall box must strongly suppress both horizontal velocity and vertical
 trajectory change. Retain the existing Wind, Seed-growth, save/load, focused
 catalog, production build, and exact resource-closure checks.
 
+That native-gravity capability is now live at exact revision
+`e2f1e9b9e484231911661a10d0122fc4961e7395` through workflow run
+`31362954779`. The cached build, Pages deployment, exact 19-resource closure,
+hosted Water capture, and portable verification passed; ccache restored 267 of
+270 C++ compilations.
+
+The next framework-level visual increment consumes the existing palette optics
+byte in the already-shared normal/compact material-body finish. One phase-scoped
+`materialBodyFinishParameters` evaluation returns bounded key/reflection,
+fill/absorption, pigment, and transmission coefficients, and both body and
+fluid-volume helpers reuse it. This deliberately improves broad material
+families instead of adding another exact-owner E-number leaf: crystalline,
+sooty, and metallic powder; aqueous, oily, corrosive, molten, cryogenic,
+metallic, and viscous liquid; and clean versus sooty gas. Species colour remains
+palette-owned and gently steers the finish, so families no longer share one
+generic orange/blue light without introducing a material-ID branch.
+
+Keep the increment RGB-only and arithmetic-only. It must add no sample,
+sampler, texture, field, pass, target, upload, allocation, alpha, support,
+silhouette, contact, semantic-owner, physics, or Canvas requirement. Both the
+normal HDR compositor and compact true 8x compositor call the same source and
+must complete real renderer-owned SwiftShader receipts. For the exhaustive
+217-material atlas, preserve exact semantic ownership and meaningful composed
+contrast, but do not pin a rounded smooth projection to the historical 70%
+blank-difference silhouette. The current visibility floor is 62%; missing or
+low-contrast matter still fails.
+
 ### E80 — accepted dense-body ambient floor
 
 E80 is the final bounded normal-WebGL floor for deep ordinary bodies. It runs
