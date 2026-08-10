@@ -34,7 +34,12 @@ this catalog instead of rebuilding their union or inferring `normal-hdr`
 fixture ownership. The tracked `material-optics` cohort composes the existing
 atmosphere, liquid-motion, and powder-style cohorts into one current-only
 five-candidate board without changing their recipes, result identities, or
-capture lifecycle.
+capture lifecycle. The first tracked production-bundle run at `6de1ddc` passed
+all five candidates through one shared WebGL host with zero browser errors,
+exact 918×576 crops and 1224×768 backing, complete portable verification, and
+no Chrome residue. Direct inspection retained Powder columns/holes and grain
+variation, continuous gas lobes, and coherent Water/Oil bodies; this framework
+increment intentionally changes no renderer pixels.
 
 Success means:
 
