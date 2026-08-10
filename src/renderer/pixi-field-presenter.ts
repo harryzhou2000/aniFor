@@ -2896,16 +2896,19 @@ void main() {
       float liquidFinishEligibility = smoothstep(1.5, 3.0,
         step(0.48, liquidLeft.a) + step(0.48, liquidRight.a)
           + step(0.48, liquidTop.a) + step(0.48, liquidBottom.a));
-      color = applyMaterialBodyFinish(
-        color, 1.0, density, depth, liquidSlope,
-        liquidFinishEligibility, uMaterialBodyFinish
-      );
       float liquidFinishNeighbourMean =
         (liquidLeft.a + liquidRight.a + liquidTop.a + liquidBottom.a) * 0.25;
+      float liquidFinishDepth = liquidBodyFinishDepth(
+        smoothstep(0.54, 0.90, min(liquid.a, liquidFinishNeighbourMean)), depth
+      );
+      color = applyMaterialBodyFinish(
+        color, 1.0, density, liquidFinishDepth, liquidSlope,
+        liquidFinishEligibility, uMaterialBodyFinish
+      );
       color = applyFluidVolumeLobe(
         color, 1.0, density, liquidFinishNeighbourMean,
         clamp((liquid.a - liquidFinishNeighbourMean) * 5.5, -1.0, 1.0),
-        depth, liquidSlope,
+        liquidFinishDepth, liquidSlope,
         liquidFinishEligibility, uMaterialBodyFinish
       );
     }
@@ -8230,14 +8233,17 @@ void main() {
       float liquidFinishEligibility = smoothstep(
         0.34, 0.82, min(liquidDepth, liquidNeighbourMean)
       );
+      float liquidFinishDepth = liquidBodyFinishDepth(
+        liquidDepth, liquidOpticalDepth
+      );
       color = applyMaterialBodyFinish(
-        color, 1.0, liquidSurfaceDensity, liquidDepth,
+        color, 1.0, liquidSurfaceDensity, liquidFinishDepth,
         semanticSlope + volumeSlope, liquidFinishEligibility,
         uMaterialBodyFinish
       );
       color = applyFluidVolumeLobe(
         color, 1.0, liquidSurfaceDensity, liquidNeighbourMean,
-        clamp((liquidDensity - liquidNeighbourMean) * 5.5, -1.0, 1.0), liquidDepth,
+        clamp((liquidDensity - liquidNeighbourMean) * 5.5, -1.0, 1.0), liquidFinishDepth,
         semanticSlope + volumeSlope, liquidFinishEligibility,
         uMaterialBodyFinish
       );

@@ -375,6 +375,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).toContain('uniform float uMaterialBodyFinish;');
     expect(eight).toContain('uniform float uMaterialBodyFinish;');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('vec3 applyFluidVolumeLobe(');
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain('float liquidBodyFinishDepth(');
     expect(POWDER_SMOOTH_COVERAGE_GLSL).toContain('float powderSmoothCoverage(');
     expect(POWDER_SMOOTH_COVERAGE_GLSL).toContain('float powderSmoothContourFinish(');
     expect(POWDER_SMOOTH_COVERAGE_GLSL).toContain('float powderSmoothTextureRetention(');
@@ -386,6 +387,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight.match(/applyMaterialBodyFinish\(/g)).toHaveLength(3);
     expect(normal.match(/applyFluidVolumeLobe\(/g)).toHaveLength(2);
     expect(eight.match(/applyFluidVolumeLobe\(/g)).toHaveLength(2);
+    expect(normal).toContain('liquidBodyFinishDepth(\n        liquidDepth, liquidOpticalDepth');
+    expect(eight).toContain('liquidBodyFinishDepth(\n        smoothstep(0.54, 0.90');
     expect(normal).toContain('uniform float uGasBodyVfx;');
     expect(normal).toContain('uniform float uGasMotionVfx;');
     expect(normal).toContain('uniform float uCflmColdFlameVfx;');

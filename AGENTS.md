@@ -61,6 +61,20 @@ with local stability, because the projected empty fragment's own byte is zero.
 The patch adds no sample, field, target, pass, alpha/support decision, or change
 to Local/square Grains. Focused presenter checks, the production 19-resource
 closure, and the true 4896×3072 Powder audit pass with zero browser errors.
+That powder increment is now deployed at exact revision
+`62b7b4a2dd7e460188f7bd510e380d91e3d770d0` by workflow run `31348108313`;
+the protected-branch build, Pages deployment, exact 19-resource closure, and
+hosted Water evidence all passed. The active liquid framework increment adds
+one shared `liquidBodyFinishDepth` normalization beside the existing body
+finish/lobe. Both normal WebGL and true 8× must derive perceptual liquid depth
+from already-proven connected field interior plus existing vertical optical
+depth, then use it only for RGB surface transmission and deep-column
+absorption. Do not let this helper own alpha, silhouette support, species
+contacts, optical-depth generation, or a material-specific branch. Current
+Water/Oil OFF/A/B captures pass WebGL/HDR with zero browser errors and preserve
+fine strands, holes, unlike contacts, native walls, and blank controls; direct
+inspection prefers the new coherent shallow/deep Oil read. The 4896×3072
+compact liquid audit also passes exact semantic topology and alpha support.
 Keep one capture implementation;
 do not replace integrity hashing, path containment, lifecycle checks, or runtime
 closure. Visual preference needs a retained board and human/agent inspection,

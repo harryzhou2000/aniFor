@@ -29,6 +29,23 @@ promotion workflow are deprecated legacy references: keep their readers for old
 portable packages and allow an explicit ad-hoc reference when useful, but do
 not use them by default in developer review, CI review, or deployment.
 
+The active material phase now builds on the deployed Smooth-powder checkpoint
+`62b7b4a2dd7e460188f7bd510e380d91e3d770d0` (workflow run `31348108313`).
+Its shared diagonal coverage and contour finish preserve Local and square
+Grains byte-for-byte, retain internal grain colour, and keep true 8x inside the
+compact compositor. The current liquid increment remains intentionally
+framework-shaped: `MATERIAL_BODY_FINISH_GLSL` owns one sampler-free
+`liquidBodyFinishDepth` normalization for normal WebGL and true 8x. Connected
+field interior proves the body, existing vertical optical depth separates a
+restrained transmitted surface shoulder from coloured deep-column absorption,
+and phase callers retain alpha, topology, species contacts, and material
+identity. Current-only Water/Oil OFF/A/B capture passed WebGL, HDR, exact
+918x576 crop/1224x768 backing, and zero browser errors; direct inspection
+prefers the deeper Oil body while Water retains its established reflected
+structure. The compact 4896x3072 liquid shader compiled and completed with
+exact semantic topology and alpha support. Do not replace this shared depth
+contract with another exact-Water or exact-Oil renderer branch.
+
 Active priority order:
 
 1. Treat repeatable performance evidence as complete infrastructure. Revision

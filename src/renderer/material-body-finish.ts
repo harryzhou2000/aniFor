@@ -9,6 +9,22 @@
  * intentionally normal-scale only.
  */
 export const MATERIAL_BODY_FINISH_GLSL = `
+// Convert the two liquid-body proofs already carried by both compositors into
+// one perceptual depth. Field interior establishes connected matter; exact
+// vertical optical depth then lets a shallow surface recede into a deep body.
+// Keeping this normalization beside the shared finish prevents normal WebGL
+// and the compact true-8x path from assigning unrelated meanings to depth.
+float liquidBodyFinishDepth(
+  float fieldInterior,
+  float verticalOpticalDepth
+) {
+  float connectedBody = clamp(fieldInterior, 0.0, 1.0);
+  float columnDepth = smoothstep(
+    30.0 / 255.0, 78.0 / 255.0, clamp(verticalOpticalDepth, 0.0, 1.0)
+  );
+  return connectedBody * mix(0.34, 1.0, columnDepth);
+}
+
 vec3 applyMaterialBodyFinish(
   vec3 color,
   float phase,
@@ -95,6 +111,14 @@ vec3 applyFluidVolumeLobe(
   float shoulder = (1.0 - smoothstep(0.54 - gas * 0.30, 0.94 - gas * 0.28, density))
     * fieldBody;
   float core = smoothstep(0.28, 0.88, depth) * fieldBody;
+  // A liquid column needs an optical surface/core read even when its centre
+  // and all four cardinal samples are uniformly dense. The shared normalized
+  // depth gives that otherwise-flat body a broad transmitted shoulder near
+  // the surface and restrained coloured absorption deeper down. Gas keeps its
+  // existing density-curvature response; topology and alpha remain caller-owned.
+  float transmittedShoulder = liquid
+    * (1.0 - smoothstep(0.24, 0.70, depth)) * fieldBody;
+  float deepColumn = liquid * smoothstep(0.56, 0.94, depth) * fieldBody;
 
   // A broad convex crown and directional shoulder supply a coherent reflected
   // lobe. Concave/deep regions retain pigment through restrained absorption;
@@ -102,9 +126,11 @@ vec3 applyFluidVolumeLobe(
   float key = (crown * mix(0.038, 0.052, gas)
       + max(facing, 0.0) * shoulder * mix(0.026, 0.034, gas))
     * (1.0 - core * mix(0.24, 0.36, gas));
+  key += transmittedShoulder * 0.050;
   float shade = (pocket * mix(0.030, 0.038, gas)
       + max(-facing, 0.0) * shoulder * mix(0.010, 0.014, gas)
       + core * mix(0.010, 0.007, gas)) * fieldBody;
+  shade += deepColumn * 0.022;
   vec3 keyTint = liquid * vec3(0.58, 0.82, 1.00)
     + gas * vec3(0.70, 0.82, 1.00);
   vec3 absorptionTint = liquid * vec3(0.34, 0.48, 0.64)
