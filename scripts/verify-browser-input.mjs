@@ -18446,14 +18446,16 @@ async function auditRenderScaleEight(cdp, dpr, powderOnly = false) {
     `renderScale=8 presentation exceeded its watchdog budget (${JSON.stringify(presentationTiming)})`);
   stage('timing-ready');
 
-  // `auditWebGLPresentationTiming` immediately above has just submitted and
-  // fence-proven the canonical 8x frame, and nothing mutates the scene before
-  // this first Smooth capture. Reuse that proof instead of submitting another
-  // identical 15M-fragment audit frame. Every later capture keeps its own
-  // completed-frame request because it follows a real toggle or scene edit.
-  const smoothCapture = await captureSettledPage(
-    cdp, 'renderScale=8 smooth powder framebuffer', 900, true,
-  );
+  // The focused powder route stays in this initial context, whose timing gate
+  // has just fence-proven the canonical Smooth frame. The broad route renews
+  // below before collecting any powder-style comparison so Smooth, Local, and
+  // Grains all remain paired to one document, scene, and WebGL context.
+  let smoothCapture;
+  if (powderOnly) {
+    smoothCapture = await captureSettledPage(
+      cdp, 'renderScale=8 smooth powder framebuffer', 900, true,
+    );
+  }
   // Shader iteration must not require the unrelated ten-minute off/on/off
   // presentation matrix before reporting a captured powder-contour failure.
   // The full --scale-eight-only gate remains authoritative; this focused path
@@ -18522,6 +18524,24 @@ async function auditRenderScaleEight(cdp, dpr, powderOnly = false) {
       presentationTiming, samples, continuity,
     };
   }
+  // The opening geometry, zoom, and optional focused-powder work can retire
+  // several full 4896x3072 presentations before the broad material cohort
+  // begins. Energy-core is the first independent off/on/off family and owns
+  // no framebuffer or scene dependency on those earlier captures. Give it a
+  // freshly promoted context through the existing bounded disposal/navigation
+  // boundary instead of extending the production 30-second fence watchdog.
+  // The helper reasserts backend, CSS geometry, containment, toolbox layout,
+  // and one completed warm-up frame before this cohort can collect evidence.
+  ({ geometry, backend } = await restartEightXAuditContext(
+    cdp, dpr, geometry.canvas, 'energy-core-and-solid-toggles',
+  ));
+  stage('energy-core-context-ready');
+  // restartEightXAuditContext fence-proved this fresh context's canonical
+  // Smooth warm-up. Retain that exact framebuffer before any toggle so the
+  // later Local/Grains and blank comparisons remain same-context evidence.
+  smoothCapture = await captureSettledPage(
+    cdp, 'renderScale=8 smooth powder framebuffer', 900, true,
+  );
   const smoothSuspensionPhaseCells = await captureMaterialCells(
     cdp, { left: 74, top: 251, right: 138, bottom: 315 }, 1, 2,
   );
@@ -18688,6 +18708,17 @@ async function auditRenderScaleEight(cdp, dpr, powderOnly = false) {
     cdp, 'renderScale=8 repeated flat translucent-backdrop framebuffer', 450,
   );
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setTranslucentBackdropRefraction(true); true');
+
+  // Gas volume and identity are another independent evidence cohort. Renew
+  // the context after the energy, rigid, contour, and translucent sequences so
+  // their completed 15M-fragment frames cannot occupy SwiftShader's sole
+  // direct-presentation slot while gas establishes its first flat frame. Keep
+  // each gas off/on/off triplet within this one fresh context.
+  ({ geometry, backend } = await restartEightXAuditContext(
+    cdp, dpr, geometry.canvas, 'gas-volume-and-identity-toggles',
+  ));
+  stage('gas-volume-context-ready');
+
   await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.setGasVolumeChroma(false); true');
   const flatGasVolumeCapture = await captureSettledPage(
     cdp, 'renderScale=8 flat gas-volume framebuffer', 450,
@@ -19842,7 +19873,9 @@ async function auditRenderScaleEight(cdp, dpr, powderOnly = false) {
   const { recovery: _vibrRecovery, ...vibrStateGraphics } = vibrStateAudit;
   const { recovery: _nativeStateRecovery, ...deutStateGraphics } = deutStateAudit;
   stage('stall-recovery-ready');
-  const contextLossGeometry = await navigateEightXRecoveryPage(cdp, 'context-loss-recovery');
+  const contextLossGeometry = await navigateEightXRecoveryPage(
+    cdp, 'context-loss-recovery', { outgoingLifecycle: 'recovered-fallback' },
+  );
   assertCanvasRectsEqual(
     geometry.canvas, contextLossGeometry.canvas, 'renderScale=8 recovery reload CSS geometry',
   );
@@ -24431,7 +24464,9 @@ async function auditEightXMaterialAtlasStress(cdp, blankBase64, canvasRect) {
   };
 }
 
-async function navigateEightXRecoveryPage(cdp, auditStage, blank = false) {
+async function navigateEightXRecoveryPage(
+  cdp, auditStage, { blank = false, outgoingLifecycle = 'strict' } = {},
+) {
   // Navigation alone leaves Pixi/WebGL destruction to document teardown. In a
   // long SwiftShader audit that can retain an outgoing 15M-fragment direct mesh
   // past the next promotion. Release the presenter and its fences explicitly,
@@ -24439,12 +24474,48 @@ async function navigateEightXRecoveryPage(cdp, auditStage, blank = false) {
   // replacement context. This is audit lifecycle fidelity, not a longer
   // presentation deadline; production Detail navigation follows the same
   // renderer-owned disposal path.
-  await evaluate(cdp, `(() => {
-    const audit = window.__ANIFOR_INPUT_AUDIT__;
-    return typeof audit?.disposeRendererForNavigation === 'function'
-      ? audit.disposeRendererForNavigation().then(() => true)
-      : true;
-  })()`);
+  if (outgoingLifecycle === 'bootstrap') {
+    // The standalone recovery command begins on the ordinary canonical audit
+    // URL and immediately replaces it with its first true-8x fixture. It has
+    // not accepted or captured that bootstrap presenter, so do not pretend it
+    // owns the strict outgoing-WebGL proof required between real cohorts.
+    const bootstrap = await evaluate(cdp, `(() => {
+      const parameters = new URLSearchParams(location.search);
+      return {
+        inputAudit: parameters.get('inputAudit'),
+        auditStage: parameters.get('auditStage'),
+        renderScale: parameters.get('renderScale'),
+      };
+    })()`);
+    assert(bootstrap?.inputAudit === '1' && bootstrap.auditStage === 'canonical'
+        && bootstrap.renderScale === '2',
+    `renderScale=8 ${auditStage} expected the canonical bootstrap page (${JSON.stringify(bootstrap)})`);
+  } else if (outgoingLifecycle === 'recovered-fallback') {
+    // A successful forced-stall/context-loss recovery has already destroyed
+    // the WebGL presenter and rebuilt the 2x Canvas fallback. Requiring the
+    // strict WebGL disposer again would turn that proven lifecycle transition
+    // into a false failure. Keep this exception explicit and fail closed unless
+    // the outgoing page is exactly the expected recovered fallback; ordinary
+    // cohort navigation still requires the strict presenter acknowledgement.
+    const outgoingBackend = await evaluate(
+      cdp, 'window.__ANIFOR_INPUT_AUDIT__?.backend?.()',
+    );
+    assert(outgoingBackend?.backend === 'canvas2d'
+        && outgoingBackend.requestedOutputScale === 8
+        && outgoingBackend.outputScale === 2
+        && ['webgl-timeout', 'webgl-context-lost'].includes(outgoingBackend.reason),
+    `renderScale=8 ${auditStage} expected an already-recovered Canvas fallback (${JSON.stringify(outgoingBackend)})`);
+  } else {
+    assert(outgoingLifecycle === 'strict',
+      `renderScale=8 ${auditStage} has unknown outgoing lifecycle ${JSON.stringify(outgoingLifecycle)}`);
+    await evaluate(cdp, `(() => {
+      const audit = window.__ANIFOR_INPUT_AUDIT__;
+      if (typeof audit?.disposeRendererForNavigation !== 'function') {
+        throw new Error('Strict audit teardown bridge is unavailable');
+      }
+      return audit.disposeRendererForNavigation().then(() => true);
+    })()`);
+  }
   const query = new URLSearchParams({
     scene: 'render-lab', inputAudit: '1', renderScale: '8', auditStage,
     plantLaminaVfx: '0',
@@ -24486,7 +24557,7 @@ async function navigateEightXRecoveryPage(cdp, auditStage, blank = false) {
 async function restartEightXAuditContext(cdp, dpr, expectedCanvas, batch, blank = false) {
   await setDesktopMetrics(cdp, 1280, 720, dpr);
   const auditStage = `scale-eight-${batch}`;
-  const geometry = await navigateEightXRecoveryPage(cdp, auditStage, blank);
+  const geometry = await navigateEightXRecoveryPage(cdp, auditStage, { blank });
   const backend = await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.backend()');
   assert(backend.requestedOutputScale === 8 && backend.outputScale === 8,
     `renderScale=8 ${batch} batch did not remain true 8x WebGL (${JSON.stringify(backend)})`);
@@ -24516,7 +24587,9 @@ async function auditEightXRecovery(cdp, dpr) {
     `[render-scale-eight-recovery] ${name} ${Math.round(performance.now() - started)}ms`,
   );
   await setDesktopMetrics(cdp, 1280, 720, dpr);
-  const geometry = await navigateEightXRecoveryPage(cdp, 'native-state-stall-recovery');
+  const geometry = await navigateEightXRecoveryPage(
+    cdp, 'native-state-stall-recovery', { outgoingLifecycle: 'bootstrap' },
+  );
   const backend = await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__.backend()');
   assert(backend.requestedOutputScale === 8 && backend.outputScale === 8,
     `renderScale=8 recovery did not remain true 8x WebGL (${JSON.stringify(backend)})`);
@@ -24528,7 +24601,9 @@ async function auditEightXRecovery(cdp, dpr) {
     cdp, geometry.canvas, deutStateAudit, 'stall',
   );
   stage('stall-recovery-ready');
-  const contextLossGeometry = await navigateEightXRecoveryPage(cdp, 'context-loss-recovery');
+  const contextLossGeometry = await navigateEightXRecoveryPage(
+    cdp, 'context-loss-recovery', { outgoingLifecycle: 'recovered-fallback' },
+  );
   assertCanvasRectsEqual(
     geometry.canvas, contextLossGeometry.canvas, 'renderScale=8 recovery reload CSS geometry',
   );

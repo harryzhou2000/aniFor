@@ -66,6 +66,25 @@ zero browser errors in 80.9 seconds. Keep `npm run audit:gas-identity:8x` as the
 reproducible compact-gas proof; do not weaken the renderer's 30-second fence
 watchdog or use a fixed sleep as a substitute.
 
+The broad true-8x release gate now has bounded context renewals before its
+energy/solid and gas-volume/identity cohorts. They reuse strict renderer
+disposal, real page navigation, exact CSS-geometry checks, and a completed
+warm-up frame; off/on/off evidence remains within one context and the production
+30-second fence watchdog is unchanged. A real `npm run audit:8x` run passed the
+complete visual/identity/device/force/retained-state sequence through forced
+stall recovery before revealing that the following navigation wrongly asked an
+already-demoted Canvas fallback to prove an active WebGL teardown. The recovery
+page helper now has closed `strict`, `bootstrap`, and `recovered-fallback`
+lifecycle modes with exact fail-closed preconditions. The focused
+`npm run audit:recovery:8x` gate passes both forced `webgl-timeout` and real
+`webgl-context-lost` recovery at 4896x3072→1224x768, preserves camera and native
+DEUT/VIBR/source state, and reports zero browser errors. Re-run the complete
+`npm run audit:8x` gate now passes in 3,568.4 seconds with zero browser errors.
+It covers every visual, identity, device, force, retained-state, same-context
+powder, high-zoom input, 217-material atlas, forced-stall, and context-loss
+contract; its eight GPU-fence timing samples stayed at 7,247.8 ms p90 and
+7,365.3 ms maximum. This lifecycle increment is deployable.
+
 Active priority order:
 
 1. Treat repeatable performance evidence as complete infrastructure. Revision

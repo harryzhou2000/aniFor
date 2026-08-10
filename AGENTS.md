@@ -89,6 +89,24 @@ captures. The real 4896×3072 gate passed all 17 gases, exact repeated-off,
 identical alpha/support hashes, and zero browser errors in 80.9 seconds. Use
 `npm run audit:gas-identity:8x`; never solve this by extending the normal
 eight-second stable-screenshot window or weakening the renderer watchdog.
+The broad true-8× release gate now renews its direct WebGL context at explicit
+cohort boundaries before energy/solid and gas-volume/identity work. Each
+renewal uses the existing strict renderer disposal, page navigation, exact CSS
+geometry assertions, and completed warm-up proof; never lengthen the 30-second
+presentation watchdog or split an off/on/off triplet across contexts. The first
+real run carried every visual, identity, device, force, retained-state, and
+recovery-preparation cohort through `stall-recovery-ready`, then exposed a
+teardown edge after forced recovery had already destroyed WebGL and rebuilt the
+2× Canvas fallback. `navigateEightXRecoveryPage` now names `strict`,
+`bootstrap`, and `recovered-fallback` outgoing lifecycle states and fails closed
+on their exact preconditions. `npm run audit:recovery:8x` passes both forced
+stall (`webgl-timeout`) and real context loss (`webgl-context-lost`) at exact
+4896×3072→1224×768 recovery geometry with zero browser errors. A final complete
+`npm run audit:8x` rerun now passes in 3,568.4 seconds with zero browser errors:
+all visual, identity, device, force, retained-state, same-context powder,
+high-zoom input, 217-material atlas, forced-stall, and context-loss evidence
+completed. The eight-sample GPU-fence timing stayed bounded at 7,247.8 ms p90
+and 7,365.3 ms maximum. Treat this lifecycle increment as checkpoint-ready.
 Keep one capture implementation;
 do not replace integrity hashing, path containment, lifecycle checks, or runtime
 closure. Visual preference needs a retained board and human/agent inspection,
