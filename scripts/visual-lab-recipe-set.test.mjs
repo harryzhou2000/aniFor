@@ -176,9 +176,12 @@ describe('Visual Lab recipe-set/v1', () => {
 
   it('keeps checked-in framework cohorts valid and pinned', async () => {
     const expected = new Map([
-      ['release', ['gas-showcase', 'oxygen-showcase', 'oil-motion', 'water-motion']],
+      ['release', [
+        'gas-showcase', 'oxygen-showcase', 'oil-motion', 'water-motion', 'powder-style-atlas',
+      ]],
       ['atmosphere', ['gas-showcase', 'oxygen-showcase']],
       ['liquid-motion', ['oil-motion', 'water-motion']],
+      ['powder-style', ['powder-style-atlas']],
     ]);
     for (const [name, candidates] of expected) {
       const file = fileURLToPath(new URL(
@@ -190,7 +193,7 @@ describe('Visual Lab recipe-set/v1', () => {
       expect(recipeSet.id).toBe(recipeSetId(recipeSet));
       if (name === 'release') {
         expect(recipeSet.id).toBe(
-          'sha256:28b2d27f44c54ba5de933addbbc1c99358428a79b2ed8da05df9c7c121fec463',
+          'sha256:2f7824673c315358416b802283d3d3333f0b22cd908699cbe512da8b38f6c5e2',
         );
       }
     }
