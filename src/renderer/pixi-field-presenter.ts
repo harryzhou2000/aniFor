@@ -1969,7 +1969,9 @@ void main() {
       // Applying the shared 0.36..0.64 crossing only to the admitted field leg
       // preserves Local/Grains, moving particles, holes, fine columns, and
       // unlike contacts while keeping Smooth geometry scale-independent.
-      float smoothPowderCoverage = powderSmoothCoverage(smoothPowderShape.x);
+      float smoothPowderCoverage = powderSmoothCoverage(
+        smoothPowderShape.x, smoothPowderShape.yz
+      );
       density = mix(density, smoothPowderCoverage, powderFieldBlend);
     }
   }
@@ -8947,7 +8949,9 @@ void main() {
       // columns, holes, seams, and moving powder on their exact local path.
       float smoothContourTransfer = boundaryStability * powderSurfaceBlend;
       if (uPowderStyle > 1.5) {
-        float smoothContourAlpha = powderSmoothCoverage(widePowderShape.x);
+        float smoothContourAlpha = powderSmoothCoverage(
+          widePowderShape.x, widePowderShape.yz
+        );
         heapAlpha = mix(heapAlpha, smoothContourAlpha, smoothContourTransfer);
         powderContourTextureRetention = powderSmoothTextureRetention(
           widePowderShape.x, smoothContourTransfer

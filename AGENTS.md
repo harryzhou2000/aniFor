@@ -159,6 +159,24 @@ zero so E04 is not doubled, and keep liquid callers zero. The focused exact
 4896×3072 gas-identity audit must preserve all 17 gases, exact repeated-off,
 34,799/34,799 cloud support, 6,596/6,596 halo support, identical alpha/support
 hashes, and zero browser errors.
+
+The active powder-boundary increment keeps the existing wide settled field but
+interprets it as an implicit surface. `powderSmoothCoverage` now receives the
+field gradient and derives a bounded roughly one-cell crossing width instead of
+using one fixed density interval on every slope. This makes a slowly varying
+wide field carry curved geometry without becoming a many-cell translucent
+bevel. Where that field owns the silhouette, `powderSmoothContourFinish` delays
+and softens the old cell-edge key so it cannot redraw a bright staircase over
+the new alpha contour. Do not apply either change to Local, square Grains,
+moving/unsupported powder, vertical fine columns, holes, or interior material
+identity. The fresh normal Powder board retained WebGL/HDR, exact semantic,
+field-alpha, and framebuffer-alpha invariants with zero errors; Local and
+Grains PNGs are byte-identical to the preceding current-only capture, and the
+Smooth revision diff is confined to exterior/contact outlines. Independent
+review prefers the cleaner apex and slopes with unchanged interior grain. The
+true 4896×3072 powder gate passes with zero browser errors and a 6.079-second
+GPU fence; Smooth reports tangent error `0.069` and curvature energy `0.073`
+versus `0.073/0.080` for Grains and `0.114/0.172` for Local.
 Keep one capture implementation;
 do not replace integrity hashing, path containment, lifecycle checks, or runtime
 closure. Visual preference needs a retained board and human/agent inspection,

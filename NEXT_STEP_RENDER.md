@@ -4320,6 +4320,19 @@ new samples, allocations, clocks, or species branches in the 15-million-fragment
 path. Continue from this framework-level phase relation before resuming isolated
 E-number detail work.
 
+The following shared powder increment treats the settled density field as an
+implicit surface rather than applying one fixed scalar alpha interval to every
+slope. The crossing width is derived from the already-packed field gradient,
+so a wide, slowly varying heap still receives a bounded approximately one-cell
+edge instead of a broad translucent bevel. The old cell-edge highlight is also
+delayed and weakened only where the field owns the Smooth silhouette; it no
+longer redraws a bright staircase over the curved alpha geometry. This touches
+no sampler, field, target, pass, allocation, semantic owner, material identity,
+or physics state. Local and square Grains remain byte-identical, fine vertical
+columns and isolated grains stay on their local route, and body texture remains
+unchanged away from the outline. The normal current-only board and true 8×
+powder gate are the review pair for subsequent contour changes.
+
 ### E80 — accepted dense-body ambient floor
 
 E80 is the final bounded normal-WebGL floor for deep ordinary bodies. It runs

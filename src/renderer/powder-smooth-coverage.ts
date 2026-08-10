@@ -19,8 +19,14 @@ float powderSmoothDirectionalSignal(vec4 shape) {
     * smoothstep(0.004, 0.027, abs(shape.z));
 }
 
-float powderSmoothCoverage(float density) {
-  return smoothstep(0.36, 0.64, density);
+float powderSmoothCoverage(float density, vec2 gradient) {
+  // Interpret the blurred density as an implicit surface instead of assigning
+  // every slope the same wide scalar interval. Dividing the crossing width by
+  // the field gradient gives a stable roughly one-cell antialias band: broad
+  // reconstruction remains a curved geometry carrier, but no longer turns
+  // into a many-cell translucent bevel where its density changes slowly.
+  float halfWidth = clamp(length(gradient) * 0.72, 0.010, 0.060);
+  return smoothstep(0.50 - halfWidth, 0.50 + halfWidth, density);
 }
 
 // Coverage may extend the settled field across a diagonal without asking the
@@ -29,8 +35,12 @@ float powderSmoothCoverage(float density) {
 // field owns the edge. Local, Grains, and untouched semantic bulk pass through
 // at exactly 1.0; alpha and material support never consume this RGB factor.
 float powderSmoothContourFinish(float density, float fieldTransfer) {
-  float inward = smoothstep(0.18, 0.48, density);
-  return mix(1.0, 0.66 * inward, clamp(fieldTransfer, 0.0, 1.0));
+  // The reconstructed alpha already supplies the curved silhouette. Delay and
+  // soften the legacy cell-edge key inside that contour so it cannot redraw a
+  // bright staircase over the field geometry. Deeper pigment and mesostrata
+  // are independent and remain fully present.
+  float inward = smoothstep(0.52, 0.82, density);
+  return mix(1.0, 0.44 * inward, clamp(fieldTransfer, 0.0, 1.0));
 }
 
 // Keep the first alpha crossing quiet, then restore the material's grain soon
