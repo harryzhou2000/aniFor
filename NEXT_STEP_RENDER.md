@@ -33,8 +33,11 @@ The active material phase now builds on the deployed Smooth-powder checkpoint
 `62b7b4a2dd7e460188f7bd510e380d91e3d770d0` (workflow run `31348108313`).
 Its shared diagonal coverage and contour finish preserve Local and square
 Grains byte-for-byte, retain internal grain colour, and keep true 8x inside the
-compact compositor. The current liquid increment remains intentionally
-framework-shaped: `MATERIAL_BODY_FINISH_GLSL` owns one sampler-free
+compact compositor. The liquid increment is also deployed at revision
+`adb6708f2f9e5984030dd5c9c6daea38de47e65f` by workflow run `31349105610`;
+build, Pages deployment, exact revision/resource closure, and hosted Visual Lab
+verification passed. It remains intentionally framework-shaped:
+`MATERIAL_BODY_FINISH_GLSL` owns one sampler-free
 `liquidBodyFinishDepth` normalization for normal WebGL and true 8x. Connected
 field interior proves the body, existing vertical optical depth separates a
 restrained transmitted surface shoulder from coloured deep-column absorption,
@@ -45,6 +48,20 @@ prefers the deeper Oil body while Water retains its established reflected
 structure. The compact 4896x3072 liquid shader compiled and completed with
 exact semantic topology and alpha support. Do not replace this shared depth
 contract with another exact-Water or exact-Oil renderer branch.
+
+The next local gas increment reuses that same shared lobe. A connected broad
+AtmosphereField body can have near-zero local slope and curvature, so the
+helper derives a pale mid-volume transmission band and restrained deep-core
+absorption from its already-computed gas `core`. The parabolic middle and
+squared core add only multiplies—no additional smoothstep, sampler, field,
+identity branch, alpha decision, or output-scale allocation—and therefore keep
+normal and compact true 8x on one phase-level grammar. Current atmosphere
+OFF/A/B capture passes WebGL/HDR with zero browser errors and unchanged alpha.
+The broad true-8x and focused gas-identity harnesses still time out before their
+flat frame on this software-GPU host; the identical Classic control times out
+at the same point, so do not attribute that existing audit/runtime-budget issue
+to the Realistic-only shared finish. Resolving the 8x gas audit budget remains
+part of the WebGL hardening phase.
 
 Active priority order:
 

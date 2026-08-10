@@ -75,6 +75,17 @@ Water/Oil OFF/A/B captures pass WebGL/HDR with zero browser errors and preserve
 fine strands, holes, unlike contacts, native walls, and blank controls; direct
 inspection prefers the new coherent shallow/deep Oil read. The 4896×3072
 compact liquid audit also passes exact semantic topology and alpha support.
+It is deployed at revision `adb6708f2f9e5984030dd5c9c6daea38de47e65f`
+by workflow run `31349105610`; build, Pages deploy, exact live revision and
+19-resource closure, and hosted Water verification passed. The following local
+gas increment belongs in the same `applyFluidVolumeLobe`: use the already-
+computed gas `core` to form a parabolic translucent middle and squared deep
+absorption. Keep it phase-gated, RGB-only, sampler-free, identity-agnostic, and
+shared by normal/compact compositors. Do not add more smoothsteps to this hot
+true-8x path. The broad and focused true-8x gas audits currently time out before
+their flat framebuffer on this software-GPU host, and the identical Classic
+control does too; retain this as an 8x audit/runtime-budget issue rather than a
+claimed Realistic visual regression.
 Keep one capture implementation;
 do not replace integrity hashing, path containment, lifecycle checks, or runtime
 closure. Visual preference needs a retained board and human/agent inspection,
