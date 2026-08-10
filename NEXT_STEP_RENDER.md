@@ -4385,6 +4385,25 @@ contrast, but do not pin a rounded smooth projection to the historical 70%
 blank-difference silhouette. The current visibility floor is 62%; missing or
 low-contrast matter still fails.
 
+The optics-aware checkpoint is live at exact revision
+`544d53f3165bd8f5021093d809a69f89a1e9a7f6` through workflow run
+`31364837196`, attempt 2. Attempt 1 stopped on one unrelated five-second native
+BASE/OPS1 timeout; the unchanged retry passed the complete build, Pages
+deployment, exact live resource closure, hosted Water capture, and portable
+verification. Keep the test timeout unchanged unless a separate reliability
+decision is made.
+
+The next authoring seam is compile-time Material Appearance Profiles. Move the
+same phase defaults and `RenderOptics` overrides into one frozen renderer-only
+module, validate every four-lane response and phase/class pairing, and emit the
+existing `materialBodyFinishParameters` GLSL selector deterministically. This
+makes a broad family response one typed data edit instead of handwritten shader
+branch surgery. It must preserve the selector arithmetic, palette and style
+formats, all normal/compact call sites, permissive Canvas fallback, and the
+zero-new-resource/topology contract. Historical PNG hashes remain irrelevant;
+use focused profile/source checks, production shader compilation, current-only
+atlas inspection, and real 2x/8x completed-frame receipts.
+
 ### E80 — accepted dense-body ambient floor
 
 E80 is the final bounded normal-WebGL floor for deep ordinary bodies. It runs

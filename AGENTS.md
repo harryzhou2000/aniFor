@@ -221,6 +221,23 @@ SwiftShader completed-frame receipts are the shader-health proof. The material
 atlas retains exact 81-cell semantic ownership and meaningful contrast, but its
 rounded smooth projection is not pinned to the historical 70% blank-difference
 silhouette; 62% remains a conservative visibility floor.
+That optics-aware body-finish checkpoint is deployed at exact revision
+`544d53f3165bd8f5021093d809a69f89a1e9a7f6` by workflow run `31364837196`,
+attempt 2. The unchanged retry passed the full build after attempt 1's isolated
+five-second native BASE/OPS1 timeout; do not widen that timeout without a
+separate decision. Pages deployment, exact live resource closure, hosted Water
+capture, and portable verification all passed.
+
+The active authoring increment moves those phase-family coefficients into
+`material-appearance-profiles.ts`. Keep frozen powder/liquid/gas defaults and
+phase-compatible `RenderOptics` overrides as the only authoring data. Validate
+known class codes, four finite bounded lanes, and phase compatibility before
+generating the one deterministic GLSL selector embedded by the shared body
+finish. The four lanes remain key/reflection, fill/absorption, pigment, and
+transmission. This source-generation seam must preserve the emitted shader
+arithmetic, six normal/compact call sites, palette/style formats, Canvas
+fallback, and all resource/topology invariants; never turn it into a runtime
+material-ID switch or a new GPU lookup.
 Keep one capture implementation;
 do not replace integrity hashing, path containment, lifecycle checks, or runtime
 closure. Visual preference needs a retained board and human/agent inspection,

@@ -1,0 +1,185 @@
+import { RENDER_OPTICS_CLASS_COUNT, RenderOptics } from './render-optics';
+
+/**
+ * Stable phase codes shared by the normal and compact material-body finish.
+ * They are source constants, not a runtime material plane or shader uniform.
+ */
+export const enum MaterialAppearancePhaseCode {
+  Powder = 0,
+  Liquid = 1,
+  Gas = 2,
+}
+
+export type MaterialAppearancePhase = 'powder' | 'liquid' | 'gas';
+
+/** Key/reflection, fill/absorption, pigment retention, and transmission. */
+export type MaterialAppearanceProfile = readonly [number, number, number, number];
+
+export interface MaterialAppearancePhaseProfiles {
+  readonly default: MaterialAppearanceProfile;
+  readonly overrides: Readonly<Partial<Record<RenderOptics, MaterialAppearanceProfile>>>;
+}
+
+export type MaterialAppearanceProfiles = Readonly<Record<
+  MaterialAppearancePhase,
+  MaterialAppearancePhaseProfiles
+>>;
+
+/** Broad enough for every currently approved response while rejecting accidental extremes. */
+export const MATERIAL_APPEARANCE_PROFILE_MINIMUM = 0.5;
+export const MATERIAL_APPEARANCE_PROFILE_MAXIMUM = 1.5;
+
+const PHASES: readonly { readonly name: MaterialAppearancePhase; readonly code: MaterialAppearancePhaseCode }[] = [
+  { name: 'powder', code: MaterialAppearancePhaseCode.Powder },
+  { name: 'liquid', code: MaterialAppearancePhaseCode.Liquid },
+  { name: 'gas', code: MaterialAppearancePhaseCode.Gas },
+];
+
+const PHASE_OPTICS = Object.freeze({
+  powder: Object.freeze([
+    RenderOptics.RoughGranular,
+    RenderOptics.CrystallineGranular,
+    RenderOptics.SootyGranular,
+    RenderOptics.MetallicGranular,
+  ]),
+  liquid: Object.freeze([
+    RenderOptics.Aqueous,
+    RenderOptics.Oily,
+    RenderOptics.Corrosive,
+    RenderOptics.Molten,
+    RenderOptics.CryogenicLiquid,
+    RenderOptics.MetallicLiquid,
+    RenderOptics.ViscousLiquid,
+  ]),
+  gas: Object.freeze([
+    RenderOptics.SootyGas,
+    RenderOptics.CleanGas,
+  ]),
+} satisfies Readonly<Record<MaterialAppearancePhase, readonly RenderOptics[]>>);
+
+function profile(
+  key: number,
+  fill: number,
+  pigment: number,
+  transmission: number,
+): MaterialAppearanceProfile {
+  return Object.freeze([key, fill, pigment, transmission]);
+}
+
+function phaseProfiles(
+  fallback: MaterialAppearanceProfile,
+  overrides: Partial<Record<RenderOptics, MaterialAppearanceProfile>>,
+): MaterialAppearancePhaseProfiles {
+  return Object.freeze({ default: fallback, overrides: Object.freeze(overrides) });
+}
+
+/**
+ * The closed, family-level body-finish vocabulary. Exact materials only choose
+ * a RenderOptics class elsewhere; adding a material here is deliberately
+ * impossible. The values match the pre-profile shared GLSL selector.
+ */
+export const MATERIAL_APPEARANCE_PROFILES: MaterialAppearanceProfiles = Object.freeze({
+  powder: phaseProfiles(profile(0.90, 1.10, 1.08, 0.80), {
+    [RenderOptics.CrystallineGranular]: profile(1.24, 0.82, 1.04, 1.22),
+    [RenderOptics.SootyGranular]: profile(0.72, 1.30, 1.26, 0.64),
+    [RenderOptics.MetallicGranular]: profile(1.32, 1.08, 0.92, 0.58),
+  }),
+  liquid: phaseProfiles(profile(1.0, 1.0, 1.0, 1.0), {
+    [RenderOptics.Aqueous]: profile(1.10, 0.86, 0.82, 1.18),
+    [RenderOptics.Oily]: profile(0.94, 1.12, 1.24, 0.72),
+    [RenderOptics.Corrosive]: profile(1.16, 1.02, 1.16, 1.02),
+    [RenderOptics.Molten]: profile(0.78, 0.82, 1.30, 0.54),
+    [RenderOptics.CryogenicLiquid]: profile(1.26, 0.74, 0.78, 1.28),
+    [RenderOptics.MetallicLiquid]: profile(1.34, 1.10, 0.92, 0.58),
+    [RenderOptics.ViscousLiquid]: profile(0.86, 1.16, 1.22, 0.66),
+  }),
+  gas: phaseProfiles(profile(1.0, 1.0, 1.0, 1.0), {
+    [RenderOptics.SootyGas]: profile(0.74, 1.28, 1.12, 0.64),
+    [RenderOptics.CleanGas]: profile(1.16, 0.76, 0.76, 1.28),
+  }),
+});
+
+function knownRenderOptics(optics: number): boolean {
+  return Number.isInteger(optics)
+    && optics >= RenderOptics.Default
+    && optics < RENDER_OPTICS_CLASS_COUNT;
+}
+
+function validateProfile(label: string, value: MaterialAppearanceProfile): void {
+  if (value.length !== 4) throw new Error(`${label} must have four response lanes`);
+  for (const lane of value) {
+    if (!Number.isFinite(lane)
+      || lane < MATERIAL_APPEARANCE_PROFILE_MINIMUM
+      || lane > MATERIAL_APPEARANCE_PROFILE_MAXIMUM) {
+      throw new Error(`${label} has an out-of-range response lane`);
+    }
+  }
+}
+
+/** Reject invalid class keys or unbounded response data before shader assembly. */
+export function validateMaterialAppearanceProfiles(profiles: MaterialAppearanceProfiles): void {
+  for (const { name } of PHASES) {
+    const phase = profiles[name];
+    if (!phase) throw new Error(`missing ${name} material appearance profile`);
+    validateProfile(`${name} default`, phase.default);
+    for (const [rawOptics, response] of Object.entries(phase.overrides)) {
+      const optics = Number(rawOptics);
+      if (!knownRenderOptics(optics) || optics === RenderOptics.Default) {
+        throw new Error(`${name} has an unknown RenderOptics override`);
+      }
+      if (!(PHASE_OPTICS[name] as readonly number[]).includes(optics)) {
+        throw new Error(`${name} has a phase-incompatible RenderOptics override`);
+      }
+      validateProfile(`${name} RenderOptics.${optics}`, response);
+    }
+  }
+}
+
+function glslFloat(value: number): string {
+  return Number.isInteger(value) ? `${value}.0` : `${value}`;
+}
+
+function glslProfile(value: MaterialAppearanceProfile): string {
+  return `vec4(${value.map(glslFloat).join(', ')})`;
+}
+
+function orderedOverrides(
+  profiles: MaterialAppearancePhaseProfiles,
+): readonly (readonly [number, MaterialAppearanceProfile])[] {
+  return Object.entries(profiles.overrides)
+    .map(([rawOptics, response]) => [Number(rawOptics), response] as const)
+    .sort(([left], [right]) => left - right);
+}
+
+/**
+ * Deterministically emits the compact selector embedded by MATERIAL_BODY_FINISH_GLSL.
+ * It is evaluated while assembling shader source, never per fragment; generated GLSL
+ * contains only enum-owned numeric constants and arithmetic-only returns.
+ */
+export function buildMaterialAppearanceProfileGLSLSelector(
+  profiles: MaterialAppearanceProfiles = MATERIAL_APPEARANCE_PROFILES,
+): string {
+  validateMaterialAppearanceProfiles(profiles);
+  const lines = [
+    'vec4 materialBodyFinishParameters(float phase, float optics, float enabled) {',
+    '  if (enabled < 0.5 || optics < 0.5) return vec4(1.0);',
+  ];
+
+  for (const { name, code } of PHASES) {
+    const phaseProfiles = profiles[name];
+    if (code === MaterialAppearancePhaseCode.Powder) lines.push('  if (phase < 0.5) {');
+    else if (code === MaterialAppearancePhaseCode.Liquid) lines.push('  if (phase < 1.5) {');
+    else lines.push('  {');
+    for (const [optics, response] of orderedOverrides(phaseProfiles)) {
+      lines.push(`    if (abs(optics - ${glslFloat(optics)}) < 0.5) return ${glslProfile(response)};`);
+    }
+    lines.push(`    return ${glslProfile(phaseProfiles.default)};`);
+    lines.push('  }');
+  }
+  lines.push('}');
+  return lines.join('\n');
+}
+
+/** Validated once at module initialization, before either WebGL program exists. */
+export const MATERIAL_APPEARANCE_PROFILE_GLSL_SELECTOR =
+  buildMaterialAppearanceProfileGLSLSelector();

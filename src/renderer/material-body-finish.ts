@@ -1,3 +1,5 @@
+import { MATERIAL_APPEARANCE_PROFILE_GLSL_SELECTOR } from './material-appearance-profiles';
+
 /**
  * Scale-safe RGB finish shared by the normal and compact WebGL compositors.
  *
@@ -30,28 +32,7 @@ float liquidBodyFinishDepth(
 // Callers evaluate this once and reuse it, which matters when SwiftShader must
 // shade roughly fifteen million true-8x fragments. The closed numeric values
 // are RenderOptics classes, never exact material IDs.
-vec4 materialBodyFinishParameters(float phase, float optics, float enabled) {
-  if (enabled < 0.5 || optics < 0.5) return vec4(1.0);
-  if (phase < 0.5) {
-    if (abs(optics - 13.0) < 0.5) return vec4(1.24, 0.82, 1.04, 1.22);
-    if (abs(optics - 14.0) < 0.5) return vec4(0.72, 1.30, 1.26, 0.64);
-    if (abs(optics - 15.0) < 0.5) return vec4(1.32, 1.08, 0.92, 0.58);
-    return vec4(0.90, 1.10, 1.08, 0.80);
-  }
-  if (phase < 1.5) {
-    if (abs(optics - 1.0) < 0.5) return vec4(1.10, 0.86, 0.82, 1.18);
-    if (abs(optics - 2.0) < 0.5) return vec4(0.94, 1.12, 1.24, 0.72);
-    if (abs(optics - 3.0) < 0.5) return vec4(1.16, 1.02, 1.16, 1.02);
-    if (abs(optics - 4.0) < 0.5) return vec4(0.78, 0.82, 1.30, 0.54);
-    if (abs(optics - 16.0) < 0.5) return vec4(1.26, 0.74, 0.78, 1.28);
-    if (abs(optics - 17.0) < 0.5) return vec4(1.34, 1.10, 0.92, 0.58);
-    if (abs(optics - 18.0) < 0.5) return vec4(0.86, 1.16, 1.22, 0.66);
-    return vec4(1.0);
-  }
-  if (abs(optics - 5.0) < 0.5) return vec4(0.74, 1.28, 1.12, 0.64);
-  if (abs(optics - 6.0) < 0.5) return vec4(1.16, 0.76, 0.76, 1.28);
-  return vec4(1.0);
-}
+${MATERIAL_APPEARANCE_PROFILE_GLSL_SELECTOR}
 
 vec3 applyMaterialBodyFinish(
   vec3 color,
