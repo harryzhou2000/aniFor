@@ -4393,13 +4393,14 @@ deployment, exact live resource closure, hosted Water capture, and portable
 verification. Keep the test timeout unchanged unless a separate reliability
 decision is made.
 
-The next authoring seam is compile-time Material Appearance Profiles. Move the
+The compile-time Material Appearance Profiles authoring seam moves the
 same phase defaults and `RenderOptics` overrides into one frozen renderer-only
 module, validate every four-lane response and phase/class pairing, and emit the
 existing `materialBodyFinishParameters` GLSL selector deterministically. This
 makes a broad family response one typed data edit instead of handwritten shader
 branch surgery. It must preserve the selector arithmetic, palette and style
-formats, all normal/compact call sites, permissive Canvas fallback, and the
+formats, and all normal/compact call sites. Canvas fallback topology remains
+independent; only direct optical transport lanes may be projected. Preserve the
 zero-new-resource/topology contract. Historical PNG hashes remain irrelevant;
 use focused profile/source checks, production shader compilation, current-only
 atlas inspection, and real 2x/8x completed-frame receipts.
@@ -4409,6 +4410,16 @@ That authoring seam is live at exact revision
 `31366038724`. The build restored 269/270 C++ compilations from ccache; Pages,
 the exact 19-resource closure, hosted Water capture, and portable verification
 all passed.
+
+The current shared-runtime projection resolves that same frozen phase/class
+profile without allocation and mirrors the GLSL default and identity behavior.
+Canvas uses only fill as an absorption multiplier and transmission as a scatter
+multiplier inside its existing liquid/gas optical-volume helper. Key and pigment
+response, RGB lifts, rims, mesostrata, topology, support, and alpha remain owned
+by each backend. This is a conservative Canvas adapter, not a shader rewrite or
+a claim of arithmetic parity: canonical normal and compact WebGL source remains
+unchanged. Add no sampler, texture, field, upload, target, pass, allocation, or
+output-scale resource.
 
 The active framework increment extends the generated appearance response into
 reconstructed gas and liquid volumes. Reconstructed pixels remain presentation

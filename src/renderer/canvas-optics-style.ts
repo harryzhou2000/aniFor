@@ -1,4 +1,5 @@
 import { RenderOptics } from './render-optics';
+import { resolveMaterialAppearanceProfile } from './material-appearance-profiles';
 
 /**
  * Apply the shared optical class to a semantic Canvas volume sample. The caller
@@ -66,6 +67,13 @@ export function shadeCanvasOpticalVolume(
     greenLift = 1;
     blueLift = 3;
   }
+
+  // These are the only shared lanes with direct Canvas equivalents. Keep the
+  // backend-specific RGB lifts, rim work, pigment retention, and topology
+  // outside this adapter so one typed profile edit cannot double-apply them.
+  const finishResponse = resolveMaterialAppearanceProfile(phase, optics);
+  absorption *= finishResponse[1];
+  scatter *= finishResponse[3];
 
   const depth = density * absorption;
   const light = sheen * scatter;

@@ -99,6 +99,25 @@ export const MATERIAL_APPEARANCE_PROFILES: MaterialAppearanceProfiles = Object.f
   }),
 });
 
+const MATERIAL_APPEARANCE_IDENTITY_PROFILE = profile(1, 1, 1, 1);
+
+/**
+ * Allocation-free runtime projection of the same phase/class vocabulary that
+ * generates the WebGL selector. Canvas consumers may use only lanes with a
+ * direct equivalent in their own transport; this resolver does not imply that
+ * shader key, pigment, or topology arithmetic should be copied into Canvas.
+ */
+export function resolveMaterialAppearanceProfile(
+  phase: MaterialAppearancePhase,
+  optics: number,
+): MaterialAppearanceProfile {
+  if (!knownRenderOptics(optics) || optics === RenderOptics.Default) {
+    return MATERIAL_APPEARANCE_IDENTITY_PROFILE;
+  }
+  const phaseProfiles = MATERIAL_APPEARANCE_PROFILES[phase];
+  return phaseProfiles.overrides[optics as RenderOptics] ?? phaseProfiles.default;
+}
+
 function knownRenderOptics(optics: number): boolean {
   return Number.isInteger(optics)
     && optics >= RenderOptics.Default

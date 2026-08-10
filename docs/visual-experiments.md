@@ -60,6 +60,33 @@ Evidence:
 - `npm run visual-lab:review -- --cohort=liquid-motion` remains the normal
   current-only review loop for visual preference.
 
+## Shared material appearance profile projection
+
+One frozen phase/class source now owns the four authored material appearance
+lanes. It deterministically generates the normal/compact WebGL selector and
+also exposes an allocation-free runtime resolver with matching class, phase,
+default, and identity behavior. This keeps broad family tuning declarative
+without introducing a second material-ID switch.
+
+Canvas deliberately consumes only the two lanes with direct equivalents in
+its existing liquid/gas transport: fill scales absorption and transmission
+scales scatter. Key and pigment response, RGB lifts, rims, mesostrata,
+topology, support, alpha, and ownership remain backend-specific. WebGL stays
+canonical and its generated source is unchanged; the runtime projection adds
+no sampler, texture, field, upload, target, pass, or allocation.
+
+Evidence:
+
+- `material-appearance-profiles.test.ts` checks validation, deterministic GLSL
+  emission, frozen runtime selection, phase fallback, and defensive identity.
+- `canvas-optics-style.test.ts` proves that only fill and transmission scale the
+  existing absorption/scatter calculation while Canvas RGB lifts remain local.
+- `canvas-liquid-light.test.ts` and `canvas-atmosphere-relief.test.ts` retain
+  liquid/gas fallback behavior. The focused renderer set passes 46 tests.
+- `npm run build` passes with the exact 19-resource production closure; the
+  Canvas production topology audit and WebGL completed-frame receipt both pass
+  with zero browser errors.
+
 ## Settled earth powder bodies
 
 The canonical normal WebGL compositor now treats a packed, temporally settled

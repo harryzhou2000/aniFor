@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { shadeCanvasOpticalVolume } from './canvas-optics-style';
 import { RenderOptics, RENDER_OPTICS_CLASS_COUNT } from './render-optics';
+import { resolveMaterialAppearanceProfile } from './material-appearance-profiles';
 
 describe('Canvas optical volume styling', () => {
   it('differentiates clear and absorbing gases without touching alpha', () => {
@@ -12,6 +13,15 @@ describe('Canvas optical volume styling', () => {
     expect(clean[2]).toBeGreaterThan(clean[0]);
     expect(clean[3]).toBe(91);
     expect(soot[3]).toBe(91);
+  });
+
+  it('adapts only shared absorption and transmission lanes', () => {
+    const output = new Float32Array(3);
+    const response = resolveMaterialAppearanceProfile('liquid', RenderOptics.Aqueous);
+    shadeCanvasOpticalVolume(output, 120, 135, 150, RenderOptics.Aqueous, 'liquid', 5, 4);
+    expect(output[0]).toBeCloseTo(120 - 5 * 2.1 * response[1] + 4 * 1.35 * response[3]);
+    expect(output[1]).toBeCloseTo(137 - 5 * 2.1 * response[1] + 4 * 1.35 * response[3]);
+    expect(output[2]).toBeCloseTo(155 - 5 * 2.1 * response[1] + 4 * 1.35 * response[3]);
   });
 
   it('gives all authored liquid optics families distinct RGB responses', () => {

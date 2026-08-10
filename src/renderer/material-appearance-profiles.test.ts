@@ -6,6 +6,7 @@ import {
   MATERIAL_APPEARANCE_PROFILES,
   MATERIAL_APPEARANCE_PROFILE_MAXIMUM,
   MATERIAL_APPEARANCE_PROFILE_MINIMUM,
+  resolveMaterialAppearanceProfile,
   validateMaterialAppearanceProfiles,
   type MaterialAppearanceProfiles,
 } from './material-appearance-profiles';
@@ -73,5 +74,18 @@ describe('material appearance profiles', () => {
     expect(first).toContain('if (abs(optics - 5.0) < 0.5) return vec4(0.74, 1.28, 1.12, 0.64);');
     expect(first).toContain('if (enabled < 0.5 || optics < 0.5) return vec4(1.0);');
     expect(first).not.toContain('Material.');
+  });
+
+  it('resolves the same frozen phase override or fallback without allocating', () => {
+    const aqueous = resolveMaterialAppearanceProfile('liquid', RenderOptics.Aqueous);
+    expect(aqueous).toBe(MATERIAL_APPEARANCE_PROFILES.liquid.overrides[RenderOptics.Aqueous]);
+    expect(resolveMaterialAppearanceProfile('liquid', RenderOptics.Aqueous)).toBe(aqueous);
+    expect(resolveMaterialAppearanceProfile('liquid', RenderOptics.CleanGas))
+      .toBe(MATERIAL_APPEARANCE_PROFILES.liquid.default);
+    const identity = resolveMaterialAppearanceProfile('gas', RenderOptics.Default);
+    expect(identity).toEqual([1, 1, 1, 1]);
+    expect(Object.isFrozen(identity)).toBe(true);
+    expect(resolveMaterialAppearanceProfile('gas', -1)).toBe(identity);
+    expect(resolveMaterialAppearanceProfile('gas', 255)).toBe(identity);
   });
 });

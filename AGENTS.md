@@ -214,9 +214,11 @@ across the body and volume helpers; never dispatch on exact material IDs or
 duplicate the response in normal and compact shaders. Palette RGB remains the
 species tint, while the class controls crystalline/sooty/metallic granular,
 aqueous/oily/corrosive/molten/cryogenic/metallic/viscous liquid, and clean/sooty
-gas response. Keep this RGB-only: support, alpha, topology, contacts, semantic
-ownership, and Canvas fallback are unchanged, with no new sampler, texture,
-field, upload, target, pass, or output-scale allocation. Real 2x and true 8x
+gas response. Keep this RGB-only: support, alpha, topology, contacts, and
+semantic ownership are unchanged. Canvas retains its independent topology,
+support, and alpha path and may project only response lanes with direct optical
+transport equivalents. Add no new sampler, texture, field, upload, target,
+pass, or output-scale allocation. Real 2x and true 8x
 SwiftShader completed-frame receipts are the shader-health proof. The material
 atlas retains exact 81-cell semantic ownership and meaningful contrast, but its
 rounded smooth projection is not pinned to the historical 70% blank-difference
@@ -242,6 +244,16 @@ That compile-time appearance-profile seam is deployed at exact revision
 `70cfeea4cd93010d4445d278bd5d1ea5346110e3` by workflow run `31366038724`;
 the cached build restored 269/270 C++ compilations, and Pages deployment, exact
 19-resource closure, hosted Water capture, and portable verification passed.
+
+The shared appearance profile also has one allocation-free runtime resolver
+that mirrors the generated GLSL phase/class/default/identity selection. Canvas
+may consume only the lanes that have direct equivalents in its existing
+optical-volume helper: fill scales absorption and transmission scales scatter.
+Key/pigment response, RGB lifts, rims, mesostrata, and topology remain
+backend-specific so the profile is not a cross-backend arithmetic rewrite.
+Normal and compact WebGL remain canonical and their generated shader source is
+unchanged. This projection adds no sampler, texture, field, upload, target,
+pass, allocation, alpha, support, or ownership change.
 
 The current reconstructed-volume increment carries those authored optics past
 semantic particle centres without granting reconstructed pixels semantic
