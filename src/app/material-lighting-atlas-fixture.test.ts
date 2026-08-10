@@ -18,8 +18,11 @@ describe('material-lighting atlas fixture', () => {
     expect(at(liquid.water.x, liquid.water.y)).toBe(Material.Water);
     expect(at(liquid.oil.x, liquid.oil.y)).toBe(Material.Oil);
     expect(at(liquid.waterHole.x, liquid.waterHole.y)).toBe(Material.Empty);
-    expect(at(gas.smoke.x, gas.smoke.y)).toBe(Material.Smoke);
-    expect(at(gas.fog.x + gas.fog.width - 1, gas.fog.y + gas.fog.height - 1)).toBe(Material.FOG);
+    expect(at(gas.smoke.probe.x, gas.smoke.probe.y)).toBe(Material.Smoke);
+    expect(at(gas.smoke.bounds.x, gas.smoke.bounds.y)).toBe(Material.Empty);
+    expect(at(gas.fog.probe.x, gas.fog.probe.y)).toBe(Material.FOG);
+    expect(at(gas.fog.bounds.x + gas.fog.bounds.width - 1, gas.fog.bounds.y + gas.fog.bounds.height - 1))
+      .toBe(Material.Empty);
     expect(at(gas.sparseSmoke[0].x, gas.sparseSmoke[0].y)).toBe(Material.Smoke);
     expect(at(guardedBlank.x, guardedBlank.y)).toBe(Material.Empty);
   });
