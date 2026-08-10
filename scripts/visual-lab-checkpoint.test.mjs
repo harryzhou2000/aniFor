@@ -21,8 +21,105 @@ describe('Visual checkpoint', () => {
       .toThrow('no compact audit');
     expect(parseVisualCheckpointArguments(['--cohort=atmosphere']))
       .toEqual({ cohort: 'atmosphere' });
+    expect(parseVisualCheckpointArguments([
+      '--cohort=atmosphere', '--canvas-companion=1',
+    ])).toEqual({ cohort: 'atmosphere', canvasCompanion: true });
+    expect(parseVisualCheckpointArguments([
+      '--canvas-companion=0', '--cohort=atmosphere',
+    ])).toEqual({ cohort: 'atmosphere', canvasCompanion: false });
+    expect(() => parseVisualCheckpointArguments([
+      '--cohort=atmosphere', '--canvas-companion=yes',
+    ])).toThrow('must be 0 or 1');
     expect(() => parseVisualCheckpointArguments(['--help', '--cohort=atmosphere']))
       .toThrow('cannot be combined');
+  });
+
+  it('adds an opt-in noncanonical Canvas companion after canonical compact success', async () => {
+    const repositoryRoot = await mkdtemp(path.join(tmpdir(), 'visual-checkpoint-test-'));
+    temporaryDirectories.push(repositoryRoot);
+    const reviewRoot = path.join(repositoryRoot, 'review');
+    const canvasRoot = path.join(reviewRoot, 'canvas-companion');
+    await mkdir(reviewRoot);
+    await Promise.all([
+      writeFile(path.join(reviewRoot, 'experiment-board.html'), 'experiment'),
+      writeFile(path.join(reviewRoot, 'index.html'), 'captures'),
+      writeFile(path.join(reviewRoot, 'recipe-set.json'), '{}'),
+      mkdir(canvasRoot),
+    ]);
+    await Promise.all([
+      writeFile(path.join(canvasRoot, 'index.html'), 'canvas'),
+      writeFile(path.join(canvasRoot, 'canvas-companion.json'), '{}'),
+    ]);
+    const calls = [];
+    const result = await runVisualCheckpoint([
+      '--cohort=atmosphere', '--canvas-companion=1',
+    ], {
+      repositoryRoot,
+      runDeveloperReview: async () => ({
+        ok: true,
+        reviewRoot,
+        links: {
+          experimentBoard: pathToFileURL(path.join(reviewRoot, 'experiment-board.html')).href,
+          contactSheet: pathToFileURL(path.join(reviewRoot, 'index.html')).href,
+        },
+        result: { recipeSet: { path: path.join(reviewRoot, 'recipe-set.json') } },
+      }),
+      runCompactAudit: async () => { calls.push('compact'); },
+      runCanvasCompanion: async (options) => {
+        calls.push('canvas');
+        expect(options.recipeSetPath).toBe(path.join(reviewRoot, 'recipe-set.json'));
+        expect(options.reviewRoot).toBe(reviewRoot);
+        return {
+          ok: true,
+          index: path.join(canvasRoot, 'index.html'),
+          receipt: path.join(canvasRoot, 'canvas-companion.json'),
+        };
+      },
+      stdout: { write() {} }, stderr: { write() {} },
+    });
+    expect(calls).toEqual(['compact', 'canvas']);
+    expect(result.manifest.canvas).toEqual({
+      requested: true,
+      passed: true,
+      canonical: false,
+      comparison: 'none',
+      selection: 'baseline-only',
+      index: 'canvas-companion/index.html',
+      receipt: 'canvas-companion/canvas-companion.json',
+    });
+  });
+
+  it('records Canvas companion failure without failing the canonical checkpoint', async () => {
+    const repositoryRoot = await mkdtemp(path.join(tmpdir(), 'visual-checkpoint-test-'));
+    temporaryDirectories.push(repositoryRoot);
+    const reviewRoot = path.join(repositoryRoot, 'review');
+    await mkdir(reviewRoot);
+    await Promise.all([
+      writeFile(path.join(reviewRoot, 'experiment-board.html'), 'experiment'),
+      writeFile(path.join(reviewRoot, 'index.html'), 'captures'),
+      writeFile(path.join(reviewRoot, 'recipe-set.json'), '{}'),
+    ]);
+    const result = await runVisualCheckpoint([
+      '--cohort=powder-style', '--canvas-companion=1',
+    ], {
+      repositoryRoot,
+      runDeveloperReview: async () => ({
+        ok: true,
+        reviewRoot,
+        links: {
+          experimentBoard: pathToFileURL(path.join(reviewRoot, 'experiment-board.html')).href,
+          contactSheet: pathToFileURL(path.join(reviewRoot, 'index.html')).href,
+        },
+        result: { recipeSet: { path: path.join(reviewRoot, 'recipe-set.json') } },
+      }),
+      runCompactAudit: async () => {},
+      runCanvasCompanion: async () => { throw new Error('fallback unavailable'); },
+      stdout: { write() {} }, stderr: { write() {} },
+    });
+    expect(result.ok).toBe(true);
+    expect(result.manifest.canvas).toMatchObject({
+      requested: true, passed: false, canonical: false, error: 'fallback unavailable',
+    });
   });
 
   it('runs the trusted normal review before its existing compact audit and writes local links only after success', async () => {

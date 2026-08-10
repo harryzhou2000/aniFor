@@ -4442,6 +4442,19 @@ evidence but publishes no checkpoint. Interrupts must terminate the detached
 compact process group before returning. Normal Visual Lab remains a 1x-4x HDR
 experiment; the coordinator does not reinterpret true 8x as OFF/A/B evidence.
 
+The next local framework increment adds an optional current-only Canvas
+companion to that checkpoint without widening Visual Lab. With
+`--canvas-companion=1`, canonical normal and compact stages still run first;
+then the coordinator reads the exact retained recipe-set sidecar and captures
+one forced-Canvas baseline per distinct typed fixture/scale. It reuses the
+hermetic 918x576 crop, app-owned fixture registry, shared Chrome host with fresh
+contexts, browser-error collection, and renderer/target/host teardown. It never
+stages OFF/A/B, creates a result identity, enters the portable package,
+compares against WebGL, or blocks a successful canonical checkpoint. Its local
+static index and receipt are explicitly `canonical:false`, `comparison:none`,
+`selection:baseline-only`, and `current-only-unhashed`. This makes the
+permissive fallback visible during material work while keeping WebGL canonical.
+
 The deployed reconstructed-volume increment extends the generated appearance response into
 reconstructed gas and liquid volumes. Reconstructed pixels remain presentation
 support rather than semantic particles. Gas resolves its optics from the

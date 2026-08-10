@@ -14,6 +14,7 @@ import { isDetachedProcessGroupAlive } from './detached-process.mjs';
 import {
   buildVisualLabCaptureUrl,
   buildVisualLabCaptureUrlFromResolvedRequest,
+  buildVisualLabCanvasPreparationExpression,
   buildVisualLabStartupExpression,
   createVisualCaptureRequestResolver,
   createVisualLabDomainCatalog,
@@ -284,6 +285,29 @@ describe('Visual Lab fixture adapters', () => {
       captureDriver: 'powder-render-style', selection: 'grains',
       fixturePrepared: true, stagedBeforeWebGL: true,
     });
+  });
+
+  it('prepares a forced Canvas fixture without staging a visual variant', () => {
+    const adapter = resolveVisualCaptureRequest({
+      domain: 'liquid', target: 2, fixture: 'water-motion',
+    }).fixtureAdapter;
+    const calls = [];
+    const expression = buildVisualLabCanvasPreparationExpression(adapter);
+    const result = Function('window', 'document', `return ${expression};`)({
+      __ANIFOR_INPUT_AUDIT__: {
+        backend: () => ({ backend: 'canvas2d', reason: 'forced' }),
+        prepareVisualLabFixture: (fixture) => calls.push(`prepare:${fixture}`),
+        refreshPresentationFields: () => calls.push('refresh'),
+        setPreparedVisualCaptureVariant: () => calls.push('unexpected-selection'),
+      },
+    }, {
+      querySelector: () => ({ dataset: { scene: 'showcase' } }),
+    });
+    expect(result).toMatchObject({
+      fixture: 'water-motion', backend: 'canvas2d', backendReason: 'forced',
+      fixturePrepared: true,
+    });
+    expect(calls).toEqual(['prepare:water-motion', 'refresh']);
   });
 
   it('selects drivers by fixture when one domain hosts multiple controls', () => {

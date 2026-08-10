@@ -1,9 +1,13 @@
 import { spawn } from 'node:child_process';
-import { writeFile } from 'node:fs/promises';
+import { lstat, realpath, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { terminateDetachedProcess } from './detached-process.mjs';
+import {
+  formatCanvasCompanionError,
+  runVisualLabCanvasCompanion,
+} from './visual-lab-canvas-companion.mjs';
 import { runVisualLabDeveloperReview } from './visual-lab-developer-review.mjs';
 
 const MODULE_PATH = fileURLToPath(import.meta.url);
@@ -37,12 +41,15 @@ export const VISUAL_CHECKPOINTS = Object.freeze({
 });
 
 const HELP = `Usage:
-  node scripts/visual-lab-checkpoint.mjs --cohort=powder-style|atmosphere|liquid-motion
+  node scripts/visual-lab-checkpoint.mjs --cohort=powder-style|atmosphere|liquid-motion \\
+    [--canvas-companion=0|1]
 
 Runs one current-only normal WebGL developer review, then that cohort's existing
 true-8x compact audit against the same already-built dist/. It never changes
 Visual Lab's normal-HDR execution contract, result identities, or browser
-lifecycle. On success it writes checkpoint.json beside the retained review.`;
+lifecycle. The optional Canvas companion is a non-gating, baseline-only fallback
+diagnostic with no parity claim. On success it writes checkpoint.json beside the
+retained review.`;
 
 export function parseVisualCheckpointArguments(argv) {
   if (!Array.isArray(argv)) throw new TypeError('arguments must be an array');
@@ -50,14 +57,25 @@ export function parseVisualCheckpointArguments(argv) {
     if (argv.length !== 1) throw new Error('--help cannot be combined with checkpoint options');
     return Object.freeze({ help: true });
   }
-  if (argv.length !== 1 || !argv[0].startsWith('--cohort=')) {
+  if (argv.length < 1 || argv.length > 2) {
     throw new Error('Visual checkpoint requires exactly one --cohort=<name>');
   }
-  const cohort = argv[0].slice('--cohort='.length);
+  const cohortArguments = argv.filter((argument) => argument.startsWith('--cohort='));
+  const canvasArguments = argv.filter((argument) => argument.startsWith('--canvas-companion='));
+  if (cohortArguments.length !== 1 || cohortArguments.length + canvasArguments.length !== argv.length
+    || canvasArguments.length > 1) {
+    throw new Error('Visual checkpoint requires exactly one --cohort=<name>');
+  }
+  const cohort = cohortArguments[0].slice('--cohort='.length);
   if (!Object.hasOwn(VISUAL_CHECKPOINTS, cohort)) {
     throw new Error(`Visual checkpoint has no compact audit for ${JSON.stringify(cohort)}`);
   }
-  return Object.freeze({ cohort });
+  if (canvasArguments.length === 0) return Object.freeze({ cohort });
+  const canvasValue = canvasArguments[0].slice('--canvas-companion='.length);
+  if (canvasValue !== '0' && canvasValue !== '1') {
+    throw new Error('--canvas-companion must be 0 or 1');
+  }
+  return Object.freeze({ cohort, canvasCompanion: canvasValue === '1' });
 }
 
 const relativeReviewLink = (reviewRoot, link, label) => {
@@ -73,7 +91,21 @@ const relativeReviewLink = (reviewRoot, link, label) => {
   return relative.split(path.sep).join('/');
 };
 
-const writeCheckpoint = async (review, cohort, compact, filesystem) => {
+const relativeReviewFile = async (reviewRoot, file, label) => {
+  const absolute = path.resolve(file);
+  const details = await lstat(absolute);
+  if (details.isSymbolicLink() || !details.isFile()) {
+    throw new Error(`Visual checkpoint received invalid ${label}`);
+  }
+  const [canonicalRoot, canonicalFile] = await Promise.all([
+    realpath(reviewRoot), realpath(absolute),
+  ]);
+  return relativeReviewLink(
+    canonicalRoot, pathToFileURL(canonicalFile).href, label,
+  );
+};
+
+const writeCheckpoint = async (review, cohort, compact, canvas, filesystem) => {
   const manifest = {
     schema: 'anifor.visual-checkpoint/v1',
     cohort,
@@ -93,6 +125,7 @@ const writeCheckpoint = async (review, cohort, compact, filesystem) => {
       arguments: compact.argv.slice(1),
       passed: true,
     },
+    ...(canvas === undefined ? {} : { canvas }),
   };
   await filesystem.writeFile(
     path.join(review.reviewRoot, 'checkpoint.json'), `${JSON.stringify(manifest, null, 2)}\n`,
@@ -172,8 +205,57 @@ export async function runVisualCheckpoint(argv, runtime = {}) {
     });
     if (compactResult?.stdout) stdout.write(compactResult.stdout);
     if (compactResult?.stderr) stderr.write(compactResult.stderr);
+    let canvas;
+    if (parsed.canvasCompanion === true) {
+      try {
+        const expectedRecipeSetPath = path.join(review.reviewRoot, 'recipe-set.json');
+        if (path.resolve(review.result?.recipeSet?.path ?? '') !== expectedRecipeSetPath
+          || await relativeReviewFile(
+            review.reviewRoot, expectedRecipeSetPath, 'retained recipe set',
+          ) !== 'recipe-set.json') {
+          throw new Error('Canvas companion requires the exact retained recipe-set sidecar');
+        }
+        const canvasResult = await (
+          runtime.runCanvasCompanion ?? runVisualLabCanvasCompanion
+        )({
+          recipeSetPath: expectedRecipeSetPath,
+          bundle: path.join(repositoryRoot, 'dist', 'index.html'),
+          reviewRoot: review.reviewRoot,
+          gpu: 'swiftshader',
+          ...(runtime.signal === undefined ? {} : { signal: runtime.signal }),
+        });
+        if (canvasResult?.ok !== true) {
+          throw new Error('Canvas companion did not report success');
+        }
+        canvas = Object.freeze({
+          requested: true,
+          passed: true,
+          canonical: false,
+          comparison: 'none',
+          selection: 'baseline-only',
+          index: await relativeReviewFile(
+            review.reviewRoot, canvasResult.index, 'Canvas companion index',
+          ),
+          receipt: await relativeReviewFile(
+            review.reviewRoot, canvasResult.receipt, 'Canvas companion receipt',
+          ),
+        });
+        stdout.write(`Canvas fallback companion: ${pathToFileURL(canvasResult.index).href}\n`);
+      } catch (error) {
+        const message = formatCanvasCompanionError(error).slice(0, 1_000);
+        canvas = Object.freeze({
+          requested: true,
+          passed: false,
+          canonical: false,
+          comparison: 'none',
+          selection: 'baseline-only',
+          error: message,
+        });
+        stderr.write(`Canvas fallback companion unavailable (non-gating): ${message}\n`);
+      }
+    }
     const manifest = await writeCheckpoint(
-      review, parsed.cohort, compact, runtime.filesystem ?? { writeFile },
+      review, parsed.cohort, compact, canvas, runtime.filesystem ?? { writeFile },
     );
     const checkpointPath = path.join(review.reviewRoot, 'checkpoint.json');
     const checkpointLink = pathToFileURL(checkpointPath).href;

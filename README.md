@@ -92,6 +92,18 @@ the established compact audit and writes a local `checkpoint.json` beside the
 review only when both pass. The manifest is navigation convenience, not a
 portable result identity, baseline, comparison, or deployment gate.
 
+Add `--canvas-companion=1` when fallback diagnosis is useful:
+
+```sh
+npm run visual-lab:checkpoint -- \
+  --cohort=<powder-style|atmosphere|liquid-motion> --canvas-companion=1
+```
+
+After the canonical normal and compact stages pass, this captures one forced
+Canvas2D baseline for each distinct typed fixture/scale and adds a static local
+index. It never stages OFF/A/B, claims WebGL parity, enters a portable package,
+or blocks the canonical checkpoint if fallback capture is unavailable.
+
 Hashes in a completed package protect its own files from tampering. They are
 not a cross-revision visual requirement: changing pixels is reviewed by a human
 or agent from the current board, while missing, unsafe, incomplete, or

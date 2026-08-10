@@ -275,6 +275,18 @@ interrupts and prove the detached compact process group is gone before success.
 Visual Lab remains normal WebGL at 1x-4x; this coordinator must never imply that
 its OFF/A/B experiment ran through the separate true-8x compositor.
 
+The optional current-only Canvas companion belongs only to that local
+checkpoint envelope. `--canvas-companion=1` runs after canonical normal and
+compact success, resolves the review's exact recipe-set sidecar, and captures
+one forced-Canvas baseline for each distinct typed fixture/scale through the
+same hermetic crop and strict Chrome/context cleanup. Canvas never becomes a
+Visual Lab variant: do not stage OFF/A/B, create a result record, add it to the
+batch/comparison/verifier, assert WebGL parity, or make its failure block the
+canonical checkpoint. Its static index and receipt must say `canonical:false`,
+`comparison:none`, `selection:baseline-only`, and `current-only-unhashed`.
+Normal WebGL remains canonical; permissive Canvas evidence is for diagnosing
+fallback appearance and coverage only.
+
 The deployed reconstructed-volume increment carries those authored optics past
 semantic particle centres without granting reconstructed pixels semantic
 ownership. Gas reuses the existing propagated clean/sooty style plane and one

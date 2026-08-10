@@ -488,3 +488,51 @@ export function buildVisualLabStartupExpression(
     };
   })()`;
 }
+
+/**
+ * Prepares one already-resolved fixture in an explicitly forced Canvas page.
+ * This is diagnostic-only: it activates no capture variant and grants no new
+ * execution authority beyond the same closed app-owned fixture registry used
+ * by the normal WebGL startup transaction.
+ */
+export function buildVisualLabCanvasPreparationExpression(adapter) {
+  const descriptor = JSON.stringify({
+    name: adapter.name,
+    scene: adapter.scene,
+    preparationLabel: visualLabFixturePreparationLabel(adapter),
+  });
+  return `(() => {
+    const audit = window.__ANIFOR_INPUT_AUDIT__;
+    if (!audit) return false;
+    const adapter = ${descriptor};
+    const observedScene = document.querySelector('[data-scene]')?.dataset.scene;
+    const backend = audit.backend();
+    const result = {
+      fixture: adapter.name,
+      scene: observedScene,
+      preparation: adapter.preparationLabel,
+      fixturePrepared: false,
+      backend: backend.backend,
+      backendReason: backend.reason,
+      canvasSequenceBefore: audit.canvasPresentationTiming?.()?.sequence ?? 0,
+    };
+    if (observedScene !== adapter.scene) return { ...result, failure: 'scene-mismatch' };
+    if (backend.backend !== 'canvas2d' || backend.reason !== 'forced') {
+      return { ...result, failure: 'forced-canvas-required' };
+    }
+    if (typeof audit.prepareVisualLabFixture !== 'function') {
+      return { ...result, failure: 'missing-preparer' };
+    }
+    try {
+      audit.prepareVisualLabFixture(adapter.name);
+      audit.refreshPresentationFields();
+    } catch (error) {
+      return {
+        ...result,
+        failure: 'preparer-threw',
+        preparationError: String(error?.message ?? error),
+      };
+    }
+    return { ...result, fixturePrepared: true };
+  })()`;
+}

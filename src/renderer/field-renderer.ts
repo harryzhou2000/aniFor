@@ -476,7 +476,12 @@ export class MaterialRenderer {
     return new Promise((resolve) => globalThis.setTimeout(resolve, 100));
   }
 
-  /** Audit-only counterpart whose acknowledgement proves presenter release. */
+  /**
+   * Audit-only counterpart whose acknowledgement proves renderer release.
+   * Canonical WebGL evidence still requires strict presenter destruction; an
+   * explicitly forced Canvas diagnostic has no presenter and may acknowledge
+   * only its own bounded fallback disposal.
+   */
   async disposeForAudit(): Promise<void> {
     if (this.disposed) throw new Error('Renderer was already disposed before strict audit teardown');
     this.disposed = true;
@@ -484,8 +489,10 @@ export class MaterialRenderer {
     this.presenter = undefined;
     let failure: Error | undefined;
     try {
-      if (!presenter) throw new Error('Strict audit teardown requires an active WebGL presenter');
-      presenter.destroyForAudit();
+      if (presenter) presenter.destroyForAudit();
+      else if (this.backend?.backend !== 'canvas2d' || this.backend.reason !== 'forced') {
+        throw new Error('Strict audit teardown requires an active WebGL presenter');
+      }
     } catch (error) {
       failure = error instanceof Error ? error : new Error(String(error));
     }

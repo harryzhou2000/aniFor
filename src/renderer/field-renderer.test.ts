@@ -304,6 +304,19 @@ describe('field renderer layout scheduling', () => {
     Object.assign(missingPresenter, { disposed: false, presenter: undefined });
     await expect(missingPresenter.disposeForAudit()).rejects.toThrow(/active WebGL presenter/);
 
+    const forcedCanvas = Object.create(MaterialRenderer.prototype) as {
+      disposed: boolean;
+      presenter?: undefined;
+      backend: { backend: 'canvas2d'; label: 'Canvas 2D'; reason: 'forced' };
+      disposeForAudit(): Promise<void>;
+    };
+    Object.assign(forcedCanvas, {
+      disposed: false,
+      presenter: undefined,
+      backend: { backend: 'canvas2d', label: 'Canvas 2D', reason: 'forced' },
+    });
+    await expect(forcedCanvas.disposeForAudit()).resolves.toBeUndefined();
+
     const destroy = vi.fn(() => { throw new Error('ordinary navigation race'); });
     const ordinary = Object.create(MaterialRenderer.prototype) as {
       disposed: boolean;
