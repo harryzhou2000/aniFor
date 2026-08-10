@@ -14,6 +14,8 @@ const NEIGHBOUR_WEIGHT = new Uint8Array([2, 2, 2, 2, 1, 1, 1, 1]);
  */
 export class LiquidDensityField {
   readonly bytes: Uint8Array;
+  /** Nearest-filtered dominant species for exact and reconstructed support. */
+  readonly identityBytes: Uint8Array;
   private readonly seed: Float32Array;
   private readonly horizontal: Float32Array;
   private readonly blurred: Float32Array;
@@ -28,6 +30,7 @@ export class LiquidDensityField {
   ) {
     const cells = width * height;
     this.bytes = new Uint8Array(cells * 4);
+    this.identityBytes = new Uint8Array(cells);
     this.seed = new Float32Array(cells);
     this.horizontal = new Float32Array(cells);
     this.blurred = new Float32Array(cells);
@@ -52,17 +55,20 @@ export class LiquidDensityField {
         this.bytes[offset + 1] = this.colorByMaterial[color + 1];
         this.bytes[offset + 2] = this.colorByMaterial[color + 2];
         this.bytes[offset + 3] = Math.round(density * 255);
+        this.identityBytes[index] = liquid;
       } else {
         this.bytes[offset] = 0;
         this.bytes[offset + 1] = 0;
         this.bytes[offset + 2] = 0;
         this.bytes[offset + 3] = 0;
+        this.identityBytes[index] = 0;
       }
     }
   }
 
   get allocatedByteLength(): number {
-    return this.bytes.byteLength + this.seed.byteLength + this.horizontal.byteLength + this.blurred.byteLength
+    return this.bytes.byteLength + this.identityBytes.byteLength
+      + this.seed.byteLength + this.horizontal.byteLength + this.blurred.byteLength
       + this.speciesSupport.byteLength + this.touchedSpecies.byteLength;
   }
 

@@ -238,6 +238,27 @@ transmission. This source-generation seam must preserve the emitted shader
 arithmetic, six normal/compact call sites, palette/style formats, Canvas
 fallback, and all resource/topology invariants; never turn it into a runtime
 material-ID switch or a new GPU lookup.
+That compile-time appearance-profile seam is deployed at exact revision
+`70cfeea4cd93010d4445d278bd5d1ea5346110e3` by workflow run `31366038724`;
+the cached build restored 269/270 C++ compilations, and Pages deployment, exact
+19-resource closure, hosted Water capture, and portable verification passed.
+
+The current reconstructed-volume increment carries those authored optics past
+semantic particle centres without granting reconstructed pixels semantic
+ownership. Gas reuses the existing propagated clean/sooty style plane and one
+generated closed style-to-optics mapping. Liquid uses a dedicated
+native-resolution nearest-filtered R8 identity plane: never multiplex material
+identity into the boundary/depth byte, overwrite semantic material/family, or
+invent vertical optical depth for reconstructed support. Exact semantic cells
+retain palette optics and semantic depth; uniquely supported reconstructed
+liquid receives only the connected-field body finish selected by its identity.
+Tied or absent support remains identity zero. Keep both bridges RGB-only and
+guard sampler work behind eligible volume/body-finish branches. Normal WebGL
+and direct true 8x consume the same generated finish response while preserving
+alpha, support, holes, chimneys, strands, unlike contacts, walls, Canvas
+fallback, and the compact compositor's single output target. Validate with
+current-only Water/Oil inspection, focused topology audits, and real 2x/8x
+completed-frame receipts; do not restore cross-revision PNG pinning.
 Keep one capture implementation;
 do not replace integrity hashing, path containment, lifecycle checks, or runtime
 closure. Visual preference needs a retained board and human/agent inspection,

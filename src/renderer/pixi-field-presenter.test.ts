@@ -380,6 +380,9 @@ describe('Pixi presenter startup configuration', () => {
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('float gasCompactMacroRelief(vec2 position)');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('float liquidBodyFinishDepth(');
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'float gasBodyFinishOptics(float semanticOptics, float gasIdentityStyle)',
+    );
     expect(POWDER_SMOOTH_COVERAGE_GLSL).toContain(
       'float powderSmoothCoverage(float density, vec2 gradient)',
     );
@@ -390,15 +393,23 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).toContain('${POWDER_SMOOTH_COVERAGE_GLSL}');
     expect(eight).toContain('${POWDER_SMOOTH_COVERAGE_GLSL}');
     expect(normal.match(/applyMaterialBodyFinish\(/g)).toHaveLength(3);
-    expect(eight.match(/applyMaterialBodyFinish\(/g)).toHaveLength(3);
+    expect(eight.match(/applyMaterialBodyFinish\(/g)).toHaveLength(5);
     expect(normal.match(/applyFluidVolumeLobe\(/g)).toHaveLength(2);
-    expect(eight.match(/applyFluidVolumeLobe\(/g)).toHaveLength(2);
+    expect(eight.match(/applyFluidVolumeLobe\(/g)).toHaveLength(4);
     expect(normal.match(/materialBodyFinishParameters\(/g)).toHaveLength(3);
-    expect(eight.match(/materialBodyFinishParameters\(/g)).toHaveLength(3);
+    expect(eight.match(/materialBodyFinishParameters\(/g)).toHaveLength(5);
     expect(eight).toContain('gasCompactMacroRelief(grid)');
+    expect(eight).toContain('gasCompactMacroRelief(uv * uFieldSize - 0.5)');
+    expect(eight).toContain('gasBodyFinishOptics(0.0, gasIdentityStyle)');
+    expect(eight).toContain('gasBodyFinishOptics(optics, gasIdentityStyle)');
+    expect(normal).toContain('gasBodyFinishOptics(\n        optics, floor(gasStyleState.r * 255.0 + 0.5)');
     expect(normal).not.toContain('gasCompactMacroRelief(fieldPosition)');
     expect(normal).toContain('liquidBodyFinishDepth(\n        liquidDepth, liquidOpticalDepth');
     expect(eight).toContain('liquidBodyFinishDepth(\n        smoothstep(0.54, 0.90');
+    expect(normal).toContain('texture(uLiquidIdentityTexture, fieldUv)');
+    expect(normal).toContain('1.0, liquidFinishOptics, uMaterialBodyFinish');
+    expect(eight).toContain('texture(uLiquidIdentityTexture, uv)');
+    expect(eight).toContain('1.0, reconstructedOptics, uMaterialBodyFinish');
     expect(normal).toContain('uniform float uGasBodyVfx;');
     expect(normal).toContain('uniform float uGasMotionVfx;');
     expect(normal).toContain('uniform float uCflmColdFlameVfx;');
@@ -458,7 +469,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(gasVfx).toContain('gasVfxBodySupport');
     expect(normal).toContain('gasStyleState = texture(uAtmosphereStyleTexture, fieldUv)');
     expect(normal.match(/texture\(uAtmosphereStyleTexture/g)).toHaveLength(1);
-    expect(normal).toContain('if (uGasIdentityStyling > 0.5 || uGasMotionVfx > 0.5)');
+    expect(normal).toContain('if (uGasIdentityStyling > 0.5 || uGasMotionVfx > 0.5\n      || uMaterialBodyFinish > 0.5)');
     expect(gasVfx).toContain('if (uGasMotionVfx > 0.5)');
     expect(gasVfx).toContain('floor(gasStyleState.gb * 255.0 + vec2(0.5))');
     expect(gasVfx).toContain('smoothstep(0.45, 0.75, gasStyleState.a)');
@@ -5412,6 +5423,8 @@ describe('Pixi presenter startup configuration', () => {
     const blockStart = source.indexOf('// Twenty ordinary, unusual, metallic, cryogenic, and radioactive liquids retain a world-anchored material signature');
     const blockEnd = source.indexOf('  } else {', blockStart);
     const block = source.slice(blockStart, blockEnd);
+    const identityBlockEnd = block.indexOf('    if (liquidVolume > 0.5');
+    const identityBlock = block.slice(0, identityBlockEnd);
     const ids = [...helper.matchAll(/material == (\d+)\.0/g)].map((match) => Number(match[1]));
     const dispatchStart = helper.indexOf('  if (material == 36.0 || material == 95.0)');
     const commonSetup = helper.slice(helper.indexOf(') {') + 3, dispatchStart);
@@ -5447,10 +5460,11 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('|| material == 104.0 || material == 202.0 || material == 207.0');
     expect(block).not.toContain('material == 54.0 || material == 55.0');
     expect(block).toContain('semanticSlope + volumeSlope');
-    expect(`${helper}${block}`).not.toContain('texture(');
-    expect(`${helper}${block}`).not.toMatch(/\balpha\s*[+*]?=/);
-    expect(`${helper}${block}`).not.toMatch(/\b(?:sin|pow)\s*\(/);
-    expect(`${helper}${block}`).not.toContain('uTime');
+    expect(identityBlockEnd).toBeGreaterThan(0);
+    expect(`${helper}${identityBlock}`).not.toContain('texture(');
+    expect(`${helper}${identityBlock}`).not.toMatch(/\balpha\s*[+*]?=/);
+    expect(`${helper}${identityBlock}`).not.toMatch(/\b(?:sin|pow)\s*\(/);
+    expect(`${helper}${identityBlock}`).not.toContain('uTime');
     expect(source).not.toContain('sampler2D uLiquidIdentityStyling');
   });
 
@@ -6619,7 +6633,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight.match(/texture\(uLiquidTexture, uv\)/g)).toHaveLength(1);
   });
 
-  it('restores true-8x liquid-air cohesion with an alpha-only trim and no extra samples', () => {
+  it('restores true-8x liquid-air cohesion with an alpha-only trim and bounded guarded samples', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');
     const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
@@ -6644,11 +6658,12 @@ describe('Pixi presenter startup configuration', () => {
     expect(block).toContain('min(liquid.a, liquidNeighbourMean) * 0.45');
     expect(block).toContain('clamp(liquidSilhouetteDensity / max(density, 0.001), 0.0, 1.0)');
     expect(block).not.toContain('texture(');
-    expect(packed).toContain('|| nativeWallForLiquidCohesion || nativeWallForLiquidSurfaceContour;');
+    expect(packed).toContain('|| nativeWallForLiquidCohesion');
+    expect(packed).toContain('|| nativeWallForLiquidSurfaceContour;');
     expect(alpha).toContain('uNativeWallsActive < 0.5 || nativeWall < 0.5');
     expect(alpha).toContain('alpha *= liquidCohesionAlphaScale;');
-    expect(eight.match(/texture\(uLiquidTexture, uv - vec2\(uTexel\.x, 0\.0\)\)/g)).toHaveLength(1);
-    expect(eight.match(/texture\(uLiquidTexture, uv \+ vec2\(uTexel\.x, 0\.0\)\)/g)).toHaveLength(1);
+    expect(eight.match(/texture\(uLiquidTexture, uv - vec2\(uTexel\.x, 0\.0\)\)/g)).toHaveLength(2);
+    expect(eight.match(/texture\(uLiquidTexture, uv \+ vec2\(uTexel\.x, 0\.0\)\)/g)).toHaveLength(2);
     // Empty-wall, packed-state, and translucent-backdrop composition retain
     // their three guarded reads; settled Smooth powder additionally reuses the
     // packed exterior-air G byte to reject authored internal holes.
@@ -6976,7 +6991,8 @@ describe('Pixi presenter startup configuration', () => {
     for (const textureSource of [
       'this.fieldSource', 'this.wallSource', 'this.photonStateSource',
       'this.atmosphereSource', 'this.atmosphereStyleSource', 'gasIdentityMotifSource',
-      'this.emissionSource', 'this.liquidSource', 'this.boundaryStabilitySource',
+      'this.emissionSource', 'this.liquidSource', 'this.liquidIdentitySource',
+      'this.boundaryStabilitySource',
       'this.powderSurfaceSource', 'this.suspensionSource',
       'paletteTexture.source', 'styleTexture.source',
     ]) expect(directMesh).toContain(textureSource);
@@ -8061,7 +8077,7 @@ describe('Pixi presenter startup configuration', () => {
     const eightEnd = source.indexOf('const FIELD_FRAGMENT = `', eightStart);
     const eight = source.slice(eightStart, eightEnd);
     const liquidStart = normal.indexOf('// Dense, ordinary liquid can retain');
-    const liquidEnd = normal.indexOf('  } else {', liquidStart);
+    const liquidEnd = normal.indexOf('    if (liquidVolume > 0.5', liquidStart);
     const solidStart = normal.indexOf('// The same bounded hue-preserving ambient lift');
     const solidEnd = normal.indexOf('  }\n  if (uEnergyIdentityStyling', solidStart);
     const bodyBlocks = `${normal.slice(liquidStart, liquidEnd)}${normal.slice(solidStart, solidEnd)}`;

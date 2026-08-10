@@ -3347,7 +3347,22 @@ async function auditMode(mode) {
       return { backend: mode, liquidIdentityGraphics, browserErrors: errors.length };
     }
     if (gasIdentityGraphicsOnly) {
-      const gasIdentityGraphics = await auditGasIdentityGraphics(cdp, mode);
+      let gasIdentityGraphics;
+      try {
+        gasIdentityGraphics = await auditGasIdentityGraphics(cdp, mode);
+      } catch (error) {
+        const diagnostic = errors.length > 0 ? `; browser errors: ${errors.join(' | ')}` : '';
+        let backendDiagnostic = '';
+        try {
+          const backend = await evaluate(cdp, 'window.__ANIFOR_INPUT_AUDIT__?.backend?.()');
+          backendDiagnostic = `; backend: ${JSON.stringify(backend)}`;
+        } catch {
+          backendDiagnostic = '; backend: unavailable';
+        }
+        throw new Error(`${error instanceof Error ? error.message : String(error)}${diagnostic}${backendDiagnostic}`, {
+          cause: error,
+        });
+      }
       assert(errors.length === 0, `${mode}: browser errors: ${errors.join(' | ')}`);
       cdp.close();
       return { backend: mode, gasIdentityGraphics, browserErrors: errors.length };

@@ -4404,6 +4404,38 @@ zero-new-resource/topology contract. Historical PNG hashes remain irrelevant;
 use focused profile/source checks, production shader compilation, current-only
 atlas inspection, and real 2x/8x completed-frame receipts.
 
+That authoring seam is live at exact revision
+`70cfeea4cd93010d4445d278bd5d1ea5346110e3` through workflow run
+`31366038724`. The build restored 269/270 C++ compilations from ccache; Pages,
+the exact 19-resource closure, hosted Water capture, and portable verification
+all passed.
+
+The active framework increment extends the generated appearance response into
+reconstructed gas and liquid volumes. Reconstructed pixels remain presentation
+support rather than semantic particles. Gas resolves its optics from the
+already propagated clean/sooty atmosphere style through one generated closed
+mapping. Liquid carries a separate native-resolution nearest-filtered R8
+identity field because the existing boundary byte is depth/topology data and
+cannot safely carry a material ID. Exact or uniquely supported reconstructed
+liquid writes that identity; absent or tied support writes zero. Normal WebGL
+and direct true 8x use that identity only to select the common body finish:
+they must not overwrite semantic material/family, synthesize semantic vertical
+depth, widen alpha, bridge unlike species, close cavities, alter contacts, or
+change physics. Exact semantic liquid retains palette optics and its existing
+vertical depth, while reconstructed support uses connected liquid-field depth.
+
+Keep the gas and liquid work RGB-only and branch-guarded. The added liquid
+identity plane is one fixed native-world R8 texture, never an output-scale or
+8x-sized resource; direct 8x still owns one output target and initializes every
+source explicitly. Current acceptance is a focused Water/Oil visual pass plus
+normal and true-8x renderer-owned completed-frame receipts, compact liquid/gas
+topology audits, permissive Canvas fallback, resource-budget checks, and zero
+browser errors. The older normal gas identity audit may still time out while
+waiting for an exact initial blank screenshot even when WebGL is active; treat
+the completed-frame receipt and collected backend/browser diagnostics as the
+renderer-health authority rather than weakening the visual implementation for
+that historical screenshot-stability gate.
+
 ### E80 — accepted dense-body ambient floor
 
 E80 is the final bounded normal-WebGL floor for deep ordinary bodies. It runs

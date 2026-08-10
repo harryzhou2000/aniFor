@@ -65,6 +65,26 @@ material blocks before accepting a powder change. For the compact direct mesh,
 run `npm run audit:powder:8x`; it exercises the same Smooth transfers at a true
 4896×3072 backing and waits for the renderer-owned GPU fence.
 
+### Experiment checkpoint matrix
+
+Visual Lab deliberately owns normal WebGL at Detail 1×–4×. True 8× is a
+separate compact compositor with its own bounded GPU-fence audits, rather than
+an unsupported Visual Lab fallback. For changes that affect an ordinary
+material family, make both checks before treating the experiment as a usable
+checkpoint:
+
+| Area | Current-only normal review | Compact true-8× health check |
+| --- | --- | --- |
+| Powder boundaries/styles | `npm run visual-lab:review -- --cohort=powder-style` | `npm run audit:powder:8x` |
+| Gas volumes | `npm run visual-lab:review -- --cohort=atmosphere` | `npm run audit:gas-identity:8x` |
+| Liquid bodies | `npm run visual-lab:review -- --cohort=liquid-motion` | `npm run audit:distilled-diesel-liquid:8x` |
+
+The liquid row uses its focused compact scene because Visual Lab deliberately
+stops at Detail 4×. Do not imply that the normal OFF/A/B board covers Detail
+8×, or duplicate Visual Lab's browser lifecycle to make it appear to do so.
+The compact audit remains a purpose-built renderer health check, not a second
+Visual Lab implementation.
+
 Hashes in a completed package protect its own files from tampering. They are
 not a cross-revision visual requirement: changing pixels is reviewed by a human
 or agent from the current board, while missing, unsafe, incomplete, or
@@ -295,7 +315,7 @@ The active renderer uploads material ID, temperature, and velocity as one compac
 
 Smooth-powder coverage now uses one shared directional field signal and one shared density crossing in normal and true-8× WebGL. Normal detail retains its established broad settled-depth proof. The compact compositor reuses its already-bound stability byte to admit only the local field blend, while separately proven empty-cell exterior projection remains available because its own stability byte is necessarily zero. This prevents an unsettled particle, authored hole, or fine column from borrowing a nearby settled contour at 8× without adding a sample or changing Local, square Grains, semantic support, or the projected outer pile.
 
-Realistic WebGL also applies one shared scale-safe body finish to already-proven powder, liquid, and gas volumes. The normal 1×–4× compositor and compact true-8× mesh inject the same GLSL helper, so their broad upper-left key, opposing fill, dense-core absorption, and pigment retention share one vocabulary even though HDR and bloom remain normal-scale only. Phase-specific fields still own density, contacts, alpha, topology, and material identity; the finish is RGB-only and adds no texture, field, upload, render target, or pass. Classic disables it through the existing product-volume switch.
+Realistic WebGL also applies one shared scale-safe body finish to already-proven powder, liquid, and gas volumes. The normal 1×–4× compositor and compact true-8× mesh inject the same GLSL helper, so their broad upper-left key, opposing fill, dense-core absorption, and pigment retention share one vocabulary even though HDR and bloom remain normal-scale only. Phase-specific fields still own density, contacts, alpha, topology, and material identity; the finish itself is RGB-only and adds no render target or pass. Reconstructed gas reuses its existing propagated identity style, while reconstructed liquid uses one fixed native-world nearest-filtered R8 identity plane so connected empty support can select the authored optical family without becoming a semantic particle or allocating an 8× resource. Classic disables the finish through the existing product-volume switch.
 
 The same shared source now adds a mesoscopic fluid-volume lobe for liquids and gases. Each compositor reuses its already-live centre density, cardinal mean, field-native curvature, depth, and slope: convex fluid shoulders receive a broad cool crown, while concave or deep pockets retain coloured absorption. Semantic particle density may prove visible support but cannot steer the curvature, so reconstructed gas fringes and liquid shores follow the authoritative atmosphere/liquid fields. The lobe changes RGB only and adds no sampler, uniform, field, upload, target, pass, material-ID branch, or 8×-scaled allocation; Classic disables it with the same existing volume switch.
 

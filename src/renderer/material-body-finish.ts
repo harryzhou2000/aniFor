@@ -1,4 +1,5 @@
 import { MATERIAL_APPEARANCE_PROFILE_GLSL_SELECTOR } from './material-appearance-profiles';
+import { RECONSTRUCTED_VOLUME_OPTICS_GLSL } from './reconstructed-volume-optics';
 
 /**
  * Scale-safe RGB finish shared by the normal and compact WebGL compositors.
@@ -33,6 +34,7 @@ float liquidBodyFinishDepth(
 // shade roughly fifteen million true-8x fragments. The closed numeric values
 // are RenderOptics classes, never exact material IDs.
 ${MATERIAL_APPEARANCE_PROFILE_GLSL_SELECTOR}
+${RECONSTRUCTED_VOLUME_OPTICS_GLSL}
 
 vec3 applyMaterialBodyFinish(
   vec3 color,

@@ -224,6 +224,7 @@ uniform sampler2D uAtmosphereTexture;
 uniform sampler2D uAtmosphereStyleTexture;
 uniform sampler2D uEmissionTexture;
 uniform sampler2D uLiquidTexture;
+uniform sampler2D uLiquidIdentityTexture;
 uniform sampler2D uSuspensionTexture;
 uniform sampler2D uBoundaryStabilityTexture;
 uniform sampler2D uPowderSurfaceTexture;
@@ -1853,8 +1854,51 @@ void main() {
   float gasFieldScatter = uGasFieldLighting * smoothstep(0.002, 0.42, emission.a);
   if (material < 0.5) {
     vec4 foreground = vec4(0.0);
-    if (liquid.a > 0.28) foreground = vec4(liquid.rgb * liquid.a, liquid.a);
+    if (liquid.a > 0.28) {
+      vec3 reconstructedLiquid = liquid.rgb;
+      if (uMaterialBodyFinish > 0.5) {
+        float reconstructedMaterial = floor(
+          texture(uLiquidIdentityTexture, uv).r * 255.0 + 0.5
+        );
+        float reconstructedOptics = reconstructedMaterial > 0.5
+          ? floor(texture(
+            uPaletteTexture, vec2((reconstructedMaterial + 0.5) / 256.0, 0.5)
+          ).a * 255.0 + 0.5) : 0.0;
+        float liquidLeft = texture(uLiquidTexture, uv - vec2(uTexel.x, 0.0)).a;
+        float liquidRight = texture(uLiquidTexture, uv + vec2(uTexel.x, 0.0)).a;
+        float liquidTop = texture(uLiquidTexture, uv - vec2(0.0, uTexel.y)).a;
+        float liquidBottom = texture(uLiquidTexture, uv + vec2(0.0, uTexel.y)).a;
+        float liquidNeighbourMean = (liquidLeft + liquidRight + liquidTop + liquidBottom) * 0.25;
+        vec2 liquidFinishSlope = vec2(liquidRight - liquidLeft, liquidBottom - liquidTop);
+        float liquidFinishEligibility = smoothstep(
+          0.34, 0.82, min(liquid.a, liquidNeighbourMean)
+        );
+        float liquidFinishDepth = liquidBodyFinishDepth(
+          smoothstep(0.48, 0.90, min(liquid.a, liquidNeighbourMean)), 0.0
+        );
+        vec4 liquidFinishResponse = materialBodyFinishParameters(
+          1.0, reconstructedOptics, uMaterialBodyFinish
+        );
+        reconstructedLiquid = applyMaterialBodyFinish(
+          reconstructedLiquid, 1.0, liquidFinishResponse, liquid.a,
+          liquidFinishDepth, liquidFinishSlope, liquidFinishEligibility,
+          uMaterialBodyFinish
+        );
+        reconstructedLiquid = applyFluidVolumeLobe(
+          reconstructedLiquid, 1.0, liquidFinishResponse, liquid.a,
+          liquidNeighbourMean,
+          clamp((liquid.a - liquidNeighbourMean) * 5.5, -1.0, 1.0),
+          liquidFinishDepth, liquidFinishSlope, 0.0,
+          liquidFinishEligibility, uMaterialBodyFinish
+        );
+      }
+      foreground = vec4(reconstructedLiquid * liquid.a, liquid.a);
+    }
     else if (atmosphere.a > 0.004) {
+      vec4 gasStyleState = (uGasIdentityStyling > 0.5
+        || (uGasFieldLighting > 0.5 && uMaterialBodyFinish > 0.5))
+        ? texture(uAtmosphereStyleTexture, uv) : vec4(0.0);
+      float gasIdentityStyle = floor(gasStyleState.r * 255.0 + 0.5);
       float gasShell = 1.0 - smoothstep(0.22, 0.82, atmosphere.a);
       vec3 gas = atmosphere.rgb + uGasVolumeChroma * atmosphere.a * vec3(0.022, -0.009, 0.017)
         + emission.rgb * gasFieldScatter * gasShell * 0.035;
@@ -1870,9 +1914,25 @@ void main() {
         float gasBottom = texture(uAtmosphereTexture,
           clamp(uv + vec2(0.0, uAtmosphereTexel.y), atmosphereMin, atmosphereMax)).a;
         gas += gasEightXVolumeRelief(atmosphere.a, gasLeft, gasRight, gasTop, gasBottom);
+        float gasNeighbourMean = (gasLeft + gasRight + gasTop + gasBottom) * 0.25;
+        vec2 gasFinishSlope = vec2(gasRight - gasLeft, gasBottom - gasTop);
+        float gasFinishDepth = smoothstep(0.035, 0.62, atmosphere.a);
+        vec4 gasFinishResponse = materialBodyFinishParameters(
+          2.0, gasBodyFinishOptics(0.0, gasIdentityStyle), uMaterialBodyFinish
+        );
+        gas = applyMaterialBodyFinish(
+          gas, 2.0, gasFinishResponse, atmosphere.a, gasFinishDepth,
+          gasFinishSlope, 1.0, uMaterialBodyFinish
+        );
+        gas = applyFluidVolumeLobe(
+          gas, 2.0, gasFinishResponse, atmosphere.a, gasNeighbourMean,
+          clamp((atmosphere.a - gasNeighbourMean) * 8.0, -1.0, 1.0),
+          gasFinishDepth, gasFinishSlope,
+          gasCompactMacroRelief(uv * uFieldSize - 0.5),
+          smoothstep(0.020, 0.12, atmosphere.a), uMaterialBodyFinish
+        );
       }
       if (uGasIdentityStyling > 0.5) {
-        float gasIdentityStyle = floor(texture(uAtmosphereStyleTexture, uv).r * 255.0 + 0.5);
         gas += gasIdentityEightXDelta(gasIdentityStyle, atmosphere.a)
           + uGasVolumeChroma * gasIdentityEightXChroma(gasIdentityStyle, atmosphere.a);
       }
@@ -1982,6 +2042,10 @@ void main() {
   if (family == 2.0) density = max(density, liquid.a);
   vec3 color = palette.rgb;
   if (family == 1.0) {
+    vec4 gasStyleState = (uGasIdentityStyling > 0.5
+      || (uGasFieldLighting > 0.5 && uMaterialBodyFinish > 0.5))
+      ? texture(uAtmosphereStyleTexture, uv) : vec4(0.0);
+    float gasIdentityStyle = floor(gasStyleState.r * 255.0 + 0.5);
     float gasDensity = max(density, atmosphere.a);
     float gasShell = 1.0 - smoothstep(0.22, 0.82, gasDensity);
     color = mix(color, atmosphere.rgb, min(0.82, atmosphere.a));
@@ -2001,7 +2065,7 @@ void main() {
       float gasNeighbourMean = (gasLeft + gasRight + gasTop + gasBottom) * 0.25;
       vec2 gasFinishSlope = vec2(gasRight - gasLeft, gasBottom - gasTop);
       vec4 gasFinishResponse = materialBodyFinishParameters(
-        2.0, optics, uMaterialBodyFinish
+        2.0, gasBodyFinishOptics(optics, gasIdentityStyle), uMaterialBodyFinish
       );
       color = applyMaterialBodyFinish(
         color, 2.0, gasFinishResponse, gasDensity, smoothstep(0.035, 0.62, gasDensity),
@@ -2016,7 +2080,6 @@ void main() {
       );
     }
     if (uGasIdentityStyling > 0.5) {
-      float gasIdentityStyle = floor(texture(uAtmosphereStyleTexture, uv).r * 255.0 + 0.5);
       color += gasIdentityEightXDelta(gasIdentityStyle, gasDensity)
         + uGasVolumeChroma * gasIdentityEightXChroma(gasIdentityStyle, gasDensity);
     }
@@ -3386,6 +3449,7 @@ uniform sampler2D uAtmosphereStyleTexture;
 uniform sampler2D uGasIdentityMotifTexture;
 uniform sampler2D uEmissionTexture;
 uniform sampler2D uLiquidTexture;
+uniform sampler2D uLiquidIdentityTexture;
 uniform sampler2D uBoundaryStabilityTexture;
 uniform sampler2D uPowderSurfaceTexture;
 uniform sampler2D uSuspensionTexture;
@@ -6068,7 +6132,8 @@ void main() {
     // One existing half-resolution style sample carries both categorical gas
     // identity and coherent atmosphere motion. E07 therefore adds no texture,
     // sampler, fetch, upload call, target, or pass to the default E04 path.
-    if (uGasIdentityStyling > 0.5 || uGasMotionVfx > 0.5) {
+    if (uGasIdentityStyling > 0.5 || uGasMotionVfx > 0.5
+      || uMaterialBodyFinish > 0.5) {
       gasStyleState = texture(uAtmosphereStyleTexture, fieldUv);
     }
     float cloudLeft = texture(uAtmosphereTexture, fieldUv - vec2(uAtmosphereTexel.x, 0.0)).a;
@@ -6558,7 +6623,9 @@ void main() {
       * (1.0 - opticalDepth * 0.30) * uGasVolumeChroma;
     color *= 1.0 + gasVolumeExposure;
     vec4 gasFinishResponse = materialBodyFinishParameters(
-      2.0, optics, uMaterialBodyFinish
+      2.0, gasBodyFinishOptics(
+        optics, floor(gasStyleState.r * 255.0 + 0.5)
+      ), uMaterialBodyFinish
     );
     color = applyMaterialBodyFinish(
       color, 2.0, gasFinishResponse, gasShadeDensity, opticalDepth, volumeSlope,
@@ -8241,9 +8308,20 @@ void main() {
       float liquidAmbientLift = min(5.0 / 255.0, liquidAmbientBody * 5.0 / 255.0);
       color *= 1.0 + liquidAmbientLift;
     }
-    if (family == 2.0 && traits < 0.5 && !materialEmissive && molten < 0.5
+    if (liquidVolume > 0.5 && traits < 0.5 && !materialEmissive && molten < 0.5
       && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5
       && dot(liquidSpeciesSlope, liquidSpeciesSlope) < 0.0004) {
+      float liquidFinishOptics = optics;
+      if (liquidOnly > 0.5) {
+        float reconstructedMaterial = floor(
+          texture(uLiquidIdentityTexture, fieldUv).r * 255.0 + 0.5
+        );
+        if (reconstructedMaterial > 0.5) {
+          liquidFinishOptics = floor(texture(
+            uPaletteTexture, vec2((reconstructedMaterial + 0.5) / 256.0, 0.5)
+          ).a * 255.0 + 0.5);
+        }
+      }
       float liquidFinishEligibility = smoothstep(
         0.34, 0.82, min(liquidDepth, liquidNeighbourMean)
       );
@@ -8251,7 +8329,7 @@ void main() {
         liquidDepth, liquidOpticalDepth
       );
       vec4 liquidFinishResponse = materialBodyFinishParameters(
-        1.0, optics, uMaterialBodyFinish
+        1.0, liquidFinishOptics, uMaterialBodyFinish
       );
       color = applyMaterialBodyFinish(
         color, 1.0, liquidFinishResponse, liquidSurfaceDensity, liquidFinishDepth,
@@ -11795,6 +11873,7 @@ export class PixiFieldPresenter {
   private readonly atmosphereStyleSource: BufferImageSource;
   private readonly emissionSource: BufferImageSource;
   private readonly liquidSource: BufferImageSource;
+  private readonly liquidIdentitySource: BufferImageSource;
   private readonly boundaryStabilityBytes: Uint8Array;
   private readonly boundaryStabilityOwners: Uint8Array;
   private readonly boundaryStabilitySource: BufferImageSource;
@@ -11945,6 +12024,15 @@ export class PixiFieldPresenter {
       format: 'rgba8unorm',
       alphaMode: 'no-premultiply-alpha',
       scaleMode: 'linear',
+      autoGarbageCollect: false,
+    });
+    this.liquidIdentitySource = new BufferImageSource({
+      resource: this.fieldSet.liquid.identityBytes,
+      width,
+      height,
+      format: 'r8unorm',
+      alphaMode: 'no-premultiply-alpha',
+      scaleMode: 'nearest',
       autoGarbageCollect: false,
     });
     this.boundaryStabilityBytes = new Uint8Array(width * height);
@@ -12542,6 +12630,8 @@ export class PixiFieldPresenter {
       uEmissionSampler: this.emissionSource.style,
       uLiquidTexture: this.liquidSource,
       uLiquidSampler: this.liquidSource.style,
+      uLiquidIdentityTexture: this.liquidIdentitySource,
+      uLiquidIdentitySampler: this.liquidIdentitySource.style,
       uBoundaryStabilityTexture: this.boundaryStabilitySource,
       uBoundaryStabilitySampler: this.boundaryStabilitySource.style,
       uPowderSurfaceTexture: this.powderSurfaceSource,
@@ -12568,7 +12658,8 @@ export class PixiFieldPresenter {
       for (const source of [
         this.fieldSource, this.wallSource, this.photonStateSource,
         this.atmosphereSource, this.atmosphereStyleSource, gasIdentityMotifSource,
-        this.emissionSource, this.liquidSource, this.boundaryStabilitySource,
+        this.emissionSource, this.liquidSource, this.liquidIdentitySource,
+        this.boundaryStabilitySource,
         this.powderSurfaceSource, this.suspensionSource,
         paletteTexture.source, styleTexture.source,
       ]) textureSystem.texture?.initSource(source);
@@ -14257,6 +14348,7 @@ export class PixiFieldPresenter {
       if (gasMotionActive) this.atmosphereMotionHydrated = true;
     } else if (volumeField === 'liquid') {
       this.liquidSource.update();
+      this.liquidIdentitySource.update();
     } else if (volumeField === 'emission') {
       this.emissionSource.update();
     }

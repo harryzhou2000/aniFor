@@ -20,10 +20,14 @@ function colorAt(field: LiquidDensityField, x: number, y: number): number[] {
   return Array.from(field.bytes.slice(offset, offset + 3));
 }
 
+function identityAt(field: LiquidDensityField, x: number, y: number): number {
+  return field.identityBytes[y * field.width + x];
+}
+
 describe('liquid density field', () => {
   it('stays within its explicit 612x384 CPU allocation budget', () => {
     const { field } = fixture(612, 384);
-    expect(field.allocatedByteLength).toBe(3_760_392);
+    expect(field.allocatedByteLength).toBe(3_995_400);
     expect(field.allocatedByteLength).toBeLessThan(4 * 1024 * 1024);
   });
 
@@ -109,6 +113,7 @@ describe('liquid density field', () => {
     field.update(materials);
     expect(densityAt(field, 1, 1)).toBeGreaterThan(0);
     expect(colorAt(field, 1, 1)).toEqual([0x8f, 0x70, 0x40]);
+    expect(identityAt(field, 1, 1)).toBe(Material.Oil);
   });
 
   it('leaves an exact mixed-species tie transparent', () => {
@@ -121,6 +126,7 @@ describe('liquid density field', () => {
     field.update(materials);
     expect(densityAt(field, 1, 1)).toBe(0);
     expect(colorAt(field, 1, 1)).toEqual([0, 0, 0]);
+    expect(identityAt(field, 1, 1)).toBe(Material.Empty);
   });
 
   it('clears stale density and ignores gas', () => {
@@ -130,5 +136,6 @@ describe('liquid density field', () => {
     materials.fill(Material.Smoke);
     field.update(materials);
     expect(field.bytes.some(Boolean)).toBe(false);
+    expect(field.identityBytes.some(Boolean)).toBe(false);
   });
 });
