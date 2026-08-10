@@ -254,8 +254,28 @@ backend-specific so the profile is not a cross-backend arithmetic rewrite.
 Normal and compact WebGL remain canonical and their generated shader source is
 unchanged. This projection adds no sampler, texture, field, upload, target,
 pass, allocation, alpha, support, or ownership change.
+That conservative runtime projection is deployed at exact revision
+`2aed1f3692396b5fb90aa9126c696e61712b9e16` by workflow run `31371719157`;
+the build restored 269/270 C++ compilations from ccache, and Pages deployment,
+exact live resource closure, hosted Visual Lab capture, and portable
+verification passed.
 
-The current reconstructed-volume increment carries those authored optics past
+The active review-loop increment is the scripts-only material checkpoint. Keep
+one closed normal-cohort-to-compact-audit registry for `powder-style`,
+`atmosphere`, and `liquid-motion`. Build once, run the established current-only
+developer review first, then invoke the exact existing true-8x browser audit
+against the same `dist/`; never duplicate CDP, Chrome, fixture, renderer, or
+capture lifecycle. Publish `checkpoint.json` last beside the ignored review
+root only after both stages pass. It may contain portable relative links to the
+normal response board/contact sheet and diagnostic compact argv/status, but it
+is local navigation metadata outside every result, batch, baseline,
+comparison, recipe-set, static-contract, and deployment identity. On compact
+failure retain the verified normal evidence without a success marker. Forward
+interrupts and prove the detached compact process group is gone before success.
+Visual Lab remains normal WebGL at 1x-4x; this coordinator must never imply that
+its OFF/A/B experiment ran through the separate true-8x compositor.
+
+The deployed reconstructed-volume increment carries those authored optics past
 semantic particle centres without granting reconstructed pixels semantic
 ownership. Gas reuses the existing propagated clean/sooty style plane and one
 generated closed style-to-optics mapping. Liquid uses a dedicated
@@ -273,6 +293,11 @@ alpha, support, holes, chimneys, strands, unlike contacts, walls, Canvas
 fallback, and the compact compositor's single output target. Validate with
 current-only Water/Oil inspection, focused topology audits, and real 2x/8x
 completed-frame receipts; do not restore cross-revision PNG pinning.
+Its gas mapping and native liquid optical-class carrier landed at revisions
+`71e6a3bd4fe0a0dde8108699ea0ae1fb7c90a893` and
+`b19aabc3655fb90b68abdae64b2b2499698a2f6f`; workflow run `31370132918`
+deployed the final direct-`RenderOptics` carrier with exact closure and hosted
+smoke verification.
 Keep one capture implementation;
 do not replace integrity hashing, path containment, lifecycle checks, or runtime
 closure. Visual preference needs a retained board and human/agent inspection,

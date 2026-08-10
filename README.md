@@ -85,6 +85,13 @@ stops at Detail 4×. Do not imply that the normal OFF/A/B board covers Detail
 The compact audit remains a purpose-built renderer health check, not a second
 Visual Lab implementation.
 
+For the three tracked material cohorts, `npm run visual-lab:checkpoint --
+--cohort=<powder-style|atmosphere|liquid-motion>` performs that exact pairing
+without rebuilding between them: it retains the normal review first, then runs
+the established compact audit and writes a local `checkpoint.json` beside the
+review only when both pass. The manifest is navigation convenience, not a
+portable result identity, baseline, comparison, or deployment gate.
+
 Hashes in a completed package protect its own files from tampering. They are
 not a cross-revision visual requirement: changing pixels is reviewed by a human
 or agent from the current board, while missing, unsafe, incomplete, or

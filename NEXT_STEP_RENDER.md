@@ -4421,7 +4421,28 @@ a claim of arithmetic parity: canonical normal and compact WebGL source remains
 unchanged. Add no sampler, texture, field, upload, target, pass, allocation, or
 output-scale resource.
 
-The active framework increment extends the generated appearance response into
+That runtime projection is live at exact revision
+`2aed1f3692396b5fb90aa9126c696e61712b9e16` through workflow run
+`31371719157`. The build restored 269/270 C++ compilations from ccache; Pages,
+exact revision/resource closure, hosted current-only capture, and portable
+verification passed.
+
+The active framework increment makes the normal-to-compact material checkpoint
+executable instead of leaving it as a manual README pairing. One closed
+scripts-side registry maps `powder-style`, `atmosphere`, and `liquid-motion` to
+their already-established true-8x audits. `visual-lab:checkpoint` builds once;
+the `:reuse` form consumes an existing `dist/`. Both run the verified
+current-only developer review first, then the compact audit without cloning
+browser or renderer lifecycle. A local `checkpoint.json` is written last beside
+the ignored normal review only after both succeed, with relative board/contact
+links and the exact compact runner arguments. This manifest is navigation
+metadata, never a result, batch, recipe set, baseline, comparison, static
+contract, promotion input, or deploy gate. Compact failure retains normal
+evidence but publishes no checkpoint. Interrupts must terminate the detached
+compact process group before returning. Normal Visual Lab remains a 1x-4x HDR
+experiment; the coordinator does not reinterpret true 8x as OFF/A/B evidence.
+
+The deployed reconstructed-volume increment extends the generated appearance response into
 reconstructed gas and liquid volumes. Reconstructed pixels remain presentation
 support rather than semantic particles. Gas resolves its optics from the
 already propagated clean/sooty atmosphere style through one generated closed
@@ -4447,6 +4468,12 @@ waiting for an exact initial blank screenshot even when WebGL is active; treat
 the completed-frame receipt and collected backend/browser diagnostics as the
 renderer-health authority rather than weakening the visual implementation for
 that historical screenshot-stability gate.
+
+The gas mapping and native liquid optical-class carrier landed at revisions
+`71e6a3bd4fe0a0dde8108699ea0ae1fb7c90a893` and
+`b19aabc3655fb90b68abdae64b2b2499698a2f6f`. Workflow run `31370132918`
+deployed the final direct-`RenderOptics` carrier with exact runtime closure and
+hosted smoke verification.
 
 ### E80 — accepted dense-body ambient floor
 
