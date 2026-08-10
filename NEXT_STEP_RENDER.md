@@ -99,6 +99,21 @@ recipe-set/v1 snapshots retain their exact bytes and identities. This removes
 repeated membership edits for domain-wide visual experiments without placing
 executable driver or fixture authority in catalog data.
 
+The first experiment through that authoring seam makes the normal-HDR liquid
+choice legible at whole-scene scale. Variant A gives the existing transmitted
+donor a broader shallow mix and narrow direction/ripple crest; B favours the
+existing reflected donor and an opposing absorption pocket. Both remain
+surface-gated RGB, add no sampler/resource/uniform, and preserve exact alpha.
+The current-only Water/Oil cohort passed WebGL/HDR and portable verification
+with zero browser errors. Direct review prefers A's translucent crest; its
+Water/Oil OFF response reaches 21/30 channel levels while A→B remains bounded.
+Only that phase-level relation is integrated into the shared
+`applyFluidVolumeLobe`: shallow connected liquid receives a direction-aware
+transmission crest and deep columns receive slightly stronger coloured
+absorption. Normal showcase inspection confines the change to liquid bodies.
+The compact 4896x3072 liquid gate compiles and completes with exact semantic
+topology, alpha support, repeated-off evidence, and zero browser errors.
+
 Active priority order:
 
 1. Treat repeatable performance evidence as complete infrastructure. Revision

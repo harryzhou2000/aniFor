@@ -129,6 +129,8 @@ vec3 applyFluidVolumeLobe(
   // with only bounded multiplies over the already-computed body proof.
   float gasMidTransmission = gas * core * (1.0 - core) * 4.0;
   float gasDeepAbsorption = gas * core * core;
+  float liquidTransmissionCrest = transmittedShoulder
+    * (0.060 + max(facing, 0.0) * 0.045);
 
   // A broad convex crown and directional shoulder supply a coherent reflected
   // lobe. Concave/deep regions retain pigment through restrained absorption;
@@ -136,12 +138,12 @@ vec3 applyFluidVolumeLobe(
   float key = (crown * mix(0.038, 0.052, gas)
       + max(facing, 0.0) * shoulder * mix(0.026, 0.034, gas))
     * (1.0 - core * mix(0.24, 0.36, gas));
-  key += transmittedShoulder * 0.050;
+  key += liquidTransmissionCrest;
   key += gasMidTransmission * 0.036;
   float shade = (pocket * mix(0.030, 0.038, gas)
       + max(-facing, 0.0) * shoulder * mix(0.010, 0.014, gas)
       + core * mix(0.010, 0.007, gas)) * fieldBody;
-  shade += deepColumn * 0.022;
+  shade += deepColumn * 0.032;
   shade += gasDeepAbsorption * 0.024;
   vec3 keyTint = liquid * vec3(0.58, 0.82, 1.00)
     + gas * vec3(0.70, 0.82, 1.00);

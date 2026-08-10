@@ -123,6 +123,20 @@ expansion, cycles, or overlap with included/explicit candidates. The tracked
 atmosphere, liquid-motion, powder-style, and release recipe-set/v1 files must
 remain byte- and identity-exact. Catalog data has no driver, preparer, method,
 argument, or browser-execution authority.
+
+The next local material checkpoint uses that framework for one visible liquid
+transport decision. In the normal-HDR liquid leaf, A is the broader transmitted
+shallow look with a narrow direction/ripple crest; B is the stronger reflected
+crown with restrained opposing absorption. Both are existing-input RGB-only
+experiments and preserve surface, wall, target, topology, and alpha gates.
+Current-only Oil/Water review passed WebGL/HDR and portable verification with
+zero browser errors; direct review prefers A. Port only its phase-level relation
+into the shared normal/compact `applyFluidVolumeLobe`: a direction-aware shallow
+transmission crest plus slightly stronger deep-column coloured absorption.
+Do not copy Water/Oil material branches, reflected/transmitted samplers, or the
+normal-HDR lab into true 8x. The compact 4896x3072 liquid gate must retain exact
+semantic topology, alpha support, repeated-off evidence, and zero browser
+errors.
 Keep one capture implementation;
 do not replace integrity hashing, path containment, lifecycle checks, or runtime
 closure. Visual preference needs a retained board and human/agent inspection,

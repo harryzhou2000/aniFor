@@ -51,33 +51,40 @@ vec3 applyHdrLiquidLab(
     * clamp(motion * (0.45 + motionFacing * 0.55), 0.0, 1.0);
   float motionLeading = smoothstep(-0.10, 0.62, flowFacing) * familyMotion;
   float motionWake = smoothstep(-0.10, 0.62, -flowFacing) * familyMotion;
+  float litCrest = surface
+    * smoothstep(0.38, 0.86, keyFacing)
+    * smoothstep(0.50, 0.88, rippleBand);
   vec3 familyTint = material == MATERIAL_WATER ? vec3(0.76, 0.98, 1.10)
     : (material == MATERIAL_OIL ? vec3(1.10, 0.82, 0.44)
     : vec3(0.84, 1.08, 0.68));
 
-  // A keeps the established transmitted donor dominant, then adds a shallow
-  // family-coloured meniscus key. It is an optical comparison, not support.
+  // A makes the already-computed transmitted donor visibly authoritative in
+  // shallow, lit liquid. A narrow ripple crest prevents the broader mix from
+  // reading as a flat opacity change. Both terms remain surface-owned RGB.
   if (labVariant < 1.5) {
     vec3 transmission = max(transmitted, vec3(0.0)) * familyTint;
     float transmissionMix = min(
-      0.12, surface * (0.040 + keyFacing * 0.035) * labGain
+      0.40,
+      surface * (0.160 + keyFacing * 0.150 + rippleBand * 0.050) * labGain
     );
     radiance = mix(radiance, transmission, transmissionMix);
     radiance += (vec3(1.18) - clamp(radiance, 0.0, 1.18))
-      * familyTint * crown * (0.040 + motionLeading * 0.035) * labGain;
+      * familyTint * (crown * 0.090 + litCrest * 0.140
+        + motionLeading * surface * 0.070) * labGain;
     return max(radiance, vec3(0.0));
   }
 
-  // B favours the already-computed environment/bloom reflection and balances
-  // it with a restrained opposing absorption pocket.
-  vec3 reflectionTint = mix(familyTint, max(reflected, vec3(0.0)), 0.38);
+  // B makes the completed environment/bloom donor visibly reflective while a
+  // restrained opposing pocket keeps Oil and Water from becoming silver foil.
+  vec3 reflectionTint = mix(familyTint, max(reflected, vec3(0.0)), 0.82);
   radiance += (vec3(1.24) - clamp(radiance, 0.0, 1.24))
-    * reflectionTint * crown * (0.075 + motionLeading * 0.050) * labGain;
+    * reflectionTint * (crown * 0.240 + litCrest * 0.090
+      + motionLeading * surface * 0.120) * labGain;
   vec3 absorption = material == MATERIAL_WATER ? vec3(0.18, 0.07, 0.03)
     : (material == MATERIAL_OIL ? vec3(0.05, 0.18, 0.42)
     : vec3(0.20, 0.05, 0.24));
   radiance *= vec3(1.0) - absorption
-    * (pocket * 0.055 + motionWake * surface * 0.035) * labGain;
+    * (pocket * 0.140 + motionWake * surface * 0.090) * labGain;
   return max(radiance, vec3(0.0));
 }
 `;
