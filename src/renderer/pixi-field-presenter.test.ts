@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { PixiFieldPresenter } from './pixi-field-presenter';
 import { MATERIAL_BODY_FINISH_GLSL } from './material-body-finish';
+import { POWDER_SMOOTH_COVERAGE_GLSL } from './powder-smooth-coverage';
 import { powderRenderStyleValue } from './powder-render-style';
 import {
   WEBGL_COMPLETED_FRAME_RECEIPT_TIMEOUT_MS,
@@ -374,8 +375,11 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).toContain('uniform float uMaterialBodyFinish;');
     expect(eight).toContain('uniform float uMaterialBodyFinish;');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('vec3 applyFluidVolumeLobe(');
+    expect(POWDER_SMOOTH_COVERAGE_GLSL).toContain('float powderSmoothCoverage(');
     expect(normal).toContain('${MATERIAL_BODY_FINISH_GLSL}');
     expect(eight).toContain('${MATERIAL_BODY_FINISH_GLSL}');
+    expect(normal).toContain('${POWDER_SMOOTH_COVERAGE_GLSL}');
+    expect(eight).toContain('${POWDER_SMOOTH_COVERAGE_GLSL}');
     expect(normal.match(/applyMaterialBodyFinish\(/g)).toHaveLength(3);
     expect(eight.match(/applyMaterialBodyFinish\(/g)).toHaveLength(3);
     expect(normal.match(/applyFluidVolumeLobe\(/g)).toHaveLength(2);
@@ -5688,8 +5692,11 @@ describe('Pixi presenter startup configuration', () => {
     expect(modes).toContain('float grainDistance = length(fract(grid + 0.5) - 0.5 - grainCentre);');
     expect(modes).toContain('else if (uPowderSurfaceActive > 0.5)');
     expect(modes).toContain(
-      'float smoothPowderCoverage = smoothstep(0.36, 0.64, smoothPowderShape.x);',
+      'float smoothPowderCoverage = powderSmoothCoverage(smoothPowderShape.x);',
     );
+    expect(modes).toContain('float localPowderFieldBlend = powderSmoothDirectionalSignal(smoothPowderShape)');
+    expect(modes).toContain('float localPowderStability = smoothstep(192.0 / 255.0, 224.0 / 255.0, depth);');
+    expect(modes).toContain('powderFieldBlend = max(projectedSmoothPowder, localPowderFieldBlend);');
     expect(modes).toContain('density = mix(density, smoothPowderCoverage, powderFieldBlend);');
     expect(modes).not.toContain('uTime');
     expect(modes).not.toMatch(/\balpha\s*[+*]?=/);
@@ -7461,7 +7468,7 @@ describe('Pixi presenter startup configuration', () => {
     // detail; Local/Grains still carry their full diagnostic cell detail.
     expect(source).toContain('float settledMineralRetention = max(powderVisualCohesion, stablePowderMineral)');
     expect(source).toContain('float smoothContourTransfer = boundaryStability * powderSurfaceBlend;');
-    expect(source).toContain('float smoothContourAlpha = smoothstep(0.36, 0.64, widePowderShape.x);');
+    expect(source).toContain('float smoothContourAlpha = powderSmoothCoverage(widePowderShape.x);');
     expect(source).toContain('heapAlpha = mix(heapAlpha, smoothContourAlpha, smoothContourTransfer);');
     expect(source).toContain('float powderContourTextureRetention = 1.0;');
     expect(source).toContain('powderContourTextureRetention = 1.0 - smoothContourTransfer');
@@ -7507,7 +7514,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(source).toContain('* smoothstep(0.72, 0.95, semanticDensity);');
     expect(source).toContain('color = max(color - vec3(50.0, 45.0, 27.0) / 255.0 * sandInteriorExposure, vec3(0.0));');
     expect(source).toContain('float sandInteriorPigment = (powderGrain * 0.365 + powderFacet * 0.285)');
-    expect(source).toContain('float smoothPowderCoverage = smoothstep(0.36, 0.64, smoothPowderShape.x);');
+    expect(source).toContain('float smoothPowderCoverage = powderSmoothCoverage(smoothPowderShape.x);');
     expect(source).not.toContain('density = smoothstep(0.04, 0.96, density);');
   });
 

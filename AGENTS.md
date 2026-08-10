@@ -52,6 +52,15 @@ their 30-second audit deadline, so the portable gate correctly rejected the
 incomplete five-candidate package. This is a review-host load failure, not an
 asset-closure or renderer-source failure; a stable deployment may use the
 manual no-review path after equivalent local current-only evidence passes.
+The subsequent local powder-parity increment extracts one shared
+`PowderSmoothCoverage` GLSL source for the normal and direct-8× shaders. Normal
+keeps its existing bulk-depth eligibility. Direct 8× moves its existing
+stability read after the fully-empty early return and gates only the local
+non-projected field blend; never gate the separately proven exterior projection
+with local stability, because the projected empty fragment's own byte is zero.
+The patch adds no sample, field, target, pass, alpha/support decision, or change
+to Local/square Grains. Focused presenter checks, the production 19-resource
+closure, and the true 4896×3072 Powder audit pass with zero browser errors.
 Keep one capture implementation;
 do not replace integrity hashing, path containment, lifecycle checks, or runtime
 closure. Visual preference needs a retained board and human/agent inspection,

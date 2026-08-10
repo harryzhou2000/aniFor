@@ -312,7 +312,15 @@ Active priority order:
    compact shader again passed the true 4896×3072 audit with zero browser
    errors and a 5.363-second GPU-fence sample. Continue from this shared
    scale-safe seam toward stronger fluid continuity and powder scale parity
-   rather than resuming the isolated E-number ladder.
+   rather than resuming the isolated E-number ladder. The next local parity
+   increment shares the directional signal and final `0.36..0.64` Smooth
+   crossing between normal and compact shaders. True 8× moves its existing
+   stability read after the empty early return and gates only the non-projected
+   local field blend; separately proven exterior projection remains independent
+   because an empty projected fragment necessarily has zero local stability.
+   Focused presenter checks, production closure, and the true 4896×3072 Powder
+   audit pass with zero browser errors. Local, square Grains, fine topology,
+   semantic support, and the sampler budget remain unchanged.
 
 Items 17 and 18 are deployed; continue item 19 and the unfinished material and
 graphics goals in this document. Visual preference may accept a candidate

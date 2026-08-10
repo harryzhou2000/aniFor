@@ -39,6 +39,7 @@ import { canvasAtmosphereAlphaAtWorldCell } from './canvas-atmosphere-relief';
 import { sampleCanvasFieldAlpha } from './canvas-surface-light';
 import { HDRVfxPipeline, type HDRPipelineInfo } from './hdr-vfx-pipeline';
 import { MATERIAL_BODY_FINISH_GLSL } from './material-body-finish';
+import { POWDER_SMOOTH_COVERAGE_GLSL } from './powder-smooth-coverage';
 import { resolveCeramicBlackbodyVfxEnabled } from './ceramic-blackbody-vfx';
 import {
   isVisualLabExecutionSupported, resolveVisualLabState,
@@ -297,6 +298,7 @@ uniform float uDlayStateStyling;
 uniform float uWifiStateStyling;
 uniform float uPhotonActive;
 ${MATERIAL_BODY_FINISH_GLSL}
+${POWDER_SMOOTH_COVERAGE_GLSL}
 float materialAt(vec2 uv) {
   return floor(texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)).r * 255.0 + 0.5);
 }
@@ -1902,6 +1904,11 @@ void main() {
   float traits = floor(style.a * 255.0 + 0.5);
   bool materialEmissive = style.b > 0.5;
   float optics = floor(palette.a * 255.0 + 0.5);
+  // This existing auxiliary-byte read is deliberately after the fully-empty
+  // early return: true 8x keeps its sampler-free empty path. Smooth's local
+  // field blend below uses it only as settled evidence; the separate projected
+  // exterior route must not read the empty fragment's necessarily-zero byte.
+  float depth = texture(uBoundaryStabilityTexture, uv).r;
   vec2 grid = uv * uFieldSize - 0.5;
   vec2 blend = fract(grid);
   vec2 origin = (floor(grid) + 0.5) * uTexel;
@@ -1947,15 +1954,13 @@ void main() {
     } else if (uPowderSurfaceActive > 0.5) {
       vec4 smoothPowderShape = projectedSmoothPowder > 0.5
         ? projectedPowderShape : powderSurfaceEightXShape(uv);
-      float verticalShare = abs(smoothPowderShape.z)
-        / (abs(smoothPowderShape.y) + abs(smoothPowderShape.z) + 0.000001);
       float semanticCompatibility = projectedSmoothPowder > 0.5 ? 1.0
         : smoothstep(0.42, 0.92, semanticDensity);
-      powderFieldBlend = max(projectedSmoothPowder,
-        smoothstep(0.42, 0.70, verticalShare)
-          * smoothstep(0.004, 0.027, abs(smoothPowderShape.z))
-          * smoothstep(5.5, 8.0, smoothPowderShape.w)
-          * semanticCompatibility);
+      float localPowderStability = smoothstep(192.0 / 255.0, 224.0 / 255.0, depth);
+      float localPowderFieldBlend = powderSmoothDirectionalSignal(smoothPowderShape)
+        * smoothstep(5.5, 8.0, smoothPowderShape.w)
+        * semanticCompatibility * localPowderStability;
+      powderFieldBlend = max(projectedSmoothPowder, localPowderFieldBlend);
       powderFieldSlope = smoothPowderShape.yz;
       // The field supplies only the settled outer volume. Semantic density
       // remains the colour/mesostructure owner in the powder branch below, so
@@ -1967,7 +1972,7 @@ void main() {
       // Applying the shared 0.36..0.64 crossing only to the admitted field leg
       // preserves Local/Grains, moving particles, holes, fine columns, and
       // unlike contacts while keeping Smooth geometry scale-independent.
-      float smoothPowderCoverage = smoothstep(0.36, 0.64, smoothPowderShape.x);
+      float smoothPowderCoverage = powderSmoothCoverage(smoothPowderShape.x);
       density = mix(density, smoothPowderCoverage, powderFieldBlend);
     }
   }
@@ -1976,7 +1981,6 @@ void main() {
   // field density remains authoritative for volume colour and final support.
   if (family == 1.0) density = max(density * 0.20, atmosphere.a);
   if (family == 2.0) density = max(density, liquid.a);
-  float depth = texture(uBoundaryStabilityTexture, uv).r;
   vec3 color = palette.rgb;
   if (family == 1.0) {
     float gasDensity = max(density, atmosphere.a);
@@ -3522,6 +3526,7 @@ uniform float uPowderStyle;
 uniform float uPowderBodyDepth;
 uniform float uSuspensionActive;
 ${MATERIAL_BODY_FINISH_GLSL}
+${POWDER_SMOOTH_COVERAGE_GLSL}
 vec4 field(vec2 uv) { return texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)); }
 vec4 wallField(vec2 uv) { return texture(uWallTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5)); }
 float materialAt(vec2 uv) { return floor(field(uv).r * 255.0 + 0.5); }
@@ -5994,10 +5999,7 @@ void main() {
   if (family == 4.0 && boundaryStability > 0.001 && uPowderStyle > 1.5) {
     widePowderShape = powderSurfaceShape(fieldUv);
     powderBulkDepth = powderSurfaceBulkDepth(fieldUv, material, surfaceOnly);
-    float verticalShare = abs(widePowderShape.z)
-      / (abs(widePowderShape.y) + abs(widePowderShape.z) + 0.000001);
-    powderSurfaceBlend = smoothstep(0.42, 0.70, verticalShare)
-      * smoothstep(0.004, 0.027, abs(widePowderShape.z))
+    powderSurfaceBlend = powderSmoothDirectionalSignal(widePowderShape)
       * powderBulkDepth;
     shape = mix(shape, widePowderShape, boundaryStability * powderSurfaceBlend);
   }
@@ -8938,7 +8940,7 @@ void main() {
       // columns, holes, seams, and moving powder on their exact local path.
       float smoothContourTransfer = boundaryStability * powderSurfaceBlend;
       if (uPowderStyle > 1.5) {
-        float smoothContourAlpha = smoothstep(0.36, 0.64, widePowderShape.x);
+        float smoothContourAlpha = powderSmoothCoverage(widePowderShape.x);
         heapAlpha = mix(heapAlpha, smoothContourAlpha, smoothContourTransfer);
         powderContourTextureRetention = 1.0 - smoothContourTransfer
           * (1.0 - smoothstep(0.72, 1.00, widePowderShape.x));
