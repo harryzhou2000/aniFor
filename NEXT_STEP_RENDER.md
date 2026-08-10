@@ -4301,6 +4301,25 @@ authoritative-temperature exact-owner blackbody-relief leg. Pause the
 detail-first ladder here and improve the framework that composes, selects, and
 visually compares subsequent experiments.
 
+The reusable-framework phase now includes closed declarative cohort selectors:
+v2 cohort records can select validated recipes by domain and/or fixture while
+the v1 alias and every tracked recipe-set byte remain stable. Current-only
+review expands those selectors in canonical catalog order and rejects empty,
+unknown, cyclic, or overlapping selection before Chrome starts. This provides
+one efficient atmosphere/liquid/powder/release authoring path without adding
+driver, preparer, or browser-execution authority to catalog data.
+
+The first material use of that loop retained a shared liquid transmission crest
+and deep-column absorption relation for both normal and compact compositors.
+The next retained experiment widens gas A/B lobe contrast enough for ordinary
+review while keeping all evidence RGB-only. Production does not copy the lab
+tint: normal WebGL keeps E04's three-wave billow, while compact true 8× gains a
+cheap world-cell-anchored two-fold macro relief inside the shared fluid-volume
+lobe. This closes a visible scale-parity gap without placing the HDR pipeline,
+new samples, allocations, clocks, or species branches in the 15-million-fragment
+path. Continue from this framework-level phase relation before resuming isolated
+E-number detail work.
+
 ### E80 — accepted dense-body ambient floor
 
 E80 is the final bounded normal-WebGL floor for deep ordinary bodies. It runs

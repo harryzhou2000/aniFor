@@ -44,7 +44,7 @@ vec3 applyHdrGasLab(
   float waveB = sin(dot(worldPosition, vec2(-0.029, 0.081)) + 2.15);
   float macro = clamp(waveA * 0.62 + waveB * 0.38, -1.0, 1.0);
   float relief = clamp(
-    directional * 0.58 + curvature * 0.24 + macro * 0.18, -1.0, 1.0
+    directional * 0.38 + curvature * 0.22 + macro * 0.40, -1.0, 1.0
   );
   float crown = max(relief, 0.0) * support;
   float pocket = max(-relief, 0.0) * support;
@@ -52,8 +52,11 @@ vec3 applyHdrGasLab(
     ? vec3(0.74, 0.82, 0.94) : vec3(0.94, 0.72, 0.48);
   vec3 shadow = variant < 1.5
     ? vec3(0.24, 0.30, 0.42) : vec3(0.40, 0.24, 0.16);
-  float keyGain = mix(0.055, 0.095, step(1.5, variant)) * gain;
-  float pocketGain = mix(0.040, 0.070, step(1.5, variant)) * gain;
+  // A is the restrained translucent reference. B deliberately widens the
+  // exposure separation enough to judge the same low-frequency lobes at the
+  // ordinary 918x576 review size; both remain RGB-only and support-gated.
+  float keyGain = mix(0.120, 0.280, step(1.5, variant)) * gain;
+  float pocketGain = mix(0.085, 0.190, step(1.5, variant)) * gain;
   radiance += (vec3(1.14) - clamp(radiance, 0.0, 1.14))
     * key * crown * keyGain;
   radiance *= vec3(1.0) - shadow * pocket * pocketGain;

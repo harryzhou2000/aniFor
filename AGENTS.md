@@ -122,7 +122,8 @@ catalog in canonical order, then fail closed on unknown metadata, empty
 expansion, cycles, or overlap with included/explicit candidates. The tracked
 atmosphere, liquid-motion, powder-style, and release recipe-set/v1 files must
 remain byte- and identity-exact. Catalog data has no driver, preparer, method,
-argument, or browser-execution authority.
+argument, or browser-execution authority. This increment is deployed at exact
+revision `1527c6d8646821fe1b43431b3e8440f025e63169`.
 
 The next local material checkpoint uses that framework for one visible liquid
 transport decision. In the normal-HDR liquid leaf, A is the broader transmitted
@@ -136,7 +137,28 @@ transmission crest plus slightly stronger deep-column coloured absorption.
 Do not copy Water/Oil material branches, reflected/transmitted samplers, or the
 normal-HDR lab into true 8x. The compact 4896x3072 liquid gate must retain exact
 semantic topology, alpha support, repeated-off evidence, and zero browser
-errors.
+errors. The shared phase-level liquid transport is deployed at exact revision
+`d897620dd1c440cefbfcb7bbeb402541ea813c97` by workflow run `31358483627`;
+build, Pages deployment, exact 19-resource closure, hosted Water capture, and
+portable verification passed.
+
+The active gas-volume increment uses the same current-only atmosphere cohort
+before changing production. In the normal-HDR gas leaf, A is the restrained
+cool translucent reference and B exposes the same low-frequency field-owned
+lobes more strongly; the widened review reaches a nine-byte RGB peak while
+semantic, atmosphere-alpha, framebuffer-alpha, support, and browser-error
+evidence remain exact. Direct review still finds the full-scene difference
+restrained, so do not treat the lab tint itself as the product result. Normal
+WebGL already owns the richer E04 three-wave billow. The retained production
+change instead closes compact true-8× parity through
+`gasCompactMacroRelief`: two world-cell-anchored triangular folds feed the
+shared `applyFluidVolumeLobe`, adding only bounded RGB key/pocket arithmetic.
+It adds no sampler, texture, field, pass, target, allocation, time carrier,
+alpha/support, identity, or topology decision. Keep normal WebGL's macro input
+zero so E04 is not doubled, and keep liquid callers zero. The focused exact
+4896×3072 gas-identity audit must preserve all 17 gases, exact repeated-off,
+34,799/34,799 cloud support, 6,596/6,596 halo support, identical alpha/support
+hashes, and zero browser errors.
 Keep one capture implementation;
 do not replace integrity hashing, path containment, lifecycle checks, or runtime
 closure. Visual preference needs a retained board and human/agent inspection,

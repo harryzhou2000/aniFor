@@ -77,6 +77,20 @@ vec3 applyMaterialBodyFinish(
   return max(color, vec3(0.0));
 }
 
+// Cheap world-space billow basis for the direct true-8x compositor. Two broad
+// triangular folds avoid sine evaluation across roughly fifteen million
+// fragments while remaining anchored in simulation cells rather than output
+// pixels. Their oblique overlap reads as cloud lobes rather than scan lines.
+float gasCompactMacroRelief(vec2 position) {
+  float foldA = 1.0 - 4.0 * abs(
+    fract(dot(position, vec2(0.026, 0.017)) + 0.15) - 0.5
+  );
+  float foldB = 1.0 - 4.0 * abs(
+    fract(dot(position, vec2(-0.015, 0.031)) + 0.52) - 0.5
+  );
+  return clamp(foldA * 0.62 + foldB * 0.38, -1.0, 1.0);
+}
+
 // Mesoscopic liquid/gas relief shared by normal WebGL and the direct true-8x
 // compositor. Callers pass the centre and cardinal mean they already sampled;
 // this deliberately adds no texture read, target, field, or scale-dependent
@@ -90,6 +104,7 @@ vec3 applyFluidVolumeLobe(
   float curvature,
   float depth,
   vec2 slope,
+  float macroRelief,
   float eligibility,
   float enabled
 ) {
@@ -129,6 +144,8 @@ vec3 applyFluidVolumeLobe(
   // with only bounded multiplies over the already-computed body proof.
   float gasMidTransmission = gas * core * (1.0 - core) * 4.0;
   float gasDeepAbsorption = gas * core * core;
+  float gasMacroBody = gas * fieldBody * smoothstep(0.14, 0.64, density)
+    * (1.0 - core * 0.22);
   float liquidTransmissionCrest = transmittedShoulder
     * (0.060 + max(facing, 0.0) * 0.045);
 
@@ -140,11 +157,13 @@ vec3 applyFluidVolumeLobe(
     * (1.0 - core * mix(0.24, 0.36, gas));
   key += liquidTransmissionCrest;
   key += gasMidTransmission * 0.036;
+  key += max(macroRelief, 0.0) * gasMacroBody * 0.052;
   float shade = (pocket * mix(0.030, 0.038, gas)
       + max(-facing, 0.0) * shoulder * mix(0.010, 0.014, gas)
       + core * mix(0.010, 0.007, gas)) * fieldBody;
   shade += deepColumn * 0.032;
   shade += gasDeepAbsorption * 0.024;
+  shade += max(-macroRelief, 0.0) * gasMacroBody * 0.036;
   vec3 keyTint = liquid * vec3(0.58, 0.82, 1.00)
     + gas * vec3(0.70, 0.82, 1.00);
   vec3 absorptionTint = liquid * vec3(0.34, 0.48, 0.64)

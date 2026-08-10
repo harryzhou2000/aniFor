@@ -2006,6 +2006,7 @@ void main() {
         color, 2.0, gasDensity, gasNeighbourMean,
         clamp((atmosphere.a - gasNeighbourMean) * 8.0, -1.0, 1.0),
         smoothstep(0.035, 0.62, gasDensity), gasFinishSlope,
+        gasCompactMacroRelief(grid),
         smoothstep(0.020, 0.12, atmosphere.a), uMaterialBodyFinish
       );
     }
@@ -2908,7 +2909,7 @@ void main() {
       color = applyFluidVolumeLobe(
         color, 1.0, density, liquidFinishNeighbourMean,
         clamp((liquid.a - liquidFinishNeighbourMean) * 5.5, -1.0, 1.0),
-        liquidFinishDepth, liquidSlope,
+        liquidFinishDepth, liquidSlope, 0.0,
         liquidFinishEligibility, uMaterialBodyFinish
       );
     }
@@ -6553,7 +6554,7 @@ void main() {
     );
     color = applyFluidVolumeLobe(
       color, 2.0, gasShadeDensity, cloudNeighbourMean, gasCurvature, opticalDepth,
-      volumeSlope, gasInterior, uMaterialBodyFinish
+      volumeSlope, 0.0, gasInterior, uMaterialBodyFinish
     );
     // E04: turn the existing field normal and curvature into a readable
     // connected billow without inventing particle-scale noise. The shared
@@ -8244,7 +8245,7 @@ void main() {
       color = applyFluidVolumeLobe(
         color, 1.0, liquidSurfaceDensity, liquidNeighbourMean,
         clamp((liquidDensity - liquidNeighbourMean) * 5.5, -1.0, 1.0), liquidFinishDepth,
-        semanticSlope + volumeSlope, liquidFinishEligibility,
+        semanticSlope + volumeSlope, 0.0, liquidFinishEligibility,
         uMaterialBodyFinish
       );
     }
