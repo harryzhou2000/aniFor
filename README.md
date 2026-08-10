@@ -44,6 +44,8 @@ npm run visual-lab:review -- \
   --cohort=powder-style
 npm run visual-lab:review -- \
   --cohort=material-optics
+npm run visual-lab:review -- \
+  --cohort=material-lighting
 ```
 
 On Linux it defaults to SwiftShader, one shared browser host, and completed-frame
@@ -85,6 +87,12 @@ Use `material-optics` for one current-only board spanning all five tracked
 Powder, liquid, and atmosphere candidates. It composes the existing cohorts and
 does not add a renderer selector, browser lifecycle, comparison baseline, or
 result identity.
+
+Use `material-lighting` for the focused shared-lighting atlas. Its Off,
+Balanced, and Volumetric variants exercise powder, connected liquid, and dense
+gas through one typed same-page control. The experiment changes RGB only inside
+the existing phase-local ownership guards; alpha, topology, fields, Canvas, and
+the compact true-8× compositor remain unchanged.
 
 The liquid row uses its focused compact scene because Visual Lab deliberately
 stops at Detail 4×. Do not imply that the normal OFF/A/B board covers Detail

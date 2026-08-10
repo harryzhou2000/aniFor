@@ -26,6 +26,17 @@ the tracked `material-optics` cohort for one current-only Powder/liquid/gas
 review board; it is composition only and grants no new selector or lifecycle
 authority.
 
+The first typed cross-phase lighting experiment is checkpointed at `2e46f4b`.
+`material-lighting-profile` owns numeric Off/Balanced/Volumetric selection for
+the `material-lighting-atlas` fixture through the existing generic prepared-
+fixture browser bridge. Its stronger current-only review passed WebGL/HDR with
+zero browser errors and exact alpha; direct inspection prefers Volumetric.
+Keep the profile RGB-only inside the existing E06 powder, E03 liquid, and E13
+gas guards. It must add no sampler, field, support/alpha decision, Canvas
+branch, or compact true-8× uniform. The experiment is opt-in: do not silently
+change the ordinary production default or fold it into `material-optics` or
+`release` without a deliberate promotion decision.
+
 The portable current-only OFF→A, OFF→B, and A→B response checkpoint is deployed
 at revision `073ca8863a14c5b231b479a8b0466751d5703d8c` by workflow run
 `31339455780`; build, downloaded-package verification, Pages deployment, exact

@@ -41,6 +41,22 @@ no Chrome residue. Direct inspection retained Powder columns/holes and grain
 variation, continuous gas lobes, and coherent Water/Oil bodies; this framework
 increment intentionally changes no renderer pixels.
 
+The first shared-lighting experiment now runs through that authoring seam at
+checkpoint `2e46f4b`. One `material-lighting-profile` driver, typed atlas
+fixture, declarative recipe, and focused cohort compare Off, Balanced, and
+Volumetric across stable powder bulk, connected Water/Oil, and dense Smoke/FOG
+without another browser method or capture lifecycle. The preferred stronger
+review retained at
+`.artifacts/visual-lab-reviews/material-lighting-214d38d1-da56-4b3c-8b18-2a04a3c69c48`
+passed WebGL/HDR with zero browser errors and exact alpha in every pair.
+Off→Balanced changed 69,244 RGB pixels with channel peak 5; Off→Volumetric
+changed 73,898 with peak 9. Direct inspection prefers Volumetric: liquid
+surface/core separation and powder bounce are more legible without flattening
+grain, holes, columns, or gas support. This remains an opt-in experiment rather
+than a production default, and it is deliberately absent from compact true 8×.
+Keep `material-optics` and `release` byte-stable until this focused profile is
+intentionally promoted into their composition.
+
 Success means:
 
 - adding a normal visual experiment requires declarative/static-contract data,
