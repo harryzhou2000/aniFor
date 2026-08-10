@@ -1,28 +1,32 @@
 {
-  "schema": "anifor.visual-lab.cohort-catalog/v1",
+  "schema": "anifor.visual-lab.cohort-catalog/v2",
   "cohorts": [
     {
       "name": "atmosphere",
       "includes": [],
-      "candidates": [
-        "gas-showcase",
-        "oxygen-showcase"
-      ]
+      "selectors": {
+        "domains": ["gas"],
+        "fixtures": []
+      },
+      "candidates": []
     },
     {
       "name": "liquid-motion",
       "includes": [],
-      "candidates": [
-        "oil-motion",
-        "water-motion"
-      ]
+      "selectors": {
+        "domains": ["liquid"],
+        "fixtures": ["oil-motion", "water-motion"]
+      },
+      "candidates": []
     },
     {
       "name": "powder-style",
       "includes": [],
-      "candidates": [
-        "powder-style-atlas"
-      ]
+      "selectors": {
+        "domains": ["powder"],
+        "fixtures": []
+      },
+      "candidates": []
     },
     {
       "name": "release",
@@ -31,6 +35,10 @@
         "liquid-motion",
         "powder-style"
       ],
+      "selectors": {
+        "domains": [],
+        "fixtures": []
+      },
       "candidates": []
     }
   ]

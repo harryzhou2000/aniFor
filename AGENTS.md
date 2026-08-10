@@ -107,6 +107,22 @@ all visual, identity, device, force, retained-state, same-context powder,
 high-zoom input, 217-material atlas, forced-stall, and context-loss evidence
 completed. The eight-sample GPU-fence timing stayed bounded at 7,247.8 ms p90
 and 7,365.3 ms maximum. Treat this lifecycle increment as checkpoint-ready.
+It is deployed at exact revision
+`0261b79979d1ddbe83d5657017c83541a5ec52f5` by workflow run `31357180292`;
+the cached build, Pages deploy, exact 19-resource closure, hosted Water capture,
+and portable verification passed.
+
+The active framework increment is backward-compatible declarative cohort
+selection. Keep `anifor.visual-lab.cohort-catalog/v1` readable through its
+original exported alias and use v2 for closed `domain`/`fixture` selectors.
+Every populated selector dimension is a constraint, so domain plus fixture is
+an intersection; empty dimensions are unconstrained, while a selector with no
+populated dimensions selects nothing. Resolve against the validated recipe
+catalog in canonical order, then fail closed on unknown metadata, empty
+expansion, cycles, or overlap with included/explicit candidates. The tracked
+atmosphere, liquid-motion, powder-style, and release recipe-set/v1 files must
+remain byte- and identity-exact. Catalog data has no driver, preparer, method,
+argument, or browser-execution authority.
 Keep one capture implementation;
 do not replace integrity hashing, path containment, lifecycle checks, or runtime
 closure. Visual preference needs a retained board and human/agent inspection,

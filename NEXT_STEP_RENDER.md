@@ -85,6 +85,20 @@ powder, high-zoom input, 217-material atlas, forced-stall, and context-loss
 contract; its eight GPU-fence timing samples stayed at 7,247.8 ms p90 and
 7,365.3 ms maximum. This lifecycle increment is deployable.
 
+That lifecycle increment is deployed at exact revision
+`0261b79979d1ddbe83d5657017c83541a5ec52f5` by workflow run `31357180292`.
+The cached build, Pages deployment, exact 19-resource closure, hosted Water
+receipt capture, and portable verification all passed. The next framework
+increment moves the cohort catalog to backward-readable
+`anifor.visual-lab.cohort-catalog/v2`. V1 remains accepted through its original
+exported schema alias; v2 can select validated recipes by closed `domain` and
+`fixture` metadata. Populated selector dimensions intersect, composition and
+explicit exceptions remain available, and expanded duplicates or empty matches
+fail closed. The tracked atmosphere, liquid-motion, powder-style, and release
+recipe-set/v1 snapshots retain their exact bytes and identities. This removes
+repeated membership edits for domain-wide visual experiments without placing
+executable driver or fixture authority in catalog data.
+
 Active priority order:
 
 1. Treat repeatable performance evidence as complete infrastructure. Revision
@@ -323,6 +337,11 @@ Active priority order:
    `npm run visual-lab:authoring:check`, typecheck, and the focused framework
    suite pass. A real `--cohort=liquid-motion` production-bundle review resolved
    through the catalog and produced a verified two-candidate current response.
+   The backward-compatible v2 cohort-catalog increment extends that authoring
+   seam with validated domain/fixture selectors. Preserve the public v1 schema
+   alias, use canonical recipe order, intersect populated selector dimensions,
+   and keep generated recipe-set/v1 bytes exact. Do not let selector data carry
+   browser methods, driver names, preparation arguments, or execution hooks.
 18. Exact visual pinning is deprecated in the deployed developer and CI paths
    at revision `19a0cc0da882472042630f9fd7af63d5b19a5fa7`. Developer and CI
    review are current-only by default: retain current

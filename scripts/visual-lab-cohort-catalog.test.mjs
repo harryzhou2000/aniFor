@@ -17,6 +17,7 @@ import {
   syncVisualLabCohortOutputs,
   VISUAL_LAB_COHORT_CATALOG_MAX_BYTES,
   VISUAL_LAB_COHORT_CATALOG_SCHEMA,
+  VISUAL_LAB_COHORT_CATALOG_SCHEMA_V2,
   visualLabCohortNames,
   visualLabCohortNamesFromCatalog,
 } from './visual-lab-cohort-catalog.mjs';
@@ -33,15 +34,24 @@ const temporaryDirectory = async () => {
   return directory;
 };
 
-const catalog = (cohorts) => ({ schema: VISUAL_LAB_COHORT_CATALOG_SCHEMA, cohorts });
-const leaf = (name, candidates) => ({ name, includes: [], candidates });
+const catalog = (cohorts) => ({ schema: VISUAL_LAB_COHORT_CATALOG_SCHEMA_V2, cohorts });
+const selectors = (domains = [], fixtures = []) => ({ domains, fixtures });
+const leaf = (name, candidates, selected = selectors()) => ({
+  name, includes: [], selectors: selected, candidates,
+});
+const composed = (name, includes, candidates = []) => ({
+  name, includes, selectors: selectors(), candidates,
+});
+const legacyCatalog = (cohorts) => ({
+  schema: VISUAL_LAB_COHORT_CATALOG_SCHEMA, cohorts,
+});
 
 describe('Visual Lab declarative cohort catalog', () => {
   it('expands names-only composition and delegates canonical order and identity', () => {
     const input = catalog([
       leaf('liquids', ['water-motion', 'oil-motion']),
       leaf('air', ['oxygen-showcase', 'gas-showcase']),
-      { name: 'release', includes: ['air', 'liquids'], candidates: [] },
+      composed('release', ['air', 'liquids']),
     ]);
     const compiled = compileVisualLabCohortCatalog(input);
     expect(compiled.map(({ name }) => name)).toEqual(['liquids', 'air', 'release']);
@@ -54,6 +64,37 @@ describe('Visual Lab declarative cohort catalog', () => {
     expect(visualLabCohortNamesFromCatalog(input)).toEqual(['liquids', 'air', 'release']);
   });
 
+  it('derives membership from closed domain and fixture selectors in canonical recipe order', () => {
+    const input = catalog([
+      leaf('air', [], selectors(['gas'])),
+      leaf('water-only', [], selectors([], ['water-motion'])),
+      leaf('liquid-motion', [], selectors(['liquid'], ['oil-motion', 'water-motion'])),
+      composed('selected', ['air', 'water-only']),
+    ]);
+    const compiled = compileVisualLabCohortCatalog(input);
+    expect(compiled[0].recipes.map(({ name }) => name)).toEqual([
+      'gas-showcase', 'oxygen-showcase',
+    ]);
+    expect(compiled[1].recipes.map(({ name }) => name)).toEqual(['water-motion']);
+    expect(compiled[2].recipes.map(({ name }) => name)).toEqual([
+      'oil-motion', 'water-motion',
+    ]);
+    expect(compiled[3].recipes.map(({ name }) => name)).toEqual([
+      'gas-showcase', 'oxygen-showcase', 'water-motion',
+    ]);
+  });
+
+  it('keeps v1 catalogs readable without granting selectors', () => {
+    const input = legacyCatalog([
+      { name: 'air', includes: [], candidates: ['gas-showcase'] },
+    ]);
+    const normalized = normalizeVisualLabCohortCatalog(input);
+    expect(normalized.schema).toBe(VISUAL_LAB_COHORT_CATALOG_SCHEMA);
+    expect(normalized.cohorts[0].selectors).toEqual({ domains: [], fixtures: [] });
+    expect(compileVisualLabCohortCatalog(input)[0].recipes.map(({ name }) => name))
+      .toEqual(['gas-showcase']);
+  });
+
   it('fails closed for malformed structure, unknowns, duplicates, cycles, and empty expansion', () => {
     expect(() => normalizeVisualLabCohortCatalog({ ...catalog([leaf('air', ['gas-showcase'])]), extra: 1 }))
       .toThrow('exactly schema, cohorts');
@@ -64,15 +105,15 @@ describe('Visual Lab declarative cohort catalog', () => {
       leaf('air', ['gas-showcase', 'gas-showcase']),
     ]))).toThrow('Duplicate');
     expect(() => compileVisualLabCohortCatalog(catalog([
-      { name: 'release', includes: ['missing'], candidates: [] },
+      composed('release', ['missing']),
     ]))).toThrow('Unknown included');
     expect(() => compileVisualLabCohortCatalog(catalog([
-      { name: 'one', includes: ['two'], candidates: [] },
-      { name: 'two', includes: ['one'], candidates: [] },
+      composed('one', ['two']),
+      composed('two', ['one']),
     ]))).toThrow('one -> two -> one');
     expect(() => compileVisualLabCohortCatalog(catalog([
       leaf('air', ['gas-showcase']),
-      { name: 'duplicate', includes: ['air'], candidates: ['gas-showcase'] },
+      composed('duplicate', ['air'], ['gas-showcase']),
     ]))).toThrow('Duplicate candidate');
     expect(() => compileVisualLabCohortCatalog(catalog([
       leaf('empty', []),
@@ -80,6 +121,22 @@ describe('Visual Lab declarative cohort catalog', () => {
     expect(() => compileVisualLabCohortCatalog(catalog([
       leaf('unknown', ['not-a-recipe']),
     ]))).toThrow('Unknown Visual Lab capture candidate');
+    expect(() => normalizeVisualLabCohortCatalog(catalog([
+      leaf('unknown-domain', [], selectors(['plasma'])),
+    ]))).toThrow('Unknown Visual Lab recipe domain');
+    expect(() => normalizeVisualLabCohortCatalog(catalog([
+      leaf('unknown-fixture', [], selectors([], ['missing-fixture'])),
+    ]))).toThrow('Unknown Visual Lab recipe fixture');
+    expect(() => normalizeVisualLabCohortCatalog(catalog([{
+      name: 'extra-selector-field', includes: [],
+      selectors: { domains: ['gas'], fixtures: [], extra: [] }, candidates: [],
+    }]))).toThrow('exactly domains, fixtures');
+    expect(() => compileVisualLabCohortCatalog(catalog([
+      leaf('nonmatching-intersection', [], selectors(['gas'], ['water-motion'])),
+    ]))).toThrow('expands to no candidates');
+    expect(() => compileVisualLabCohortCatalog(catalog([
+      leaf('overlap', ['gas-showcase'], selectors(['gas'])),
+    ]))).toThrow('Duplicate candidate');
   });
 
   it('parses and reads only bounded real JSON with unique object keys', async () => {
