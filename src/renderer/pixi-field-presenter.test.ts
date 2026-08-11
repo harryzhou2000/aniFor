@@ -422,6 +422,12 @@ describe('Pixi presenter startup configuration', () => {
       '* (liquid * deepColumn * 0.016 + gasDeepAbsorption * 0.024);',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'float profileSheenWeight = powder * 0.18 + liquid + gas * 0.78;',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      '* (0.100 + profileGrazing * profileGrazing * 0.300)',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       '* mix(0.18, 0.52, lightingExperimentB);',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(

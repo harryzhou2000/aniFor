@@ -466,6 +466,30 @@ through workflow run `31525037877`; build, Pages, hosted WebGL capture and
 portable verification, exact 19-resource closure, and an independent first-
 attempt live closure check all passed.
 
+The next retained phase-wide illumination experiment adds a single B-only
+profile sheen in `applyMaterialBodyFinish`. It consumes the already-built shell,
+facing, phase weights, eligibility, and optical-profile reflection/transmission
+lanes, rather than adding another family branch or renderer resource. Powder is
+weighted lightly enough to preserve its internal grain; liquid gets the
+strongest coherent curved-shell cue; gas receives a softer profile lift. The
+term is RGB-only and adds no sample, field, texture, pass, allocation, material
+selector, support, alpha, topology, or physics rule. The current-only package is
+`.artifacts/visual-lab-reviews/material-lighting-profile-sheen-20260812-001`;
+both mixed and gas-specific candidates passed shared-host WebGL/HDR, completed
+receipts, exact semantic/field/framebuffer-alpha evidence, portable
+verification, and zero browser errors. The real true-4896x3072 material atlas
+kept all 217 projections visible with zero browser errors, so compact remains
+literal Off. Direct and independent visual review retain the result as a modest
+but coherent dimensional improvement, strongest on liquid and deliberately
+subtle on powder and gas. Current PNG bytes and RGB deltas remain diagnostic.
+
+The manual CI Visual Lab control now defaults to
+`completed-frame-receipt`, using the deployed v2 tuning plan and one evidence
+snapshot per variant. `stable-snapshots` remains an explicit workflow choice,
+and the low-level batch default remains conservative v1. This changes only the
+manual review default: exact evidence planes, screenshot-after-proof, portable
+verification, strict teardown, and current-only aesthetic review remain intact.
+
 Success means:
 
 - adding a normal visual experiment requires declarative/static-contract data,
@@ -490,11 +514,12 @@ Success means:
 
 Priority order from this checkpoint:
 
-1. Checkpoint and deploy the retained shared liquid/gas deep-volume pigment
-   increment, preserving compact true-8x literal Off.
-2. Use the same current-only framework for the next phase-wide optical or
-   illumination primitive; prefer an existing proof/resource shared by multiple
-   families over an exact-material branch.
+1. Checkpoint and deploy the retained shared profile-sheen increment together
+   with the faster manual-CI review default, preserving compact true-8x literal
+   Off and the explicit stable-snapshot fallback.
+2. Use the same current-only framework for the next broad material-composition
+   pass; prefer an existing proof/resource shared by multiple families over an
+   exact-material branch.
 3. Harden only regressions that threaten geometry, semantic/topology
    correctness, WebGL lifecycle, true-8× completion, package integrity, or live
    Pages loading. Do not grow exact-pixel tests for evolving aesthetics.

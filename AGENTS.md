@@ -216,6 +216,32 @@ deployed this visual checkpoint through workflow run `31525037877`; build,
 Pages, hosted WebGL capture and portable verification, exact 19-resource
 closure, and an independent first-attempt live closure check all passed.
 
+The next retained phase-wide illumination increment adds one B-only
+profile-sheen term inside `applyMaterialBodyFinish`. It reuses the reconstructed
+shell, facing, phase weights, eligibility, and optical-profile
+reflection/transmission lanes, so powder, liquid, and gas share one grazing-key
+vocabulary without another sample, field, texture, pass, allocation, material
+selector, support, alpha, topology, or physics rule. Powder remains deliberately
+restrained so grain dominates; liquid gets the clearest curved-shell response;
+gas receives a softer upper/profile lift rather than a hard halo. The retained
+current-only package is
+`.artifacts/visual-lab-reviews/material-lighting-profile-sheen-20260812-001`.
+Its mixed and gas-specific candidates passed shared-host WebGL/HDR, completed
+receipts, exact semantic/field/framebuffer-alpha evidence, portable
+verification, and zero browser errors. The true-4896x3072 217-material atlas
+also passed with every projection visible and zero browser errors, proving the
+compact literal-Off path remains healthy. Independent visual review found the
+change safe and modestly positive, strongest on liquid; do not turn its RGB
+deltas or current PNG bytes into thresholds.
+
+Manual CI Visual Lab review now defaults to the deployed
+`completed-frame-receipt` proof so ordinary authoring uses one evidence snapshot
+per variant. Keep `stable-snapshots` available as an explicit workflow choice
+and keep the low-level batch API's conservative v1 default unchanged. This is a
+review-loop acceleration only: portable tuning-plan verification, all three
+evidence planes, screenshot-after-proof, strict teardown, and current-only
+aesthetic judgment remain required.
+
 When reviewing that dark solid atlas, do not infer lost support merely because
 the B broad-body treatment reduces contrast around a one-cell control. Compare
 fixture-aligned crops first: the retained OFF/B package has AE=0 for the thin

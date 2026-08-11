@@ -64,9 +64,9 @@ describe('deploy-verified CI workflow contract', () => {
       .map(([, choice]) => choice);
     expect(captureProof).toContain('description: Evidence proof used by an optional Visual Lab review');
     expect(captureProof).toContain('required: true');
-    expect(captureProof).toContain('default: stable-snapshots');
+    expect(captureProof).toContain('default: completed-frame-receipt');
     expect(captureProof).toContain('type: choice');
-    expect(choices).toEqual(['stable-snapshots', 'completed-frame-receipt']);
+    expect(choices).toEqual(['completed-frame-receipt', 'stable-snapshots']);
 
     const inputReferences = workflow.match(
       /\$\{\{\s*inputs\.visual_lab_capture_proof\s*\}\}/g,

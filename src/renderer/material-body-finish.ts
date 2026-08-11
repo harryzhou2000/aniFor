@@ -130,6 +130,25 @@ vec3 applyMaterialBodyFinish(
   color += (vec3(1.08) - clamp(color, 0.0, 1.08))
     * powderTransmissionTint * powderShellTransmission;
 
+  // Give every reconstructed body one coherent grazing-light vocabulary. The
+  // existing shell and facing proofs decide where a reflection can live, while
+  // the optical profile's reflection/transmission lanes decide its strength
+  // and pigment keeps it species-aware. Powder stays deliberately restrained
+  // so mineral grain remains dominant; liquid and gas receive the clearer
+  // curved-shell cue. This B-only term is RGB-only and compact true-8x passes
+  // literal Off, so it cannot alter support, topology, or the bounded path.
+  float profileSheenWeight = powder * 0.18 + liquid + gas * 0.78;
+  float profileGrazing = 1.0 - abs(clamp(facing, -1.0, 1.0));
+  float profileSheen = lightingExperimentB * eligibility * shell
+    * profileSheenWeight * finishResponse.x
+    * (0.100 + profileGrazing * profileGrazing * 0.300)
+    * mix(0.55, 1.0, clamp(finishResponse.w / 1.40, 0.0, 1.0));
+  vec3 profileSheenTint = mix(
+    vec3(0.78, 0.89, 1.00), mix(vec3(0.98), identityTint, 0.38), 0.48
+  );
+  color += (vec3(1.10) - clamp(color, 0.0, 1.10))
+    * profileSheenTint * profileSheen;
+
   // Dense volumes keep their pigment instead of collapsing toward grey. This
   // is a bounded saturation lift over existing RGB and cannot affect alpha.
   float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
