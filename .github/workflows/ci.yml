@@ -87,8 +87,9 @@ jobs:
           key: >-
             ccache-${{ runner.os }}-emsdk-6.0.3-${{
             hashFiles('native/**', 'patches/**', 'scripts/build-tpt-wasm.sh',
-            'scripts/fetch-powder-toy.sh') }}
+            'scripts/fetch-powder-toy.sh') }}-${{ github.sha }}
           restore-keys: |
+            ccache-${{ runner.os }}-emsdk-6.0.3-${{ hashFiles('native/**', 'patches/**', 'scripts/build-tpt-wasm.sh', 'scripts/fetch-powder-toy.sh') }}-
             ccache-${{ runner.os }}-emsdk-6.0.3-
 
       - name: Cache project-local Emscripten

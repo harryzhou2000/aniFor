@@ -88,6 +88,21 @@ describe('deploy-verified CI workflow contract', () => {
     expect(candidates).toContain('type: string');
   });
 
+  it('restores the nearest ccache lineage and saves each successful commit', () => {
+    const build = indentedEntry(workflow, 'build', 2);
+    const restore = namedStep(build, 'Restore C++ compiler cache');
+    const save = namedStep(build, 'Save C++ compiler cache after successful build');
+    expect(restore).toContain('uses: actions/cache/restore@v6');
+    expect(restore).toContain("hashFiles('native/**', 'patches/**', 'scripts/build-tpt-wasm.sh',");
+    expect(restore).toContain("'scripts/fetch-powder-toy.sh') }}-${{ github.sha }}");
+    expect(restore.match(/ccache-\$\{\{ runner\.os \}\}-emsdk-6\.0\.3-/g))
+      .toHaveLength(3);
+    expect(save).toContain("if: success() && steps.ccache-restore.outputs.cache-hit != 'true'");
+    expect(save).toContain('uses: actions/cache/save@v6');
+    expect(save).toContain('key: ${{ steps.ccache-restore.outputs.cache-primary-key }}');
+    expect(build.indexOf(restore)).toBeLessThan(build.indexOf(save));
+  });
+
   it('makes build and exact-SHA reuse mutually exclusive and resolves provenance first', () => {
     const build = indentedEntry(workflow, 'build', 2);
     const verified = indentedEntry(workflow, 'verified_build', 2);

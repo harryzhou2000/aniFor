@@ -504,6 +504,20 @@ adding stronger directional/body-wide structure. Manual CI review now defaults
 to these five candidates; clearing the editable candidate field still requests
 the frozen catalog, and `stable-snapshots` remains the proof default.
 
+Revision `9ee61ca0d20489e1e638172a6675dd2fb0883aa5` deployed this shared-
+irradiance checkpoint through successful `main_codex` workflow run
+`31532264988`; its build restored 269/270 C++ objects from ccache, Pages
+deployed in 11 seconds, and exact revision/resource closure plus the hosted
+completed-frame Water smoke passed. Feature-ref run `31531377836` had already
+passed the five-candidate review, artifact round trip, and portable verifier,
+but Pages correctly rejected that unapproved environment branch. Exact-SHA
+reuse then failed closed because the source workflow's overall conclusion was
+failure, despite its passing build and review jobs. A workflow-only follow-up
+therefore keys ccache by native lineage plus commit SHA: a new commit restores
+the nearest compatible prefix and saves its updated cache only after success,
+while an exact-SHA rerun may reuse the immutable primary key without rewriting
+it.
+
 The manual CI Visual Lab control keeps `stable-snapshots` as its conservative
 default. A deployment trial of a `completed-frame-receipt` default failed the
 heavy mixed material atlas twice on loaded GitHub SwiftShader: one bounded CDP

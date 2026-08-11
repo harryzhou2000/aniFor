@@ -253,6 +253,18 @@ without a more directional body-wide proof. Manual CI review defaults to this
 five-candidate cohort; clearing the candidate input still runs the frozen
 catalog, and stable snapshots remain the proof default.
 
+Revision `9ee61ca0d20489e1e638172a6675dd2fb0883aa5` deployed this shared-
+irradiance checkpoint through successful `main_codex` workflow run
+`31532264988`. The build restored 269/270 ccache objects, Pages deployed in 11
+seconds, and exact revision/resource closure plus the hosted completed-frame
+Water smoke passed. Feature-ref run `31531377836` had already passed the five-
+candidate review and downloaded-package verifier, but Pages correctly rejected
+that unapproved environment branch; exact-SHA reuse also correctly rejected an
+overall-failed source run. The workflow-only follow-up keys ccache by native
+lineage plus commit SHA so each new successful commit can restore the nearest
+compatible cache and then save its update. Exact-SHA reruns may reuse the
+immutable primary key without another save.
+
 Keep manual CI Visual Lab review on the conservative `stable-snapshots`
 default. A trial making `completed-frame-receipt` the default failed the heavy
 mixed material atlas twice on loaded GitHub SwiftShader: first through a bounded
