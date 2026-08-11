@@ -36,12 +36,12 @@ describe('Visual Lab execution plan', () => {
 
     expect(plan.entries.map(({ candidate }) => candidate)).toEqual([
       'gas-showcase', 'oxygen-showcase', 'oil-motion', 'water-motion',
-      'powder-style-atlas',
+      'powder-style-atlas', 'material-lighting-atlas',
     ]);
     expect(plan.inspection).toMatchObject({
       schema: VISUAL_LAB_EXECUTION_PLAN_SCHEMA,
-      id: 'sha256:846378d9998da05c2bfbeb11f8bd367fcf1f1239ecf374b360246a90dee31972',
-      summary: { selected: 5 },
+      id: 'sha256:e10b816ed5b8f7c1620f28be867097c4c3b1a71b53af0b8c7f03aad791356a82',
+      summary: { selected: 6 },
       variants: ['off', 'a', 'b'],
       executionPolicy: {
         gpuMode: 'swiftshader',
