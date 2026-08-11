@@ -52,6 +52,7 @@ import {
   resolveRockRoughnessVfxEnabled,
   resolveRockWeatheredFacetVfxEnabled,
   resolveMetalWaterContactVfxEnabled,
+  resolveMaterialLightingVariant,
   resolveWaterMetalTransmissionVfxEnabled,
   resolveWaterMetalSeparationVfxEnabled,
   resolveWaterMetalFresnelSpectrumVfxEnabled,
@@ -83,6 +84,15 @@ describe('resolveRenderLook', () => {
     'accepts the %s preset',
     (look) => expect(resolveRenderLook(`?renderLook=${look}`)).toBe(look),
   );
+
+  it('promotes Volumetric only for the normal-scale Realistic product look', () => {
+    for (const scale of [1, 2, 4]) {
+      expect(resolveMaterialLightingVariant('realistic', scale)).toBe(2);
+      expect(resolveMaterialLightingVariant('classic', scale)).toBe(0);
+      expect(resolveMaterialLightingVariant('neon-lab', scale)).toBe(0);
+    }
+    expect(resolveMaterialLightingVariant('realistic', 8)).toBe(0);
+  });
 
   it('keeps volume VFX opt-in through an HDR preset and independently switchable', () => {
     expect(resolveVolumeVfxEnabled('classic', '?volumeVfx=on')).toBe(false);

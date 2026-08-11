@@ -241,7 +241,10 @@ describe('field renderer layout scheduling', () => {
     const setMaterialLightingVariant = vi.fn();
     const renderer = Object.create(MaterialRenderer.prototype) as {
       desiredMaterialLightingVariant?: 0 | 1 | 2;
-      presenter?: { setMaterialLightingVariant(variant: 0 | 1 | 2): void };
+      presenter?: {
+        setMaterialLightingVariant(variant: 0 | 1 | 2): void;
+        getMaterialLightingVariant(): 0 | 1 | 2;
+      };
       setMaterialLightingVariant(variant: 0 | 1 | 2): void;
       getMaterialLightingVariant(): 0 | 1 | 2;
     };
@@ -252,10 +255,29 @@ describe('field renderer layout scheduling', () => {
     expect(renderer.desiredMaterialLightingVariant).toBe(2);
     expect(renderer.getMaterialLightingVariant()).toBe(2);
 
-    renderer.presenter = { setMaterialLightingVariant };
+    renderer.presenter = {
+      setMaterialLightingVariant,
+      getMaterialLightingVariant: () => renderer.desiredMaterialLightingVariant ?? 0,
+    };
     renderer.setMaterialLightingVariant(1);
     expect(setMaterialLightingVariant).toHaveBeenCalledWith(1);
     expect(renderer.getMaterialLightingVariant()).toBe(1);
+  });
+
+  it('reports the live product material-lighting profile after WebGL promotion', () => {
+    const renderer = Object.create(MaterialRenderer.prototype) as {
+      desiredMaterialLightingVariant?: 0 | 1 | 2;
+      presenter?: {
+        getMaterialLightingVariant(): 0 | 1 | 2;
+      };
+      getMaterialLightingVariant(): 0 | 1 | 2;
+    };
+    expect(renderer.getMaterialLightingVariant()).toBe(0);
+    renderer.presenter = { getMaterialLightingVariant: () => 2 };
+    expect(renderer.getMaterialLightingVariant()).toBe(2);
+    renderer.presenter = { getMaterialLightingVariant: () => 0 };
+    renderer.desiredMaterialLightingVariant = 2;
+    expect(renderer.getMaterialLightingVariant()).toBe(0);
   });
 
   it('forwards completed-frame tickets only through an active WebGL presenter', () => {

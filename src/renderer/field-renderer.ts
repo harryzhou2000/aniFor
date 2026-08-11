@@ -1024,7 +1024,9 @@ export class MaterialRenderer {
   }
 
   getMaterialLightingVariant(): 0 | 1 | 2 {
-    return this.desiredMaterialLightingVariant ?? 0;
+    return this.presenter?.getMaterialLightingVariant()
+      ?? this.desiredMaterialLightingVariant
+      ?? 0;
   }
 
   /** Native DLAY countdown is a state-owned RGB cue, never a JavaScript timer. */

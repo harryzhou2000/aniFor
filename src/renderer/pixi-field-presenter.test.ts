@@ -794,6 +794,12 @@ describe('Pixi presenter startup configuration', () => {
     expect(source.match(/this\.uniforms\.uniforms\.uGasLightVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uMaterialLightingVariant = 0;/g))
       .toHaveLength(3);
+    expect(source).toContain(
+      'const materialLightingVariant = resolveMaterialLightingVariant(\n      renderLook, outputScale,\n    );',
+    );
+    expect(source).toContain(
+      'const variant = Number(this.uniforms.uniforms.uMaterialLightingVariant);',
+    );
     expect(source.match(/this\.uniforms\.uniforms\.uGasCoreDepthVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uSmokeSoftnessVfx = 0;/g)).toHaveLength(2);
     expect(source.match(/this\.uniforms\.uniforms\.uSmokeBillowDepthVfx = 0;/g)).toHaveLength(2);

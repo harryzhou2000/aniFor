@@ -104,6 +104,7 @@ import {
   resolveRockWeatheredFacetVfxEnabled,
   resolveSolidBodyVfxEnabled,
   resolveConcreteMesostrataRetentionVfxEnabled,
+  resolveMaterialLightingVariant,
   resolvePowderBodyVfxEnabled, resolvePowderLightVfxEnabled, resolveRenderLook,
   resolveSootyPowderBodyVfxEnabled,
   resolveSnowpackBodyVfxEnabled,
@@ -12132,10 +12133,12 @@ export class PixiFieldPresenter {
     // The protected compact shader retains its one established emission sample.
     const powderLightVfxEnabled = outputScale < 8
       && resolvePowderLightVfxEnabled(renderLook);
-    // Shared normal-WebGL material-lighting variants are selected only through
-    // the typed same-page capture driver. Production begins at exact no-op;
-    // compact true 8x declares neither this uniform nor parallel arithmetic.
-    const materialLightingVariant = 0;
+    // Promote the reviewed Volumetric response through the product-look owner.
+    // The typed same-page driver can still select exact Off/Balanced/Volumetric
+    // states, while Classic, Neon Lab, and compact true 8x remain unchanged.
+    const materialLightingVariant = resolveMaterialLightingVariant(
+      renderLook, outputScale,
+    );
     // E09 is arithmetic over the normal shader's existing packed stability
     // sample. The protected compact true-8x shader deliberately
     // declares neither its selector nor its contact-depth branch.
@@ -13803,6 +13806,12 @@ export class PixiFieldPresenter {
     this.uniforms.uniforms.uMaterialLightingVariant = variant;
     this.app.canvas.dataset.materialLightingVariant = String(variant);
     if (render) this.renderApplication();
+  }
+
+  /** Live profile after product defaults, capture overrides, and HDR fallback. */
+  getMaterialLightingVariant(): 0 | 1 | 2 {
+    const variant = Number(this.uniforms.uniforms.uMaterialLightingVariant);
+    return variant === 1 || variant === 2 ? variant : 0;
   }
 
   private publishVisualLabDataset(): void {

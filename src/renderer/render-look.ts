@@ -21,6 +21,21 @@ export function resolveRenderLook(
   return DEFAULT_RENDER_LOOK;
 }
 
+export type MaterialLightingVariant = 0 | 1 | 2;
+
+/**
+ * Resolves the reviewed cross-phase lighting treatment owned by the product
+ * look. Volumetric is the normal-HDR Realistic default; Classic, Neon Lab, and
+ * the compact true-8x compositor retain their established presentation. The
+ * typed same-page capture control may still override this value after startup.
+ */
+export function resolveMaterialLightingVariant(
+  look: RenderLook,
+  outputScale: number,
+): MaterialLightingVariant {
+  return look === 'realistic' && outputScale < 8 ? 2 : 0;
+}
+
 /**
  * Keeps the material-volume experiment independently measurable inside an HDR
  * preset. The query override is deliberately unable to enable it for Classic:
