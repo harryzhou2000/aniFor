@@ -14,6 +14,18 @@ visual requirement or deploy gate. Keep `accepted-v1`, baseline comparison, and
 promotion readable only for legacy packages or an explicit ad-hoc reference;
 developer review and CI must move to current-only evidence by default.
 
+The domain-derived checkpoint launcher is deployed at revision
+`21fe52c96dd0d30152d2b2cec3a3d4b589a53630` by workflow run `31500138353`.
+Its next retained visual candidate strengthens only the shared gas
+mid-transmission/deep-absorption pair under material-lighting Volumetric/B; keep
+Off/Balanced and compact true-8× exact on their established paths. The current
+review package is
+`.artifacts/visual-lab-reviews/material-lighting-4c682ed7-8997-4fb1-af63-6191a39da8e5`:
+both normal candidates passed WebGL/HDR with exact alpha and zero browser
+errors, and the derived 217-material true-8× audit passed. The next visual
+priority is powder bulk lighting that retains grain and fine topology, not
+another capture lifecycle or exact-image test.
+
 Capture-facing fixture and recipe ownership has one data-only join point:
 `src/shared/visual-capture-static-catalog.js`. It projects the frozen
 normal-HDR and source-stage contracts into ordered fixture/driver bindings and

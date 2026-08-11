@@ -202,9 +202,9 @@ vec3 applyFluidVolumeLobe(
   float liquidCoreScale = 1.0 + liquid * opticalExperiment
     * mix(0.22, 0.66, opticalExperimentB);
   float gasMidScale = 1.0 + gas * opticalExperiment
-    * mix(0.18, 0.85, opticalExperimentB);
+    * mix(0.18, 1.75, opticalExperimentB);
   float gasExtinctionScale = 1.0 + gas * opticalExperiment
-    * mix(0.65, 2.40, opticalExperimentB);
+    * mix(0.65, 4.25, opticalExperimentB);
   // Variant B may strengthen the cloud's existing field-proven lobe, but it
   // must not invent another noise field or grow support. Convex crowns and
   // lit shoulders catch a little more transmitted light while concave pockets

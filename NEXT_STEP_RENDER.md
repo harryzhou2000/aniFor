@@ -216,6 +216,23 @@ zero browser errors. Its manifest retained the exact
 `profile-inactive-compact-compatibility` relationship and the established
 compact runner argv, proving routing changed without replacing either lifecycle.
 
+The first visual increment after that framework checkpoint strengthens gas
+volume contrast inside the existing shared fluid lobe. Volumetric/B increases
+only the already-authored `core * (1 - core)` transmission and paired `core²`
+absorption scales; Off and Balanced retain their established values. It adds no
+sample, procedural noise, field, material selector, resource, pass, alpha,
+support, or topology decision, and the compact true-8× compositor still passes
+literal Off. The retained two-fixture checkpoint is
+`.artifacts/visual-lab-reviews/material-lighting-4c682ed7-8997-4fb1-af63-6191a39da8e5`.
+Both candidates passed WebGL/HDR with zero warnings, browser errors, or alpha
+differences. Gas Off→Volumetric changed 164,278 RGB pixels with total absolute
+delta 1,498,236 and channel peak 26; direct inspection retains the cloud
+silhouettes, hole, open channel, contacts, emitters, and sparse controls while
+giving Smoke and Oxygen a more legible translucent middle and deeper core. The
+derived 4896×3072 217-material compact audit also passed. Retain this candidate
+as the current gas-volume checkpoint; the next aesthetic pass should address
+powder bulk lighting without averaging away its mineral grain or fine topology.
+
 Success means:
 
 - adding a normal visual experiment requires declarative/static-contract data,
@@ -240,15 +257,14 @@ Success means:
 
 Priority order from this checkpoint:
 
-1. Checkpoint and deploy the retained shared shallow-liquid transmission shelf.
-   Preserve its B-only experiment boundary and the explicit compact evidence
-   relationship: normal Volumetric/HDR behavior is inactive at 8×, while the
-   compact liquid atlas proves phase-family health only.
-2. Continue reducing experiment-authoring friction only where another
-   experiment still requires duplicated registration or lifecycle code. The
-   checkpoint launcher now derives cohort routing from the resolved recipe
-   domain; prefer the same static-catalog and closed-capability pattern over new
-   audit branches.
+1. Checkpoint and deploy the retained B-only gas mid/core contrast refinement.
+   Preserve the explicit compact evidence relationship: normal
+   Volumetric/HDR behavior is inactive at 8×, while the compact atlas proves
+   broad material and phase health only.
+2. Use the established current-only loop for a powder-bulk lighting experiment
+   that preserves the existing grain signal, holes, fine columns, unlike
+   contacts, and stable Smooth boundary. Avoid another fixture or lifecycle
+   unless the current powder atlas cannot expose the decision.
 3. Harden only regressions that threaten geometry, semantic/topology
    correctness, WebGL lifecycle, true-8× completion, package integrity, or live
    Pages loading. Do not grow exact-pixel tests for evolving aesthetics.
