@@ -321,7 +321,7 @@ describe('Pixi presenter startup configuration', () => {
     );
     const powderLightVfxStart = powder.indexOf('    // E06:', powderBodyVfxEnd);
     const powderLightVfxEnd = powder.indexOf(
-      '    color += fieldLightContribution;', powderLightVfxStart,
+      '    // Volumetric/B replaces part of the phase-local field response', powderLightVfxStart,
     );
     const powderSolidContactVfxStart = normal.indexOf('  // E09:');
     const powderSolidContactVfxBranchStart = normal.indexOf(
@@ -432,6 +432,14 @@ describe('Pixi presenter startup configuration', () => {
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'finishResponse.x * 0.34 + finishResponse.w * 0.46',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'lightIncidence\n      + max(dot(bodyNormal',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain('sourceFacing * 0.140');
+    expect(normal).toContain('profileIrradianceProbeResolved < 0.5');
+    expect(normal).toContain(
+      'fieldUv + profileIrradianceOutward * uEmissionTexel * 2.0',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       '* mix(0.18, 0.52, lightingExperimentB);',
@@ -739,7 +747,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(powderLightVfx).not.toContain('uTime');
     expect(powderLightVfx).not.toContain('gl_FragCoord');
     expect(powderLightVfx).not.toMatch(/\balpha\s*[+*]?=/);
-    expect(normal.match(/texture\(\s*uEmissionTexture/g)).toHaveLength(7);
+    expect(normal.match(/texture\(\s*uEmissionTexture/g)).toHaveLength(8);
 
     // E09 decodes exact value 254 from the already-sampled presenter-owned
     // stability byte. The Canvas fallback retains ordinary settled value 255,

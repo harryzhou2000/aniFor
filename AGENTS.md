@@ -274,6 +274,31 @@ remains an explicit workflow choice for suitable cohorts. Do not lengthen its
 watchdog, weaken strict teardown, or make it the universal default without new
 cross-fixture hosted evidence.
 
+The retained directional-irradiance increment extends the same B-only shared
+composition seam with one source-facing proof. Gas and solid reuse their
+existing outward emission probe; eligible liquid and stable Smooth powder take
+one bounded normal-directed emission sample only on the normal high-quality
+shader. The shared body finish combines that incidence with a deliberately
+small analytic key fallback, so flat or lower-quality bodies degrade
+continuously. Off/A, Canvas, and compact true 8x remain unchanged. The solid
+atlas keeps each Fire source behind a four-cell air gap, making directionality
+visible without source/body overlap or a new fixture mechanism. Add no new
+field, texture, pass, target, allocation, material selector, support, alpha,
+topology, or physics rule.
+
+The retained current-only package is
+`.artifacts/visual-lab-reviews/material-lighting-directional-irradiance-20260812-001`.
+All five material-lighting candidates passed stable-snapshot shared-host
+WebGL/HDR capture, exact geometry and semantic/field/framebuffer-alpha evidence,
+portable verification, and zero capture failures with one host and no recycle.
+The real 4896x3072 true-8x atlas kept all 217 material projections visible and
+reported zero browser errors. Direct and independent review retain the restrained
+result: broad solid bodies and gas volumes respond toward their nearby source
+without exterior halos, support growth, lost holes, or erased fine structures.
+Do not strengthen the mild cavity-adjacent response without first improving its
+outer-source discrimination. Current PNG bytes and RGB deltas remain diagnostic,
+not acceptance gates.
+
 Revision `813066c81735da2e9b2752c9ddff276cc1c8f0da` deployed the retained
 profile sheen through workflow run `31528453927`. The ccache-backed build,
 two-candidate stable-snapshot review, downloaded-package verification, Pages

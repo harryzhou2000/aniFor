@@ -30,6 +30,8 @@ describe('solid material-lighting atlas fixture', () => {
       expect(at(card.nativeWall.anchor.x, card.nativeWall.anchor.y)).toBe(card.material);
       expect(wallAt(card.nativeWall.anchor.x, card.nativeWall.anchor.y)).toBe(1);
       expect(at(card.emitter.x, card.emitter.y)).toBe(Material.Fire);
+      expect(card.emitter.x - (card.body.x + card.body.width)).toBe(4);
+      expect(card.thinStructure.x - (card.emitter.x + card.emitter.width)).toBe(7);
       expect(at(card.guardedBlank.x, card.guardedBlank.y)).toBe(Material.Empty);
     }
   });

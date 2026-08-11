@@ -527,6 +527,31 @@ an explicit choice for suitable cohorts. Do not lengthen its watchdog, weaken
 strict teardown, or make it universal without new cross-fixture hosted
 evidence.
 
+The next retained composition increment makes shared profile irradiance
+source-directional without creating another lighting subsystem. Gas and solid
+reuse the outward emission probes they already own; eligible liquid and stable
+Smooth powder take one bounded normal-directed emission sample only in the
+normal high-quality B shader. `applyMaterialProfileIrradiance` receives the
+resolved incidence and source colour, retaining only a small analytic key as a
+continuous fallback. Off/A, Canvas, and compact true 8x remain literal controls.
+The solid atlas moves its Fire strips behind a four-cell air gap so source-facing
+response is reviewable without overlap. No field, texture, pass, target,
+allocation, material selector, support, alpha, topology, or physics rule is
+added.
+
+The retained current-only package is
+`.artifacts/visual-lab-reviews/material-lighting-directional-irradiance-20260812-001`.
+All five material-lighting candidates passed stable-snapshot shared-host
+WebGL/HDR capture, exact geometry and semantic/field/framebuffer-alpha evidence,
+portable verification, and zero capture failures with one host and no recycle.
+The real 4896x3072 true-8x atlas kept all 217 projections visible and reported
+zero browser errors. Direct and independent review retain the restrained result:
+solid bodies and gas volumes gain coherent source-facing depth without exterior
+halos, topology expansion, lost holes, or erased fine structures. Keep the mild
+cavity-adjacent response bounded; a future increase must improve outer-source
+discrimination rather than merely raise the coefficient. Current PNG bytes and
+RGB deltas remain diagnostic rather than visual gates.
+
 Revision `813066c81735da2e9b2752c9ddff276cc1c8f0da` deployed the retained
 profile sheen through workflow run `31528453927`. The ccache-backed build,
 two-candidate stable-snapshot review, downloaded-package verification, Pages

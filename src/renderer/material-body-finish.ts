@@ -173,6 +173,7 @@ vec3 applyMaterialProfileIrradiance(
   vec2 slope,
   float eligibility,
   vec4 emissionState,
+  float lightIncidence,
   float enabled,
   float materialLightingVariant
 ) {
@@ -188,8 +189,16 @@ vec3 applyMaterialProfileIrradiance(
   float body = smoothstep(0.035, 0.42, density) * eligibility;
   float bodyDepth = clamp(depth, 0.0, 1.0);
   float slopeLength = length(slope);
-  vec2 bodyNormal = slopeLength > 0.0001 ? slope / slopeLength : vec2(0.0);
-  float sourceFacing = max(dot(bodyNormal, normalize(vec2(-0.58, -0.815))), 0.0);
+  vec2 bodyNormal = slopeLength > 0.0001 ? -slope / slopeLength : vec2(0.0);
+  // A normal-directed field probe is the authoritative source-facing proof at
+  // high quality. Retain a small shared key fallback for flat/compact-quality
+  // bodies so the response degrades continuously rather than becoming a hard
+  // quality seam; the probe remains the dominant directional term.
+  float sourceFacing = clamp(
+    lightIncidence
+      + max(dot(bodyNormal, normalize(vec2(-0.58, -0.815))), 0.0) * 0.24,
+    0.0, 1.0
+  );
 
   // Reflection/transmission lanes define transport while the pigment lane
   // keeps diffuse powder and deep gas from converging on the same glossy tint.
@@ -204,7 +213,7 @@ vec3 applyMaterialProfileIrradiance(
     );
   float phaseGain = powder * 0.62 + liquid + gas * 0.82 + solid * 0.76;
   float irradiance = lightReach * body * transport * phaseGain
-    * (0.020 + sourceFacing * 0.034 + bodyDepth * (0.018 + gas * 0.016));
+    * (0.020 + sourceFacing * 0.140 + bodyDepth * (0.018 + gas * 0.016));
 
   float lightPeak = max(max(emissionState.r, emissionState.g), max(emissionState.b, 0.08));
   vec3 lightTint = clamp(emissionState.rgb / lightPeak, 0.0, 1.0);

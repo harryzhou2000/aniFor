@@ -6239,6 +6239,12 @@ void main() {
   float powderLightBodyDepth = 0.0;
   float powderLightBodySlope = 0.0;
   float powderSolidContactBodyGate = 0.0;
+  // Volumetric/B may reuse a phase-local outward emission probe below. Keep
+  // the carried result data-only and centre-seeded so Off/Balanced and lower
+  // quality paths retain their established sampling and colour behavior.
+  vec4 profileIrradianceEmission = emissionState;
+  float profileIrradianceIncidence = 0.0;
+  float profileIrradianceProbeResolved = 0.0;
   vec2 liquidBackdropOffset = vec2(0.0);
   if (wallOnly > 0.5) {
     alpha = smoothstep(0.30, 0.70, density) * 0.96;
@@ -6543,7 +6549,10 @@ void main() {
         uEmissionTexture, fieldUv + gasOutward * uEmissionTexel * 2.0
       );
       gasLightIncidence = smoothstep(0.0, 0.12, outwardLight.a - emissionState.a);
+      profileIrradianceIncidence = gasLightIncidence;
+      profileIrradianceProbeResolved = 1.0;
       if (outwardLight.a > emissionState.a) gasLightColor = outwardLight.rgb;
+      if (outwardLight.a > emissionState.a) profileIrradianceEmission = outwardLight;
       gasLightReach = max(gasLightReach, smoothstep(0.002, 0.42, outwardLight.a) * 0.86);
     }
     float gasLightScatter = gasLightReach
@@ -8536,6 +8545,11 @@ void main() {
             float outwardIncidence = smoothstep(
               0.0, 0.12, outwardEmission.a - emissionState.a
             );
+            profileIrradianceIncidence = outwardIncidence;
+            profileIrradianceProbeResolved = 1.0;
+            if (outwardEmission.a > emissionState.a) {
+              profileIrradianceEmission = outwardEmission;
+            }
             solidFieldIncidence = outwardReach * outwardIncidence * 0.12;
             if (outwardEmission.a > emissionState.a) solidFieldColor = outwardEmission.rgb;
           } else {
@@ -11638,6 +11652,29 @@ void main() {
     vec4 profileIrradianceResponse = materialBodyFinishParameters(
       profileIrradiancePhase, optics, uMaterialBodyFinish
     );
+    // Resolve one shared source-facing proof only when a phase-local gas/solid
+    // branch did not already perform the same outward probe. Liquid and stable
+    // Smooth powder therefore gain directionality for one bounded normal-HDR
+    // sample, while gas/solid reuse their existing sample and compact true 8x
+    // never enters this shader branch.
+    float profileIrradianceNormalLength = length(normal.xy);
+    if (profileIrradianceB > 0.5 && uHighQuality > 0.5
+      && profileIrradianceEligibility > 0.001
+      && profileIrradianceProbeResolved < 0.5
+      && profileIrradianceNormalLength > 0.0001) {
+      vec2 profileIrradianceOutward = normal.xy / profileIrradianceNormalLength;
+      vec4 outwardIrradiance = texture(
+        uEmissionTexture,
+        fieldUv + profileIrradianceOutward * uEmissionTexel * 2.0
+      );
+      profileIrradianceIncidence = smoothstep(
+        0.0, 0.12, outwardIrradiance.a - emissionState.a
+      );
+      if (outwardIrradiance.a > emissionState.a) {
+        profileIrradianceEmission = outwardIrradiance;
+      }
+      profileIrradianceProbeResolved = 1.0;
+    }
     float legacyIrradianceShare = profileIrradianceB
       * profileIrradianceEligibility
       * (gasVolume > 0.5 ? 0.0 : (liquidVolume > 0.5 ? 0.30 : 0.24));
@@ -11649,7 +11686,8 @@ void main() {
         color, profileIrradiancePhase, profileIrradianceResponse,
         gasVolume > 0.5 ? atmosphereState.a : density,
         profileIrradianceDepth, semanticSlope + volumeSlope,
-        profileIrradianceEligibility, emissionState,
+        profileIrradianceEligibility, profileIrradianceEmission,
+        profileIrradianceIncidence,
         uMaterialBodyFinish, uMaterialLightingVariant
       );
     }

@@ -53,7 +53,7 @@ export interface SolidMaterialLightingAtlasCard {
   };
   /** Matter and the native bmap wall plane are independently present here. */
   readonly nativeWall: { readonly body: Rect; readonly anchor: Point };
-  /** Separated source keeps the material-lighting emission evidence plane live. */
+  /** Four-cell air gap keeps directional emission live without source overlap. */
   readonly emitter: Rect;
   readonly guardedBlank: Rect;
 }
@@ -106,7 +106,7 @@ const SOLID_MATERIAL_LIGHTING_CARDS = Object.freeze(
         neighbourMaterial: neighbour,
       }),
       nativeWall: Object.freeze({ body: wallBody, anchor: point(wallBody.x, wallBody.y) }),
-      emitter: rect(card.x + 140, card.y + 82, 3, 40),
+      emitter: rect(card.x + 86, card.y + 22, 3, 44),
       guardedBlank: rect(card.x + 50, card.y + 116, 66, 18),
     } satisfies SolidMaterialLightingAtlasCard);
   }),
