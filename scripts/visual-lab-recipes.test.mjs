@@ -48,10 +48,14 @@ describe('Visual Lab capture recipes', () => {
         name: 'material-lighting-atlas', domain: 'material-lighting', target: 0,
         fixture: 'material-lighting-atlas', gain: 1, renderScale: 2,
       },
+      {
+        name: 'gas-material-lighting-atlas', domain: 'material-lighting', target: 0,
+        fixture: 'gas-material-lighting-atlas', gain: 1, renderScale: 2,
+      },
     ]);
     expect(visualLabCaptureRecipeNames()).toEqual([
       'gas-showcase', 'oxygen-showcase', 'oil-motion', 'water-motion',
-      'powder-style-atlas', 'material-lighting-atlas',
+      'powder-style-atlas', 'material-lighting-atlas', 'gas-material-lighting-atlas',
     ]);
     expect(resolveVisualLabCaptureRecipe('water-motion'))
       .toBe(VISUAL_LAB_CAPTURE_RECIPES[3]);
@@ -78,7 +82,7 @@ describe('Visual Lab capture recipes', () => {
 
     const names = visualLabCaptureRecipeNames();
     names.pop();
-    expect(visualLabCaptureRecipeNames()).toHaveLength(6);
+    expect(visualLabCaptureRecipeNames()).toHaveLength(7);
   });
 
   it('requires an array of exact data objects', () => {
@@ -139,7 +143,7 @@ describe('Visual Lab capture recipes', () => {
     expect(() => createOne({ fixture: 'missing' }))
       .toThrow(
         'has an incompatible fixture: --fixture must be showcase, oil-motion, water-motion,'
-        + ' powder-style-atlas, or material-lighting-atlas',
+        + ' powder-style-atlas, material-lighting-atlas, or gas-material-lighting-atlas',
       );
     expect(() => createOne({ fixture: 'oil-motion', domain: 'gas', target: 8 }))
       .toThrow('--fixture=oil-motion requires --domain=liquid --target=8');
@@ -165,7 +169,8 @@ describe('Visual Lab capture recipes', () => {
     expect(() => resolveVisualLabCaptureRecipe('missing'))
       .toThrow(
         'Unknown Visual Lab capture candidate "missing"; --candidate must be one of: '
-        + 'gas-showcase, oxygen-showcase, oil-motion, water-motion, powder-style-atlas, material-lighting-atlas',
+        + 'gas-showcase, oxygen-showcase, oil-motion, water-motion, powder-style-atlas, material-lighting-atlas,'
+        + ' gas-material-lighting-atlas',
       );
     expect(() => resolveVisualLabCaptureRecipe(undefined))
       .toThrow('Unknown Visual Lab capture candidate undefined');

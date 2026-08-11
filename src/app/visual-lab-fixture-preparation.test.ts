@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Material } from '../shared/materials';
 import { RenderLabBackend } from '../simulation/render-lab-backend';
+import { prepareGasMaterialLightingAtlasFixture } from './gas-material-lighting-atlas-fixture';
 import { prepareLiquidMotionVfxFixture } from './liquid-motion-vfx-audit';
 import { prepareOilMotionVfxFixture } from './oil-motion-vfx-audit';
 import { prepareMaterialLightingAtlasFixture } from './material-lighting-atlas-fixture';
@@ -15,6 +16,7 @@ describe('Visual Lab fixture preparation registry', () => {
   it('exposes the exact frozen closed activation IDs', () => {
     expect(VISUAL_LAB_FIXTURE_IDS).toEqual([
       'showcase', 'oil-motion', 'water-motion', 'powder-style-atlas', 'material-lighting-atlas',
+      'gas-material-lighting-atlas',
     ]);
     expect(Object.isFrozen(VISUAL_LAB_FIXTURE_IDS)).toBe(true);
   });
@@ -22,6 +24,7 @@ describe('Visual Lab fixture preparation registry', () => {
   it('exposes the exact frozen closed preparation IDs', () => {
     expect(VISUAL_LAB_PREPARED_FIXTURE_IDS).toEqual([
       'oil-motion', 'water-motion', 'powder-style-atlas', 'material-lighting-atlas',
+      'gas-material-lighting-atlas',
     ]);
     expect(Object.isFrozen(VISUAL_LAB_PREPARED_FIXTURE_IDS)).toBe(true);
   });
@@ -31,6 +34,7 @@ describe('Visual Lab fixture preparation registry', () => {
     ['water-motion', (simulation: RenderLabBackend) => prepareLiquidMotionVfxFixture(simulation, 'moving')],
     ['powder-style-atlas', preparePowderStyleAtlasFixture],
     ['material-lighting-atlas', prepareMaterialLightingAtlasFixture],
+    ['gas-material-lighting-atlas', prepareGasMaterialLightingAtlasFixture],
   ] as const)('prepares %s byte-identically to its direct moving builder', (id, prepareDirect) => {
     const generic = new RenderLabBackend();
     const direct = new RenderLabBackend();

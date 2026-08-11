@@ -187,9 +187,9 @@ vec3 applyFluidVolumeLobe(
   float liquidCoreScale = 1.0 + liquid * opticalExperiment
     * mix(0.22, 0.66, opticalExperimentB);
   float gasMidScale = 1.0 + gas * opticalExperiment
-    * mix(0.10, 0.24, opticalExperimentB);
+    * mix(0.18, 0.85, opticalExperimentB);
   float gasExtinctionScale = 1.0 + gas * opticalExperiment
-    * mix(0.32, 0.86, opticalExperimentB);
+    * mix(0.65, 2.40, opticalExperimentB);
   float liquidTransmissionCrest = transmittedShoulder * finishResponse.w
     * (0.060 + max(facing, 0.0) * 0.045) * liquidSurfaceScale;
 

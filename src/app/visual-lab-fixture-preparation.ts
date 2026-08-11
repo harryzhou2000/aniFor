@@ -1,5 +1,6 @@
 import type { SimulationBackend } from '../simulation';
 import { VISUAL_CAPTURE_STATIC_FIXTURES } from '../shared/visual-capture-static-catalog.js';
+import { prepareGasMaterialLightingAtlasFixture } from './gas-material-lighting-atlas-fixture';
 import { prepareLiquidMotionVfxFixture } from './liquid-motion-vfx-audit';
 import { prepareMaterialLightingAtlasFixture } from './material-lighting-atlas-fixture';
 import { prepareOilMotionVfxFixture } from './oil-motion-vfx-audit';
@@ -48,6 +49,7 @@ const VISUAL_LAB_FIXTURE_PREPARERS = Object.freeze({
   'water-motion': (simulation) => prepareLiquidMotionVfxFixture(simulation, 'moving'),
   'powder-style-atlas': preparePowderStyleAtlasFixture,
   'material-lighting-atlas': prepareMaterialLightingAtlasFixture,
+  'gas-material-lighting-atlas': prepareGasMaterialLightingAtlasFixture,
 } satisfies Record<VisualLabPreparedFixtureId, VisualLabFixturePreparer>);
 
 const REGISTERED_PREPARER_IDS = Object.keys(VISUAL_LAB_FIXTURE_PREPARERS);

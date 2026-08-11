@@ -81,7 +81,12 @@ This is review-scene geometry, not a new gas renderer path or material rule;
 keep it as the more representative shared-lighting diagnostic for later
 volumetric experiments.
 
-The next shared-transport candidate is retained locally at
+The shared-transport checkpoint is deployed at exact revision
+`e7f1f9f102b251a05fc056acacd9b1e464ffeb39` by workflow run
+`31489782228`. The build passed 1,506 source and 326 tooling tests with
+269/270 ccache hits; Pages deployment, exact 19-resource closure, hosted
+receipt-bound Water capture, and portable verification all passed. Its retained
+local review is at
 `.artifacts/visual-lab-reviews/material-lighting-4811021f-790b-41c5-b9c6-742d45c7b972`.
 It scales the existing sampler-free fluid lobe with the already-owned
 Off/Balanced/Volumetric profile: normal 1×–4× liquid receives stronger exposed
@@ -97,6 +102,26 @@ peak 13 and zero alpha differences. Compact true-8× gas and liquid gates remain
 literal Off and passed exact repeated-Off topology/alpha with zero browser
 errors. This candidate adds no sampler, texture, field, allocation, target, or
 pass.
+
+The follow-up gas authoring checkpoint adds one declarative
+`gas-material-lighting-atlas` recipe and one typed paused fixture preparer. It
+reuses `material-lighting-profile` and the generic capture lifecycle unchanged;
+there is no new driver, browser method, renderer branch, CI path, or release
+cohort membership. The fixture exposes two close multi-lobe Smoke/Oxygen
+clouds, a hole, open channel, sparse carriers, solid/liquid/foreign-gas
+contacts, native wall, emitters, and guarded blank. The retained two-candidate
+review at
+`.artifacts/visual-lab-reviews/material-lighting-ac2ed964-66fc-4b9d-9f7d-d587ccfe6c7f`
+passes WebGL/HDR, completed-frame receipts, every semantic/field/framebuffer
+invariant, and zero browser errors. The stronger gas-only Volumetric response
+is preferred: it raises existing field-proven mid-volume key and deep
+extinction without globally grading gas or changing liquid/powder coefficients.
+Off→Volumetric changes 160,363 RGB pixels with total absolute delta 727,708,
+channel peak 12, and zero alpha differences. Direct inspection retains every
+cloud silhouette, void, contact, wall, and sparse control while making core and
+shoulder separation more legible. Keep this as a restrained shared-volume
+foundation; later gas work may add optical character, but must use this fixture
+instead of another lifecycle or material-specific branch.
 
 Success means:
 
@@ -122,9 +147,9 @@ Success means:
 
 Priority order from this checkpoint:
 
-1. Checkpoint and deploy the retained shared fluid-transport candidate. Then add
-   a close gas-focused fixture through the existing declarative authoring seam
-   and improve field-proven core/shoulder extinction without changing support,
+1. Checkpoint and deploy the new declarative gas fixture plus its reviewed
+   gas-only transport response. Then use the two-fixture material-lighting board
+   to explore the next sampler-free optical character without changing support,
    alpha, sparse gaps, or compact true-8× resource cost. Do not add another
    exact-material renderer leaf for this work.
 2. Reduce experiment-authoring friction further only where a new experiment

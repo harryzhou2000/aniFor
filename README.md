@@ -88,11 +88,13 @@ Powder, liquid, and atmosphere candidates. It composes the existing cohorts and
 does not add a renderer selector, browser lifecycle, comparison baseline, or
 result identity.
 
-Use `material-lighting` for the focused shared-lighting atlas. Its Off,
-Balanced, and Volumetric variants exercise powder, connected liquid, and dense
-gas through one typed same-page control. The experiment changes RGB only inside
-the existing phase-local ownership guards; alpha, topology, fields, Canvas, and
-the compact true-8× compositor remain unchanged.
+Use `material-lighting` for the focused shared-lighting board. Its Off,
+Balanced, and Volumetric variants exercise powder and connected liquid in the
+mixed atlas, then close multi-lobe gas clouds, voids, sparse wisps, contacts,
+walls, and emitters in the gas atlas through the same typed same-page control.
+The experiment changes RGB only inside the existing phase-local ownership
+guards; alpha, topology, fields, Canvas, and the compact true-8× compositor
+remain unchanged.
 
 Volumetric is also the ordinary `realistic` product default at normal 1×–4×
 WebGL/HDR. The focused atlas still begins at exact Off so all three responses
