@@ -293,6 +293,29 @@ strokes, isolated controls, contacts, emitters, native walls, Wood, BTRY, and
 ISZS remain unchanged. Solid Off-to-Volumetric changes 44,769 RGB pixels with
 absolute delta 494,170, channel peak 10, and zero alpha differences.
 
+The retained local shared-family increment expands the same normal-HDR
+`applySolidMaterialLighting` response from `SmoothRigid` and
+`TranslucentRigid` to the existing `Organic`, `Device`, and `Radioactive`
+optics profiles. It keeps material identity data-only: Wood, BTRY, and ISZS
+receive a B-only broad-body RGB key/fill/pigment/transmission response beneath
+their already-owned fibre/source/radioactive-state overlays. Existing solid
+interior, optical-depth, surface, halo, wall, emission-only, material-emissive,
+granular, foreign-contact, and unlike-contact guards still decide admission;
+the new profile lanes do not add an exact-material branch, sampler, field,
+pass, target, alpha, or support decision. Device reserves the upper shared
+fill lane for a deeper casing core, while Organic remains warm and restrained
+and Radioactive remains absorption-led. Compact true 8x is still literal Off.
+Focused profile/presenter contracts, Visual Lab authoring metadata, and the
+production 19-resource closure pass. The complete current-only material-lighting
+board passed all three normal WebGL candidates with no warnings; the solid
+atlas changed 72,013 RGB pixels from Off to B with zero alpha differences.
+Independent inspection retained the restrained Wood and ISZS response and the
+tuned deeper BTRY casing, while thin controls and the separated emitter stayed
+unchanged. The paired compact checkpoint also passed its true-8x 217-material
+atlas with all 217 projections visible under the intentionally inactive compact
+profile. This remains a source checkpoint until its revision and live closure
+pass the release workflow.
+
 Success means:
 
 - adding a normal visual experiment requires declarative/static-contract data,

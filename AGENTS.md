@@ -65,6 +65,19 @@ admitted by existing exact-species depth/interior/contact proofs. Do not add an
 exact-material branch, another capture driver/lifecycle, or imply that the
 inactive compact profile is visual parity.
 
+The retained local candidate extends that same profile vocabulary to `Organic`,
+`Device`, and `Radioactive` solid optics. Its normal-HDR B-only broad-body
+response stays inside `applySolidMaterialLighting`; existing semantic, source,
+radioactive-state, and lifecycle overlays still run afterward. It preserves
+the established interior, depth, contact, wall, and non-emissive admission
+guards, and compact true-8x remains literal Off. Current-only normal WebGL
+review retained restrained Wood warmth, absorption-led ISZS depth, and the
+deeper BTRY casing profile; thin controls and the separated emitter remained
+unchanged. The complete material-lighting checkpoint passed all three normal
+candidates and the true-8x 217-material atlas with all projections visible.
+This source checkpoint is not deployed until its revision and live resource
+closure have passed the release workflow.
+
 Capture-facing fixture and recipe ownership has one data-only join point:
 `src/shared/visual-capture-static-catalog.js`. It projects the frozen
 normal-HDR and source-stage contracts into ordered fixture/driver bindings and

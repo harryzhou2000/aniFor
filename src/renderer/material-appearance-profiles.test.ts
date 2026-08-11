@@ -72,6 +72,9 @@ describe('material appearance profiles', () => {
     expect(first).toContain('if (abs(optics - 13.0) < 0.5) return vec4(1.24, 0.82, 1.04, 1.22);');
     expect(first).toContain('if (abs(optics - 17.0) < 0.5) return vec4(1.34, 1.1, 0.92, 0.58);');
     expect(first).toContain('if (abs(optics - 5.0) < 0.5) return vec4(0.74, 1.28, 1.12, 0.64);');
+    expect(first).toContain('if (abs(optics - 9.0) < 0.5) return vec4(0.92, 1.16, 1.12, 0.78);');
+    expect(first).toContain('if (abs(optics - 10.0) < 0.5) return vec4(1.12, 1.5, 1.04, 0.5);');
+    expect(first).toContain('if (abs(optics - 11.0) < 0.5) return vec4(0.98, 1.24, 1.1, 0.8);');
     expect(first).toContain('if (abs(optics - 12.0) < 0.5) return vec4(1.34, 0.82, 0.84, 1.42);');
     expect(first).toContain('if (enabled < 0.5 || optics < 0.5) return vec4(1.0);');
     expect(first).not.toContain('Material.');
@@ -91,6 +94,6 @@ describe('material appearance profiles', () => {
     expect(resolveMaterialAppearanceProfile('solid', RenderOptics.TranslucentRigid))
       .toBe(MATERIAL_APPEARANCE_PROFILES.solid.overrides[RenderOptics.TranslucentRigid]);
     expect(resolveMaterialAppearanceProfile('solid', RenderOptics.Device))
-      .toBe(MATERIAL_APPEARANCE_PROFILES.solid.default);
+      .toBe(MATERIAL_APPEARANCE_PROFILES.solid.overrides[RenderOptics.Device]);
   });
 });

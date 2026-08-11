@@ -8625,8 +8625,8 @@ void main() {
     // sole admission boundary; the helper changes RGB only and compact 8x has
     // no live material-lighting variant.
     float solidLightingFamily = max(
-      optics == 8.0 ? 1.0 : 0.0,
-      translucentSurface
+      max(optics == 8.0 ? 1.0 : 0.0, organicSurface),
+      max(max(deviceSurface, radioactiveSurface), translucentSurface)
     );
     if (family == 0.0 && surfaceOnly < 0.5 && halo < 0.5
       && wall < 0.5 && wallOnly < 0.5 && emissionOnly < 0.5

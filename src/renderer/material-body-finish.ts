@@ -156,6 +156,11 @@ vec3 applySolidMaterialLighting(
   float transmission = shell * (0.032 + grazing * 0.045) * finishResponse.w;
   float fill = body * (core * 0.032 + max(-facing, 0.0) * 0.019)
     * finishResponse.y;
+  // The ordinary linear lane stays restrained for rigid, translucent,
+  // organic, and radioactive bodies. Profiles that deliberately reserve the
+  // upper fill range gain a deeper core shoulder, allowing a dense enclosure
+  // response without a material/class branch or a brighter false emission.
+  fill += body * core * max(finishResponse.y - 1.25, 0.0) * 0.18;
 
   float identityPeak = max(max(color.r, color.g), max(color.b, 0.12));
   vec3 identityTint = clamp(color / identityPeak, 0.0, 1.0);
