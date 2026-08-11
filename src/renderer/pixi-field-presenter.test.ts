@@ -416,6 +416,12 @@ describe('Pixi presenter startup configuration', () => {
       '* max(finishResponse.w - 1.0, 0.0);',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'float liquidDeepPigment = liquid * opticalExperimentB * deepColumn',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      '* finishResponse.z * 0.016;',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       '* mix(0.18, 0.52, lightingExperimentB);',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(

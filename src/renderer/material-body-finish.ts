@@ -350,6 +350,15 @@ vec3 applyFluidVolumeLobe(
   shade *= mix(1.0, 0.82, sootyGasCharacter * core);
   color += (vec3(1.08) - clamp(color, 0.0, 1.08)) * keyTint * key;
   color *= vec3(1.0) - absorptionTint * shade;
+  // Preserve authored liquid pigment through the existing deep-column proof
+  // instead of letting connected transparent bodies converge on one grey
+  // absorption. This is a B-only, profile-driven RGB response over established
+  // support; shoreline, contacts, alpha, and compact literal-Off stay owned by
+  // their callers.
+  float liquidDeepPigment = liquid * opticalExperimentB * deepColumn
+    * finishResponse.z * 0.016;
+  float liquidLuminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
+  color += (color - vec3(liquidLuminance)) * liquidDeepPigment;
   return max(color, vec3(0.0));
 }
 `;

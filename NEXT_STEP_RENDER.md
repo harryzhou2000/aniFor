@@ -397,6 +397,23 @@ checkpoint through workflow run `31518942179`; cached build, Pages deployment,
 exact 19-resource closure, hosted completed-frame capture, portable
 verification, and an independent live closure check all passed.
 
+The next retained phase-wide liquid increment adds a B-only deep-pigment
+response to the existing shared `applyFluidVolumeLobe`. It consumes only the
+liquid phase, established deep-column proof, and optical-profile pigment lane,
+so Water/Oil-like bodies retain more authored color through deep absorption
+without another exact-material branch. The current-only packages are
+`.artifacts/visual-lab-reviews/material-lighting-atlas-434adc53-e248-4d4e-be17-0ddf3d5d2449`,
+`.artifacts/visual-lab-reviews/water-motion-e7483455-02cd-4e26-bf20-7cb759134245`,
+and
+`.artifacts/visual-lab-reviews/oil-motion-f970cac0-b2a7-47c3-a907-591fad5927b3`.
+All passed normal WebGL/HDR with completed receipts, exact alpha, and zero
+browser errors. Direct review retains shorelines, holes, open notches, thin
+structures, wall/contact controls, and hard liquid boundaries while deep cyan
+and brown bodies read less grey. The material atlas Off-to-B response changes
+186,305 RGB pixels with total absolute delta 1,575,791, channel peak 26, and
+zero alpha changes. The real compact 4896x3072 atlas also rendered all 217
+projections with zero browser errors; compact remains literal Off.
+
 Success means:
 
 - adding a normal visual experiment requires declarative/static-contract data,
@@ -421,13 +438,13 @@ Success means:
 
 Priority order from this checkpoint:
 
-1. Checkpoint and deploy the retained powder shell-transmission increment.
+1. Checkpoint and deploy the retained shared liquid deep-pigment increment.
    Preserve the explicit compact evidence relationship: normal Volumetric/HDR
    behavior is inactive at 8x, while the compact atlas proves broad material
    and phase health only.
-2. Continue phase-wide material presentation through shared optical-profile
-   parameters and existing declarative fixtures. Prefer liquid surface/body
-   depth or solid translucency leverage over another exact-material branch.
+2. Resolve the audited responsive UI gaps: add a short-height fallback for the
+   681-920px tablet band and enlarge cramped desktop category targets without
+   shrinking or overlapping the viewport.
 3. Harden only regressions that threaten geometry, semantic/topology
    correctness, WebGL lifecycle, true-8× completion, package integrity, or live
    Pages loading. Do not grow exact-pixel tests for evolving aesthetics.

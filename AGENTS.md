@@ -150,6 +150,22 @@ checkpoint through workflow run `31518942179`; cached build, Pages deployment,
 exact 19-resource closure, hosted completed-frame capture, portable
 verification, and an independent live closure check all passed.
 
+The next retained liquid refinement is a shared B-only deep-pigment response in
+`applyFluidVolumeLobe`. It uses only the existing liquid phase, deep-column
+proof, and optical-profile pigment lane, preserving authored cyan/brown identity
+through absorption without a material selector. It is RGB-only; shorelines,
+holes, contacts, alpha, Canvas, and compact literal-Off remain unchanged. The
+current-only packages are
+`.artifacts/visual-lab-reviews/material-lighting-atlas-434adc53-e248-4d4e-be17-0ddf3d5d2449`,
+`.artifacts/visual-lab-reviews/water-motion-e7483455-02cd-4e26-bf20-7cb759134245`,
+and
+`.artifacts/visual-lab-reviews/oil-motion-f970cac0-b2a7-47c3-a907-591fad5927b3`.
+All passed normal WebGL/HDR with completed receipts, exact alpha, and zero
+browser errors. Direct inspection retains every Water/Oil topology control and
+gives deep bodies a slightly stronger species-colored read. The real compact
+4896x3072 atlas rendered all 217 projections with zero browser errors. Do not
+pin these evolving PNG hashes.
+
 When reviewing that dark solid atlas, do not infer lost support merely because
 the B broad-body treatment reduces contrast around a one-cell control. Compare
 fixture-aligned crops first: the retained OFF/B package has AE=0 for the thin
