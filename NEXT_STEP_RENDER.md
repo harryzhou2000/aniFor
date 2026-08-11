@@ -492,6 +492,14 @@ an explicit choice for suitable cohorts. Do not lengthen its watchdog, weaken
 strict teardown, or make it universal without new cross-fixture hosted
 evidence.
 
+Revision `813066c81735da2e9b2752c9ddff276cc1c8f0da` deployed the retained
+profile sheen through workflow run `31528453927`. The ccache-backed build,
+two-candidate stable-snapshot review, downloaded-package verification, Pages
+deployment, exact 19-resource closure, hosted completed-frame Water smoke, and
+an independent first-attempt live closure check all passed. Preserve failed run
+`31527385138` as evidence that the receipt mode is cohort-dependent rather than
+retrying it into a claim that it is a safe universal default.
+
 Success means:
 
 - adding a normal visual experiment requires declarative/static-contract data,

@@ -243,6 +243,14 @@ remains an explicit workflow choice for suitable cohorts. Do not lengthen its
 watchdog, weaken strict teardown, or make it the universal default without new
 cross-fixture hosted evidence.
 
+Revision `813066c81735da2e9b2752c9ddff276cc1c8f0da` deployed the retained
+profile sheen through workflow run `31528453927`. The ccache-backed build,
+two-candidate stable-snapshot review, downloaded-package verification, Pages
+deployment, exact 19-resource closure, hosted completed-frame Water smoke, and
+an independent first-attempt live closure check all passed. The preceding
+receipt-default trial run `31527385138` is retained as the negative hosted
+evidence above; do not retry it into a false universal-success claim.
+
 When reviewing that dark solid atlas, do not infer lost support merely because
 the B broad-body treatment reduces contrast around a one-cell control. Compare
 fixture-aligned crops first: the retained OFF/B package has AE=0 for the thin
