@@ -211,7 +211,10 @@ core reads more chromatic without making soot, shoulders, holes, channels,
 sparse wisps, contacts, or blanks conspicuous. The true-4896x3072 17-gas gate
 passed exact repeated-Off topology/support and zero browser errors, so compact
 remains literal Off. Do not pin the evolving PNG hashes or turn the reported RGB
-deltas into thresholds.
+deltas into thresholds. Revision `e4909c31bac7f2bb0efbf1a7b147e7ab78f93ee6`
+deployed this visual checkpoint through workflow run `31525037877`; build,
+Pages, hosted WebGL capture and portable verification, exact 19-resource
+closure, and an independent first-attempt live closure check all passed.
 
 When reviewing that dark solid atlas, do not infer lost support merely because
 the B broad-body treatment reduces contrast around a one-cell control. Compare

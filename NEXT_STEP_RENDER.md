@@ -460,7 +460,11 @@ browser errors. Off-to-B changes 186,302 RGB pixels in the mixed atlas and
 166,325 in the gas atlas, with channel peak 26 in both; these measurements are
 diagnostic, not acceptance thresholds. The real true-4896x3072 gas gate passed
 all 17 identities, exact repeated-Off topology/support, and zero browser errors,
-proving compact remains literal Off.
+proving compact remains literal Off. Revision
+`e4909c31bac7f2bb0efbf1a7b147e7ab78f93ee6` deployed this visual checkpoint
+through workflow run `31525037877`; build, Pages, hosted WebGL capture and
+portable verification, exact 19-resource closure, and an independent first-
+attempt live closure check all passed.
 
 Success means:
 
