@@ -37,7 +37,7 @@ on:
       visual_lab_candidates:
         description: Comma-separated candidates; clear to run the frozen catalog
         required: false
-        default: material-lighting-atlas,gas-material-lighting-atlas,solid-material-lighting-atlas,source-target-material-lighting-atlas,force-activity-material-lighting-atlas
+        default: material-lighting-atlas,gas-material-lighting-atlas,solid-material-lighting-atlas,source-target-material-lighting-atlas,force-activity-material-lighting-atlas,thermal-source-material-lighting-atlas
         type: string
       visual_lab_recipe_set:
         description: Optional checked-in recipe-set JSON; exclusive with Visual Lab candidates

@@ -119,6 +119,7 @@ describe('Visual Lab fixture adapters', () => {
       'gas-material-lighting-atlas', 'solid-material-lighting-atlas',
       'source-target-material-lighting-atlas',
       'force-activity-material-lighting-atlas',
+      'thermal-source-material-lighting-atlas',
     ]);
     expect(VISUAL_CAPTURE_DOMAIN_ADAPTERS).toHaveLength(5);
     expect(resolveVisualCaptureDomain('powder')).toMatchObject({
@@ -162,6 +163,12 @@ describe('Visual Lab fixture adapters', () => {
         scene: 'showcase',
         captureDriver: 'material-lighting-profile',
         preparation: { reportLabel: 'prepareSourceTargetGraphicsAuditFixture' },
+      });
+    expect(resolveVisualCaptureFixture('thermal-source-material-lighting-atlas', 'material-lighting', 0))
+      .toMatchObject({
+        scene: 'showcase',
+        captureDriver: 'material-lighting-profile',
+        preparation: { reportLabel: 'prepareCeramicTemperatureVfxFixture' },
       });
     expect(() => resolveVisualLabDomain('powder'))
       .toThrow('--domain must be gas, liquid, or emission');
@@ -389,6 +396,10 @@ describe('Visual Lab fixture adapters', () => {
       [{ domain: 'material-lighting', target: 0, fixture: 'solid-material-lighting-atlas' },
         'material-lighting-profile'],
       [{ domain: 'material-lighting', target: 0, fixture: 'source-target-material-lighting-atlas' },
+        'material-lighting-profile'],
+      [{ domain: 'material-lighting', target: 0, fixture: 'force-activity-material-lighting-atlas' },
+        'material-lighting-profile'],
+      [{ domain: 'material-lighting', target: 0, fixture: 'thermal-source-material-lighting-atlas' },
         'material-lighting-profile'],
     ]) {
       const resolved = resolveVisualCaptureRequest(request);

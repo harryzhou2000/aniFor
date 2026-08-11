@@ -82,7 +82,7 @@ describe('deploy-verified CI workflow contract', () => {
     expect(candidates).toContain(
       'default: material-lighting-atlas,gas-material-lighting-atlas,'
       + 'solid-material-lighting-atlas,source-target-material-lighting-atlas,'
-      + 'force-activity-material-lighting-atlas',
+      + 'force-activity-material-lighting-atlas,thermal-source-material-lighting-atlas',
     );
     expect(candidates).toContain('required: false');
     expect(candidates).toContain('type: string');

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Material } from '../shared/materials';
 import { RenderLabBackend } from '../simulation/render-lab-backend';
+import { prepareCeramicTemperatureVfxFixture } from './ceramic-temperature-vfx-audit';
 import { prepareGasMaterialLightingAtlasFixture } from './gas-material-lighting-atlas-fixture';
 import { prepareForceActivityGraphicsAuditFixture } from './force-activity-graphics-audit';
 import { prepareLiquidMotionVfxFixture } from './liquid-motion-vfx-audit';
@@ -22,6 +23,7 @@ describe('Visual Lab fixture preparation registry', () => {
       'gas-material-lighting-atlas', 'solid-material-lighting-atlas',
       'source-target-material-lighting-atlas',
       'force-activity-material-lighting-atlas',
+      'thermal-source-material-lighting-atlas',
     ]);
     expect(Object.isFrozen(VISUAL_LAB_FIXTURE_IDS)).toBe(true);
   });
@@ -32,6 +34,7 @@ describe('Visual Lab fixture preparation registry', () => {
       'gas-material-lighting-atlas', 'solid-material-lighting-atlas',
       'source-target-material-lighting-atlas',
       'force-activity-material-lighting-atlas',
+      'thermal-source-material-lighting-atlas',
     ]);
     expect(Object.isFrozen(VISUAL_LAB_PREPARED_FIXTURE_IDS)).toBe(true);
   });
@@ -45,6 +48,7 @@ describe('Visual Lab fixture preparation registry', () => {
     ['solid-material-lighting-atlas', prepareSolidMaterialLightingAtlasFixture],
     ['source-target-material-lighting-atlas', prepareSourceTargetGraphicsAuditFixture],
     ['force-activity-material-lighting-atlas', prepareForceActivityGraphicsAuditFixture],
+    ['thermal-source-material-lighting-atlas', prepareCeramicTemperatureVfxFixture],
   ] as const)('prepares %s byte-identically to its direct moving builder', (id, prepareDirect) => {
     const generic = new RenderLabBackend();
     const direct = new RenderLabBackend();
@@ -55,6 +59,7 @@ describe('Visual Lab fixture preparation registry', () => {
     expect(equalBytes(generic.cells(), direct.cells())).toBe(true);
     expect(equalBytes(generic.walls(), direct.walls())).toBe(true);
     expect(equalBytes(generic.velocity(), direct.velocity())).toBe(true);
+    expect(equalBytes(generic.temperature(), direct.temperature())).toBe(true);
   });
 
   it('acknowledges showcase without mutating a seeded backend', () => {

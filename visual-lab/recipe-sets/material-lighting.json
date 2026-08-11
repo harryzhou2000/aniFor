@@ -1,6 +1,6 @@
 {
   "schema": "anifor.visual-lab.recipe-set/v1",
-  "id": "sha256:4569ea5b3d6209b982924cd8cac488b0481493acda871dcce5295cdf13647ccc",
+  "id": "sha256:dd0b3afc772c88d34acee9480bc0b3e95b1ee4de33361304d643dd354de29708",
   "name": "material-lighting",
   "recipes": [
     {
@@ -40,6 +40,14 @@
       "domain": "material-lighting",
       "target": 0,
       "fixture": "force-activity-material-lighting-atlas",
+      "gain": 1,
+      "renderScale": 2
+    },
+    {
+      "name": "thermal-source-material-lighting-atlas",
+      "domain": "material-lighting",
+      "target": 0,
+      "fixture": "thermal-source-material-lighting-atlas",
       "gain": 1,
       "renderScale": 2
     }

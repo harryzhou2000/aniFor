@@ -60,10 +60,27 @@ portable verification with zero browser errors. Direct review retains powder
 grain/fine topology, liquid boundaries, gas holes/channels, solid cavities,
 thin structures, contacts, blanks, and source-colour separation. The independent
 true-8x atlas rendered all 217 materials at 4896x3072 with zero browser errors;
-compact remains literal Off. The next framework increment should expose a
-current-only thermal-source scene through the existing typed Visual Lab fixture
-and material-lighting driver, replacing reliance on the legacy E82 exact-pixel
-gate when judging hot ordinary matter and temperature-derived scene light.
+compact remains literal Off.
+
+That next framework increment is now complete locally. The declarative
+`thermal-source-material-lighting-atlas` recipe reuses the existing typed
+Ceramic temperature fixture, `material-lighting-profile` driver, shared-host
+capture transaction, evidence planes, and cohort selector. It adds no browser
+method, driver, renderer branch, or capture lifecycle. The fixture's
+authoritative Uint16 temperature plane is byte-compared through the generic
+preparer boundary, while its five ambient-to-bright Ceramic stages, exact holes,
+notches, thin structures, Water contacts, and hot Brick/Metal controls are now
+visible in the canonical current-only review instead of being judged only by
+E82's legacy exact-pixel gate. The retained six-scene checkpoint is
+`.artifacts/visual-lab-reviews/material-lighting-a0110f38-0668-4c3c-a0f0-4c6e78ce8561`:
+all normal captures used WebGL/HDR with completed-frame receipts, exact alpha,
+portable evidence, and zero browser errors; the independent true-8x audit
+rendered all 217 material projections at 4896x3072 with zero browser errors.
+Compact remains literal Off. Keep E82 readable as a historical specialized
+gate, but use this typed scene for ordinary thermal-source aesthetic review.
+The next framework priority is to deploy this six-scene default and then use
+the retained board to tune temperature-derived scene light without adding a
+thermal-only capture path or cross-revision PNG requirement.
 
 The next authoring increment centralizes the capture-facing projection of the
 normal-HDR and source-stage static contracts. One pure, recursively frozen

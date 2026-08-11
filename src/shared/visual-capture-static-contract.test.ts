@@ -110,6 +110,13 @@ describe('visual capture driver static contract', () => {
         preparationReportLabel: 'prepareForceActivityGraphicsAuditFixture',
         requirement: '--domain=material-lighting --target=0',
       },
+      {
+        name: 'thermal-source-material-lighting-atlas', scene: 'showcase',
+        driver: 'material-lighting-profile',
+        constraints: [{ domain: 'material-lighting', targets: [0] }],
+        preparationReportLabel: 'prepareCeramicTemperatureVfxFixture',
+        requirement: '--domain=material-lighting --target=0',
+      },
     ]);
     for (const recipe of VISUAL_CAPTURE_STATIC_CONTRACT.captureRecipes) {
       expect(Reflect.ownKeys(recipe)).toEqual([
@@ -144,12 +151,14 @@ describe('visual capture driver static contract', () => {
       ['solid-material-lighting-atlas', 'material-lighting-profile'],
       ['source-target-material-lighting-atlas', 'material-lighting-profile'],
       ['force-activity-material-lighting-atlas', 'material-lighting-profile'],
+      ['thermal-source-material-lighting-atlas', 'material-lighting-profile'],
     ]);
     expect(VISUAL_CAPTURE_STATIC_RECIPES.map(({ name }) => name)).toEqual([
       'gas-showcase', 'oxygen-showcase', 'oil-motion', 'water-motion', 'powder-style-atlas',
       'material-lighting-atlas', 'gas-material-lighting-atlas', 'solid-material-lighting-atlas',
       'source-target-material-lighting-atlas',
       'force-activity-material-lighting-atlas',
+      'thermal-source-material-lighting-atlas',
     ]);
     visit(VISUAL_CAPTURE_STATIC_CATALOG, (nested) => expect(Object.isFrozen(nested)).toBe(true));
   });

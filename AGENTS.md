@@ -59,10 +59,25 @@ strict teardown, and zero browser errors. Direct review retains powder grain,
 fluid boundaries, gas holes/channels, solid cavities, thin structures, contacts,
 blanks, and source-colour separation while preserving the intended optical-
 family ordering. The real 4896x3072 compact atlas rendered all 217 projections
-with zero browser errors. Do not pin its PNG bytes or current RGB deltas. The
-next framework leverage should author a current-only thermal-source review scene
-through the existing typed fixture/driver path, so hot ordinary matter and the
-new shared transport can be judged without depending on E82's legacy pixel gate.
+with zero browser errors. Do not pin its PNG bytes or current RGB deltas.
+
+The thermal-source authoring increment is now complete locally. One declarative
+`thermal-source-material-lighting-atlas` fixture/recipe reuses
+`prepareCeramicTemperatureVfxFixture`, `material-lighting-profile`, and the
+domain-derived cohort; do not add another browser method, driver, evidence
+plane, or lifecycle for it. The generic preparer test must continue to compare
+the authoritative Uint16 temperature plane as well as cells, walls, and
+velocity. The retained six-scene checkpoint is
+`.artifacts/visual-lab-reviews/material-lighting-a0110f38-0668-4c3c-a0f0-4c6e78ce8561`.
+All normal candidates passed WebGL/HDR capture with completed-frame receipts,
+exact alpha, portable verification, strict teardown, and zero browser errors;
+the independent true 4896x3072 audit rendered all 217 projections with zero
+browser errors. Direct inspection preserves the five Ceramic temperature
+stages, holes, notches, thin structures, Water contacts, and hot Brick/Metal
+controls. Keep E82 readable as a historical specialized gate, but use this
+current-only typed scene for ordinary thermal-source aesthetics and never pin
+its PNG bytes across revisions. The CI manual default should include all six
+material-lighting candidates.
 
 The domain-derived checkpoint launcher is deployed at revision
 `21fe52c96dd0d30152d2b2cec3a3d4b589a53630` by workflow run `31500138353`.
