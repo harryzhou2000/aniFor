@@ -126,7 +126,25 @@ pixels from Off to B. Direct inspection retains the internal mineral grain and
 adds a restrained shallow shell lift. Smooth, Local, and Grains remain visibly
 distinct, and the real 4896x3072 compact atlas rendered all 217 projections
 with zero browser errors. Treat this current visual review as the acceptance
-evidence; do not add or pin an exact output hash.
+evidence; do not add or pin an exact output hash. Revision
+`b8ad33177d98fe07012580001697a1620685055b` deployed this powder checkpoint
+through workflow run `31518089847`; cached build, Pages deployment, exact
+19-resource closure, hosted completed-frame capture, portable verification,
+and an independent live closure check all passed.
+
+The following retained solid refinement reuses the same profile vocabulary in
+`applySolidMaterialLighting`: a B-only inner-transmission lobe admits only
+optical classes whose transmission lane is above neutral. Existing body,
+optical-depth, normal, contact, wall, and topology proofs remain authoritative;
+the term is RGB-only, has no exact-material branch, and every compact true-8x
+call remains literal Off. The current-only package is
+`.artifacts/visual-lab-reviews/solid-material-lighting-atlas-79bab451-52ae-41a7-abb8-03126ef3d684`.
+WebGL/HDR, completed receipts, semantic/field/framebuffer-alpha invariants, and
+zero browser errors passed. Off-to-B changes 72,062 RGB pixels with total
+absolute delta 914,929, channel peak 11, and zero alpha changes. Direct
+inspection retains holes, thin controls, crisp boundaries, and opaque-family
+restraint while giving translucent rigid bodies a more coherent interior-to-
+edge read. Do not pin its PNG hashes.
 
 When reviewing that dark solid atlas, do not infer lost support merely because
 the B broad-body treatment reduces contrast around a one-cell control. Compare

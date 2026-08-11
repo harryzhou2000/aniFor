@@ -410,6 +410,12 @@ describe('Pixi presenter startup configuration', () => {
       '* finishResponse.w * (0.040 + max(facing, 0.0) * 0.024);',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'float interiorTransmission = body * (1.0 - core)',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      '* max(finishResponse.w - 1.0, 0.0);',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       '* mix(0.18, 0.52, lightingExperimentB);',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(

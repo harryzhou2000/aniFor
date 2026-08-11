@@ -372,6 +372,10 @@ while adding a restrained mineral-shell lift. The companion product capture at
 keeps Smooth, Local, and square Grains visibly distinct. The real compact
 4896x3072 atlas compiled and rendered all 217 projections with zero browser
 errors; compact still passes literal Off and does not claim visual parity.
+Revision `b8ad33177d98fe07012580001697a1620685055b` deployed this powder
+checkpoint through workflow run `31518089847`; cached build, Pages deployment,
+exact 19-resource closure, hosted completed-frame capture, portable
+verification, and an independent live closure check all passed.
 
 The following local solid refinement reuses that profile vocabulary in
 `applySolidMaterialLighting`. A B-only interior-transmission lobe admits only
@@ -385,6 +389,9 @@ passed WebGL/HDR with completed Off/A/B receipts, exact semantic, field-alpha,
 and framebuffer-alpha invariants, and zero browser errors. Direct inspection
 retains opaque-family restraint while translucent cards retain their holes, thin
 controls, and crisp boundary with a more coherent interior-to-edge read.
+Off-to-B changes 72,062 RGB pixels with total absolute delta 914,929, channel
+peak 11, and zero alpha changes. The real compact 4896x3072 atlas also rendered
+all 217 projections with zero browser errors.
 
 Success means:
 
