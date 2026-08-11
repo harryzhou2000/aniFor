@@ -375,6 +375,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).toContain('uniform float uMaterialBodyFinish;');
     expect(eight).toContain('uniform float uMaterialBodyFinish;');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('vec3 applyFluidVolumeLobe(');
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain('vec3 applySolidMaterialLighting(');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'vec4 materialBodyFinishParameters(float phase, float optics, float enabled)',
     );
@@ -397,7 +398,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal.match(/applyFluidVolumeLobe\(/g)).toHaveLength(2);
     expect(eight.match(/applyFluidVolumeLobe\(/g)).toHaveLength(4);
     expect(normal.match(/uMaterialBodyFinish,\s*uMaterialLightingVariant\s*\)/g))
-      .toHaveLength(5);
+      .toHaveLength(6);
     expect(eight.match(/uMaterialBodyFinish,\s*0\.0\s*\)/g)).toHaveLength(9);
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'float lightingExperimentB = step(1.5, materialLightingVariant);',
@@ -429,7 +430,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'shade += gasDeepAbsorption * 0.024 * gasExtinctionScale;',
     );
-    expect(normal.match(/materialBodyFinishParameters\(/g)).toHaveLength(3);
+    expect(normal.match(/materialBodyFinishParameters\(/g)).toHaveLength(4);
     expect(eight.match(/materialBodyFinishParameters\(/g)).toHaveLength(5);
     expect(eight).toContain('gasCompactMacroRelief(grid)');
     expect(eight).toContain('gasCompactMacroRelief(uv * uFieldSize - 0.5)');

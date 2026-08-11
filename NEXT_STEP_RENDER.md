@@ -265,6 +265,34 @@ Off-to-Volumetric changed 164,290 RGB pixels with total absolute delta
 sooty centre exposes broader internal lobes without washout, while clean gas,
 silhouettes, cutout, contacts, and sparse controls remain visually stable.
 
+The following shared-solid increment is retained locally in the same
+optical-family checkpoint. The existing material-lighting
+profile now reaches normal-HDR rigid bodies through one RGB-only
+`applySolidMaterialLighting` helper, while the fixture/catalog seam adds the
+paused `solid-material-lighting-atlas` to the same typed
+`material-lighting-profile` driver. Its eight cards cover Brick, Metal,
+Ceramic, Glass, Ice, Wood, BTRY, and ISZS with broad bodies, holes, open
+notches, one-cell strokes, isolated cells, unlike-solid contacts, native-wall
+coexistence, separated Fire evidence sources, and guarded blanks. Admission
+remains owned by existing solid interior, optical-depth, family, contact, and
+wall proofs; the helper only applies Volumetric/B RGB key, fill, pigment, and
+thin-shell transmission to `SmoothRigid` and `TranslucentRigid` broad bodies.
+Wood, BTRY, and ISZS are exact Organic, Device, and Radioactive controls until
+separately tailored family responses are visibly preferred. Off and Balanced
+stay identical for the solid fixture; compact true 8x still receives literal
+Off. The complete current-only normal
+board at
+`.artifacts/visual-lab-reviews/material-lighting-ddb8059c-2ad1-47f4-9263-e6027421f26a`
+passes mixed, gas, and solid candidates with WebGL/HDR, completed-frame
+receipts, exact semantic/field/framebuffer invariants, and zero browser errors.
+Its derived 4896x3072 compact 217-material audit also passes with 217/217
+visible projections and records the explicit
+`profile-inactive-compact-compatibility` relationship. Direct OFF-to-B
+inspection prefers the stronger broad material read and confirms holes, thin
+strokes, isolated controls, contacts, emitters, native walls, Wood, BTRY, and
+ISZS remain unchanged. Solid Off-to-Volumetric changes 44,769 RGB pixels with
+absolute delta 494,170, channel peak 10, and zero alpha differences.
+
 Success means:
 
 - adding a normal visual experiment requires declarative/static-contract data,
@@ -289,14 +317,14 @@ Success means:
 
 Priority order from this checkpoint:
 
-1. Checkpoint and deploy the retained optical-family sooty-gas response.
-   Preserve the explicit compact evidence relationship: normal Volumetric/HDR
-   behavior is inactive at 8x, while the compact atlas proves broad material
-   and phase health only.
-2. Extend the shared material-lighting profile to representative rigid,
-   translucent, organic, and device solids using an existing broad solid
-   fixture where possible. Prefer class/profile response over exact-material
-   branches, and require current product-scene inspection before retention.
+1. Checkpoint and deploy the retained solid phase/profile authoring increment
+   together with the optical-family sooty-gas response. Preserve the explicit
+   compact evidence relationship: normal Volumetric/HDR behavior is inactive at
+   8x, while the compact atlas proves broad material and phase health only.
+2. Use the new solid atlas to author tailored Organic, Device, and Radioactive
+   responses only when they improve those families beyond their existing
+   semantic/lifecycle treatments. Keep Wood, BTRY, and ISZS exact until a
+   separately reviewable family response is visibly preferable.
 3. Harden only regressions that threaten geometry, semantic/topology
    correctness, WebGL lifecycle, true-8× completion, package integrity, or live
    Pages loading. Do not grow exact-pixel tests for evolving aesthetics.

@@ -127,6 +127,49 @@ vec3 applyMaterialBodyFinish(
   return max(color, vec3(0.0));
 }
 
+// B-only normal-HDR lighting for exact, supported solid bodies. The solid
+// compositor already owns normals, optical depth, contact rejection, and
+// family classification; this helper only turns those proofs into a shared
+// key/fill/transmission vocabulary. Its response is RGB-only and material
+// identity comes from the existing optics profile rather than an element ID.
+vec3 applySolidMaterialLighting(
+  vec3 color,
+  vec4 finishResponse,
+  float opticalDepth,
+  vec3 normal,
+  float eligibility,
+  float enabled,
+  float materialLightingVariant
+) {
+  if (enabled < 0.5 || materialLightingVariant < 1.5 || eligibility <= 0.0001) {
+    return color;
+  }
+
+  float body = smoothstep(6.0 / 255.0, 42.0 / 255.0, opticalDepth) * eligibility;
+  float core = smoothstep(24.0 / 255.0, 116.0 / 255.0, opticalDepth);
+  float facing = dot(normal, normalize(vec3(-0.42, -0.62, 0.78)));
+  float grazing = pow(1.0 - clamp(normal.z, 0.0, 1.0), 2.0);
+  float shell = body * (1.0 - core);
+
+  float key = body * (max(facing, 0.0) * 0.040 + grazing * 0.025)
+    * finishResponse.x;
+  float transmission = shell * (0.032 + grazing * 0.045) * finishResponse.w;
+  float fill = body * (core * 0.032 + max(-facing, 0.0) * 0.019)
+    * finishResponse.y;
+
+  float identityPeak = max(max(color.r, color.g), max(color.b, 0.12));
+  vec3 identityTint = clamp(color / identityPeak, 0.0, 1.0);
+  vec3 keyTint = mix(vec3(0.78, 0.88, 1.0), mix(vec3(0.94), identityTint, 0.48), 0.46);
+  vec3 shadowTint = mix(vec3(0.48, 0.56, 0.68), mix(vec3(0.52), identityTint, 0.24), 0.30);
+  color += (vec3(1.08) - clamp(color, 0.0, 1.08))
+    * keyTint * (key + transmission);
+  color *= vec3(1.0) - shadowTint * fill;
+
+  float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
+  color += (color - vec3(luminance)) * body * core * 0.018 * finishResponse.z;
+  return max(color, vec3(0.0));
+}
+
 // Cheap world-space billow basis for the direct true-8x compositor. Two broad
 // triangular folds avoid sine evaluation across roughly fifteen million
 // fragments while remaining anchored in simulation cells rather than output

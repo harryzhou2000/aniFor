@@ -116,7 +116,7 @@ describe('Visual Lab fixture adapters', () => {
     ]);
     expect(visualCaptureFixtureNames()).toEqual([
       'showcase', 'oil-motion', 'water-motion', 'powder-style-atlas', 'material-lighting-atlas',
-      'gas-material-lighting-atlas',
+      'gas-material-lighting-atlas', 'solid-material-lighting-atlas',
     ]);
     expect(VISUAL_CAPTURE_DOMAIN_ADAPTERS).toHaveLength(5);
     expect(resolveVisualCaptureDomain('powder')).toMatchObject({
@@ -148,6 +148,12 @@ describe('Visual Lab fixture adapters', () => {
         scene: 'showcase',
         captureDriver: 'material-lighting-profile',
         preparation: { reportLabel: 'prepareGasMaterialLightingAtlasFixture' },
+      });
+    expect(resolveVisualCaptureFixture('solid-material-lighting-atlas', 'material-lighting', 0))
+      .toMatchObject({
+        scene: 'showcase',
+        captureDriver: 'material-lighting-profile',
+        preparation: { reportLabel: 'prepareSolidMaterialLightingAtlasFixture' },
       });
     expect(() => resolveVisualLabDomain('powder'))
       .toThrow('--domain must be gas, liquid, or emission');
@@ -371,6 +377,8 @@ describe('Visual Lab fixture adapters', () => {
       [{ domain: 'material-lighting', target: 0, fixture: 'material-lighting-atlas' },
         'material-lighting-profile'],
       [{ domain: 'material-lighting', target: 0, fixture: 'gas-material-lighting-atlas' },
+        'material-lighting-profile'],
+      [{ domain: 'material-lighting', target: 0, fixture: 'solid-material-lighting-atlas' },
         'material-lighting-profile'],
     ]) {
       const resolved = resolveVisualCaptureRequest(request);

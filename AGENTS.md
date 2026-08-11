@@ -49,6 +49,22 @@ this refinement. The next preferred experiment is shared solid/profile
 lighting across several rigid material families, not another gas-specific
 material branch or capture lifecycle.
 
+The next retained framework/visual checkpoint adds one solid phase to the
+shared appearance profile and one declarative `solid-material-lighting-atlas`
+recipe using the existing material-lighting driver. Its eight cards cover
+Brick, Metal, Ceramic, Glass, Ice, Wood, BTRY, and ISZS plus holes, notches,
+one-cell structures, isolated owners, unlike contacts, native walls, separated
+emitters, and blanks. Only `SmoothRigid` and `TranslucentRigid` currently
+receive the B-only solid response; Organic, Device, and Radioactive cards remain
+exact controls until a tailored family experiment is reviewed. The complete
+package is
+`.artifacts/visual-lab-reviews/material-lighting-ddb8059c-2ad1-47f4-9263-e6027421f26a`:
+three normal WebGL/HDR candidates and the derived 217-material true-8x audit
+passed with zero browser errors and exact alpha. Keep the helper RGB-only and
+admitted by existing exact-species depth/interior/contact proofs. Do not add an
+exact-material branch, another capture driver/lifecycle, or imply that the
+inactive compact profile is visual parity.
+
 Capture-facing fixture and recipe ownership has one data-only join point:
 `src/shared/visual-capture-static-catalog.js`. It projects the frozen
 normal-HDR and source-stage contracts into ordered fixture/driver bindings and

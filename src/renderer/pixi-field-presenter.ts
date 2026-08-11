@@ -8619,6 +8619,30 @@ void main() {
       color * vec3(0.88, 0.97, 1.08) + solidEnvironment * (0.16 + solidFresnel * 0.34),
       translucentSurface * mix(0.18, 0.34, solidDepth)
     );
+    // The material-lighting profile now reaches exact supported solid bodies
+    // through the same family-level response vocabulary as reconstructed
+    // powder, liquid, and gas. Existing depth/contact/wall proofs remain the
+    // sole admission boundary; the helper changes RGB only and compact 8x has
+    // no live material-lighting variant.
+    float solidLightingFamily = max(
+      optics == 8.0 ? 1.0 : 0.0,
+      translucentSurface
+    );
+    if (family == 0.0 && surfaceOnly < 0.5 && halo < 0.5
+      && wall < 0.5 && wallOnly < 0.5 && emissionOnly < 0.5
+      && !materialEmissive && granularSurface < 0.5
+      && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5
+      && solidInterior > 0.001 && solidOpticalDepth > 6.0 / 255.0
+      && solidLightingFamily > 0.5) {
+      vec4 solidFinishResponse = materialBodyFinishParameters(
+        3.0, optics, uMaterialBodyFinish
+      );
+      color = applySolidMaterialLighting(
+        color, solidFinishResponse, solidOpticalDepth, normal,
+        solidInterior * solidLightingFamily, uMaterialBodyFinish,
+        uMaterialLightingVariant
+      );
+    }
     // Moving/loose powder stays a deterministic soft grain. The CPU-owned
     // stability field requires persistent low velocity and compatible contact,
     // with a hold band between settle and release thresholds. This keeps noisy

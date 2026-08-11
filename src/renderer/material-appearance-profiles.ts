@@ -8,9 +8,10 @@ export const enum MaterialAppearancePhaseCode {
   Powder = 0,
   Liquid = 1,
   Gas = 2,
+  Solid = 3,
 }
 
-export type MaterialAppearancePhase = 'powder' | 'liquid' | 'gas';
+export type MaterialAppearancePhase = 'powder' | 'liquid' | 'gas' | 'solid';
 
 /** Key/reflection, fill/absorption, pigment retention, and transmission. */
 export type MaterialAppearanceProfile = readonly [number, number, number, number];
@@ -33,6 +34,7 @@ const PHASES: readonly { readonly name: MaterialAppearancePhase; readonly code: 
   { name: 'powder', code: MaterialAppearancePhaseCode.Powder },
   { name: 'liquid', code: MaterialAppearancePhaseCode.Liquid },
   { name: 'gas', code: MaterialAppearancePhaseCode.Gas },
+  { name: 'solid', code: MaterialAppearancePhaseCode.Solid },
 ];
 
 const PHASE_OPTICS = Object.freeze({
@@ -54,6 +56,10 @@ const PHASE_OPTICS = Object.freeze({
   gas: Object.freeze([
     RenderOptics.SootyGas,
     RenderOptics.CleanGas,
+  ]),
+  solid: Object.freeze([
+    RenderOptics.SmoothRigid,
+    RenderOptics.TranslucentRigid,
   ]),
 } satisfies Readonly<Record<MaterialAppearancePhase, readonly RenderOptics[]>>);
 
@@ -96,6 +102,10 @@ export const MATERIAL_APPEARANCE_PROFILES: MaterialAppearanceProfiles = Object.f
   gas: phaseProfiles(profile(1.0, 1.0, 1.0, 1.0), {
     [RenderOptics.SootyGas]: profile(0.74, 1.28, 1.12, 0.64),
     [RenderOptics.CleanGas]: profile(1.16, 0.76, 0.76, 1.28),
+  }),
+  solid: phaseProfiles(profile(1.0, 1.0, 1.0, 1.0), {
+    [RenderOptics.SmoothRigid]: profile(1.18, 1.12, 1.06, 0.72),
+    [RenderOptics.TranslucentRigid]: profile(1.34, 0.82, 0.84, 1.42),
   }),
 });
 
@@ -188,6 +198,7 @@ export function buildMaterialAppearanceProfileGLSLSelector(
     const phaseProfiles = profiles[name];
     if (code === MaterialAppearancePhaseCode.Powder) lines.push('  if (phase < 0.5) {');
     else if (code === MaterialAppearancePhaseCode.Liquid) lines.push('  if (phase < 1.5) {');
+    else if (code === MaterialAppearancePhaseCode.Gas) lines.push('  if (phase < 2.5) {');
     else lines.push('  {');
     for (const [optics, response] of orderedOverrides(phaseProfiles)) {
       lines.push(`    if (abs(optics - ${glslFloat(optics)}) < 0.5) return ${glslProfile(response)};`);

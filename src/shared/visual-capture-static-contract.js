@@ -95,6 +95,14 @@ const contract = {
       preparationReportLabel: 'prepareGasMaterialLightingAtlasFixture',
       requirement: '--domain=material-lighting --target=0',
     },
+    {
+      name: 'solid-material-lighting-atlas',
+      scene: 'showcase',
+      driver: 'material-lighting-profile',
+      constraints: [{ domain: 'material-lighting', targets: [0] }],
+      preparationReportLabel: 'prepareSolidMaterialLightingAtlasFixture',
+      requirement: '--domain=material-lighting --target=0',
+    },
   ],
   captureRecipes: [
     {
@@ -118,6 +126,14 @@ const contract = {
       domain: 'material-lighting',
       target: 0,
       fixture: 'gas-material-lighting-atlas',
+      gain: 1,
+      renderScale: 2,
+    },
+    {
+      name: 'solid-material-lighting-atlas',
+      domain: 'material-lighting',
+      target: 0,
+      fixture: 'solid-material-lighting-atlas',
       gain: 1,
       renderScale: 2,
     },

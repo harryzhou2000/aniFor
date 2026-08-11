@@ -5,6 +5,7 @@ import { prepareLiquidMotionVfxFixture } from './liquid-motion-vfx-audit';
 import { prepareMaterialLightingAtlasFixture } from './material-lighting-atlas-fixture';
 import { prepareOilMotionVfxFixture } from './oil-motion-vfx-audit';
 import { preparePowderStyleAtlasFixture } from './powder-style-atlas-fixture';
+import { prepareSolidMaterialLightingAtlasFixture } from './solid-material-lighting-atlas-fixture';
 
 type VisualLabFixturePreparer = (simulation: SimulationBackend) => void;
 type StaticVisualLabFixture = (typeof VISUAL_CAPTURE_STATIC_FIXTURES)[number];
@@ -50,6 +51,7 @@ const VISUAL_LAB_FIXTURE_PREPARERS = Object.freeze({
   'powder-style-atlas': preparePowderStyleAtlasFixture,
   'material-lighting-atlas': prepareMaterialLightingAtlasFixture,
   'gas-material-lighting-atlas': prepareGasMaterialLightingAtlasFixture,
+  'solid-material-lighting-atlas': prepareSolidMaterialLightingAtlasFixture,
 } satisfies Record<VisualLabPreparedFixtureId, VisualLabFixturePreparer>);
 
 const REGISTERED_PREPARER_IDS = Object.keys(VISUAL_LAB_FIXTURE_PREPARERS);
