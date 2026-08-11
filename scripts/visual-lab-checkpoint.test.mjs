@@ -21,6 +21,8 @@ describe('Visual checkpoint', () => {
       .toThrow('no compact audit');
     expect(parseVisualCheckpointArguments(['--cohort=atmosphere']))
       .toEqual({ cohort: 'atmosphere' });
+    expect(parseVisualCheckpointArguments(['--cohort=material-lighting']))
+      .toEqual({ cohort: 'material-lighting' });
     expect(parseVisualCheckpointArguments([
       '--cohort=atmosphere', '--canvas-companion=1',
     ])).toEqual({ cohort: 'atmosphere', canvasCompanion: true });
@@ -32,6 +34,42 @@ describe('Visual checkpoint', () => {
     ])).toThrow('must be 0 or 1');
     expect(() => parseVisualCheckpointArguments(['--help', '--cohort=atmosphere']))
       .toThrow('cannot be combined');
+  });
+
+  it('labels material-lighting 8x evidence as inactive-profile compatibility', async () => {
+    const repositoryRoot = await mkdtemp(path.join(tmpdir(), 'visual-checkpoint-test-'));
+    temporaryDirectories.push(repositoryRoot);
+    const reviewRoot = path.join(repositoryRoot, 'review');
+    await mkdir(reviewRoot);
+    await Promise.all([
+      writeFile(path.join(reviewRoot, 'experiment-board.html'), 'experiment'),
+      writeFile(path.join(reviewRoot, 'index.html'), 'captures'),
+    ]);
+    let compactOptions;
+    const result = await runVisualCheckpoint(['--cohort=material-lighting'], {
+      repositoryRoot,
+      runDeveloperReview: async () => ({
+        ok: true,
+        reviewRoot,
+        links: {
+          experimentBoard: pathToFileURL(path.join(reviewRoot, 'experiment-board.html')).href,
+          contactSheet: pathToFileURL(path.join(reviewRoot, 'index.html')).href,
+        },
+      }),
+      runCompactAudit: async (options) => { compactOptions = options; },
+      stdout: { write() {} }, stderr: { write() {} },
+    });
+    expect(compactOptions.argv).toEqual([
+      'scripts/verify-browser-input.mjs', '--eight-material-atlas-only',
+      '--production-bundle',
+    ]);
+    expect(result.manifest.compact).toMatchObject({
+      label: 'true-8x 217-material atlas',
+      evidenceRelationship: 'profile-inactive-compact-compatibility',
+      detail: 8,
+      backend: 'webgl',
+      passed: true,
+    });
   });
 
   it('adds an opt-in noncanonical Canvas companion after canonical compact success', async () => {

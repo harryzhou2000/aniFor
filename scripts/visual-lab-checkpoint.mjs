@@ -20,12 +20,14 @@ const REPOSITORY_ROOT = path.resolve(path.dirname(MODULE_PATH), '..');
 export const VISUAL_CHECKPOINTS = Object.freeze({
   'powder-style': Object.freeze({
     label: 'true-8x powder',
+    evidenceRelationship: 'same-powder-style-family',
     argv: Object.freeze([
       'scripts/verify-browser-input.mjs', '--eight-powder-only', '--production-bundle',
     ]),
   }),
   atmosphere: Object.freeze({
     label: 'true-8x gas identity',
+    evidenceRelationship: 'same-gas-identity-family',
     argv: Object.freeze([
       'scripts/verify-browser-input.mjs', '--gas-identity-graphics-only',
       '--render-scale=8', '--webgl-only', '--production-bundle',
@@ -33,15 +35,24 @@ export const VISUAL_CHECKPOINTS = Object.freeze({
   }),
   'liquid-motion': Object.freeze({
     label: 'true-8x distilled/diesel liquid',
+    evidenceRelationship: 'liquid-family-health-not-fixture-parity',
     argv: Object.freeze([
       'scripts/verify-browser-input.mjs', '--distilled-diesel-liquid-graphics-only',
       '--render-scale=8', '--webgl-only', '--production-bundle',
     ]),
   }),
+  'material-lighting': Object.freeze({
+    label: 'true-8x 217-material atlas',
+    evidenceRelationship: 'profile-inactive-compact-compatibility',
+    argv: Object.freeze([
+      'scripts/verify-browser-input.mjs', '--eight-material-atlas-only',
+      '--production-bundle',
+    ]),
+  }),
 });
 
 const HELP = `Usage:
-  node scripts/visual-lab-checkpoint.mjs --cohort=powder-style|atmosphere|liquid-motion \\
+  node scripts/visual-lab-checkpoint.mjs --cohort=powder-style|atmosphere|liquid-motion|material-lighting \\
     [--canvas-companion=0|1]
 
 Runs one current-only normal WebGL developer review, then that cohort's existing
@@ -49,7 +60,9 @@ true-8x compact audit against the same already-built dist/. It never changes
 Visual Lab's normal-HDR execution contract, result identities, or browser
 lifecycle. The optional Canvas companion is a non-gating, baseline-only fallback
 diagnostic with no parity claim. On success it writes checkpoint.json beside the
-retained review.`;
+retained review. The manifest states whether compact evidence covers the same
+feature family, phase-family health only, or an intentionally inactive normal
+profile's compact compatibility; none of those relationships claim PNG parity.`;
 
 export function parseVisualCheckpointArguments(argv) {
   if (!Array.isArray(argv)) throw new TypeError('arguments must be an array');
@@ -119,6 +132,7 @@ const writeCheckpoint = async (review, cohort, compact, canvas, filesystem) => {
     },
     compact: {
       label: compact.label,
+      evidenceRelationship: compact.evidenceRelationship,
       detail: 8,
       backend: 'webgl',
       runner: compact.argv[0],

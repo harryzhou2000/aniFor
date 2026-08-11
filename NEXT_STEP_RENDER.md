@@ -162,6 +162,21 @@ smooth, and powder grain plus Water/Oil depth are unaffected. The real
 4896×3072 SwiftShader completed-frame gate again passed with a superseded first
 ticket, completed successor, and zero browser errors.
 
+The normal-to-compact checkpoint now includes the shared `material-lighting`
+cohort without pretending that its normal-HDR profile executes at true 8×.
+The closed scripts-side mapping invokes the existing 217-material atlas after
+the two-candidate current-only review and records
+`profile-inactive-compact-compatibility` in the local manifest. The retained
+checkpoint at
+`.artifacts/visual-lab-reviews/material-lighting-e75a9ae6-bd42-40ff-83dc-5042afc5829f`
+passed both normal candidates with WebGL/HDR, completed-frame receipts, exact
+semantic/field/framebuffer invariants, and zero browser errors. Its separate
+4896×3072 compact audit rendered all 217 projections with exact semantic
+ownership, minimum changed fraction 0.658, minimum mean difference 3.219,
+minimum peak difference 7, and zero browser errors. The coordinator adds no
+Chrome, CDP, capture, renderer, or evidence lifecycle; each existing owner
+still runs unchanged against the same built `dist/`.
+
 Success means:
 
 - adding a normal visual experiment requires declarative/static-contract data,
@@ -186,15 +201,13 @@ Success means:
 
 Priority order from this checkpoint:
 
-1. Checkpoint and deploy the retained B-only gas optical-character response.
-   Keep it inside the shared fluid lobe and never restore compounded generic
-   plus phase-specific profile responses.
-2. Reduce experiment-authoring friction where a new experiment still requires
-   duplicated registration or lifecycle code. First document and, if it saves
-   real manual work, add one thin data-only normal-review-to-compact-health
-   checkpoint mapping that invokes the existing review and 8× audits without
-   duplicating browser lifecycle, capture logic, or evidence formats. Do not
-   claim liquid 8× coverage until a real existing compact fixture can prove it.
+1. Checkpoint and deploy the completed material-lighting normal-to-compact
+   mapping. Preserve its explicit evidence relationship: normal Volumetric/HDR
+   behavior is inactive at 8×, while the compact atlas proves compatibility and
+   complete material projection only.
+2. Reduce experiment-authoring friction only where another experiment still
+   requires duplicated registration or lifecycle code. Prefer derivation from
+   the static catalog and closed driver capabilities over new audit branches.
 3. Harden only regressions that threaten geometry, semantic/topology
    correctness, WebGL lifecycle, true-8× completion, package integrity, or live
    Pages loading. Do not grow exact-pixel tests for evolving aesthetics.

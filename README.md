@@ -82,6 +82,7 @@ checkpoint:
 | Powder boundaries/styles | `npm run visual-lab:review -- --cohort=powder-style` | `npm run audit:powder:8x` |
 | Gas volumes | `npm run visual-lab:review -- --cohort=atmosphere` | `npm run audit:gas-identity:8x` |
 | Liquid bodies | `npm run visual-lab:review -- --cohort=liquid-motion` | `npm run audit:distilled-diesel-liquid:8x` |
+| Shared material lighting | `npm run visual-lab:review -- --cohort=material-lighting` | `npm run audit:material-atlas:8x` |
 
 Use `material-optics` for one current-only board spanning all five tracked
 Powder, liquid, and atmosphere candidates. It composes the existing cohorts and
@@ -108,18 +109,24 @@ stops at Detail 4×. Do not imply that the normal OFF/A/B board covers Detail
 The compact audit remains a purpose-built renderer health check, not a second
 Visual Lab implementation.
 
-For the three tracked material cohorts, `npm run visual-lab:checkpoint --
---cohort=<powder-style|atmosphere|liquid-motion>` performs that exact pairing
+For the four tracked material cohorts, `npm run visual-lab:checkpoint --
+--cohort=<powder-style|atmosphere|liquid-motion|material-lighting>` performs
+that pairing
 without rebuilding between them: it retains the normal review first, then runs
 the established compact audit and writes a local `checkpoint.json` beside the
 review only when both pass. The manifest is navigation convenience, not a
-portable result identity, baseline, comparison, or deployment gate.
+portable result identity, baseline, comparison, or deployment gate. Its
+`evidenceRelationship` states whether the compact audit exercises the same
+feature family, phase-family health only, or an intentionally inactive normal
+profile's compact compatibility. In particular, material-lighting remains Off
+at 8×: the 217-material atlas proves compact shader health and complete visible
+projection, never Volumetric/HDR parity.
 
 Add `--canvas-companion=1` when fallback diagnosis is useful:
 
 ```sh
 npm run visual-lab:checkpoint -- \
-  --cohort=<powder-style|atmosphere|liquid-motion> --canvas-companion=1
+  --cohort=<powder-style|atmosphere|liquid-motion|material-lighting> --canvas-companion=1
 ```
 
 After the canonical normal and compact stages pass, this captures one forced

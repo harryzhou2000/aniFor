@@ -285,9 +285,9 @@ verification passed.
 
 The active review-loop increment is the scripts-only material checkpoint. Keep
 one closed normal-cohort-to-compact-audit registry for `powder-style`,
-`atmosphere`, and `liquid-motion`. Build once, run the established current-only
-developer review first, then invoke the exact existing true-8x browser audit
-against the same `dist/`; never duplicate CDP, Chrome, fixture, renderer, or
+`atmosphere`, `liquid-motion`, and `material-lighting`. Build once, run the
+established current-only developer review first, then invoke the exact existing
+true-8x browser audit against the same `dist/`; never duplicate CDP, Chrome, fixture, renderer, or
 capture lifecycle. Publish `checkpoint.json` last beside the ignored review
 root only after both stages pass. It may contain portable relative links to the
 normal response board/contact sheet and diagnostic compact argv/status, but it
@@ -297,6 +297,11 @@ failure retain the verified normal evidence without a success marker. Forward
 interrupts and prove the detached compact process group is gone before success.
 Visual Lab remains normal WebGL at 1x-4x; this coordinator must never imply that
 its OFF/A/B experiment ran through the separate true-8x compositor.
+Every mapping must publish its exact `evidenceRelationship`. Material lighting
+uses `profile-inactive-compact-compatibility`: its normal-HDR profile remains
+literal Off at 8x, and the exhaustive 217-material atlas proves only compact
+shader health, semantic ownership, and visible projection—not Volumetric/HDR
+or PNG parity.
 
 The optional current-only Canvas companion belongs only to that local
 checkpoint envelope. `--canvas-companion=1` runs after canonical normal and
