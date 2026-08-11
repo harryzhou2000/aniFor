@@ -35,9 +35,9 @@ on:
           - stable-snapshots
           - completed-frame-receipt
       visual_lab_candidates:
-        description: Optional comma-separated Visual Lab candidates; empty runs the frozen catalog
+        description: Comma-separated candidates; clear to run the frozen catalog
         required: false
-        default: ''
+        default: material-lighting-atlas,gas-material-lighting-atlas,solid-material-lighting-atlas,source-target-material-lighting-atlas,force-activity-material-lighting-atlas
         type: string
       visual_lab_recipe_set:
         description: Optional checked-in recipe-set JSON; exclusive with Visual Lab candidates

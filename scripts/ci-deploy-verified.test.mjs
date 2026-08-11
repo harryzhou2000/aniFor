@@ -74,6 +74,20 @@ describe('deploy-verified CI workflow contract', () => {
     expect(inputReferences).toHaveLength(1);
   });
 
+  it('defaults manual review to the current material-lighting cohort', () => {
+    const candidates = indentedEntry(workflow, 'visual_lab_candidates', 6);
+    expect(candidates).toContain(
+      'description: Comma-separated candidates; clear to run the frozen catalog',
+    );
+    expect(candidates).toContain(
+      'default: material-lighting-atlas,gas-material-lighting-atlas,'
+      + 'solid-material-lighting-atlas,source-target-material-lighting-atlas,'
+      + 'force-activity-material-lighting-atlas',
+    );
+    expect(candidates).toContain('required: false');
+    expect(candidates).toContain('type: string');
+  });
+
   it('makes build and exact-SHA reuse mutually exclusive and resolves provenance first', () => {
     const build = indentedEntry(workflow, 'build', 2);
     const verified = indentedEntry(workflow, 'verified_build', 2);

@@ -398,7 +398,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal.match(/applyFluidVolumeLobe\(/g)).toHaveLength(2);
     expect(eight.match(/applyFluidVolumeLobe\(/g)).toHaveLength(4);
     expect(normal.match(/uMaterialBodyFinish,\s*uMaterialLightingVariant\s*\)/g))
-      .toHaveLength(6);
+      .toHaveLength(7);
     expect(eight.match(/uMaterialBodyFinish,\s*0\.0\s*\)/g)).toHaveLength(9);
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'float lightingExperimentB = step(1.5, materialLightingVariant);',
@@ -428,6 +428,12 @@ describe('Pixi presenter startup configuration', () => {
       '* (0.100 + profileGrazing * profileGrazing * 0.300)',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'vec3 applyMaterialProfileIrradiance(',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'finishResponse.x * 0.34 + finishResponse.w * 0.46',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       '* mix(0.18, 0.52, lightingExperimentB);',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
@@ -454,7 +460,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'shade += gasDeepAbsorption * 0.024 * gasExtinctionScale;',
     );
-    expect(normal.match(/materialBodyFinishParameters\(/g)).toHaveLength(4);
+    expect(normal.match(/materialBodyFinishParameters\(/g)).toHaveLength(5);
     expect(eight.match(/materialBodyFinishParameters\(/g)).toHaveLength(5);
     expect(eight).toContain('gasCompactMacroRelief(grid)');
     expect(eight).toContain('gasCompactMacroRelief(uv * uFieldSize - 0.5)');
@@ -5271,7 +5277,8 @@ describe('Pixi presenter startup configuration', () => {
 
     expect(blockStart).toBeGreaterThan(0);
     expect(blockEnd).toBeGreaterThan(blockStart);
-    expect(block).toContain('* (1.0 - opticalDepth * 0.48) * uGasFieldLighting;');
+    expect(block).toContain('* (1.0 - opticalDepth * 0.48) * uGasFieldLighting\n'
+      + '      * mix(1.0, 0.74, step(1.5, uMaterialLightingVariant));');
     expect(block).not.toContain('gasLightShape');
     expect(block.match(/texture\(\s*uEmissionTexture/g)).toHaveLength(1);
     expect(block).not.toMatch(/\balpha\s*[+*]?=/);

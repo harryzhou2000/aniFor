@@ -159,6 +159,65 @@ vec3 applyMaterialBodyFinish(
   return max(color, vec3(0.0));
 }
 
+// Place every reconstructed phase in the same emitter-lit scene. The caller
+// already samples the shared emission field and owns all matter/support proofs;
+// this helper only converts that existing centre sample, body response, and
+// optical profile into a B-only RGB contribution. It deliberately performs no
+// texture read and cannot create coverage, alpha, topology, or a new owner.
+vec3 applyMaterialProfileIrradiance(
+  vec3 color,
+  float phase,
+  vec4 finishResponse,
+  float density,
+  float depth,
+  vec2 slope,
+  float eligibility,
+  vec4 emissionState,
+  float enabled,
+  float materialLightingVariant
+) {
+  float lightingExperimentB = step(1.5, materialLightingVariant);
+  float lightReach = smoothstep(0.002, 0.42, emissionState.a);
+  if (enabled < 0.5 || lightingExperimentB < 0.5
+    || eligibility <= 0.0001 || lightReach <= 0.0001) return color;
+
+  float powder = 1.0 - step(0.5, phase);
+  float liquid = step(0.5, phase) * (1.0 - step(1.5, phase));
+  float gas = step(1.5, phase) * (1.0 - step(2.5, phase));
+  float solid = step(2.5, phase);
+  float body = smoothstep(0.035, 0.42, density) * eligibility;
+  float bodyDepth = clamp(depth, 0.0, 1.0);
+  float slopeLength = length(slope);
+  vec2 bodyNormal = slopeLength > 0.0001 ? slope / slopeLength : vec2(0.0);
+  float sourceFacing = max(dot(bodyNormal, normalize(vec2(-0.58, -0.815))), 0.0);
+
+  // Reflection/transmission lanes define transport while the pigment lane
+  // keeps diffuse powder and deep gas from converging on the same glossy tint.
+  float transport = powder * (
+      finishResponse.x * 0.30 + finishResponse.z * 0.16
+    ) + liquid * (
+      finishResponse.x * 0.34 + finishResponse.w * 0.46
+    ) + gas * (
+      finishResponse.x * 0.16 + finishResponse.w * 0.58
+    ) + solid * (
+      finishResponse.x * 0.38 + finishResponse.w * 0.26
+    );
+  float phaseGain = powder * 0.62 + liquid + gas * 0.82 + solid * 0.76;
+  float irradiance = lightReach * body * transport * phaseGain
+    * (0.020 + sourceFacing * 0.034 + bodyDepth * (0.018 + gas * 0.016));
+
+  float lightPeak = max(max(emissionState.r, emissionState.g), max(emissionState.b, 0.08));
+  vec3 lightTint = clamp(emissionState.rgb / lightPeak, 0.0, 1.0);
+  float identityPeak = max(max(color.r, color.g), max(color.b, 0.12));
+  vec3 identityTint = clamp(color / identityPeak, 0.0, 1.0);
+  float pigmentCoupling = powder * 0.44 + liquid * 0.24 + gas * 0.16 + solid * 0.34;
+  vec3 irradianceTint = mix(lightTint, lightTint * mix(vec3(0.72), identityTint, 0.58),
+    pigmentCoupling);
+  color += (vec3(1.12) - clamp(color, 0.0, 1.12))
+    * irradianceTint * irradiance;
+  return max(color, vec3(0.0));
+}
+
 // B-only normal-HDR lighting for exact, supported solid bodies. The solid
 // compositor already owns normals, optical depth, contact rejection, and
 // family classification; this helper only turns those proofs into a shared

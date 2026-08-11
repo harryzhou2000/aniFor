@@ -483,6 +483,27 @@ literal Off. Direct and independent visual review retain the result as a modest
 but coherent dimensional improvement, strongest on liquid and deliberately
 subtle on powder and gas. Current PNG bytes and RGB deltas remain diagnostic.
 
+The next retained composition increment adds one shared B-only
+`applyMaterialProfileIrradiance` response over the already-sampled emission
+field. Powder, liquid, gas, and solid bodies now derive restrained local light
+transport from the same phase, body/depth/slope proof and appearance-profile
+reflection, pigment, and transmission lanes. It coordinates the older
+phase-local contributions instead of stacking unrestricted brightness, remains
+RGB-only, and adds no sample, field, texture, pass, allocation, material-ID
+selector, support, alpha, topology, or physics rule. The stable-snapshot
+current-only package is
+`.artifacts/visual-lab-reviews/material-lighting-shared-irradiance-20260812-001`;
+all five material-lighting candidates passed shared-host WebGL/HDR, exact
+semantic/field/framebuffer-alpha evidence, portable reconstruction, and zero
+browser errors. The true-4896x3072 atlas retained all 217 projections. Direct
+and independent review retain the conservative strength: broad Ceramic,
+Glass/Ice, and BTRY bodies gain useful interior depth while Brick, Metal, and
+Wood texture remains legible; gas and mixed boards stay close to the prior
+sheen checkpoint. Do not raise the symmetric cavity response without first
+adding stronger directional/body-wide structure. Manual CI review now defaults
+to these five candidates; clearing the editable candidate field still requests
+the frozen catalog, and `stable-snapshots` remains the proof default.
+
 The manual CI Visual Lab control keeps `stable-snapshots` as its conservative
 default. A deployment trial of a `completed-frame-receipt` default failed the
 heavy mixed material atlas twice on loaded GitHub SwiftShader: one bounded CDP

@@ -234,6 +234,25 @@ compact literal-Off path remains healthy. Independent visual review found the
 change safe and modestly positive, strongest on liquid; do not turn its RGB
 deltas or current PNG bytes into thresholds.
 
+The retained shared-irradiance increment adds one B-only
+`applyMaterialProfileIrradiance` response over the existing centre emission
+sample. It derives powder, liquid, gas, and solid transport from the same
+phase/body/depth/slope proofs and appearance-profile lanes, while coordinating
+the older phase-local response rather than stacking unrestricted light. It is
+RGB-only and adds no sample, field, texture, pass, allocation, material-ID
+selector, support, alpha, topology, or physics decision. The current-only
+stable-snapshot package is
+`.artifacts/visual-lab-reviews/material-lighting-shared-irradiance-20260812-001`;
+all five material-lighting candidates passed shared-host WebGL/HDR, exact
+semantic/field/framebuffer-alpha evidence, portable verification, and zero
+browser errors. The true-4896x3072 atlas kept all 217 projections visible.
+Direct and independent review retain the conservative strength: the clearest
+gain is restrained solid interior depth, while mixed and gas boards remain near
+the prior sheen. Do not amplify the symmetric Ceramic/Ice cavity cushion
+without a more directional body-wide proof. Manual CI review defaults to this
+five-candidate cohort; clearing the candidate input still runs the frozen
+catalog, and stable snapshots remain the proof default.
+
 Keep manual CI Visual Lab review on the conservative `stable-snapshots`
 default. A trial making `completed-frame-receipt` the default failed the heavy
 mixed material atlas twice on loaded GitHub SwiftShader: first through a bounded

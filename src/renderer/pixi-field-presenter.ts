@@ -6548,7 +6548,8 @@ void main() {
     }
     float gasLightScatter = gasLightReach
       * (0.060 + gasLightIncidence * 0.78 + silverLining * 0.040)
-      * (1.0 - opticalDepth * 0.48) * uGasFieldLighting;
+      * (1.0 - opticalDepth * 0.48) * uGasFieldLighting
+      * mix(1.0, 0.74, step(1.5, uMaterialLightingVariant));
     color += vividColor(gasLightColor, 1.12) * gasLightScatter;
     // E13: use the atmosphere's exact propagated species byte and the light
     // values already consumed above to give field-owned Smoke and FOG distinct
@@ -8542,7 +8543,8 @@ void main() {
             solidFieldIncidence = solidFieldReach
               * mix(0.030, 0.050, clamp(solidFieldNormalLength * 1.6, 0.0, 1.0));
           }
-          float solidFieldResponse = solidFieldContour * solidFieldIncidence;
+          float solidFieldResponse = solidFieldContour * solidFieldIncidence
+            * mix(1.0, 0.76, step(1.5, uMaterialLightingVariant));
           color += (vec3(1.0) - clamp(color, 0.0, 1.0))
             * vividColor(solidFieldColor, 1.10) * solidFieldResponse;
         }
@@ -8555,7 +8557,7 @@ void main() {
         float bodyFieldResponse = min(
           12.0 / 255.0,
           emissionState.a * surfaceLightGain(profile) * bodyExposure
-        );
+        ) * mix(1.0, 0.76, step(1.5, uMaterialLightingVariant));
         color += (vec3(1.0) - clamp(color, 0.0, 1.0))
           * vividColor(emissionState.rgb, 1.08) * bodyFieldResponse;
       }
@@ -11619,7 +11621,38 @@ void main() {
         fieldLightContribution, powderLightContribution, powderLightBodyGate
       );
     }
+    // Volumetric/B replaces part of the phase-local field response with one
+    // profile-driven irradiance vocabulary. All inputs are already live in the
+    // composed shader: the centre emission sample, body/phase proofs, normal,
+    // and appearance profile. Off/Balanced retain their existing bytes, while
+    // compact true 8x passes literal Off and compiles this response inactive.
+    float profileIrradianceB = step(1.5, uMaterialLightingVariant);
+    float profileIrradiancePhase = gasVolume > 0.5 ? 2.0
+      : (liquidVolume > 0.5 ? 1.0 : (family == 4.0 ? 0.0 : 3.0));
+    float profileIrradianceEligibility = gasVolume > 0.5 ? gasInterior
+      : (liquidVolume > 0.5 ? liquidInterior
+      : (family == 4.0 ? powderLightBodyGate : solidInterior));
+    float profileIrradianceDepth = gasVolume > 0.5 ? atmosphereState.a
+      : (liquidVolume > 0.5 ? liquidBodyFinishDepth(liquidInterior, liquidOpticalDepth)
+      : (family == 4.0 ? powderLightBodyDepth : solidOpticalDepth));
+    vec4 profileIrradianceResponse = materialBodyFinishParameters(
+      profileIrradiancePhase, optics, uMaterialBodyFinish
+    );
+    float legacyIrradianceShare = profileIrradianceB
+      * profileIrradianceEligibility
+      * (gasVolume > 0.5 ? 0.0 : (liquidVolume > 0.5 ? 0.30 : 0.24));
+    fieldLightContribution *= 1.0 - legacyIrradianceShare;
     color += fieldLightContribution;
+    if (wallOnly < 0.5 && family != 3.0 && !materialEmissive
+      && surfaceOnly < 0.5 && emissionOnly < 0.5) {
+      color = applyMaterialProfileIrradiance(
+        color, profileIrradiancePhase, profileIrradianceResponse,
+        gasVolume > 0.5 ? atmosphereState.a : density,
+        profileIrradianceDepth, semanticSlope + volumeSlope,
+        profileIrradianceEligibility, emissionState,
+        uMaterialBodyFinish, uMaterialLightingVariant
+      );
+    }
   }
   if (uSparkStateStyling > 0.5 && material == 148.0) {
     color += sparkStateDelta(material, wallState.ba, fieldPosition, color);
