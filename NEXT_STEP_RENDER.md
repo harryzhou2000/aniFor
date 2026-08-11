@@ -353,8 +353,10 @@ errors. Off-to-Volumetric changes 61,321 RGB pixels with total absolute delta
 702,164, channel peak 28, and zero alpha differences. Direct inspection retains
 the clearer Device casings without losing inactive/active motifs, holes,
 notches, one-cell structures, isolated points, or wrong-owner/liquid/metal
-controls. This increment is not deployed until its committed revision and live
-closure pass.
+controls. Revision `360d2ca3a8b3846b69d30c2d8654b8c5e2f9aeb7` deployed
+this increment through workflow run `31516452237`; the full build/test package,
+Pages deployment, exact 19-resource closure, hosted completed-frame receipt
+capture, portable verification, and retained smoke evidence all passed.
 
 Success means:
 

@@ -105,8 +105,11 @@ package is
 WebGL/HDR, completed Off/Balanced/Volumetric receipts, exact semantic/field/
 framebuffer-alpha invariants, portable verification, strict teardown, and zero
 browser errors passed. Volumetric changes 61,321 RGB pixels from Off with zero
-alpha differences while preserving state motifs and protected topology. This
-increment is not deployed until its committed revision and live closure pass.
+alpha differences while preserving state motifs and protected topology.
+Revision `360d2ca3a8b3846b69d30c2d8654b8c5e2f9aeb7` deployed this increment
+through workflow run `31516452237`; the full build/test package, Pages
+deployment, exact 19-resource closure, hosted completed-frame receipt capture,
+portable verification, and retained smoke evidence all passed.
 
 When reviewing that dark solid atlas, do not infer lost support merely because
 the B broad-body treatment reduces contrast around a one-cell control. Compare
