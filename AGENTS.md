@@ -299,6 +299,17 @@ Do not strengthen the mild cavity-adjacent response without first improving its
 outer-source discrimination. Current PNG bytes and RGB deltas remain diagnostic,
 not acceptance gates.
 
+Stable-snapshot v1 gives SwiftShader 60 seconds for its two complete convergence
+reads, and each `snapshotState` CDP command consumes that same driver-owned
+stability budget rather than the unrelated generic 20-second command timeout.
+Keep auto at 10 seconds and completed-frame-receipt v2 at its protected
+30-second stability/watchdog contract. Failed workflow run `31535162886` is the
+motivating hosted evidence: the mixed material atlas remained inside a healthy
+WebGL session but its full `Runtime.evaluate` readback exceeded 20 seconds;
+the other four candidates passed after a correct host recycle. This is a
+bounded transport/convergence allowance, not permission to omit semantic,
+field-alpha, framebuffer-alpha, repetition, strict disposal, or package proof.
+
 Revision `813066c81735da2e9b2752c9ddff276cc1c8f0da` deployed the retained
 profile sheen through workflow run `31528453927`. The ccache-backed build,
 two-candidate stable-snapshot review, downloaded-package verification, Pages

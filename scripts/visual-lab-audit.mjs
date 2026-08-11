@@ -1215,6 +1215,10 @@ async function waitForPage(
 async function captureVariant(cdp, options, variant, captureSubphases) {
   const { profile, effectiveTimeouts } = options.executionTuning;
   const settleTimeoutMs = effectiveTimeouts.stabilityMs;
+  // A complete framebuffer readback is itself the convergence proof. Let its
+  // CDP transport consume the driver-owned stability budget instead of failing
+  // first at the generic command timeout on loaded software GPUs.
+  const snapshotCommandTimeoutMs = Math.max(CDP_COMMAND_TIMEOUT_MS, settleTimeoutMs);
   const compiledVariant = options.executionPlan.compiled.variants.find(
     ({ name }) => name === variant.name,
   );
@@ -1285,7 +1289,8 @@ async function captureVariant(cdp, options, variant, captureSubphases) {
     assert(receipt !== undefined && ticket !== undefined,
       `${variant.name} completed-frame receipt was superseded eight times`);
     state = await captureSubphases.measureSnapshot(
-      variant.name, () => snapshotState(cdp, options.executionPlan),
+      variant.name,
+      () => snapshotState(cdp, options.executionPlan, snapshotCommandTimeoutMs),
     );
     const verified = await readCompletedFrameReceipt(cdp, variant, ticket);
     assert(verified.state === 'completed' && verified.submission === receipt.submission,
@@ -1296,7 +1301,8 @@ async function captureVariant(cdp, options, variant, captureSubphases) {
     let consecutiveSnapshots = 0;
     state = await waitFor(async () => {
       const current = await captureSubphases.measureSnapshot(
-        variant.name, () => snapshotState(cdp, options.executionPlan),
+        variant.name,
+        () => snapshotState(cdp, options.executionPlan, snapshotCommandTimeoutMs),
       );
       const stable = previousState
         && sameDigest(previousState.semantic, current.semantic)
@@ -1397,7 +1403,7 @@ function assertVariantState(state, options, variant) {
   assert(state.framebufferAlpha.nonzero > 0, `${variant.name} WebGL framebuffer alpha is empty`);
 }
 
-async function snapshotState(cdp, executionPlan) {
+async function snapshotState(cdp, executionPlan, commandTimeoutMs = CDP_COMMAND_TIMEOUT_MS) {
   const { evidenceReaderExpression, datasetProjectionExpression: observedDriverState } = (
     executionPlan.compiled
   );
@@ -1463,7 +1469,7 @@ async function snapshotState(cdp, executionPlan) {
         cssWidth: rect.width, cssHeight: rect.height,
       },
     };
-  })()`);
+  })()`, commandTimeoutMs);
 }
 
 function sameDigest(left, right) {

@@ -33,7 +33,7 @@ const capability = () => ({
     planes: ['semantic', 'field-alpha', 'framebuffer-alpha'],
     consecutiveSnapshots: 2,
     pollIntervalMs: 50,
-    timeoutMsByGpu: { auto: 10_000, swiftshader: 30_000 },
+    timeoutMsByGpu: { auto: 10_000, swiftshader: 60_000 },
   },
   screenshot: { after: 'stability-proof' },
 });

@@ -331,7 +331,10 @@ const CONSERVATIVE_PROFILE = () => ({
     planes: [...EVIDENCE_PLANES],
     consecutiveSnapshots: 2,
     pollIntervalMs: 50,
-    timeoutMsByGpu: { auto: 10_000, swiftshader: 30_000 },
+    // Stable snapshots retain two complete semantic/field/framebuffer reads.
+    // Hosted SwiftShader can spend more than 30 seconds in one full readback
+    // on the mixed material atlas even though the renderer remains healthy.
+    timeoutMsByGpu: { auto: 10_000, swiftshader: 60_000 },
   },
   screenshot: { after: 'stability-proof' },
 });
