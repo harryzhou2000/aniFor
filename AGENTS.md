@@ -78,6 +78,15 @@ candidates and the true-8x 217-material atlas with all projections visible.
 This source checkpoint is not deployed until its revision and live resource
 closure have passed the release workflow.
 
+When reviewing that dark solid atlas, do not infer lost support merely because
+the B broad-body treatment reduces contrast around a one-cell control. Compare
+fixture-aligned crops first: the retained OFF/B package has AE=0 for the thin
+structure, isolated cell, native-wall patch, Fire emitter, and guarded blank,
+while broad bodies and contact swatches are the deliberate responders.
+Semantic and framebuffer-alpha invariants do not replace this targeted RGB
+check; conversely, a dim-looking control is not a regression when its direct
+pixels are exact.
+
 Capture-facing fixture and recipe ownership has one data-only join point:
 `src/shared/visual-capture-static-catalog.js`. It projects the frozen
 normal-HDR and source-stage contracts into ordered fixture/driver bindings and
