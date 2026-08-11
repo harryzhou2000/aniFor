@@ -109,18 +109,22 @@ stops at Detail 4×. Do not imply that the normal OFF/A/B board covers Detail
 The compact audit remains a purpose-built renderer health check, not a second
 Visual Lab implementation.
 
-For the four tracked material cohorts, `npm run visual-lab:checkpoint --
---cohort=<powder-style|atmosphere|liquid-motion|material-lighting>` performs
-that pairing
-without rebuilding between them: it retains the normal review first, then runs
-the established compact audit and writes a local `checkpoint.json` beside the
-review only when both pass. The manifest is navigation convenience, not a
-portable result identity, baseline, comparison, or deployment gate. Its
-`evidenceRelationship` states whether the compact audit exercises the same
-feature family, phase-family health only, or an intentionally inactive normal
-profile's compact compatibility. In particular, material-lighting remains Off
-at 8×: the 217-material atlas proves compact shader health and complete visible
-projection, never Volumetric/HDR parity.
+For any validated single-domain cohort with a closed compact capability,
+`npm run visual-lab:checkpoint -- --cohort=<name>` performs that pairing without
+rebuilding between stages: it retains the normal review first, derives the
+compact health check from the cohort recipe set's one authoritative domain,
+then writes a local `checkpoint.json` beside the review only when both pass.
+Executable audit commands remain in a closed scripts-side capability registry;
+cohort data contains no method, argument, driver, or browser authority. A new
+cohort over an existing gas, liquid, powder, or material-lighting domain
+therefore needs no checkpoint-launcher edit. Multi-domain cohorts fail closed
+instead of choosing an arbitrary compact proof. The manifest is navigation
+convenience, not a portable result identity, baseline, comparison, or deployment
+gate. Its `evidenceRelationship` states whether compact evidence exercises the
+same feature family, phase-family health only, or an intentionally inactive
+normal profile's compact compatibility. In particular, material-lighting
+remains Off at 8×: the 217-material atlas proves compact shader health and
+complete visible projection, never Volumetric/HDR parity.
 
 Add `--canvas-companion=1` when fallback diagnosis is useful:
 

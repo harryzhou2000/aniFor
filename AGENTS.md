@@ -284,11 +284,16 @@ exact live resource closure, hosted Visual Lab capture, and portable
 verification passed.
 
 The active review-loop increment is the scripts-only material checkpoint. Keep
-one closed normal-cohort-to-compact-audit registry for `powder-style`,
-`atmosphere`, `liquid-motion`, and `material-lighting`. Build once, run the
-established current-only developer review first, then invoke the exact existing
-true-8x browser audit against the same `dist/`; never duplicate CDP, Chrome, fixture, renderer, or
-capture lifecycle. Publish `checkpoint.json` last beside the ignored review
+one closed compact-audit capability registry keyed by validated recipe domain,
+not cohort name. Resolve the cohort through the canonical catalog, require its
+recipe set to contain exactly one domain, and derive the existing compact audit
+from that domain. A new single-domain cohort over an established capability
+must need no launcher edit; a multi-domain cohort fails closed rather than
+claiming one compact proof covers several domains. Executable argv stays in the
+scripts-side capability registry and never enters catalog data. Build once, run
+the established current-only developer review first, then invoke the exact
+existing true-8x browser audit against the same `dist/`; never duplicate CDP,
+Chrome, fixture, renderer, or capture lifecycle. Publish `checkpoint.json` last beside the ignored review
 root only after both stages pass. It may contain portable relative links to the
 normal response board/contact sheet and diagnostic compact argv/status, but it
 is local navigation metadata outside every result, batch, baseline,
@@ -317,6 +322,19 @@ not to increase it: Water and Oil gain a soft surface-to-core shelf without a
 flat stripe, washout, clipping, contact motion, or topology/support change.
 The 4896×3072 compact audit retains literal Off and proves only exact
 phase-family health, repeated output, and zero browser errors.
+
+The checkpoint launcher now derives its compact capability from the canonical
+resolved cohort's unique recipe domain instead of re-registering cohort names.
+Keep executable labels, evidence relationships, and argv in the closed
+scripts-side domain-capability registry; catalog data must retain no execution
+authority. Single-domain cohorts over gas, liquid, powder, or
+material-lighting require no launcher edit. Multi-domain and unsupported-domain
+cohorts fail before normal review or Chrome launch. The first real derived run
+is retained at
+`.artifacts/visual-lab-reviews/material-lighting-b2d23c1f-211a-403c-99b4-fc0ff9c124cf`:
+both normal candidates passed WebGL/HDR with no warnings, and the separate
+4896×3072 atlas rendered all 217 projections with exact ownership and zero
+browser errors while retaining the existing compact argv and evidence label.
 
 The optional current-only Canvas companion belongs only to that local
 checkpoint envelope. `--canvas-companion=1` runs after canonical normal and

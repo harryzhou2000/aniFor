@@ -8,24 +8,27 @@ import {
   formatCanvasCompanionError,
   runVisualLabCanvasCompanion,
 } from './visual-lab-canvas-companion.mjs';
+import { resolveVisualLabCohort } from './visual-lab-cohort-catalog.mjs';
 import { runVisualLabDeveloperReview } from './visual-lab-developer-review.mjs';
 
 const MODULE_PATH = fileURLToPath(import.meta.url);
 const REPOSITORY_ROOT = path.resolve(path.dirname(MODULE_PATH), '..');
 
 /**
- * Scripts-side checkpoint routing deliberately stays outside the static Visual
+ * Closed scripts-side capabilities deliberately stay outside the static Visual
  * Lab contract: each compact audit owns a separate renderer and lifecycle.
+ * Cohorts do not re-register here. Their validated recipe domains select one
+ * capability below, so another single-domain cohort needs catalog data only.
  */
-export const VISUAL_CHECKPOINTS = Object.freeze({
-  'powder-style': Object.freeze({
+export const VISUAL_COMPACT_AUDIT_CAPABILITIES = Object.freeze({
+  powder: Object.freeze({
     label: 'true-8x powder',
     evidenceRelationship: 'same-powder-style-family',
     argv: Object.freeze([
       'scripts/verify-browser-input.mjs', '--eight-powder-only', '--production-bundle',
     ]),
   }),
-  atmosphere: Object.freeze({
+  gas: Object.freeze({
     label: 'true-8x gas identity',
     evidenceRelationship: 'same-gas-identity-family',
     argv: Object.freeze([
@@ -33,7 +36,7 @@ export const VISUAL_CHECKPOINTS = Object.freeze({
       '--render-scale=8', '--webgl-only', '--production-bundle',
     ]),
   }),
-  'liquid-motion': Object.freeze({
+  liquid: Object.freeze({
     label: 'true-8x distilled/diesel liquid',
     evidenceRelationship: 'liquid-family-health-not-fixture-parity',
     argv: Object.freeze([
@@ -52,7 +55,7 @@ export const VISUAL_CHECKPOINTS = Object.freeze({
 });
 
 const HELP = `Usage:
-  node scripts/visual-lab-checkpoint.mjs --cohort=powder-style|atmosphere|liquid-motion|material-lighting \\
+  node scripts/visual-lab-checkpoint.mjs --cohort=<single-domain-cohort> \\
     [--canvas-companion=0|1]
 
 Runs one current-only normal WebGL developer review, then that cohort's existing
@@ -63,6 +66,32 @@ diagnostic with no parity claim. On success it writes checkpoint.json beside the
 retained review. The manifest states whether compact evidence covers the same
 feature family, phase-family health only, or an intentionally inactive normal
 profile's compact compatibility; none of those relationships claim PNG parity.`;
+
+const SAFE_COHORT_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+export function resolveVisualCheckpointProfile(resolvedCohort) {
+  const name = resolvedCohort?.name;
+  const recipes = resolvedCohort?.recipeSet?.recipes;
+  if (typeof name !== 'string' || !SAFE_COHORT_NAME.test(name)
+    || !Array.isArray(recipes) || recipes.length === 0) {
+    throw new TypeError('Visual checkpoint requires a validated nonempty cohort');
+  }
+  const domains = [...new Set(recipes.map(({ domain }) => domain))];
+  if (domains.length !== 1) {
+    throw new Error(
+      `Visual checkpoint cohort ${JSON.stringify(name)} spans ${domains.length} domains;`
+      + ' compact evidence must be selected by one domain',
+    );
+  }
+  const domain = domains[0];
+  const compact = VISUAL_COMPACT_AUDIT_CAPABILITIES[domain];
+  if (!compact) {
+    throw new Error(
+      `Visual checkpoint has no compact audit capability for domain ${JSON.stringify(domain)}`,
+    );
+  }
+  return Object.freeze({ cohort: name, domain, compact });
+}
 
 export function parseVisualCheckpointArguments(argv) {
   if (!Array.isArray(argv)) throw new TypeError('arguments must be an array');
@@ -80,8 +109,8 @@ export function parseVisualCheckpointArguments(argv) {
     throw new Error('Visual checkpoint requires exactly one --cohort=<name>');
   }
   const cohort = cohortArguments[0].slice('--cohort='.length);
-  if (!Object.hasOwn(VISUAL_CHECKPOINTS, cohort)) {
-    throw new Error(`Visual checkpoint has no compact audit for ${JSON.stringify(cohort)}`);
+  if (!SAFE_COHORT_NAME.test(cohort)) {
+    throw new Error('Visual checkpoint --cohort must be safe kebab-case');
   }
   if (canvasArguments.length === 0) return Object.freeze({ cohort });
   const canvasValue = canvasArguments[0].slice('--canvas-companion='.length);
@@ -193,7 +222,14 @@ export async function runVisualCheckpoint(argv, runtime = {}) {
     return Object.freeze({ help: true });
   }
   const repositoryRoot = path.resolve(runtime.repositoryRoot ?? REPOSITORY_ROOT);
-  const compact = VISUAL_CHECKPOINTS[parsed.cohort];
+  const resolvedCohort = await (
+    runtime.resolveCohort ?? resolveVisualLabCohort
+  )(parsed.cohort);
+  const checkpointProfile = resolveVisualCheckpointProfile(resolvedCohort);
+  if (checkpointProfile.cohort !== parsed.cohort) {
+    throw new Error('Visual checkpoint resolver returned a different cohort');
+  }
+  const { compact } = checkpointProfile;
   const stderr = runtime.stderr ?? process.stderr;
   let review;
   try {

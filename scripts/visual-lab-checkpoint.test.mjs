@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   parseVisualCheckpointArguments,
+  resolveVisualCheckpointProfile,
   runVisualCheckpoint,
 } from './visual-lab-checkpoint.mjs';
 
@@ -15,10 +16,12 @@ afterEach(async () => Promise.all(temporaryDirectories.splice(0).map((directory)
 ))));
 
 describe('Visual checkpoint', () => {
-  it('accepts only a closed cohort selector', () => {
+  it('accepts only a safe cohort selector', () => {
     expect(() => parseVisualCheckpointArguments([])).toThrow('exactly one');
-    expect(() => parseVisualCheckpointArguments(['--cohort=unknown']))
-      .toThrow('no compact audit');
+    expect(parseVisualCheckpointArguments(['--cohort=future-gas']))
+      .toEqual({ cohort: 'future-gas' });
+    expect(() => parseVisualCheckpointArguments(['--cohort=Unsafe_Name']))
+      .toThrow('safe kebab-case');
     expect(parseVisualCheckpointArguments(['--cohort=atmosphere']))
       .toEqual({ cohort: 'atmosphere' });
     expect(parseVisualCheckpointArguments(['--cohort=material-lighting']))
@@ -34,6 +37,34 @@ describe('Visual checkpoint', () => {
     ])).toThrow('must be 0 or 1');
     expect(() => parseVisualCheckpointArguments(['--help', '--cohort=atmosphere']))
       .toThrow('cannot be combined');
+  });
+
+  it('derives compact routing from a validated single-domain cohort', () => {
+    const resolved = resolveVisualCheckpointProfile({
+      name: 'future-gas',
+      recipeSet: { recipes: [{ domain: 'gas' }, { domain: 'gas' }] },
+    });
+    expect(resolved).toMatchObject({ cohort: 'future-gas', domain: 'gas' });
+    expect(resolved.compact).toMatchObject({
+      label: 'true-8x gas identity',
+      evidenceRelationship: 'same-gas-identity-family',
+    });
+    expect(() => resolveVisualCheckpointProfile({
+      name: 'mixed',
+      recipeSet: { recipes: [{ domain: 'gas' }, { domain: 'liquid' }] },
+    })).toThrow('spans 2 domains');
+    expect(() => resolveVisualCheckpointProfile({
+      name: 'future', recipeSet: { recipes: [{ domain: 'future-domain' }] },
+    })).toThrow('no compact audit capability');
+  });
+
+  it('rejects a multi-domain cohort before normal review starts', async () => {
+    let reviewed = false;
+    await expect(runVisualCheckpoint(['--cohort=material-optics'], {
+      runDeveloperReview: async () => { reviewed = true; },
+      stdout: { write() {} }, stderr: { write() {} },
+    })).rejects.toThrow('spans 3 domains');
+    expect(reviewed).toBe(false);
   });
 
   it('labels material-lighting 8x evidence as inactive-profile compatibility', async () => {

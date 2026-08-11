@@ -196,6 +196,26 @@ chimneys, strands, isolated cells, walls, repeated-off output, and zero browser
 errors. Compact true 8× still carries literal Off, so this is compatibility
 health rather than normal-HDR visual parity.
 
+The next framework increment removes cohort-name registration from the local
+normal-to-compact checkpoint launcher. The canonical cohort resolver already
+returns a validated recipe set, so the launcher now requires exactly one unique
+recipe domain and selects one closed scripts-side compact capability from that
+domain. Executable argv, labels, and evidence relationships stay outside the
+catalog; catalog data gains no driver, method, argument, preparer, or browser
+authority. Any future single-domain cohort over the existing gas, liquid,
+powder, or material-lighting capabilities becomes checkpointable without a
+launcher edit, while multi-domain or unsupported-domain cohorts fail closed.
+Keep the normal review, compact audit, Canvas companion, Chrome teardown, and
+manifest lifecycles unchanged. The real derived `material-lighting` checkpoint
+at
+`.artifacts/visual-lab-reviews/material-lighting-b2d23c1f-211a-403c-99b4-fc0ff9c124cf`
+passed both normal candidates with WebGL/HDR and zero warnings, then rendered
+all 217 projections at 4896×3072 with exact semantic ownership, minimum changed
+fraction 0.658, minimum mean difference 3.219, minimum peak difference 7, and
+zero browser errors. Its manifest retained the exact
+`profile-inactive-compact-compatibility` relationship and the established
+compact runner argv, proving routing changed without replacing either lifecycle.
+
 Success means:
 
 - adding a normal visual experiment requires declarative/static-contract data,
@@ -224,9 +244,11 @@ Priority order from this checkpoint:
    Preserve its B-only experiment boundary and the explicit compact evidence
    relationship: normal Volumetric/HDR behavior is inactive at 8×, while the
    compact liquid atlas proves phase-family health only.
-2. Reduce experiment-authoring friction only where another experiment still
-   requires duplicated registration or lifecycle code. Prefer derivation from
-   the static catalog and closed driver capabilities over new audit branches.
+2. Continue reducing experiment-authoring friction only where another
+   experiment still requires duplicated registration or lifecycle code. The
+   checkpoint launcher now derives cohort routing from the resolved recipe
+   domain; prefer the same static-catalog and closed-capability pattern over new
+   audit branches.
 3. Harden only regressions that threaten geometry, semantic/topology
    correctness, WebGL lifecycle, true-8× completion, package integrity, or live
    Pages loading. Do not grow exact-pixel tests for evolving aesthetics.
