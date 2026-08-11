@@ -1913,8 +1913,9 @@ export class MaterialRenderer {
     }
     const timingStart = this.canvasPresentationTimingEnabled ? performance.now() : undefined;
     let volumePlaneUploads = 0;
+    if (refreshDynamicFields && temperatures) fields.markThermalEmissionDirty();
     const rebuiltField = fields.updateNext(
-      this.rendered, scheduleTime, this.renderedWalls, velocities,
+      this.rendered, scheduleTime, this.renderedWalls, velocities, temperatures,
     );
     fields.refreshSuspension(this.rendered, scheduleTime, this.renderedWalls);
     if (rebuiltField === 'liquid' || !this.canvasLiquidOpticalDepthHydrated) {

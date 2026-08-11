@@ -14456,8 +14456,9 @@ export class PixiFieldPresenter {
     if (gasMotionActive && (!this.atmosphereMotionHydrated || refreshDynamicFields)) {
       this.fieldSet.markAtmosphereMotionDirty();
     }
+    if (refreshDynamicFields && temperatures) this.fieldSet.markThermalEmissionDirty();
     const volumeField = this.fieldSet.updateNext(
-      materials, scheduleTime, walls, velocities,
+      materials, scheduleTime, walls, velocities, temperatures,
     );
     if (volumeField === 'liquid' || !this.liquidOpticalDepthHydrated) {
       this.fieldSet.liquid.writeVerticalOpticalDepth(

@@ -95,7 +95,10 @@ export class RenderFieldSet {
     this.liquid = new LiquidDensityField(
       width, height, this.lookups.liquidByMaterial, this.lookups.paletteBytes,
     );
-    this.emission = new EmissionField(width, height, this.lookups.emissiveByMaterial, this.lookups.colorByMaterial);
+    this.emission = new EmissionField(
+      width, height, this.lookups.emissiveByMaterial, this.lookups.colorByMaterial,
+      this.lookups.styleBytes,
+    );
     this.powderSurface = new PowderSurfaceField(width, height, this.lookups.styleBytes);
     this.suspension = new SuspensionField(
       width, height, this.lookups.styleBytes, this.lookups.paletteBytes,
@@ -106,7 +109,10 @@ export class RenderFieldSet {
     if (this.lookups.gasByMaterial[previousMaterial] || this.lookups.gasByMaterial[nextMaterial]
       || this.atmosphere.mayHaveIdentityNearWorldIndex(index)) this.atmosphereDirty = true;
     if (this.lookups.liquidByMaterial[previousMaterial] || this.lookups.liquidByMaterial[nextMaterial]) this.liquidDirty = true;
-    if (this.lookups.emissiveByMaterial[previousMaterial] || this.lookups.emissiveByMaterial[nextMaterial]) this.emissionDirty = true;
+    if (this.lookups.emissiveByMaterial[previousMaterial]
+      || this.lookups.emissiveByMaterial[nextMaterial]
+      || this.emission.canMaterialEmitThermally(previousMaterial)
+      || this.emission.canMaterialEmitThermally(nextMaterial)) this.emissionDirty = true;
     const previousPhase = this.lookups.styleBytes[previousMaterial * 4];
     const nextPhase = this.lookups.styleBytes[nextMaterial * 4];
     if (previousPhase === RenderPhase.Powder || previousPhase === RenderPhase.Liquid
@@ -133,6 +139,11 @@ export class RenderFieldSet {
     if (this.atmosphere.hasVolume) this.atmosphereDirty = true;
   }
 
+  /** Queues temperature-derived light through the existing bounded field cadence. */
+  markThermalEmissionDirty(): void {
+    if (this.emission.hasThermalCandidate) this.emissionDirty = true;
+  }
+
   due(time: number): boolean {
     return this.schedule.due(time, this.atmosphereDirty, this.liquidDirty, this.emissionDirty)
       || (this.suspensionDirty
@@ -141,6 +152,7 @@ export class RenderFieldSet {
 
   updateNext(
     materials: Uint8Array, time: number, walls?: Uint8Array, velocities?: Int8Array,
+    temperatures?: Uint16Array,
   ): VolumeFieldKind | undefined {
     const field = this.schedule.next(time, this.atmosphereDirty, this.liquidDirty, this.emissionDirty);
     if (field === 'atmosphere') {
@@ -151,7 +163,7 @@ export class RenderFieldSet {
       this.liquidDirty = false;
       this.suspensionDirty = true;
     } else if (field === 'emission') {
-      this.emission.update(materials);
+      this.emission.update(materials, temperatures);
       this.emissionDirty = false;
     }
     if (field) this.schedule.refreshed(field, time);

@@ -14,6 +14,32 @@ visual requirement or deploy gate. Keep `accepted-v1`, baseline comparison, and
 promotion readable only for legacy packages or an explicit ad-hoc reference;
 developer review and CI must move to current-only evidence by default.
 
+The active renderer increment makes the existing compact RGB emission field
+temperature-aware instead of adding another light pass. Its CPU eligibility
+must remain identical to normal HDR blackbody admission: Fire, Lava, Plasma,
+and non-emissive trait-free Solid/Powder may contribute temperature-derived
+light; hot PHOT/ELEC, Empty, Wall, gas, liquid, and trait-owned matter retain
+their established emission behavior. A module-static 256-entry blackbody LUT
+keeps refreshes allocation-free, and the existing 12 Hz field scheduler rebuilds
+for temperature motion only while a thermally capable owner is present. Material
+transitions into or out of that owner set must still dirty the field. Both WebGL
+and permissive Canvas consume the same field and authoritative Uint16 temperature
+plane; do not duplicate this source rule in a presenter or shader branch.
+
+The retained current-only review for this increment is
+`.artifacts/visual-lab-reviews/material-lighting-d00d7106-18ae-40b9-8005-fd9a12f328a0`.
+All five material-lighting candidates passed shared-host WebGL/HDR capture,
+portable verification, strict teardown, and zero browser errors. Direct review
+retains powder grain/fine structures, coherent Water/Oil bodies, soft gas lobes,
+solid holes and contacts, and source-colour separation. The independent true
+4896x3072 audit rendered all 217 material projections with zero browser errors.
+The older focused Ceramic check reports only a stable one-channel bloom spill
+(`rgbPeak=1`, zero coverage change) in an authored hole; retain that as current
+visual evidence and do not weaken its historical exact-pixel assertion. The
+next shared-lighting experiment should use the existing appearance-profile
+transport seam to distinguish shallow external-light penetration from deep
+absorption, without another sampler, field, pass, or fixture lifecycle.
+
 The domain-derived checkpoint launcher is deployed at revision
 `21fe52c96dd0d30152d2b2cec3a3d4b589a53630` by workflow run `31500138353`.
 Its next retained visual candidate strengthens only the shared gas

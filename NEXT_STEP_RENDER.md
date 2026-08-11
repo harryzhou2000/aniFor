@@ -1,6 +1,6 @@
 ## Current execution objective — framework leverage
 
-### Active goal (updated 2026-08-11)
+### Active goal (updated 2026-08-12)
 
 Build an efficient, reusable visual-development loop for AniforTPT, then use it
 to deliver substantial powder, liquid, gas, lighting, and material-style
@@ -22,6 +22,30 @@ multi-backend/scale board to make and review higher-leverage material
 experiments, starting with shared optical and lighting structure that benefits
 powder, liquid, and gas without changing their semantic topology or expanding
 exact-visual unit tests.
+
+The current implementation increment connects authoritative temperature to the
+shared scene-light transport. The existing three-times-downsampled emission
+field now derives blackbody colour/radiance from one precomputed 256-entry LUT
+and accepts exactly the same thermal owners as normal HDR: Fire/Lava/Plasma and
+trait-free ordinary Solid/Powder. Established PHOT/ELEC emission stays byte-
+identical even when hot. Both presenters pass the Uint16 temperature plane into
+the same field; the existing 12 Hz scheduler redirties it on thermal motion only
+when an eligible material is present, while material transitions still force
+correct add/remove hydration. This adds no texture, target, pass, allocation,
+or per-presenter lighting rule.
+
+Focused field contracts and the production build pass. The current-only five-
+scene review is retained at
+`.artifacts/visual-lab-reviews/material-lighting-d00d7106-18ae-40b9-8005-fd9a12f328a0`:
+all candidates passed WebGL/HDR capture and portable verification with zero
+browser errors, and its independent true-8x 217-material companion rendered all
+projections at 4896x3072. Direct review keeps powder grain and fine topology,
+fluid bodies, gas support, solid holes/contacts, and source-target separation.
+The next high-leverage visual experiment is profile-governed external-light
+penetration in the existing shared material-body finish: transmission should
+carry source colour deeper through clean gas, liquid, Glass, and Ice, while
+absorption should keep powder, soot, and opaque solids shallow. Keep it B-only,
+RGB-only, arithmetic-only, and current-review driven.
 
 The next authoring increment centralizes the capture-facing projection of the
 normal-HDR and source-stage static contracts. One pure, recursively frozen

@@ -177,6 +177,59 @@ describe('shared render field set', () => {
     expect(fields.updateNext(materials, 101, undefined, velocities)).toBeUndefined();
   });
 
+  it('reuses the bounded emission cadence for authoritative temperature refreshes', () => {
+    const materials = new Uint8Array(16);
+    const temperatures = new Uint16Array(16).fill(2_952);
+    materials[5] = Material.Brick;
+    const fields = new RenderFieldSet(4, 4, ALL_MATERIALS);
+    fields.updateNext(materials, 0, undefined, undefined, temperatures);
+    fields.updateNext(materials, 1, undefined, undefined, temperatures);
+    fields.updateNext(materials, 2, undefined, undefined, temperatures);
+    expect(fields.emission.hasLight).toBe(false);
+
+    temperatures[5] = 23_040;
+    fields.markThermalEmissionDirty();
+    expect(fields.updateNext(materials, 80, undefined, undefined, temperatures)).toBeUndefined();
+    expect(fields.updateNext(materials, 100, undefined, undefined, temperatures)).toBe('emission');
+    expect(fields.emission.hasLight).toBe(true);
+    expect(fields.updateNext(materials, 101, undefined, undefined, temperatures)).toBeUndefined();
+  });
+
+  it('does not schedule thermal emission work without an eligible material', () => {
+    const materials = new Uint8Array(16);
+    const temperatures = new Uint16Array(16).fill(23_040);
+    materials[5] = Material.Water;
+    const fields = new RenderFieldSet(4, 4, ALL_MATERIALS);
+    fields.updateNext(materials, 0, undefined, undefined, temperatures);
+    fields.updateNext(materials, 1, undefined, undefined, temperatures);
+    fields.updateNext(materials, 2, undefined, undefined, temperatures);
+
+    expect(fields.emission.hasThermalCandidate).toBe(false);
+    fields.markThermalEmissionDirty();
+    expect(fields.updateNext(materials, 100, undefined, undefined, temperatures)).toBeUndefined();
+  });
+
+  it('redirties emission when thermal-capable matter is added or removed', () => {
+    const materials = new Uint8Array(16);
+    const temperatures = new Uint16Array(16).fill(23_040);
+    const fields = new RenderFieldSet(4, 4, ALL_MATERIALS);
+    fields.updateNext(materials, 0, undefined, undefined, temperatures);
+    fields.updateNext(materials, 1, undefined, undefined, temperatures);
+    fields.updateNext(materials, 2, undefined, undefined, temperatures);
+
+    materials[5] = Material.Brick;
+    fields.markDirty(Material.Empty, Material.Brick, 5);
+    expect(fields.updateNext(materials, 100, undefined, undefined, temperatures)).toBe('emission');
+    expect(fields.emission.hasThermalCandidate).toBe(true);
+    expect(fields.emission.hasLight).toBe(true);
+
+    materials[5] = Material.Empty;
+    fields.markDirty(Material.Brick, Material.Empty, 5);
+    expect(fields.updateNext(materials, 200, undefined, undefined, temperatures)).toBe('emission');
+    expect(fields.emission.hasThermalCandidate).toBe(false);
+    expect(fields.emission.hasLight).toBe(false);
+  });
+
   it('paces the soft suspension field independently at six hertz', () => {
     const materials = new Uint8Array(16);
     const fields = new RenderFieldSet(4, 4, ALL_MATERIALS);

@@ -1,3 +1,8 @@
+import { Material } from '../shared/materials';
+import { blackbodyRadiance, blackbodyRgb } from './blackbody-emission';
+import { RenderPhase } from './render-profile';
+import { semanticTemperatureByte } from './semantic-field';
+
 const DOWNSAMPLE = 3;
 // A nine-tap binomial field reaches twelve world cells from a sparse source.
 // That is broad enough for thick material shoulders to receive the same shared
@@ -6,6 +11,23 @@ const DOWNSAMPLE = 3;
 const KERNEL = [1, 8, 28, 56, 70, 56, 28, 8, 1] as const;
 const KERNEL_RADIUS = 4;
 const GLOW_GAIN = 8;
+const BLACKBODY_LUT_STRIDE = 4;
+const BLACKBODY_SOURCE_THRESHOLD = 0.001;
+
+/** Build the expensive approximation once; field refreshes only index this table. */
+const BLACKBODY_SOURCE_LUT = (() => {
+  const table = new Float32Array(256 * BLACKBODY_LUT_STRIDE);
+  const color = new Float32Array(3);
+  for (let temperature = 0; temperature < 256; temperature++) {
+    blackbodyRgb(color, temperature);
+    const offset = temperature * BLACKBODY_LUT_STRIDE;
+    table[offset] = color[0];
+    table[offset + 1] = color[1];
+    table[offset + 2] = color[2];
+    table[offset + 3] = blackbodyRadiance(temperature);
+  }
+  return table;
+})();
 
 /**
  * A compact coloured light field for energy and emissive materials. It is
@@ -17,6 +39,7 @@ export class EmissionField {
   readonly height: number;
   readonly bytes: Uint8Array;
   hasLight = false;
+  hasThermalCandidate = false;
   private minimumLightX = 0;
   private maximumLightX = -1;
   private minimumLightY = 0;
@@ -30,6 +53,7 @@ export class EmissionField {
     private readonly worldHeight: number,
     private readonly emissiveByMaterial: Uint8Array,
     private readonly colorByMaterial: Uint8Array,
+    private readonly styleBytes?: Uint8Array,
   ) {
     this.width = Math.ceil(worldWidth / DOWNSAMPLE);
     this.height = Math.ceil(worldHeight / DOWNSAMPLE);
@@ -39,10 +63,13 @@ export class EmissionField {
     this.blurred = new Float32Array(this.bytes.length);
   }
 
-  update(materials: Uint8Array): void {
+  update(materials: Uint8Array, temperatures?: Uint16Array): void {
     if (materials.length !== this.worldWidth * this.worldHeight) throw new Error('Emission field size mismatch');
+    if (temperatures && temperatures.length !== materials.length) {
+      throw new Error('Emission temperature field size mismatch');
+    }
     this.seed.fill(0);
-    this.seedSources(materials);
+    this.seedSources(materials, temperatures);
     this.blurHorizontal();
     this.blurVertical();
     this.packBytes();
@@ -69,34 +96,90 @@ export class EmissionField {
       && y1 >= this.minimumLightY && y0 <= this.maximumLightY;
   }
 
-  private seedSources(materials: Uint8Array): void {
+  /** Mirrors the normal-HDR blackbody eligibility contract on the CPU field. */
+  canMaterialEmitThermally(material: number): boolean {
+    if (material === Material.Fire || material === Material.Lava || material === Material.Plasma) {
+      return true;
+    }
+    if (!this.styleBytes || this.emissiveByMaterial[material]
+      || material === Material.Empty || material === Material.Wall) return false;
+    const styleOffset = material * 4;
+    const phase = this.styleBytes[styleOffset];
+    const traits = this.styleBytes[styleOffset + 3];
+    return traits === 0 && (phase === RenderPhase.Solid || phase === RenderPhase.Powder);
+  }
+
+  private seedSources(materials: Uint8Array, temperatures?: Uint16Array): void {
+    this.hasThermalCandidate = false;
     for (let fieldY = 0; fieldY < this.height; fieldY++) for (let fieldX = 0; fieldX < this.width; fieldX++) {
       let count = 0;
       let red = 0;
       let green = 0;
       let blue = 0;
+      let thermalWeight = 0;
+      let thermalRed = 0;
+      let thermalGreen = 0;
+      let thermalBlue = 0;
       for (let offsetY = 0; offsetY < DOWNSAMPLE; offsetY++) {
         const y = fieldY * DOWNSAMPLE + offsetY;
         if (y >= this.worldHeight) continue;
         for (let offsetX = 0; offsetX < DOWNSAMPLE; offsetX++) {
           const x = fieldX * DOWNSAMPLE + offsetX;
           if (x >= this.worldWidth) continue;
-          const material = materials[y * this.worldWidth + x];
-          if (!this.emissiveByMaterial[material]) continue;
+          const worldIndex = y * this.worldWidth + x;
+          const material = materials[worldIndex];
+          const emissive = this.emissiveByMaterial[material] !== 0;
+          const thermalCandidate = this.canMaterialEmitThermally(material);
+          if (thermalCandidate) this.hasThermalCandidate = true;
           const colorOffset = material * 3;
+          const temperature = temperatures && this.styleBytes
+            ? semanticTemperatureByte(temperatures[worldIndex]) : 0;
+          const blackbodyOffset = temperature * BLACKBODY_LUT_STRIDE;
+          const radiance = BLACKBODY_SOURCE_LUT[blackbodyOffset + 3];
+          const thermallyVisible = radiance > BLACKBODY_SOURCE_THRESHOLD
+            && thermalCandidate;
+          if (thermallyVisible) {
+            const sourceWeight = emissive ? 1 : Math.min(1, radiance / 1.2);
+            const tint = emissive ? Math.min(1, radiance / 1.2) : 1;
+            thermalWeight += sourceWeight;
+            thermalRed += (
+              this.colorByMaterial[colorOffset] * (1 - tint)
+                + BLACKBODY_SOURCE_LUT[blackbodyOffset] * 255 * tint
+            ) * sourceWeight;
+            thermalGreen += (
+              this.colorByMaterial[colorOffset + 1] * (1 - tint)
+                + BLACKBODY_SOURCE_LUT[blackbodyOffset + 1] * 255 * tint
+            ) * sourceWeight;
+            thermalBlue += (
+              this.colorByMaterial[colorOffset + 2] * (1 - tint)
+                + BLACKBODY_SOURCE_LUT[blackbodyOffset + 2] * 255 * tint
+            ) * sourceWeight;
+            continue;
+          }
+          if (!emissive) continue;
           red += this.colorByMaterial[colorOffset];
           green += this.colorByMaterial[colorOffset + 1];
           blue += this.colorByMaterial[colorOffset + 2];
           count++;
         }
       }
-      if (!count) continue;
-      const density = count / (DOWNSAMPLE * DOWNSAMPLE);
+      if (!count && thermalWeight <= 0) continue;
       const target = (fieldY * this.width + fieldX) * 4;
-      this.seed[target] = red / count / 255 * density;
-      this.seed[target + 1] = green / count / 255 * density;
-      this.seed[target + 2] = blue / count / 255 * density;
-      this.seed[target + 3] = density;
+      if (thermalWeight <= 0) {
+        // Preserve the established static-emission arithmetic byte-for-byte.
+        const density = count / (DOWNSAMPLE * DOWNSAMPLE);
+        this.seed[target] = red / count / 255 * density;
+        this.seed[target + 1] = green / count / 255 * density;
+        this.seed[target + 2] = blue / count / 255 * density;
+        this.seed[target + 3] = density;
+      } else {
+        const sourceWeight = count + thermalWeight;
+        const density = sourceWeight / (DOWNSAMPLE * DOWNSAMPLE);
+        this.seed[target] = (red + thermalRed) / sourceWeight / 255 * density;
+        this.seed[target + 1] = (green + thermalGreen) / sourceWeight / 255 * density;
+        this.seed[target + 2] = (blue + thermalBlue) / sourceWeight / 255 * density;
+        this.seed[target + 3] = density;
+      }
     }
   }
 
