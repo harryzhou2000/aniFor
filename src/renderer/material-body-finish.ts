@@ -211,6 +211,17 @@ vec3 applyFluidVolumeLobe(
   // and deep cores retain a complementary, pigment-tinted shadow. Variant A
   // and Off remain byte-for-byte on the established path.
   float gasOpticalCharacter = gas * opticalExperimentB;
+  // A connected shallow liquid body can be nearly level, leaving its local
+  // normal and curvature close to zero across most of a broad pool. Square the
+  // existing transmission proof into a recognisable upper shallow zone while
+  // letting the directional term below remain the brighter moving crest. Blend
+  // only the authored reflection/transmission lanes so oily and aqueous bodies
+  // retain distinct response. This remains RGB-only and field/depth-gated: it
+  // cannot grow a shore or bridge an unlike-material contact.
+  float liquidShallowBand = transmittedShoulder * transmittedShoulder
+    * opticalExperimentB;
+  float liquidBroadTransmission = liquidShallowBand
+    * finishResponse.w * (0.160 + crown * 0.040);
   float liquidTransmissionCrest = transmittedShoulder * finishResponse.w
     * (0.060 + max(facing, 0.0) * 0.045) * liquidSurfaceScale;
 
@@ -227,6 +238,10 @@ vec3 applyFluidVolumeLobe(
     * (crown * fieldBody * 0.026 + max(facing, 0.0) * shoulder * 0.016)
     * finishResponse.w;
   key *= finishResponse.x;
+  // Transmission is a separate optical lane: applying it after reflection
+  // scaling keeps aqueous and oily bodies distinct instead of multiplying the
+  // authored response by the reflection lane a second time.
+  key += liquidBroadTransmission;
   float shade = (pocket * mix(0.030, 0.038, gas)
       + max(-facing, 0.0) * shoulder * mix(0.010, 0.014, gas)
       + core * mix(0.010, 0.007, gas)) * fieldBody;

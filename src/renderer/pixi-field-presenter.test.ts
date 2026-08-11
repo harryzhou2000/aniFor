@@ -421,6 +421,12 @@ describe('Pixi presenter startup configuration', () => {
       '* (0.060 + max(facing, 0.0) * 0.045) * liquidSurfaceScale;',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'float liquidShallowBand = transmittedShoulder * transmittedShoulder\n    * opticalExperimentB;',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      '* finishResponse.w * (0.160 + crown * 0.040);',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'shade += gasDeepAbsorption * 0.024 * gasExtinctionScale;',
     );
     expect(normal.match(/materialBodyFinishParameters\(/g)).toHaveLength(3);

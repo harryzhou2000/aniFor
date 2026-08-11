@@ -177,6 +177,25 @@ minimum peak difference 7, and zero browser errors. The coordinator adds no
 Chrome, CDP, capture, renderer, or evidence lifecycle; each existing owner
 still runs unchanged against the same built `dist/`.
 
+The next retained Volumetric refinement gives connected liquids an explicit
+shallow transmission shelf in that same shared fluid lobe. It squares the
+already-proven transmitted-shoulder mask, gates it to profile B, and applies
+the authored transmission lane after reflection scaling; Off is therefore an
+exact reference and aqueous/oily families do not receive a duplicated
+reflection multiplier. The retained mixed-atlas board at
+`.artifacts/visual-lab-reviews/material-lighting-atlas-db08abc1-e027-4900-9638-f6e87482b2ef`
+passes WebGL/HDR, completed-frame evidence, exact semantic/field/framebuffer
+invariants, and zero browser errors. Direct and independent inspection retain
+the result: Water and Oil gain a broad softly graded surface-to-core separation
+without a flat stripe, washout, clipping, boundary motion, or topology change.
+The paired liquid checkpoint at
+`.artifacts/visual-lab-reviews/liquid-motion-df811072-13bc-470c-a9a7-fdf007a5088f`
+preserves moving Water/Oil contacts and controls; its separate 4896×3072
+compact audit preserves exact semantic topology, alpha support, cavities,
+chimneys, strands, isolated cells, walls, repeated-off output, and zero browser
+errors. Compact true 8× still carries literal Off, so this is compatibility
+health rather than normal-HDR visual parity.
+
 Success means:
 
 - adding a normal visual experiment requires declarative/static-contract data,
@@ -201,10 +220,10 @@ Success means:
 
 Priority order from this checkpoint:
 
-1. Checkpoint and deploy the completed material-lighting normal-to-compact
-   mapping. Preserve its explicit evidence relationship: normal Volumetric/HDR
-   behavior is inactive at 8×, while the compact atlas proves compatibility and
-   complete material projection only.
+1. Checkpoint and deploy the retained shared shallow-liquid transmission shelf.
+   Preserve its B-only experiment boundary and the explicit compact evidence
+   relationship: normal Volumetric/HDR behavior is inactive at 8×, while the
+   compact liquid atlas proves phase-family health only.
 2. Reduce experiment-authoring friction only where another experiment still
    requires duplicated registration or lifecycle code. Prefer derivation from
    the static catalog and closed driver capabilities over new audit branches.

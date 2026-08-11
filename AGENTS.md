@@ -303,6 +303,21 @@ literal Off at 8x, and the exhaustive 217-material atlas proves only compact
 shader health, semantic ownership, and visible projection—not Volumetric/HDR
 or PNG parity.
 
+The retained shared-liquid follow-up adds one Volumetric-only shallow
+transmission shelf inside `applyFluidVolumeLobe`. Square the existing
+`transmittedShoulder`, gate it with `opticalExperimentB`, scale it by the
+authored transmission lane, and add it only after reflection scaling; do not
+fold it back into Off/Balanced or multiply it by the reflection lane again.
+The retained mixed-atlas board is
+`.artifacts/visual-lab-reviews/material-lighting-atlas-db08abc1-e027-4900-9638-f6e87482b2ef`
+and the paired moving-liquid/compact checkpoint is
+`.artifacts/visual-lab-reviews/liquid-motion-df811072-13bc-470c-a9a7-fdf007a5088f`.
+Direct and independent inspection prefer the 0.160 response and explicitly say
+not to increase it: Water and Oil gain a soft surface-to-core shelf without a
+flat stripe, washout, clipping, contact motion, or topology/support change.
+The 4896×3072 compact audit retains literal Off and proves only exact
+phase-family health, repeated output, and zero browser errors.
+
 The optional current-only Canvas companion belongs only to that local
 checkpoint envelope. `--canvas-companion=1` runs after canonical normal and
 compact success, resolves the review's exact recipe-set sidecar, and captures
