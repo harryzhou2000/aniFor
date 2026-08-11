@@ -234,13 +234,14 @@ compact literal-Off path remains healthy. Independent visual review found the
 change safe and modestly positive, strongest on liquid; do not turn its RGB
 deltas or current PNG bytes into thresholds.
 
-Manual CI Visual Lab review now defaults to the deployed
-`completed-frame-receipt` proof so ordinary authoring uses one evidence snapshot
-per variant. Keep `stable-snapshots` available as an explicit workflow choice
-and keep the low-level batch API's conservative v1 default unchanged. This is a
-review-loop acceleration only: portable tuning-plan verification, all three
-evidence planes, screenshot-after-proof, strict teardown, and current-only
-aesthetic judgment remain required.
+Keep manual CI Visual Lab review on the conservative `stable-snapshots`
+default. A trial making `completed-frame-receipt` the default failed the heavy
+mixed material atlas twice on loaded GitHub SwiftShader: first through a bounded
+CDP evaluation timeout and then through the protected 30-second receipt
+watchdog, while the gas candidate passed after host recycle. Receipt proof
+remains an explicit workflow choice for suitable cohorts. Do not lengthen its
+watchdog, weaken strict teardown, or make it the universal default without new
+cross-fixture hosted evidence.
 
 When reviewing that dark solid atlas, do not infer lost support merely because
 the B broad-body treatment reduces contrast around a one-cell control. Compare

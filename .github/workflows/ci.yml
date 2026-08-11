@@ -29,11 +29,11 @@ on:
       visual_lab_capture_proof:
         description: Evidence proof used by an optional Visual Lab review
         required: true
-        default: completed-frame-receipt
+        default: stable-snapshots
         type: choice
         options:
-          - completed-frame-receipt
           - stable-snapshots
+          - completed-frame-receipt
       visual_lab_candidates:
         description: Optional comma-separated Visual Lab candidates; empty runs the frozen catalog
         required: false

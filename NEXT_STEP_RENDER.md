@@ -483,12 +483,14 @@ literal Off. Direct and independent visual review retain the result as a modest
 but coherent dimensional improvement, strongest on liquid and deliberately
 subtle on powder and gas. Current PNG bytes and RGB deltas remain diagnostic.
 
-The manual CI Visual Lab control now defaults to
-`completed-frame-receipt`, using the deployed v2 tuning plan and one evidence
-snapshot per variant. `stable-snapshots` remains an explicit workflow choice,
-and the low-level batch default remains conservative v1. This changes only the
-manual review default: exact evidence planes, screenshot-after-proof, portable
-verification, strict teardown, and current-only aesthetic review remain intact.
+The manual CI Visual Lab control keeps `stable-snapshots` as its conservative
+default. A deployment trial of a `completed-frame-receipt` default failed the
+heavy mixed material atlas twice on loaded GitHub SwiftShader: one bounded CDP
+evaluation timeout, then one protected 30-second receipt timeout; in both runs
+the gas candidate passed after the shared host recycled. Keep receipt proof as
+an explicit choice for suitable cohorts. Do not lengthen its watchdog, weaken
+strict teardown, or make it universal without new cross-fixture hosted
+evidence.
 
 Success means:
 
@@ -514,9 +516,9 @@ Success means:
 
 Priority order from this checkpoint:
 
-1. Checkpoint and deploy the retained shared profile-sheen increment together
-   with the faster manual-CI review default, preserving compact true-8x literal
-   Off and the explicit stable-snapshot fallback.
+1. Checkpoint and deploy the retained shared profile-sheen increment through the
+   conservative stable-snapshot CI path, preserving compact true-8x literal Off
+   and the explicit receipt-proof option.
 2. Use the same current-only framework for the next broad material-composition
    pass; prefer an existing proof/resource shared by multiple families over an
    exact-material branch.
