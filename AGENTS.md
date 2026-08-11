@@ -36,6 +36,19 @@ Normal WebGL/HDR, exact alpha, the product Smooth pile controls, and the derived
 217-material true-8× audit passed. Keep Local, square Grains, fine topology,
 contacts, Canvas, and compact literal-Off outside this response.
 
+The retained follow-up after powder is a B-only optical-family response for
+sooty gas in `applyFluidVolumeLobe`. It derives eligibility from the existing
+SootyGas fill/transmission lanes, exposes a little more transmitted middle, and
+eases deep-core absorption without an exact material selector. The current
+review package is
+`.artifacts/visual-lab-reviews/material-lighting-14dc9e76-150c-4a14-a249-dfafd3eaa8bd`:
+both normal WebGL/HDR candidates, exact alpha, and the derived 217-material
+true-8x audit passed. Direct and independent review retain B. Keep Off,
+Balanced, clean gas, Canvas, contacts/topology, and compact literal-Off outside
+this refinement. The next preferred experiment is shared solid/profile
+lighting across several rigid material families, not another gas-specific
+material branch or capture lifecycle.
+
 Capture-facing fixture and recipe ownership has one data-only join point:
 `src/shared/visual-capture-static-catalog.js`. It projects the frozen
 normal-HDR and source-stage contracts into ordered fixture/driver bindings and

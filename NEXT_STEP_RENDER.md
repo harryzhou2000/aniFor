@@ -250,6 +250,21 @@ retains the curved crown, crisp mineral grain, one-cell stem and ledge, isolated
 grains, concrete hole, wet contact, wall control, and separate Local/Grains
 references while making the crown-to-core read clearer.
 
+The next shared-family refinement is also retained. Volumetric/B now recognizes
+the existing `SootyGas` optical response through its fill and transmission
+lanes, opens a restrained transmitted middle, and eases only its deepest core
+absorption. It never selects an exact material and adds no sampler, noise,
+field, pass, resource, support, alpha, contact, or topology decision; Off,
+Balanced, clean gas, Canvas, and compact true-8x stay on their established
+paths. The current-only checkpoint is
+`.artifacts/visual-lab-reviews/material-lighting-14dc9e76-150c-4a14-a249-dfafd3eaa8bd`.
+Both candidates passed WebGL/HDR with zero warnings, browser errors, or alpha
+differences, and the derived 4896x3072 217-material compact audit passed. Gas
+Off-to-Volumetric changed 164,290 RGB pixels with total absolute delta
+1,306,845 and channel peak 26. Direct and independent inspection retain B: the
+sooty centre exposes broader internal lobes without washout, while clean gas,
+silhouettes, cutout, contacts, and sparse controls remain visually stable.
+
 Success means:
 
 - adding a normal visual experiment requires declarative/static-contract data,
@@ -274,13 +289,14 @@ Success means:
 
 Priority order from this checkpoint:
 
-1. Checkpoint and deploy the retained B-only powder countershade together with
-   the preceding gas mid/core refinement. Preserve the explicit compact
-   evidence relationship: normal Volumetric/HDR behavior is inactive at 8×,
-   while the compact atlas proves broad material and phase health only.
-2. Choose the next material experiment from the current full atlas and product
-   scenes. Prefer a shared phase/profile response that improves several
-   materials over another element-specific treatment or capture lifecycle.
+1. Checkpoint and deploy the retained optical-family sooty-gas response.
+   Preserve the explicit compact evidence relationship: normal Volumetric/HDR
+   behavior is inactive at 8x, while the compact atlas proves broad material
+   and phase health only.
+2. Extend the shared material-lighting profile to representative rigid,
+   translucent, organic, and device solids using an existing broad solid
+   fixture where possible. Prefer class/profile response over exact-material
+   branches, and require current product-scene inspection before retention.
 3. Harden only regressions that threaten geometry, semantic/topology
    correctness, WebGL lifecycle, true-8× completion, package integrity, or live
    Pages loading. Do not grow exact-pixel tests for evolving aesthetics.

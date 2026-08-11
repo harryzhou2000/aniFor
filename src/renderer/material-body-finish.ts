@@ -226,6 +226,15 @@ vec3 applyFluidVolumeLobe(
   // and deep cores retain a complementary, pigment-tinted shadow. Variant A
   // and Off remain byte-for-byte on the established path.
   float gasOpticalCharacter = gas * opticalExperimentB;
+  // Sooty families deliberately retain more pigment and absorption than clean
+  // gases, but that authored profile can otherwise let B read as a dark slab
+  // with only a bright rim. Detect the family through its existing optical
+  // response lanes (never a material ID), open a little transmitted middle,
+  // and ease only the deepest B absorption. Clean gases stay on the shared
+  // cloud response. This is RGB-only over proven gas support.
+  float sootyGasCharacter = gasOpticalCharacter
+    * smoothstep(1.04, 1.24, finishResponse.y)
+    * (1.0 - smoothstep(0.66, 0.98, finishResponse.w));
   // A connected shallow liquid body can be nearly level, leaving its local
   // normal and curvature close to zero across most of a broad pool. Square the
   // existing transmission proof into a recognisable upper shallow zone while
@@ -248,6 +257,8 @@ vec3 applyFluidVolumeLobe(
     * (1.0 - core * mix(0.24, 0.36, gas));
   key += liquidTransmissionCrest;
   key += gasMidTransmission * 0.036 * finishResponse.w * gasMidScale;
+  key += sootyGasCharacter * gasMidTransmission
+    * (0.026 + max(macroRelief, 0.0) * 0.018) * finishResponse.x;
   key += max(macroRelief, 0.0) * gasMacroBody * 0.052;
   key += gasOpticalCharacter
     * (crown * fieldBody * 0.026 + max(facing, 0.0) * shoulder * 0.016)
@@ -267,6 +278,7 @@ vec3 applyFluidVolumeLobe(
     * (pocket * fieldBody * 0.022 + max(-facing, 0.0) * shoulder * 0.010
       + gasDeepAbsorption * 0.014);
   shade *= finishResponse.y;
+  shade *= mix(1.0, 0.82, sootyGasCharacter * core);
   color += (vec3(1.08) - clamp(color, 0.0, 1.08)) * keyTint * key;
   color *= vec3(1.0) - absorptionTint * shade;
   return max(color, vec3(0.0));
