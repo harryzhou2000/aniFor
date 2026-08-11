@@ -127,7 +127,8 @@ vec3 applyFluidVolumeLobe(
   vec2 slope,
   float macroRelief,
   float eligibility,
-  float enabled
+  float enabled,
+  float materialLightingVariant
 ) {
   if (enabled < 0.5 || eligibility <= 0.0001) return color;
 
@@ -175,8 +176,22 @@ vec3 applyFluidVolumeLobe(
   float gasDeepAbsorption = gas * core * core;
   float gasMacroBody = gas * fieldBody * smoothstep(0.14, 0.64, density)
     * (1.0 - core * 0.22);
+  // Reuse the existing material-lighting OFF/A/B control to compare a shared
+  // optical transport response. These are phase coefficients over already-live
+  // body proofs, never new support or material selectors. Compact true-8x passes
+  // literal Off, keeping its established fifteen-million-fragment path exact.
+  float opticalExperiment = step(0.5, materialLightingVariant);
+  float opticalExperimentB = step(1.5, materialLightingVariant);
+  float liquidSurfaceScale = 1.0 + liquid * opticalExperiment
+    * mix(0.28, 0.74, opticalExperimentB);
+  float liquidCoreScale = 1.0 + liquid * opticalExperiment
+    * mix(0.22, 0.66, opticalExperimentB);
+  float gasMidScale = 1.0 + gas * opticalExperiment
+    * mix(0.10, 0.24, opticalExperimentB);
+  float gasExtinctionScale = 1.0 + gas * opticalExperiment
+    * mix(0.32, 0.86, opticalExperimentB);
   float liquidTransmissionCrest = transmittedShoulder * finishResponse.w
-    * (0.060 + max(facing, 0.0) * 0.045);
+    * (0.060 + max(facing, 0.0) * 0.045) * liquidSurfaceScale;
 
   // A broad convex crown and directional shoulder supply a coherent reflected
   // lobe. Concave/deep regions retain pigment through restrained absorption;
@@ -185,14 +200,14 @@ vec3 applyFluidVolumeLobe(
       + max(facing, 0.0) * shoulder * mix(0.026, 0.034, gas))
     * (1.0 - core * mix(0.24, 0.36, gas));
   key += liquidTransmissionCrest;
-  key += gasMidTransmission * 0.036 * finishResponse.w;
+  key += gasMidTransmission * 0.036 * finishResponse.w * gasMidScale;
   key += max(macroRelief, 0.0) * gasMacroBody * 0.052;
   key *= finishResponse.x;
   float shade = (pocket * mix(0.030, 0.038, gas)
       + max(-facing, 0.0) * shoulder * mix(0.010, 0.014, gas)
       + core * mix(0.010, 0.007, gas)) * fieldBody;
-  shade += deepColumn * 0.032;
-  shade += gasDeepAbsorption * 0.024;
+  shade += deepColumn * 0.032 * liquidCoreScale;
+  shade += gasDeepAbsorption * 0.024 * gasExtinctionScale;
   shade += max(-macroRelief, 0.0) * gasMacroBody * 0.036;
   shade *= finishResponse.y;
   color += (vec3(1.08) - clamp(color, 0.0, 1.08)) * keyTint * key;

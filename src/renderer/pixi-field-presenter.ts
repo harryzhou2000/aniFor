@@ -1886,7 +1886,7 @@ void main() {
           liquidNeighbourMean,
           clamp((liquid.a - liquidNeighbourMean) * 5.5, -1.0, 1.0),
           liquidFinishDepth, liquidFinishSlope, 0.0,
-          liquidFinishEligibility, uMaterialBodyFinish
+          liquidFinishEligibility, uMaterialBodyFinish, 0.0
         );
       }
       foreground = vec4(reconstructedLiquid * liquid.a, liquid.a);
@@ -1926,7 +1926,7 @@ void main() {
           clamp((atmosphere.a - gasNeighbourMean) * 8.0, -1.0, 1.0),
           gasFinishDepth, gasFinishSlope,
           gasCompactMacroRelief(uv * uFieldSize - 0.5),
-          smoothstep(0.020, 0.12, atmosphere.a), uMaterialBodyFinish
+          smoothstep(0.020, 0.12, atmosphere.a), uMaterialBodyFinish, 0.0
         );
       }
       if (uGasIdentityStyling > 0.5) {
@@ -2073,7 +2073,7 @@ void main() {
         clamp((atmosphere.a - gasNeighbourMean) * 8.0, -1.0, 1.0),
         smoothstep(0.035, 0.62, gasDensity), gasFinishSlope,
         gasCompactMacroRelief(grid),
-        smoothstep(0.020, 0.12, atmosphere.a), uMaterialBodyFinish
+        smoothstep(0.020, 0.12, atmosphere.a), uMaterialBodyFinish, 0.0
       );
     }
     if (uGasIdentityStyling > 0.5) {
@@ -2979,7 +2979,7 @@ void main() {
         color, 1.0, liquidFinishResponse, density, liquidFinishNeighbourMean,
         clamp((liquid.a - liquidFinishNeighbourMean) * 5.5, -1.0, 1.0),
         liquidFinishDepth, liquidSlope, 0.0,
-        liquidFinishEligibility, uMaterialBodyFinish
+        liquidFinishEligibility, uMaterialBodyFinish, 0.0
       );
     }
   }
@@ -6646,7 +6646,8 @@ void main() {
     color = applyFluidVolumeLobe(
       color, 2.0, gasFinishResponse, gasShadeDensity, cloudNeighbourMean,
       gasCurvature, opticalDepth,
-      volumeSlope, 0.0, gasInterior, uMaterialBodyFinish
+      volumeSlope, 0.0, gasInterior, uMaterialBodyFinish,
+      uMaterialLightingVariant
     );
     // E04: turn the existing field normal and curvature into a readable
     // connected billow without inventing particle-scale noise. The shared
@@ -8360,7 +8361,7 @@ void main() {
         color, 1.0, liquidFinishResponse, liquidSurfaceDensity, liquidNeighbourMean,
         clamp((liquidDensity - liquidNeighbourMean) * 5.5, -1.0, 1.0), liquidFinishDepth,
         semanticSlope + volumeSlope, 0.0, liquidFinishEligibility,
-        uMaterialBodyFinish
+        uMaterialBodyFinish, uMaterialLightingVariant
       );
     }
   } else {

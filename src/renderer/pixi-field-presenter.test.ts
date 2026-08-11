@@ -396,6 +396,18 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight.match(/applyMaterialBodyFinish\(/g)).toHaveLength(5);
     expect(normal.match(/applyFluidVolumeLobe\(/g)).toHaveLength(2);
     expect(eight.match(/applyFluidVolumeLobe\(/g)).toHaveLength(4);
+    expect(normal.match(/uMaterialBodyFinish,\s*uMaterialLightingVariant\s*\)/g))
+      .toHaveLength(2);
+    expect(eight.match(/uMaterialBodyFinish,\s*0\.0\s*\)/g)).toHaveLength(4);
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'float opticalExperimentB = step(1.5, materialLightingVariant);',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      '* (0.060 + max(facing, 0.0) * 0.045) * liquidSurfaceScale;',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'shade += gasDeepAbsorption * 0.024 * gasExtinctionScale;',
+    );
     expect(normal.match(/materialBodyFinishParameters\(/g)).toHaveLength(3);
     expect(eight.match(/materialBodyFinishParameters\(/g)).toHaveLength(5);
     expect(eight).toContain('gasCompactMacroRelief(grid)');

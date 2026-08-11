@@ -1,6 +1,6 @@
 ## Current execution objective — framework leverage
 
-### Active goal (updated 2026-08-10)
+### Active goal (updated 2026-08-11)
 
 Build an efficient, reusable visual-development loop for AniforTPT, then use it
 to deliver substantial powder, liquid, gas, lighting, and material-style
@@ -81,6 +81,23 @@ This is review-scene geometry, not a new gas renderer path or material rule;
 keep it as the more representative shared-lighting diagnostic for later
 volumetric experiments.
 
+The next shared-transport candidate is retained locally at
+`.artifacts/visual-lab-reviews/material-lighting-4811021f-790b-41c5-b9c6-742d45c7b972`.
+It scales the existing sampler-free fluid lobe with the already-owned
+Off/Balanced/Volumetric profile: normal 1×–4× liquid receives stronger exposed
+transmission and core absorption, while gas receives a restrained mid-volume
+key and deeper extinction. Volumetric is the preferred liquid-led view: Water
+has clearer surface-to-core depth and Oil has a modestly richer body, with
+powder grain, holes, columns, fluid silhouettes, and alpha unchanged. The
+current full-atlas gas response is too subtle to claim that gas volume is
+solved; the next visual increment should use a closer gas-focused fixture and
+strengthen only field-proven core/shoulder contrast. The WebGL/HDR review had
+zero browser errors; Off→Volumetric changed 119,174 RGB pixels with channel
+peak 13 and zero alpha differences. Compact true-8× gas and liquid gates remain
+literal Off and passed exact repeated-Off topology/alpha with zero browser
+errors. This candidate adds no sampler, texture, field, allocation, target, or
+pass.
+
 Success means:
 
 - adding a normal visual experiment requires declarative/static-contract data,
@@ -105,11 +122,11 @@ Success means:
 
 Priority order from this checkpoint:
 
-1. Treat the shared Volumetric product promotion as the first completed use of
-   the consolidated `material-optics` board. Use the same board for the next
-   sampler-free, scale-safe optical experiment across representative powder,
-   liquid, and atmosphere fixtures; prefer improvements to coherent fluid depth,
-   surface/core separation, and gas extinction over another exact-material leaf.
+1. Checkpoint and deploy the retained shared fluid-transport candidate. Then add
+   a close gas-focused fixture through the existing declarative authoring seam
+   and improve field-proven core/shoulder extinction without changing support,
+   alpha, sparse gaps, or compact true-8× resource cost. Do not add another
+   exact-material renderer leaf for this work.
 2. Reduce experiment-authoring friction further only where a new experiment
    still requires duplicated registration or lifecycle code.
 3. Harden only regressions that threaten geometry, semantic/topology
