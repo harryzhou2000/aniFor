@@ -150,7 +150,7 @@ checkpoint through workflow run `31518942179`; cached build, Pages deployment,
 exact 19-resource closure, hosted completed-frame capture, portable
 verification, and an independent live closure check all passed.
 
-The next retained liquid refinement is a shared B-only deep-pigment response in
+The retained liquid refinement is a shared B-only deep-pigment response in
 `applyFluidVolumeLobe`. It uses only the existing liquid phase, deep-column
 proof, and optical-profile pigment lane, preserving authored cyan/brown identity
 through absorption without a material selector. It is RGB-only; shorelines,
@@ -165,6 +165,30 @@ browser errors. Direct inspection retains every Water/Oil topology control and
 gives deep bodies a slightly stronger species-colored read. The real compact
 4896x3072 atlas rendered all 217 projections with zero browser errors. Do not
 pin these evolving PNG hashes.
+
+The following responsive checkpoint makes the fitted viewport and renderer
+geometry converge without depending on requestAnimationFrame delivery. Modern
+desktop browsers use a CSS container-unit native-aspect fit while JavaScript
+retains the compatibility fallback. Synchronize the renderer after controls
+mount, after late WebGL promotion, on observer/window/visual-viewport/media
+signals, before a presentation that sees dimension drift, and through the
+bounded 250 ms dimension-only fallback used for throttled tabs. Both disposal
+paths must remove the observer, interval, window listener, visual-viewport
+listener, and media-query listener. Keep the WebGL audit assertion that the
+presenter's published viewport size exactly equals the host client size; canvas
+containment alone cannot detect the old upper-left-anchored transform.
+
+The 681-920 px short-tablet band owns a native-aspect first row and a scrollable
+document with a 300-380 px internally scrolling palette. Desktop category
+targets own a fixed 112 px two-column vertical rail. The production-bundle
+desktop gate passed widely separated and transformed painted footprints,
+continuous left brushing, anchored wheel zoom, 42x27 middle pan, breakpoint and
+live-scale transitions, three short layouts, exact host/presenter geometry, and
+zero browser errors. The focused mobile gate passed one-touch brush handoff,
+two-touch anchored zoom/pan, zero pinch paint, and zero browser errors. A Water
+Visual Lab capture retained the hermetic 918x576 crop at (181,12), 1224x768
+backing, WebGL/HDR, and all evidence planes. Do not replace these composed
+geometry checks with a HUD coordinate or a historical screenshot hash.
 
 When reviewing that dark solid atlas, do not infer lost support merely because
 the B broad-body treatment reduces contrast around a one-cell control. Compare
@@ -3508,7 +3532,7 @@ The non-negotiable contract is:
 - The simulation world is 612×384 cells.
 - World, brush, and semantic texture coordinates use that same unscaled space.
 - Layout performs one uniform aspect fit; camera zoom/pan performs one presentation transform.
-- Coalesce viewport fitting through `requestAnimationFrame` from the frame `ResizeObserver`, `window.resize`, `visualViewport.resize`, and compact-media changes. A frame can change during an in-place desktop resize without a timely observer delivery; never rely on one resize signal alone.
+- Fit the viewport immediately from the frame `ResizeObserver`, `window.resize`, `visualViewport.resize`, and compact-media changes; background tabs and CDP emulation may throttle `requestAnimationFrame` long enough to retain stale inline geometry. On modern desktop browsers, a native-aspect CSS container-unit fit is the immediate layout authority and the JavaScript dimensions are the compatibility fallback. The renderer must independently reconcile host dimensions after control mount, late WebGL promotion, resize signals, and before presentation, with a bounded low-frequency dimension-only fallback for deferred observers. Remove every retained resize source on disposal. Never rely on one resize signal alone.
 - Device pixel ratio affects backing resolution only, never world or CSS coordinate math.
 - A live DPR or browser page-scale transition may legitimately reflow the CSS viewport. Preserve world-space camera state: zoom is invariant and CSS-pixel pan scales by the fitted-canvas ratio. Do not require raw pan or absolute canvas rectangles to stay equal across different device-emulation viewports. The browser gate must change DPR and `visualViewport.scale` in one session while the camera is zoomed/panned, repeat anchored wheel zoom and exact radius-zero painting, and compare the composed footprint. A page-zoom screenshot maps through `visualViewport.width/height` and `offsetLeft/offsetTop`, not layout `innerWidth/innerHeight` alone.
 - The default render backing is 2× per axis (1224×768 for the 612×384 world). The in-app Detail control and `?renderScale=1|2|4|8` select true per-cell sampling; canonical 8× is 4896×3072. WebGL 8× is supported inside the explicit 8,192-axis/16,777,216-pixel budget. Render the semantic shader directly on one world-sized mesh; attaching it as a Pixi Filter can create a redundant full-resolution input pass/target even when the shader never samples that input. The semantic texture must remain `no-premultiply-alpha`, but the direct mesh's marker texture must be premultiplied (`Texture.WHITE`) because Pixi's `MeshPipe` derives its output blend equation from `mesh.texture.alphaMode`; pointing that property at the semantic texture multiplies translucent shader RGB by alpha twice. Disable redundant MSAA and extra high-quality diagonal/ring probes at 8×, but retain the desktop analytic lighting-normal basis through a separate arithmetic-only scalar so output scale does not darken bodies. Use only a 2× temporary automatic Canvas while an 8× candidate starts, and zero every fallback/contour canvas plus its ImageData after promotion. Keep no more than one 8× GPU frame in flight: use a WebGL fence, coalesce pending texture/uniform mutations latest-wins, poll without blocking, and release the fence on signal, context loss, or destruction. Keep the fallback mounted during a bounded 30-second cold warm-up; 1×–4× retain 10 seconds. A slow first 15-million-fragment draw is not evidence that 8× is unsupported. The browser gate must prove effective 8×, exact 4896×3072 backing, zero browser errors, identical 2×/8× CSS geometry, full Smooth/Local powder-column support, preserved authored holes, and an exact high-zoom square in Grains; backing scale never enters pointer/camera math.

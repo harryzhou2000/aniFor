@@ -514,6 +514,11 @@ export class Game {
     this.renderer.dispose();
   }
 
+  /** Finalizes viewport geometry after the control library has mounted. */
+  resizeViewport(): void {
+    this.renderer.resizeToHost();
+  }
+
   private installBrowserInputAudit(): void {
     this.material = Material.Sand;
     this.wallTool = undefined;

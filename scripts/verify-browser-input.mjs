@@ -822,7 +822,7 @@ const usesProductionBundle = productionBundle || showcaseScreenshotOnly || compo
   || nativeSeedGrowthOnly || nativeSemanticsOnly || catalogSelectionOnly || shortDesktopOnly || liveScaleOnly
   || scaleEightOnly || eightSpngOnly || eightFieldProfileOnly || eightMaterialAtlasOnly || eightRecoveryOnly;
 const AUDIT_BASE_URL = usesProductionBundle ? PRODUCTION_BUNDLE_URL : ORIGIN + '/';
-const DESKTOP_TOOL_FILTER_HEIGHT = 96;
+const DESKTOP_TOOL_FILTER_HEIGHT = 112;
 const screenshotRequest = process.argv.find((argument) => argument.startsWith('--screenshot='))?.slice('--screenshot='.length);
 const renderLook = process.argv.find((argument) => argument.startsWith('--render-look='))
   ?.slice('--render-look='.length);
@@ -16346,10 +16346,13 @@ function waitForCanvasPresentation(cdp, afterSequence, label) {
 
 async function auditShortDesktop(cdp, mode, dpr, previous) {
   const samples = [];
-  let last = previous;
+  void previous;
   for (const [width, height] of [[1280, 520], [1024, 500]]) {
     await setDesktopMetrics(cdp, width, height, dpr);
-    const current = await waitForStableCanvas(cdp, width, height, last, 6_000, `${mode} short ${width}x${height}`);
+    // Two different browser sizes may legitimately yield the same fitted
+    // world rectangle. Exact target metrics plus consecutive stable samples
+    // prove settlement without requiring an artificial size delta.
+    const current = await waitForStableCanvas(cdp, width, height, undefined, 6_000, `${mode} short ${width}x${height}`);
     assertGeometry(current, `${mode} short ${width}x${height}`);
     assertContained(current, `${mode} short ${width}x${height}`);
     assertToolboxGeometry(current, `${mode} short ${width}x${height}`, DESKTOP_TOOL_FILTER_HEIGHT);
@@ -16408,8 +16411,59 @@ async function auditShortDesktop(cdp, mode, dpr, previous) {
       filterOverflow: round(filterReach.maximum),
       shellScroll: round(shellReach.maximum),
     });
-    last = current;
   }
+  await setDesktopMetrics(cdp, 900, 600, dpr);
+  const tablet = await waitForStableCanvas(cdp, 900, 600, undefined, 6_000, `${mode} short tablet 900x600`);
+  assertGeometry(tablet, `${mode} short tablet 900x600`);
+  assertContained(tablet, `${mode} short tablet 900x600`);
+  assert(Math.abs(tablet.ui.filters.height - 40) <= 0.75,
+    `${mode}: short tablet tool filter rail is ${round(tablet.ui.filters.height)}px`);
+  assert(Math.abs(tablet.frame.width / tablet.frame.height - WORLD_ASPECT) < 0.002,
+    `${mode}: short tablet viewport frame lost the world aspect`);
+  assert(tablet.ui.toolbox.top >= tablet.frame.bottom - 0.75,
+    `${mode}: short tablet toolbox overlaps the viewport`);
+  assert(tablet.ui.palette.top >= tablet.ui.toolbox.top - 0.75
+    && tablet.ui.palette.bottom <= tablet.ui.toolbox.bottom + 0.75
+    && tablet.ui.actions.top >= tablet.ui.toolbox.top - 0.75
+    && tablet.ui.actions.bottom <= tablet.ui.toolbox.bottom + 0.75,
+  `${mode}: short tablet controls escaped the toolbox`);
+  assert(tablet.ui.palette.height >= 299 && tablet.ui.palette.height <= 381,
+    `${mode}: short tablet palette is ${round(tablet.ui.palette.height)}px`);
+  assert(tablet.ui.horizontalOverflow <= 0.75,
+    `${mode}: short tablet document has ${round(tablet.ui.horizontalOverflow)}px horizontal overflow`);
+  const tabletReach = await evaluate(cdp, `(() => {
+    const scrolling = document.scrollingElement;
+    const actions = document.querySelector('.actions');
+    const footer = document.querySelector('.footer');
+    if (!(scrolling instanceof HTMLElement) || !(actions instanceof HTMLElement)
+      || !(footer instanceof HTMLElement)) throw new Error('Missing short tablet scroll geometry');
+    const overflow = getComputedStyle(document.documentElement).overflowY;
+    window.scrollTo(0, scrolling.scrollHeight);
+    const actionsRect = actions.getBoundingClientRect();
+    const footerRect = footer.getBoundingClientRect();
+    const result = {
+      overflow,
+      maximum: Math.max(0, scrolling.scrollHeight - innerHeight),
+      reached: scrollY,
+      actionsBottom: actionsRect.bottom,
+      footerBottom: footerRect.bottom,
+      viewportHeight: innerHeight,
+    };
+    window.scrollTo(0, 0);
+    return result;
+  })()`);
+  assert(tabletReach.overflow === 'auto', `${mode}: short tablet document is not scrollable`);
+  assert(tabletReach.maximum > 0 && tabletReach.reached >= tabletReach.maximum - 1,
+    `${mode}: short tablet cannot reach its overflow`);
+  assert(tabletReach.actionsBottom <= tabletReach.viewportHeight + 1
+    && tabletReach.footerBottom <= tabletReach.viewportHeight + 1,
+  `${mode}: short tablet controls or footer remain unreachable after scrolling`);
+  samples.push({
+    width: 900, height: 600, layout: 'tablet',
+    canvas: `${round(tablet.canvas.width, 2)}x${round(tablet.canvas.height, 2)}`,
+    paletteHeight: round(tablet.ui.palette.height),
+    documentScroll: round(tabletReach.maximum),
+  });
   return samples;
 }
 
@@ -55233,7 +55287,11 @@ async function metrics(cdp) {
     };
     return {
       canvas: box(canvas), viewport: box(viewport), frame: box(frame),
-      logical: { width: canvas.offsetWidth, height: canvas.offsetHeight, worldSize: canvas.dataset.worldSize },
+      logical: {
+        width: canvas.offsetWidth, height: canvas.offsetHeight, worldSize: canvas.dataset.worldSize,
+        viewportSize: canvas.dataset.viewportSize, viewScale: canvas.dataset.viewScale,
+        hostClient: String(viewport.clientWidth) + 'x' + String(viewport.clientHeight),
+      },
       backing: { width: canvas.width, height: canvas.height },
       outputScale: canvas.dataset.outputScale,
       backend: window.__ANIFOR_INPUT_AUDIT__.backend(),
@@ -55262,10 +55320,21 @@ function assertGeometry(value, label, outputScale = 2) {
   assert(value.backing.width === WORLD_WIDTH * outputScale && value.backing.height === WORLD_HEIGHT * outputScale,
     `${label}: backing is ${value.backing.width}x${value.backing.height}`);
   assert(value.outputScale === String(outputScale), `${label}: outputScale is ${value.outputScale}`);
+  if (value.backend?.backend === 'webgl') {
+    assert(value.logical.viewportSize === value.logical.hostClient,
+      `${label}: presenter viewport ${value.logical.viewportSize} differs from host ${value.logical.hostClient}`);
+    assert(Number.isFinite(Number(value.logical.viewScale)) && Number(value.logical.viewScale) > 0,
+      `${label}: invalid presenter view scale ${value.logical.viewScale}`);
+  }
 }
 
 function assertContained(value, label) {
   const tolerance = 0.75;
+  assert(value.viewport.left >= value.frame.left - tolerance
+    && value.viewport.top >= value.frame.top - tolerance
+    && value.viewport.right <= value.frame.right + tolerance
+    && value.viewport.bottom <= value.frame.bottom + tolerance,
+  `${label}: fitted viewport escaped its frame`);
   assert(value.canvas.left >= value.viewport.left - tolerance, `${label}: canvas escaped left`);
   assert(value.canvas.top >= value.viewport.top - tolerance, `${label}: canvas escaped top`);
   assert(value.canvas.right <= value.viewport.right + tolerance, `${label}: canvas escaped right`);
@@ -57134,7 +57203,10 @@ async function capturePaintedFootprints(
   do {
     const capture = capturedFrameBase64
       ? { data: capturedFrameBase64 }
-      : await capturePageScreenshotWithin(cdp, 10_000, `${label} footprint screenshot`);
+      // A loaded software WebGL compositor can legitimately need more than the
+      // old ten-second CDP budget even after geometry and semantic paint are
+      // ready. Keep the screenshot bounded by the renderer receipt watchdog.
+      : await capturePageScreenshotWithin(cdp, 30_000, `${label} footprint screenshot`);
     capturedFrameBase64 = undefined;
     const samples = await samplePageRegions(
       cdp,

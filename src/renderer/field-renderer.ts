@@ -265,8 +265,13 @@ export class MaterialRenderer {
   private readonly webGLAvailable: boolean;
   private readonly contourScratch: CanvasPhaseContourScratch;
   private readonly contourChunks: DirtyChunkGrid;
-  private readonly scheduleResize: () => void;
   private resizeSourcesInstalled = false;
+  private resizeObserver?: ResizeObserver;
+  private resizePoll?: number;
+  private resizeListener?: () => void;
+  private resizeMedia?: MediaQueryList;
+  private viewportWidth = 0;
+  private viewportHeight = 0;
   private readonly boundaryDirtyMarker = {
     markCell: (index: number): void => {
       this.contourChunks.markCell(index);
@@ -426,7 +431,6 @@ export class MaterialRenderer {
     this.contourChunks.markAll();
     if (simulation.walls) this.renderedWalls = new Uint8Array(simulation.walls());
     this.view = new ViewTransform(simulation.width, simulation.height);
-    this.scheduleResize = createAnimationFrameCoalescer(() => this.resize());
   }
 
   async init(): Promise<void> {
@@ -463,6 +467,7 @@ export class MaterialRenderer {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.clearResizeSources();
     const presenter = this.presenter;
     this.presenter = undefined;
     try { presenter?.destroy(); }
@@ -487,6 +492,7 @@ export class MaterialRenderer {
   async disposeForAudit(): Promise<void> {
     if (this.disposed) throw new Error('Renderer was already disposed before strict audit teardown');
     this.disposed = true;
+    this.clearResizeSources();
     const presenter = this.presenter;
     this.presenter = undefined;
     let failure: Error | undefined;
@@ -506,10 +512,37 @@ export class MaterialRenderer {
   private installResizeSources(): void {
     if (this.resizeSourcesInstalled) return;
     this.resizeSourcesInstalled = true;
-    new ResizeObserver(this.scheduleResize).observe(this.host);
-    window.addEventListener('resize', this.scheduleResize, { passive: true });
-    window.visualViewport?.addEventListener('resize', this.scheduleResize, { passive: true });
-    window.matchMedia('(max-width: 680px)').addEventListener('change', this.scheduleResize);
+    const resize = (): void => this.resize();
+    this.resizeListener = resize;
+    this.resizeObserver = new ResizeObserver(resize);
+    this.resizeObserver.observe(this.host);
+    window.addEventListener('resize', resize, { passive: true });
+    window.visualViewport?.addEventListener('resize', resize, { passive: true });
+    this.resizeMedia = window.matchMedia('(max-width: 680px)');
+    this.resizeMedia.addEventListener('change', resize);
+    // Background tabs and some embedded browsers may defer both rAF and
+    // ResizeObserver delivery. A low-frequency dimension-only check closes
+    // that gap without touching the fixed backing store when geometry matches.
+    this.resizePoll = window.setInterval(() => {
+      if (this.disposed) return;
+      if (this.host.clientWidth !== this.viewportWidth || this.host.clientHeight !== this.viewportHeight) {
+        this.resize();
+      }
+    }, 250);
+  }
+
+  private clearResizeSources(): void {
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = undefined;
+    if (this.resizePoll !== undefined) window.clearInterval(this.resizePoll);
+    this.resizePoll = undefined;
+    if (this.resizeListener) {
+      window.removeEventListener('resize', this.resizeListener);
+      window.visualViewport?.removeEventListener('resize', this.resizeListener);
+      this.resizeMedia?.removeEventListener('change', this.resizeListener);
+    }
+    this.resizeListener = undefined;
+    this.resizeMedia = undefined;
   }
 
   render(time: number, visualTime = time): void {
@@ -518,6 +551,13 @@ export class MaterialRenderer {
     // the bounded hand-off interval; rendering into released Canvas/WebGL
     // fields is neither meaningful nor safe.
     if (this.disposed) return;
+    // Responsive layout can settle between ResizeObserver delivery and the
+    // next presentation (notably after the toolbox establishes its desktop
+    // grid height). Reconcile that bounded geometry drift before mapping input
+    // or presenting, without allocating or resizing the fixed backing store.
+    if (this.host.clientWidth !== this.viewportWidth || this.host.clientHeight !== this.viewportHeight) {
+      this.resize();
+    }
     if (time - this.lastDraw < FRAME_INTERVAL) return;
     for (const cell of this.simulation.consumeDirtyCells()) {
       const previous = this.rendered[cell.index];
@@ -1500,6 +1540,9 @@ export class MaterialRenderer {
 
   resetView(): void { this.view.reset(); this.syncTransform(); }
 
+  /** Reconciles the camera with the current fitted host after surrounding UI settles. */
+  resizeToHost(): void { this.resize(); }
+
   screenToWorld(clientX: number, clientY: number): Point {
     return this.presenter
       ? this.presenter.clientWorldPoint(clientX, clientY)
@@ -1689,11 +1732,13 @@ export class MaterialRenderer {
       this.simulation.presentationState?.(), this.simulation.photonState?.(),
       now, now, true,
     );
-    presenter.resize(this.host.clientWidth, this.host.clientHeight);
-    const position = this.view.position;
-    presenter.setTransform(this.view.scale, position.x, position.y);
     if (presenter.isContextLost()) throw new Error('WebGL context lost during presenter promotion');
     presenter.mount();
+    // Mounting replaces the fallback surface and can settle the host's fitted
+    // layout in the same task. Route that geometry through the single renderer
+    // resize owner so the presenter, camera, and tracked host size cannot begin
+    // WebGL life with different viewport dimensions.
+    this.resize();
     if (presenter.isContextLost()) throw new Error('WebGL context lost while mounting presenter');
     // update() may synchronously compile the large composed shader. Charge that
     // elapsed work to the original promotion window instead of starting a fresh
@@ -3256,6 +3301,8 @@ export class MaterialRenderer {
   private resize(): void {
     const width = this.host.clientWidth;
     const height = this.host.clientHeight;
+    this.viewportWidth = width;
+    this.viewportHeight = height;
     const viewport = this.presenter?.resize(width, height) ?? { width, height };
     this.view.resize(viewport.width, viewport.height);
     this.syncTransform();

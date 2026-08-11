@@ -397,7 +397,7 @@ checkpoint through workflow run `31518942179`; cached build, Pages deployment,
 exact 19-resource closure, hosted completed-frame capture, portable
 verification, and an independent live closure check all passed.
 
-The next retained phase-wide liquid increment adds a B-only deep-pigment
+The retained phase-wide liquid increment adds a B-only deep-pigment
 response to the existing shared `applyFluidVolumeLobe`. It consumes only the
 liquid phase, established deep-column proof, and optical-profile pigment lane,
 so Water/Oil-like bodies retain more authored color through deep absorption
@@ -413,6 +413,30 @@ and brown bodies read less grey. The material atlas Off-to-B response changes
 186,305 RGB pixels with total absolute delta 1,575,791, channel peak 26, and
 zero alpha changes. The real compact 4896x3072 atlas also rendered all 217
 projections with zero browser errors; compact remains literal Off.
+
+The following responsive checkpoint closes the upper-left-anchored input drift
+that appeared when the fitted host changed before the WebGL presenter consumed
+its new dimensions. Modern desktop layout now performs an immediate native-
+aspect container fit, with the existing JavaScript fit retained as a fallback;
+the renderer is synchronized once controls mount, after late WebGL promotion,
+on every relevant resize signal, before a presentation that observes dimension
+drift, and through a bounded 250 ms dimension-only fallback for throttled tabs.
+All retained observers, listeners, and the fallback timer are removed during
+both ordinary and strict-audit teardown. The 681-920 px short-tablet band uses
+a native-aspect viewport followed by a scrollable, height-bounded catalog, and
+desktop category targets use a fixed 112 px two-column rail.
+
+The fresh production-bundle desktop gate passed exact host/presenter geometry,
+three widely separated painted landmarks, a 25-cell continuous left stroke,
+cursor-anchored wheel zoom, exact 42x27 middle-button pan, transformed painting,
+breakpoint resize anchoring, live DPR/page-scale transition, and the 1280x520,
+1024x500, and 900x600 short layouts with zero browser errors. The mobile gate
+passed a square 378x378 viewport, one-touch brush handoff, two-touch anchored
+zoom plus pan, zero pinch paint, complete filter reach, and zero browser errors.
+A protected Water Visual Lab capture retained the exact 1280x600 audit viewport,
+918x576 crop at (181,12), 1224x768 backing, WebGL/HDR, all evidence planes, and
+zero browser errors. These are geometry and lifecycle contracts, not visual-
+hash requirements.
 
 Success means:
 
@@ -438,13 +462,11 @@ Success means:
 
 Priority order from this checkpoint:
 
-1. Checkpoint and deploy the retained shared liquid deep-pigment increment.
-   Preserve the explicit compact evidence relationship: normal Volumetric/HDR
-   behavior is inactive at 8x, while the compact atlas proves broad material
-   and phase health only.
-2. Resolve the audited responsive UI gaps: add a short-height fallback for the
-   681-920px tablet band and enlarge cramped desktop category targets without
-   shrinking or overlapping the viewport.
+1. Checkpoint and deploy the retained responsive geometry/input increment.
+2. Use the established current-only material-lighting atlas and generic capture
+   path for the next phase-wide visual experiment; prefer a shared optical or
+   illumination primitive that benefits multiple families over an exact-
+   material branch.
 3. Harden only regressions that threaten geometry, semantic/topology
    correctness, WebGL lifecycle, true-8× completion, package integrity, or live
    Pages loading. Do not grow exact-pixel tests for evolving aesthetics.

@@ -61,20 +61,27 @@ const fitViewport = (): void => {
   viewport.style.height = size.height + 'px';
   viewport.dataset.aspect = simulation.width + ':' + simulation.height;
 };
-let pendingViewportFit = 0;
-const scheduleViewportFit = (): void => {
-  cancelAnimationFrame(pendingViewportFit);
-  pendingViewportFit = requestAnimationFrame(fitViewport);
-};
-new ResizeObserver(scheduleViewportFit).observe(viewportFrame);
-compactViewport.addEventListener('change', scheduleViewportFit);
-window.addEventListener('resize', scheduleViewportFit, { passive: true });
-window.visualViewport?.addEventListener('resize', scheduleViewportFit, { passive: true });
+// Fitting reads layout and writes only two CSS dimensions. Perform it in the
+// resize signal itself so background tabs and automation do not retain an old
+// inline viewport size while requestAnimationFrame is throttled.
+const viewportFrameResizeObserver = new ResizeObserver(fitViewport);
+viewportFrameResizeObserver.observe(viewportFrame);
+compactViewport.addEventListener('change', fitViewport);
+window.addEventListener('resize', fitViewport, { passive: true });
+window.visualViewport?.addEventListener('resize', fitViewport, { passive: true });
 fitViewport();
 
 root.querySelector('.status')!.textContent = `${simulation.name} · saved on this device`;
 const game = new Game(root, simulation);
 await game.start();
+// Controls are mounted inside Game.start and may change the workspace's final
+// row height. Refit once against that settled frame, then synchronize the
+// renderer camera immediately instead of waiting for observer/rAF delivery.
+fitViewport();
+game.resizeViewport();
 // Browser navigation tears down WebGL asynchronously. Dispose the outgoing
 // presenter first so a following Detail page can allocate true 8x promptly.
-window.addEventListener('pagehide', () => game.dispose(), { once: true });
+window.addEventListener('pagehide', () => {
+  viewportFrameResizeObserver.disconnect();
+  game.dispose();
+}, { once: true });
