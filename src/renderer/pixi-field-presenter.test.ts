@@ -404,6 +404,12 @@ describe('Pixi presenter startup configuration', () => {
       'float lightingExperimentB = step(1.5, materialLightingVariant);',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'float powderShellTransmission = powderCountershade * shell',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      '* finishResponse.w * (0.040 + max(facing, 0.0) * 0.024);',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       '* mix(0.18, 0.52, lightingExperimentB);',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(

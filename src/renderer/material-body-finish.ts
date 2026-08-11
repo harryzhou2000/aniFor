@@ -117,6 +117,19 @@ vec3 applyMaterialBodyFinish(
     * keyTint * powderShallowKey;
   color *= vec3(1.0) - shadowTint * powderDeepFill;
 
+  // Let the existing optical profile's transmission lane distinguish a pale
+  // crystalline shell from a dense sooty or metallic one. This remains a
+  // broad-body B-only response: the caller still owns topology and excludes
+  // Local/Grains, motion, wet mixtures, fine structures, contacts, and halos.
+  // Compact true-8x passes literal Off, preserving its bounded shader path.
+  float powderShellTransmission = powderCountershade * shell
+    * finishResponse.w * (0.040 + max(facing, 0.0) * 0.024);
+  vec3 powderTransmissionTint = mix(
+    keyTint, mix(vec3(0.96), identityTint, 0.56), 0.42
+  );
+  color += (vec3(1.08) - clamp(color, 0.0, 1.08))
+    * powderTransmissionTint * powderShellTransmission;
+
   // Dense volumes keep their pigment instead of collapsing toward grey. This
   // is a bounded saturation lift over existing RGB and cannot affect alpha.
   float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));

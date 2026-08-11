@@ -358,6 +358,21 @@ this increment through workflow run `31516452237`; the full build/test package,
 Pages deployment, exact 19-resource closure, hosted completed-frame receipt
 capture, portable verification, and retained smoke evidence all passed.
 
+The next retained material increment uses the already-defined powder optical
+profiles rather than another material branch. A B-only shell-transmission term
+now differentiates crystalline, rough, sooty, and metallic bulk through the
+existing transmission lane while the settled Smooth caller remains the sole
+topology admission proof. The current-only material-lighting package at
+`.artifacts/visual-lab-reviews/material-lighting-atlas-23426abc-b3d1-45aa-a66e-0babc0915011`
+passed WebGL/HDR, completed receipts, exact alpha, and zero browser errors;
+Off-to-Volumetric changes 185,208 RGB pixels with total absolute delta
+1,564,674 and channel peak 26. Direct inspection retains the internal grain
+while adding a restrained mineral-shell lift. The companion product capture at
+`.artifacts/visual-lab-reviews/powder-style-atlas-795d4e78-862e-4b5b-9380-f28359dbfad5`
+keeps Smooth, Local, and square Grains visibly distinct. The real compact
+4896x3072 atlas compiled and rendered all 217 projections with zero browser
+errors; compact still passes literal Off and does not claim visual parity.
+
 Success means:
 
 - adding a normal visual experiment requires declarative/static-contract data,
@@ -382,14 +397,13 @@ Success means:
 
 Priority order from this checkpoint:
 
-1. Checkpoint and deploy the retained configured-source material-lighting
-   recipe. Preserve the explicit compact evidence relationship: normal
-   Volumetric/HDR behavior is inactive at 8x, while the compact atlas proves
-   broad material and phase health only.
-2. Reuse existing state-rich force/mechanism/device fixtures as declarative
-   material-lighting recipes where they expose a genuine Device-profile review
-   gap. Do not create another fixture when an existing typed preparer already
-   owns the required semantics and controls.
+1. Checkpoint and deploy the retained powder shell-transmission increment.
+   Preserve the explicit compact evidence relationship: normal Volumetric/HDR
+   behavior is inactive at 8x, while the compact atlas proves broad material
+   and phase health only.
+2. Continue phase-wide material presentation through shared optical-profile
+   parameters and existing declarative fixtures. Prefer liquid surface/body
+   depth or solid translucency leverage over another exact-material branch.
 3. Harden only regressions that threaten geometry, semantic/topology
    correctness, WebGL lifecycle, true-8× completion, package integrity, or live
    Pages loading. Do not grow exact-pixel tests for evolving aesthetics.

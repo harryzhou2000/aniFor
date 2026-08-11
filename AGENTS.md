@@ -111,6 +111,23 @@ through workflow run `31516452237`; the full build/test package, Pages
 deployment, exact 19-resource closure, hosted completed-frame receipt capture,
 portable verification, and retained smoke evidence all passed.
 
+The next retained visual increment extends the shared powder B response with a
+bounded shell-transmission term driven by the existing optical profile's
+transmission lane. It remains admitted only by the caller-owned settled Smooth
+broad-body proof; Local, square Grains, motion, wet mixtures, fine structures,
+unlike contacts, halos, Canvas, and compact true-8x remain outside the term.
+The current-only packages are
+`.artifacts/visual-lab-reviews/material-lighting-atlas-23426abc-b3d1-45aa-a66e-0babc0915011`
+and
+`.artifacts/visual-lab-reviews/powder-style-atlas-795d4e78-862e-4b5b-9380-f28359dbfad5`.
+The material-lighting atlas passed WebGL/HDR with completed Off/Balanced/
+Volumetric receipts, exact alpha, zero browser errors, and 185,208 changed RGB
+pixels from Off to B. Direct inspection retains the internal mineral grain and
+adds a restrained shallow shell lift. Smooth, Local, and Grains remain visibly
+distinct, and the real 4896x3072 compact atlas rendered all 217 projections
+with zero browser errors. Treat this current visual review as the acceptance
+evidence; do not add or pin an exact output hash.
+
 When reviewing that dark solid atlas, do not infer lost support merely because
 the B broad-body treatment reduces contrast around a one-cell control. Compare
 fixture-aligned crops first: the retained OFF/B package has AE=0 for the thin
