@@ -123,6 +123,27 @@ shoulder separation more legible. Keep this as a restrained shared-volume
 foundation; later gas work may add optical character, but must use this fixture
 instead of another lifecycle or material-specific branch.
 
+The next retained local experiment consolidates material-lighting profile
+ownership into `applyMaterialBodyFinish`. Its already-computed contact-stable
+body normal, shell, core, key, fill, and pigment response now receive the one
+normal-HDR Off/Balanced/Volumetric value across powder, liquid, and gas. The
+three former phase-specific A/B deltas are removed instead of stacking another
+lighting layer; fluid lobes remain separate because they own surface/core
+transport rather than generic body light. Exactly three normal calls receive
+the live profile and all five compact calls receive literal Off. The retained
+two-fixture board at
+`.artifacts/visual-lab-reviews/material-lighting-afe3c1b9-2234-416c-9b57-2a2662625757`
+passes WebGL/HDR, completed-frame receipts, exact semantic/field/framebuffer
+invariants, zero alpha differences, and zero browser errors. Direct inspection
+prefers Volumetric: powder grain remains crisp, Water/Oil retain their depth,
+and gas becomes a broader gentler volume rather than receiving compounded
+highlights. Off→Volumetric changes 176,366 mixed-atlas pixels with RGB delta
+694,214 and 161,293 gas-atlas pixels with RGB delta 800,120; both peak at 9.
+The real 4896×3072 SwiftShader completed-frame gate passed with a superseded
+first ticket, completed successor, and zero browser errors. This is the desired
+shared framework direction: tune one phase-level vocabulary, not three bespoke
+profile blocks.
+
 Success means:
 
 - adding a normal visual experiment requires declarative/static-contract data,
@@ -147,11 +168,11 @@ Success means:
 
 Priority order from this checkpoint:
 
-1. Checkpoint and deploy the new declarative gas fixture plus its reviewed
-   gas-only transport response. Then use the two-fixture material-lighting board
-   to explore the next sampler-free optical character without changing support,
-   alpha, sparse gaps, or compact true-8× resource cost. Do not add another
-   exact-material renderer leaf for this work.
+1. Checkpoint and deploy the consolidated shared body-lighting profile. Then use
+   the same two-fixture board for a B-only gas optical-character tuning pass if
+   it yields a clearly better cloud read; keep it inside the shared fluid lobe
+   and never restore compounded generic plus phase-specific profile responses.
+   Do not change support, alpha, sparse gaps, or compact true-8× resource cost.
 2. Reduce experiment-authoring friction further only where a new experiment
    still requires duplicated registration or lifecycle code.
 3. Harden only regressions that threaten geometry, semantic/topology

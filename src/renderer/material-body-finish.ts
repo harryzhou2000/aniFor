@@ -44,7 +44,8 @@ vec3 applyMaterialBodyFinish(
   float depth,
   vec2 slope,
   float eligibility,
-  float enabled
+  float enabled,
+  float materialLightingVariant
 ) {
   if (enabled < 0.5 || eligibility <= 0.0001) return color;
 
@@ -59,6 +60,18 @@ vec3 applyMaterialBodyFinish(
   float powder = 1.0 - step(0.5, phase);
   float gas = step(1.5, phase);
   float liquid = 1.0 - powder - gas;
+  // One shared profile response replaces phase-specific A/B lighting deltas.
+  // Off remains an exact multiplicative identity. Normal HDR supplies the
+  // live profile; compact true-8x passes literal Off and retains exact output.
+  float lightingExperiment = step(0.5, materialLightingVariant);
+  float lightingExperimentB = step(1.5, materialLightingVariant);
+  float sharedLightingWeight = powder * 0.78 + liquid + gas * 0.90;
+  float sharedKeyScale = 1.0 + lightingExperiment * sharedLightingWeight
+    * mix(0.18, 0.52, lightingExperimentB);
+  float sharedFillScale = 1.0 + lightingExperiment * sharedLightingWeight
+    * mix(0.16, 0.46, lightingExperimentB);
+  float sharedPigmentScale = 1.0 + lightingExperiment * sharedLightingWeight
+    * mix(0.08, 0.24, lightingExperimentB);
   vec3 keyTint = powder * vec3(1.00, 0.76, 0.46)
     + liquid * vec3(0.64, 0.86, 1.00)
     + gas * vec3(0.72, 0.82, 1.00);
@@ -82,8 +95,9 @@ vec3 applyMaterialBodyFinish(
     + liquid * grazing * shell * 0.010;
   float fill = max(-facing, 0.0) * (0.012 + powder * 0.010 + gas * 0.008)
     + core * (0.010 + powder * 0.010 + gas * 0.006);
-  key *= bodySupport * finishResponse.x * (1.0 - core * (0.18 + gas * 0.18));
-  fill *= bodySupport * finishResponse.y;
+  key *= bodySupport * finishResponse.x * (1.0 - core * (0.18 + gas * 0.18))
+    * sharedKeyScale;
+  fill *= bodySupport * finishResponse.y * sharedFillScale;
 
   color += (vec3(1.08) - clamp(color, 0.0, 1.08)) * keyTint * key;
   color *= vec3(1.0) - shadowTint * fill;
@@ -92,7 +106,8 @@ vec3 applyMaterialBodyFinish(
   // is a bounded saturation lift over existing RGB and cannot affect alpha.
   float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
   float pigment = bodySupport * core
-    * (0.018 + powder * 0.018 + liquid * 0.010) * finishResponse.z;
+    * (0.018 + powder * 0.018 + liquid * 0.010) * finishResponse.z
+    * sharedPigmentScale;
   color += (color - vec3(luminance)) * pigment;
   return max(color, vec3(0.0));
 }

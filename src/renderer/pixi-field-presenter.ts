@@ -1879,7 +1879,7 @@ void main() {
         reconstructedLiquid = applyMaterialBodyFinish(
           reconstructedLiquid, 1.0, liquidFinishResponse, liquid.a,
           liquidFinishDepth, liquidFinishSlope, liquidFinishEligibility,
-          uMaterialBodyFinish
+          uMaterialBodyFinish, 0.0
         );
         reconstructedLiquid = applyFluidVolumeLobe(
           reconstructedLiquid, 1.0, liquidFinishResponse, liquid.a,
@@ -1919,7 +1919,7 @@ void main() {
         );
         gas = applyMaterialBodyFinish(
           gas, 2.0, gasFinishResponse, atmosphere.a, gasFinishDepth,
-          gasFinishSlope, 1.0, uMaterialBodyFinish
+          gasFinishSlope, 1.0, uMaterialBodyFinish, 0.0
         );
         gas = applyFluidVolumeLobe(
           gas, 2.0, gasFinishResponse, atmosphere.a, gasNeighbourMean,
@@ -2066,7 +2066,7 @@ void main() {
       );
       color = applyMaterialBodyFinish(
         color, 2.0, gasFinishResponse, gasDensity, smoothstep(0.035, 0.62, gasDensity),
-        gasFinishSlope, 1.0, uMaterialBodyFinish
+        gasFinishSlope, 1.0, uMaterialBodyFinish, 0.0
       );
       color = applyFluidVolumeLobe(
         color, 2.0, gasFinishResponse, gasDensity, gasNeighbourMean,
@@ -2306,7 +2306,7 @@ void main() {
       color = applyMaterialBodyFinish(
         color, 0.0, materialBodyFinishParameters(0.0, optics, uMaterialBodyFinish),
         density, depth, powderFieldSlope,
-        powderFinishEligibility, uMaterialBodyFinish
+        powderFinishEligibility, uMaterialBodyFinish, 0.0
       );
     }
   }
@@ -2973,7 +2973,7 @@ void main() {
       );
       color = applyMaterialBodyFinish(
         color, 1.0, liquidFinishResponse, density, liquidFinishDepth, liquidSlope,
-        liquidFinishEligibility, uMaterialBodyFinish
+        liquidFinishEligibility, uMaterialBodyFinish, 0.0
       );
       color = applyFluidVolumeLobe(
         color, 1.0, liquidFinishResponse, density, liquidFinishNeighbourMean,
@@ -6600,20 +6600,6 @@ void main() {
           vec3(0.72, 0.54, 0.36), vec3(0.34, 0.50, 0.72), gasLightFog
         );
         color *= vec3(1.0) - gasAbsorptionTint * gasSpectralAbsorption;
-        // Shared material-lighting experiment: preserve E13's exact gas owner,
-        // transport, and spectral proof while comparing a restrained balanced
-        // lift against a deeper cinematic shoulder. This is RGB-only arithmetic
-        // over already-live values and is absent from the compact true-8x shader.
-        if (uMaterialLightingVariant > 0.5) {
-          float materialLightingB = step(1.5, uMaterialLightingVariant);
-          float materialGasGain = gasLightTransport
-            * mix(0.120, 0.260, materialLightingB)
-            * (0.46 + gasLightFacing * 0.54);
-          color += (vec3(1.10) - clamp(color, 0.0, 1.10))
-            * gasSpectralKey * materialGasGain;
-          color *= vec3(1.0) - gasAbsorptionTint * gasLightTransport
-            * opticalDepth * mix(0.014, 0.036, materialLightingB);
-        }
       }
     }
     // The atmosphere's existing cardinal field samples also supply a signed
@@ -6641,7 +6627,7 @@ void main() {
     );
     color = applyMaterialBodyFinish(
       color, 2.0, gasFinishResponse, gasShadeDensity, opticalDepth, volumeSlope,
-      1.0, uMaterialBodyFinish
+      1.0, uMaterialBodyFinish, uMaterialLightingVariant
     );
     color = applyFluidVolumeLobe(
       color, 2.0, gasFinishResponse, gasShadeDensity, cloudNeighbourMean,
@@ -7702,19 +7688,6 @@ void main() {
             * mix(0.74, 1.0, liquidVfxBody);
           color += (vec3(1.35) - clamp(color, 0.0, 1.35))
             * mix(liquidFresnelKey, edgeTint, 0.18) * liquidVfxSurface;
-          // The shared lighting profile compares two bounded liquid responses
-          // inside E03's connected-species/depth proof. It changes RGB only:
-          // silhouette, meniscus ownership, contacts, and optical-depth bytes
-          // remain authoritative and true 8x keeps its compact compositor.
-          if (uMaterialLightingVariant > 0.5) {
-            float materialLightingB = step(1.5, uMaterialLightingVariant);
-            float materialLiquidCrown = liquidVfxSurface
-              * mix(0.58, 1.18, materialLightingB);
-            color += (vec3(1.28) - clamp(color, 0.0, 1.28))
-              * mix(liquidFresnelKey, edgeTint, 0.30) * materialLiquidCrown;
-            color *= exp(-liquidVfxAbsorption * liquidVfxColumn
-              * mix(0.024, 0.070, materialLightingB));
-          }
           // E24: the broad production Water pool read as an opaque cyan slab
           // crossed by two coherent diagonal bands. Recombine those same
           // already-live sheen/caustic carriers into an interference roll:
@@ -8355,7 +8328,7 @@ void main() {
       color = applyMaterialBodyFinish(
         color, 1.0, liquidFinishResponse, liquidSurfaceDensity, liquidFinishDepth,
         semanticSlope + volumeSlope, liquidFinishEligibility,
-        uMaterialBodyFinish
+        uMaterialBodyFinish, uMaterialLightingVariant
       );
       color = applyFluidVolumeLobe(
         color, 1.0, liquidFinishResponse, liquidSurfaceDensity, liquidNeighbourMean,
@@ -11489,7 +11462,7 @@ void main() {
       color, 0.0, materialBodyFinishParameters(0.0, optics, uMaterialBodyFinish),
       density, powderLightBodyDepth,
       widePowderShape.yz, powderLightBodyGate,
-      uMaterialBodyFinish
+      uMaterialBodyFinish, uMaterialLightingVariant
     );
   }
   // E11: Wax and genuinely hydrated PLNT carry a shallow, coloured
@@ -11597,15 +11570,10 @@ void main() {
       // so strong that display tonemapping compresses Concrete's fine pigment.
       float powderLightReach = mix(lightReach, sqrt(lightReach), 0.65);
       float powderLightTransport = min(
-        uMaterialLightingVariant > 0.5
-          ? mix(0.124, 0.184, step(1.5, uMaterialLightingVariant))
-          : 0.082,
+        0.082,
         powderLightReach * (
           mix(0.052, 0.030, powderLightBodyDepth)
             + powderLightCrown * 0.036
-            + (uMaterialLightingVariant > 0.5
-              ? mix(0.034, 0.082, step(1.5, uMaterialLightingVariant))
-              : 0.0)
         )
       );
       vec3 powderLightSpectrum = max(
