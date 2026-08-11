@@ -188,7 +188,30 @@ zero browser errors. The focused mobile gate passed one-touch brush handoff,
 two-touch anchored zoom/pan, zero pinch paint, and zero browser errors. A Water
 Visual Lab capture retained the hermetic 918x576 crop at (181,12), 1224x768
 backing, WebGL/HDR, and all evidence planes. Do not replace these composed
-geometry checks with a HUD coordinate or a historical screenshot hash.
+geometry checks with a HUD coordinate or a historical screenshot hash. Revision
+`f66061754d888e9e10eff8557e7fbe9a823f3205` deployed this checkpoint through
+workflow run `31524267478`; build, Pages, hosted Visual Lab verification, exact
+19-resource closure, and an independent first-attempt live closure check passed.
+The preceding run's only failure was a transient shared-Chrome-host DevTools
+startup timeout; its focused local rerun passed in 0.52 seconds and the exact-SHA
+retry passed without relaxing CI.
+
+The next retained shared-volume experiment extends B-only deep-pigment
+retention from liquid columns to dense gas cores inside
+`applyFluidVolumeLobe`. Reuse only the existing `deepColumn`,
+`gasDeepAbsorption`, phase, and optical-profile pigment lane; keep separate
+restrained liquid/gas coefficients and add no sample, field, texture, pass,
+allocation, material selector, support, alpha, topology, or physics decision.
+The retained current-only package is
+`.artifacts/visual-lab-reviews/material-lighting-fluid-pigment-20260812-001`.
+Its mixed and gas-specific candidates passed shared-host WebGL/HDR, completed
+receipts, exact semantic/field/framebuffer-alpha evidence, and zero browser
+errors. Direct review prefers the stronger gas response because the clean blue
+core reads more chromatic without making soot, shoulders, holes, channels,
+sparse wisps, contacts, or blanks conspicuous. The true-4896x3072 17-gas gate
+passed exact repeated-Off topology/support and zero browser errors, so compact
+remains literal Off. Do not pin the evolving PNG hashes or turn the reported RGB
+deltas into thresholds.
 
 When reviewing that dark solid atlas, do not infer lost support merely because
 the B broad-body treatment reduces contrast around a one-cell control. Compare

@@ -436,7 +436,31 @@ zoom plus pan, zero pinch paint, complete filter reach, and zero browser errors.
 A protected Water Visual Lab capture retained the exact 1280x600 audit viewport,
 918x576 crop at (181,12), 1224x768 backing, WebGL/HDR, all evidence planes, and
 zero browser errors. These are geometry and lifecycle contracts, not visual-
-hash requirements.
+hash requirements. Revision `f66061754d888e9e10eff8557e7fbe9a823f3205`
+deployed this checkpoint through workflow run `31524267478`; build, Pages,
+hosted Visual Lab verification, exact 19-resource closure, and an independent
+first-attempt live closure check passed. The preceding run's sole failure was a
+transient DevTools-startup timeout in the shared-Chrome-host tooling test; its
+focused local rerun passed in 0.52 seconds and the exact-SHA workflow retry
+passed without weakening the timeout or CI contract.
+
+The next retained shared-volume experiment generalizes the same B-only pigment
+retention from deep liquid columns to dense gas cores. `applyFluidVolumeLobe`
+uses only the existing `deepColumn`, `gasDeepAbsorption`, phase, and optical-
+profile pigment lane; no sample, field, texture, pass, allocation, material-ID
+branch, support, alpha, or topology rule is added. Liquid and gas retain
+separate restrained phase coefficients. Direct review prefers the stronger gas
+coefficient: clean blue volume keeps more authored chroma through its core,
+while neutral soot, shoulders, sparse wisps, holes, channels, contacts, and
+blanks remain restrained. The current-only shared-host package is
+`.artifacts/visual-lab-reviews/material-lighting-fluid-pigment-20260812-001`;
+both mixed and gas-specific candidates passed WebGL/HDR, completed receipts,
+exact semantic/field/framebuffer-alpha evidence, portable aggregation, and zero
+browser errors. Off-to-B changes 186,302 RGB pixels in the mixed atlas and
+166,325 in the gas atlas, with channel peak 26 in both; these measurements are
+diagnostic, not acceptance thresholds. The real true-4896x3072 gas gate passed
+all 17 identities, exact repeated-Off topology/support, and zero browser errors,
+proving compact remains literal Off.
 
 Success means:
 
@@ -462,11 +486,11 @@ Success means:
 
 Priority order from this checkpoint:
 
-1. Checkpoint and deploy the retained responsive geometry/input increment.
-2. Use the established current-only material-lighting atlas and generic capture
-   path for the next phase-wide visual experiment; prefer a shared optical or
-   illumination primitive that benefits multiple families over an exact-
-   material branch.
+1. Checkpoint and deploy the retained shared liquid/gas deep-volume pigment
+   increment, preserving compact true-8x literal Off.
+2. Use the same current-only framework for the next phase-wide optical or
+   illumination primitive; prefer an existing proof/resource shared by multiple
+   families over an exact-material branch.
 3. Harden only regressions that threaten geometry, semantic/topology
    correctness, WebGL lifecycle, true-8× completion, package integrity, or live
    Pages loading. Do not grow exact-pixel tests for evolving aesthetics.
