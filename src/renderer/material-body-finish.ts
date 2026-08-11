@@ -167,6 +167,14 @@ vec3 applySolidMaterialLighting(
   float key = body * (max(facing, 0.0) * 0.040 + grazing * 0.025)
     * finishResponse.x;
   float transmission = shell * (0.032 + grazing * 0.045) * finishResponse.w;
+  // Optical classes which explicitly reserve extra transmission can carry a
+  // little light into the first connected body layers, rather than reading as
+  // one bright silhouette rim. The profile lane, not an exact material ID,
+  // decides admission; opaque/default families retain the existing shell-only
+  // response. This is RGB-only over the compositor-owned body/depth proof.
+  float interiorTransmission = body * (1.0 - core)
+    * (0.010 + grazing * 0.018 + max(facing, 0.0) * 0.010)
+    * max(finishResponse.w - 1.0, 0.0);
   float fill = body * (core * 0.032 + max(-facing, 0.0) * 0.019)
     * finishResponse.y;
   // The ordinary linear lane stays restrained for rigid, translucent,
@@ -180,7 +188,7 @@ vec3 applySolidMaterialLighting(
   vec3 keyTint = mix(vec3(0.78, 0.88, 1.0), mix(vec3(0.94), identityTint, 0.48), 0.46);
   vec3 shadowTint = mix(vec3(0.48, 0.56, 0.68), mix(vec3(0.52), identityTint, 0.24), 0.30);
   color += (vec3(1.08) - clamp(color, 0.0, 1.08))
-    * keyTint * (key + transmission);
+    * keyTint * (key + transmission + interiorTransmission);
   color *= vec3(1.0) - shadowTint * fill;
 
   float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));

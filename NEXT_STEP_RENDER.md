@@ -373,6 +373,19 @@ keeps Smooth, Local, and square Grains visibly distinct. The real compact
 4896x3072 atlas compiled and rendered all 217 projections with zero browser
 errors; compact still passes literal Off and does not claim visual parity.
 
+The following local solid refinement reuses that profile vocabulary in
+`applySolidMaterialLighting`. A B-only interior-transmission lobe admits only
+classes which already reserve transmission above the neutral lane, so connected
+translucent rigid bodies gain a shallow body read beyond their silhouette rim
+without adding an exact material selector. The normal-HDR compositor continues
+to own body support, optical depth, normals, holes, contacts, walls, alpha, and
+every compact true-8x call remains literal Off. The current-only review at
+`.artifacts/visual-lab-reviews/solid-material-lighting-atlas-79bab451-52ae-41a7-abb8-03126ef3d684`
+passed WebGL/HDR with completed Off/A/B receipts, exact semantic, field-alpha,
+and framebuffer-alpha invariants, and zero browser errors. Direct inspection
+retains opaque-family restraint while translucent cards retain their holes, thin
+controls, and crisp boundary with a more coherent interior-to-edge read.
+
 Success means:
 
 - adding a normal visual experiment requires declarative/static-contract data,
