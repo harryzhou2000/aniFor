@@ -205,6 +205,12 @@ vec3 applyFluidVolumeLobe(
     * mix(0.18, 0.85, opticalExperimentB);
   float gasExtinctionScale = 1.0 + gas * opticalExperiment
     * mix(0.65, 2.40, opticalExperimentB);
+  // Variant B may strengthen the cloud's existing field-proven lobe, but it
+  // must not invent another noise field or grow support. Convex crowns and
+  // lit shoulders catch a little more transmitted light while concave pockets
+  // and deep cores retain a complementary, pigment-tinted shadow. Variant A
+  // and Off remain byte-for-byte on the established path.
+  float gasOpticalCharacter = gas * opticalExperimentB;
   float liquidTransmissionCrest = transmittedShoulder * finishResponse.w
     * (0.060 + max(facing, 0.0) * 0.045) * liquidSurfaceScale;
 
@@ -217,6 +223,9 @@ vec3 applyFluidVolumeLobe(
   key += liquidTransmissionCrest;
   key += gasMidTransmission * 0.036 * finishResponse.w * gasMidScale;
   key += max(macroRelief, 0.0) * gasMacroBody * 0.052;
+  key += gasOpticalCharacter
+    * (crown * fieldBody * 0.026 + max(facing, 0.0) * shoulder * 0.016)
+    * finishResponse.w;
   key *= finishResponse.x;
   float shade = (pocket * mix(0.030, 0.038, gas)
       + max(-facing, 0.0) * shoulder * mix(0.010, 0.014, gas)
@@ -224,6 +233,9 @@ vec3 applyFluidVolumeLobe(
   shade += deepColumn * 0.032 * liquidCoreScale;
   shade += gasDeepAbsorption * 0.024 * gasExtinctionScale;
   shade += max(-macroRelief, 0.0) * gasMacroBody * 0.036;
+  shade += gasOpticalCharacter
+    * (pocket * fieldBody * 0.022 + max(-facing, 0.0) * shoulder * 0.010
+      + gasDeepAbsorption * 0.014);
   shade *= finishResponse.y;
   color += (vec3(1.08) - clamp(color, 0.0, 1.08)) * keyTint * key;
   color *= vec3(1.0) - absorptionTint * shade;

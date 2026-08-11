@@ -144,6 +144,24 @@ first ticket, completed successor, and zero browser errors. This is the desired
 shared framework direction: tune one phase-level vocabulary, not three bespoke
 profile blocks.
 
+The follow-up B-only gas optical-character pass is retained in the same shared
+fluid lobe. It reuses only the authoritative field body's convex crown,
+directional shoulder, concave pocket, and deep-core proof: Volumetric gas gains
+a restrained transmitted key and opposing pigment-tinted absorption, while Off
+and Balanced keep the established path. It adds no noise, sample, field,
+resource, pass, material selector, support, alpha, or topology decision, and
+compact true 8× still passes literal Off. The retained two-fixture board at
+`.artifacts/visual-lab-reviews/material-lighting-dd2bbb0a-44f1-45f3-8dde-4b7f80fbb0ed`
+passes WebGL/HDR, completed-frame receipts, exact semantic/field/framebuffer
+invariants, zero alpha differences, and zero browser errors. Gas
+Off→Volumetric changes 162,384 pixels with RGB delta 951,008 and peak 9;
+the mixed atlas changes 176,942 pixels with RGB delta 760,735 and peak 9.
+Direct and independent inspection retain the result: cloud centres read fuller,
+cool and sooty identities stay distinct, rounded density transitions stay
+smooth, and powder grain plus Water/Oil depth are unaffected. The real
+4896×3072 SwiftShader completed-frame gate again passed with a superseded first
+ticket, completed successor, and zero browser errors.
+
 Success means:
 
 - adding a normal visual experiment requires declarative/static-contract data,
@@ -168,13 +186,15 @@ Success means:
 
 Priority order from this checkpoint:
 
-1. Checkpoint and deploy the consolidated shared body-lighting profile. Then use
-   the same two-fixture board for a B-only gas optical-character tuning pass if
-   it yields a clearly better cloud read; keep it inside the shared fluid lobe
-   and never restore compounded generic plus phase-specific profile responses.
-   Do not change support, alpha, sparse gaps, or compact true-8× resource cost.
-2. Reduce experiment-authoring friction further only where a new experiment
-   still requires duplicated registration or lifecycle code.
+1. Checkpoint and deploy the retained B-only gas optical-character response.
+   Keep it inside the shared fluid lobe and never restore compounded generic
+   plus phase-specific profile responses.
+2. Reduce experiment-authoring friction where a new experiment still requires
+   duplicated registration or lifecycle code. First document and, if it saves
+   real manual work, add one thin data-only normal-review-to-compact-health
+   checkpoint mapping that invokes the existing review and 8× audits without
+   duplicating browser lifecycle, capture logic, or evidence formats. Do not
+   claim liquid 8× coverage until a real existing compact fixture can prove it.
 3. Harden only regressions that threaten geometry, semantic/topology
    correctness, WebGL lifecycle, true-8× completion, package integrity, or live
    Pages loading. Do not grow exact-pixel tests for evolving aesthetics.

@@ -409,6 +409,15 @@ describe('Pixi presenter startup configuration', () => {
       'float opticalExperimentB = step(1.5, materialLightingVariant);',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'float gasOpticalCharacter = gas * opticalExperimentB;',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'crown * fieldBody * 0.026 + max(facing, 0.0) * shoulder * 0.016',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'pocket * fieldBody * 0.022 + max(-facing, 0.0) * shoulder * 0.010',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       '* (0.060 + max(facing, 0.0) * 0.045) * liquidSurfaceScale;',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
