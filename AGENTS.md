@@ -94,6 +94,20 @@ workflow run `31515192326`; the full build/test package, Pages deployment,
 exact 19-resource closure, hosted completed-frame receipt capture, portable
 verification, and retained smoke evidence all passed.
 
+The next retained local authoring increment adds
+`force-activity-material-lighting-atlas` through the same static contract,
+driver, and app-owned preparer registry. It reuses the existing four-card
+ACEL/DCEL inactive/active fixture and adds only one separated Fire calibration
+strip per card so the protected material-lighting emission evidence plane is
+populated; never weaken readiness to admit an empty evidence plane. The current
+package is
+`.artifacts/visual-lab-reviews/force-activity-material-lighting-atlas-f75e2c4f-87b7-4723-953b-5336084a9565`.
+WebGL/HDR, completed Off/Balanced/Volumetric receipts, exact semantic/field/
+framebuffer-alpha invariants, portable verification, strict teardown, and zero
+browser errors passed. Volumetric changes 61,321 RGB pixels from Off with zero
+alpha differences while preserving state motifs and protected topology. This
+increment is not deployed until its committed revision and live closure pass.
+
 When reviewing that dark solid atlas, do not infer lost support merely because
 the B broad-body treatment reduces contrast around a one-cell control. Compare
 fixture-aligned crops first: the retained OFF/B package has AE=0 for the thin

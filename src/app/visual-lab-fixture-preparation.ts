@@ -1,6 +1,7 @@
 import type { SimulationBackend } from '../simulation';
 import { VISUAL_CAPTURE_STATIC_FIXTURES } from '../shared/visual-capture-static-catalog.js';
 import { prepareGasMaterialLightingAtlasFixture } from './gas-material-lighting-atlas-fixture';
+import { prepareForceActivityGraphicsAuditFixture } from './force-activity-graphics-audit';
 import { prepareLiquidMotionVfxFixture } from './liquid-motion-vfx-audit';
 import { prepareMaterialLightingAtlasFixture } from './material-lighting-atlas-fixture';
 import { prepareOilMotionVfxFixture } from './oil-motion-vfx-audit';
@@ -54,6 +55,7 @@ const VISUAL_LAB_FIXTURE_PREPARERS = Object.freeze({
   'gas-material-lighting-atlas': prepareGasMaterialLightingAtlasFixture,
   'solid-material-lighting-atlas': prepareSolidMaterialLightingAtlasFixture,
   'source-target-material-lighting-atlas': prepareSourceTargetGraphicsAuditFixture,
+  'force-activity-material-lighting-atlas': prepareForceActivityGraphicsAuditFixture,
 } satisfies Record<VisualLabPreparedFixtureId, VisualLabFixturePreparer>);
 
 const REGISTERED_PREPARER_IDS = Object.keys(VISUAL_LAB_FIXTURE_PREPARERS);

@@ -118,6 +118,7 @@ describe('Visual Lab fixture adapters', () => {
       'showcase', 'oil-motion', 'water-motion', 'powder-style-atlas', 'material-lighting-atlas',
       'gas-material-lighting-atlas', 'solid-material-lighting-atlas',
       'source-target-material-lighting-atlas',
+      'force-activity-material-lighting-atlas',
     ]);
     expect(VISUAL_CAPTURE_DOMAIN_ADAPTERS).toHaveLength(5);
     expect(resolveVisualCaptureDomain('powder')).toMatchObject({

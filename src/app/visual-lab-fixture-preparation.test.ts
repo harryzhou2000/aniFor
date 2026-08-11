@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Material } from '../shared/materials';
 import { RenderLabBackend } from '../simulation/render-lab-backend';
 import { prepareGasMaterialLightingAtlasFixture } from './gas-material-lighting-atlas-fixture';
+import { prepareForceActivityGraphicsAuditFixture } from './force-activity-graphics-audit';
 import { prepareLiquidMotionVfxFixture } from './liquid-motion-vfx-audit';
 import { prepareOilMotionVfxFixture } from './oil-motion-vfx-audit';
 import { prepareMaterialLightingAtlasFixture } from './material-lighting-atlas-fixture';
@@ -20,6 +21,7 @@ describe('Visual Lab fixture preparation registry', () => {
       'showcase', 'oil-motion', 'water-motion', 'powder-style-atlas', 'material-lighting-atlas',
       'gas-material-lighting-atlas', 'solid-material-lighting-atlas',
       'source-target-material-lighting-atlas',
+      'force-activity-material-lighting-atlas',
     ]);
     expect(Object.isFrozen(VISUAL_LAB_FIXTURE_IDS)).toBe(true);
   });
@@ -29,6 +31,7 @@ describe('Visual Lab fixture preparation registry', () => {
       'oil-motion', 'water-motion', 'powder-style-atlas', 'material-lighting-atlas',
       'gas-material-lighting-atlas', 'solid-material-lighting-atlas',
       'source-target-material-lighting-atlas',
+      'force-activity-material-lighting-atlas',
     ]);
     expect(Object.isFrozen(VISUAL_LAB_PREPARED_FIXTURE_IDS)).toBe(true);
   });
@@ -41,6 +44,7 @@ describe('Visual Lab fixture preparation registry', () => {
     ['gas-material-lighting-atlas', prepareGasMaterialLightingAtlasFixture],
     ['solid-material-lighting-atlas', prepareSolidMaterialLightingAtlasFixture],
     ['source-target-material-lighting-atlas', prepareSourceTargetGraphicsAuditFixture],
+    ['force-activity-material-lighting-atlas', prepareForceActivityGraphicsAuditFixture],
   ] as const)('prepares %s byte-identically to its direct moving builder', (id, prepareDirect) => {
     const generic = new RenderLabBackend();
     const direct = new RenderLabBackend();

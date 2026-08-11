@@ -128,6 +128,21 @@ export declare const VISUAL_CAPTURE_STATIC_CATALOG: Readonly<{
       readonly "preparationReportLabel": "prepareSourceTargetGraphicsAuditFixture";
       readonly "requirement": "--domain=material-lighting --target=0";
     }>,
+    Readonly<{
+      readonly "name": "force-activity-material-lighting-atlas";
+      readonly "scene": "showcase";
+      readonly "driver": "material-lighting-profile";
+      readonly "constraints": readonly [
+        Readonly<{
+          readonly "domain": "material-lighting";
+          readonly "targets": readonly [
+            0,
+          ];
+        }>,
+      ];
+      readonly "preparationReportLabel": "prepareForceActivityGraphicsAuditFixture";
+      readonly "requirement": "--domain=material-lighting --target=0";
+    }>,
   ];
   readonly "captureRecipes": readonly [
     Readonly<{
@@ -199,6 +214,14 @@ export declare const VISUAL_CAPTURE_STATIC_CATALOG: Readonly<{
       readonly "domain": "material-lighting";
       readonly "target": 0;
       readonly "fixture": "source-target-material-lighting-atlas";
+      readonly "gain": 1;
+      readonly "renderScale": 2;
+    }>,
+    Readonly<{
+      readonly "name": "force-activity-material-lighting-atlas";
+      readonly "domain": "material-lighting";
+      readonly "target": 0;
+      readonly "fixture": "force-activity-material-lighting-atlas";
       readonly "gain": 1;
       readonly "renderScale": 2;
     }>,

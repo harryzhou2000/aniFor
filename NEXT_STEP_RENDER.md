@@ -340,6 +340,22 @@ workflow run `31515192326`; the full build/test package, Pages deployment,
 exact 19-resource closure, hosted completed-frame receipt capture, portable
 verification, and retained smoke evidence all passed.
 
+The next retained local framework increment adds a declarative
+`force-activity-material-lighting-atlas` recipe under the existing
+`material-lighting-profile` driver. It reuses the four-card ACEL/DCEL
+inactive/active graphics atlas and adds one separated Fire calibration strip
+per card because the shared material-lighting capture correctly fails closed on
+an empty emission evidence plane. The current-only package at
+`.artifacts/visual-lab-reviews/force-activity-material-lighting-atlas-f75e2c4f-87b7-4723-953b-5336084a9565`
+passed WebGL/HDR, completed-frame receipts, exact semantic/field/framebuffer-
+alpha invariants, portable verification, strict teardown, and zero browser
+errors. Off-to-Volumetric changes 61,321 RGB pixels with total absolute delta
+702,164, channel peak 28, and zero alpha differences. Direct inspection retains
+the clearer Device casings without losing inactive/active motifs, holes,
+notches, one-cell structures, isolated points, or wrong-owner/liquid/metal
+controls. This increment is not deployed until its committed revision and live
+closure pass.
+
 Success means:
 
 - adding a normal visual experiment requires declarative/static-contract data,

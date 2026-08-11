@@ -38,11 +38,12 @@ describe('Visual Lab execution plan', () => {
       'gas-showcase', 'oxygen-showcase', 'oil-motion', 'water-motion',
       'powder-style-atlas', 'material-lighting-atlas', 'gas-material-lighting-atlas',
       'solid-material-lighting-atlas', 'source-target-material-lighting-atlas',
+      'force-activity-material-lighting-atlas',
     ]);
     expect(plan.inspection).toMatchObject({
       schema: VISUAL_LAB_EXECUTION_PLAN_SCHEMA,
-      id: 'sha256:2b46e048c493738286de7d65f0b6dba8da9ca8c6f49ed72b08e33690de4e9ae2',
-      summary: { selected: 9 },
+      id: 'sha256:c2b002b4a6d911813141209e6a932c5b2d7d7845b5f58e412a0c660b6556169b',
+      summary: { selected: 10 },
       variants: ['off', 'a', 'b'],
       executionPolicy: {
         gpuMode: 'swiftshader',

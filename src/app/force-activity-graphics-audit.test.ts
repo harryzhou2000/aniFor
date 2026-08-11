@@ -43,7 +43,7 @@ describe('ACEL/DCEL activity-state graphics audit', () => {
         entry.body, entry.surfaceProbe, entry.coreProbe, entry.motifAxisProbe,
         entry.motifArrowProbe, entry.motifBackgroundProbe, entry.authoredHole,
         entry.openNotch, entry.thinStructure, entry.wrongOwner, entry.waterControl,
-        entry.metalControl, entry.guardedBlank,
+        entry.metalControl, entry.emitter, entry.guardedBlank,
       ]) expect(rectInside(rect, entry.card)).toBe(true);
       for (const probe of [
         entry.surfaceProbe, entry.coreProbe, entry.motifAxisProbe,
@@ -97,6 +97,7 @@ describe('ACEL/DCEL activity-state graphics audit', () => {
       expectExactRect(simulation, entry.wrongOwner, Material.Sand, 1);
       expectExactRect(simulation, entry.waterControl, Material.Water, 1);
       expectExactRect(simulation, entry.metalControl, Material.Metal, 1);
+      expectExactRect(simulation, entry.emitter, Material.Fire, 0);
       expectExactRect(simulation, entry.guardedBlank, Material.Empty, 0);
     }
 
@@ -107,6 +108,7 @@ describe('ACEL/DCEL activity-state graphics audit', () => {
     expect(FORCE_ACTIVITY_GRAPHICS_AUDIT.wrongOwners).toHaveLength(4);
     expect(FORCE_ACTIVITY_GRAPHICS_AUDIT.waterControls).toHaveLength(4);
     expect(FORCE_ACTIVITY_GRAPHICS_AUDIT.metalControls).toHaveLength(4);
+    expect(FORCE_ACTIVITY_GRAPHICS_AUDIT.emitters).toHaveLength(4);
     expect(FORCE_ACTIVITY_GRAPHICS_AUDIT.guardedBlanks).toHaveLength(4);
   });
 

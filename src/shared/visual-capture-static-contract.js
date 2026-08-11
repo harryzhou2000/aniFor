@@ -111,6 +111,14 @@ const contract = {
       preparationReportLabel: 'prepareSourceTargetGraphicsAuditFixture',
       requirement: '--domain=material-lighting --target=0',
     },
+    {
+      name: 'force-activity-material-lighting-atlas',
+      scene: 'showcase',
+      driver: 'material-lighting-profile',
+      constraints: [{ domain: 'material-lighting', targets: [0] }],
+      preparationReportLabel: 'prepareForceActivityGraphicsAuditFixture',
+      requirement: '--domain=material-lighting --target=0',
+    },
   ],
   captureRecipes: [
     {
@@ -150,6 +158,14 @@ const contract = {
       domain: 'material-lighting',
       target: 0,
       fixture: 'source-target-material-lighting-atlas',
+      gain: 1,
+      renderScale: 2,
+    },
+    {
+      name: 'force-activity-material-lighting-atlas',
+      domain: 'material-lighting',
+      target: 0,
+      fixture: 'force-activity-material-lighting-atlas',
       gain: 1,
       renderScale: 2,
     },

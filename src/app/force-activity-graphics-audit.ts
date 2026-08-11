@@ -51,6 +51,8 @@ export interface ForceActivityGraphicsAtlasEntry {
   /** Wrong-phase controls deliberately carry active state one. */
   readonly waterControl: ForceActivityGraphicsRect;
   readonly metalControl: ForceActivityGraphicsRect;
+  /** Separated calibration source keeps material-lighting evidence populated. */
+  readonly emitter: ForceActivityGraphicsRect;
   readonly guardedBlank: ForceActivityGraphicsRect;
 }
 
@@ -67,6 +69,7 @@ export interface ForceActivityGraphicsAuditSnapshot {
   readonly wrongOwners: readonly ForceActivityGraphicsRect[];
   readonly waterControls: readonly ForceActivityGraphicsRect[];
   readonly metalControls: readonly ForceActivityGraphicsRect[];
+  readonly emitters: readonly ForceActivityGraphicsRect[];
   readonly guardedBlanks: readonly ForceActivityGraphicsRect[];
 }
 
@@ -114,6 +117,7 @@ export const FORCE_ACTIVITY_GRAPHICS_ATLAS: readonly ForceActivityGraphicsAtlasE
         wrongOwner: { x: card.x + 142, y: card.y + 8, width: 20, height: 16 },
         waterControl: { x: card.x + 142, y: card.y + 34, width: 20, height: 14 },
         metalControl: { x: card.x + 142, y: card.y + 56, width: 20, height: 14 },
+        emitter: { x: card.x + 240, y: card.y + 8, width: 4, height: 40 },
         guardedBlank: { x: card.x + 136, y: card.y + 86, width: 80, height: 30 },
       } satisfies ForceActivityGraphicsAtlasEntry;
     })
@@ -132,6 +136,7 @@ export const FORCE_ACTIVITY_GRAPHICS_AUDIT: ForceActivityGraphicsAuditSnapshot =
   wrongOwners: FORCE_ACTIVITY_GRAPHICS_ATLAS.map(({ wrongOwner }) => wrongOwner),
   waterControls: FORCE_ACTIVITY_GRAPHICS_ATLAS.map(({ waterControl }) => waterControl),
   metalControls: FORCE_ACTIVITY_GRAPHICS_ATLAS.map(({ metalControl }) => metalControl),
+  emitters: FORCE_ACTIVITY_GRAPHICS_ATLAS.map(({ emitter }) => emitter),
   guardedBlanks: FORCE_ACTIVITY_GRAPHICS_ATLAS.map(({ guardedBlank }) => guardedBlank),
 };
 
@@ -165,6 +170,7 @@ export function prepareForceActivityGraphicsAuditFixture(simulation: SimulationB
     fillStateControl(simulation, cells, entry.wrongOwner, Material.Sand, 1);
     fillStateControl(simulation, cells, entry.waterControl, Material.Water, 1);
     fillStateControl(simulation, cells, entry.metalControl, Material.Metal, 1);
+    fillStateControl(simulation, cells, entry.emitter, Material.Fire, 0);
     fillStateControl(simulation, cells, entry.guardedBlank, Material.Empty, 0);
   }
 }
