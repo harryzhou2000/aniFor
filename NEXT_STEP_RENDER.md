@@ -233,6 +233,23 @@ derived 4896×3072 217-material compact audit also passed. Retain this candidate
 as the current gas-volume checkpoint; the next aesthetic pass should address
 powder bulk lighting without averaging away its mineral grain or fine topology.
 
+That powder-bulk pass is now retained. `applyMaterialBodyFinish` gives only
+Volumetric/B powder a shallow-facing key and complementary deep countershade,
+using the existing stable-Smooth body support, depth, facing, and authored
+optical response. It does not add a contour, blur, world-wave texture, sampler,
+field, material branch, support, or alpha decision. Local, square Grains,
+moving particles, holes, thin structures, unlike contacts, and compact true-8×
+remain outside the response. The final normal/compact checkpoint is
+`.artifacts/visual-lab-reviews/material-lighting-6e9369e6-9017-44d7-814d-8a3242d8149c`;
+both normal candidates passed WebGL/HDR with zero alpha differences or browser
+errors, and the derived 4896×3072 217-material audit passed. Mixed-atlas
+Off→Volumetric changed 185,267 RGB pixels with total absolute delta 1,696,474
+and channel peak 26. The closer product-Smooth pile review at
+`.artifacts/visual-lab-reviews/powder-style-760f5e6d-576e-4434-9f5f-da983b4cc3ac`
+retains the curved crown, crisp mineral grain, one-cell stem and ledge, isolated
+grains, concrete hole, wet contact, wall control, and separate Local/Grains
+references while making the crown-to-core read clearer.
+
 Success means:
 
 - adding a normal visual experiment requires declarative/static-contract data,
@@ -257,14 +274,13 @@ Success means:
 
 Priority order from this checkpoint:
 
-1. Checkpoint and deploy the retained B-only gas mid/core contrast refinement.
-   Preserve the explicit compact evidence relationship: normal
-   Volumetric/HDR behavior is inactive at 8×, while the compact atlas proves
-   broad material and phase health only.
-2. Use the established current-only loop for a powder-bulk lighting experiment
-   that preserves the existing grain signal, holes, fine columns, unlike
-   contacts, and stable Smooth boundary. Avoid another fixture or lifecycle
-   unless the current powder atlas cannot expose the decision.
+1. Checkpoint and deploy the retained B-only powder countershade together with
+   the preceding gas mid/core refinement. Preserve the explicit compact
+   evidence relationship: normal Volumetric/HDR behavior is inactive at 8×,
+   while the compact atlas proves broad material and phase health only.
+2. Choose the next material experiment from the current full atlas and product
+   scenes. Prefer a shared phase/profile response that improves several
+   materials over another element-specific treatment or capture lifecycle.
 3. Harden only regressions that threaten geometry, semantic/topology
    correctness, WebGL lifecycle, true-8× completion, package integrity, or live
    Pages loading. Do not grow exact-pixel tests for evolving aesthetics.

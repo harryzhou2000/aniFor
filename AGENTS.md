@@ -26,6 +26,16 @@ errors, and the derived 217-material true-8× audit passed. The next visual
 priority is powder bulk lighting that retains grain and fine topology, not
 another capture lifecycle or exact-image test.
 
+The retained powder follow-up adds a B-only shallow-key/deep-countershade pair
+inside the same shared body finish. It is admitted only by the existing settled
+Smooth powder body proof and does not touch contour or grain generation. The
+final current-only checkpoints are
+`.artifacts/visual-lab-reviews/material-lighting-6e9369e6-9017-44d7-814d-8a3242d8149c`
+and `.artifacts/visual-lab-reviews/powder-style-760f5e6d-576e-4434-9f5f-da983b4cc3ac`.
+Normal WebGL/HDR, exact alpha, the product Smooth pile controls, and the derived
+217-material true-8× audit passed. Keep Local, square Grains, fine topology,
+contacts, Canvas, and compact literal-Off outside this response.
+
 Capture-facing fixture and recipe ownership has one data-only join point:
 `src/shared/visual-capture-static-catalog.js`. It projects the frozen
 normal-HDR and source-stage contracts into ordered fixture/driver bindings and

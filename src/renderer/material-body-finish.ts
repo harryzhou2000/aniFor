@@ -102,6 +102,21 @@ vec3 applyMaterialBodyFinish(
   color += (vec3(1.08) - clamp(color, 0.0, 1.08)) * keyTint * key;
   color *= vec3(1.0) - shadowTint * fill;
 
+  // Volumetric powder keeps its existing mineral cadence, but the stable bulk
+  // receives a broad shallow-to-core countershade. The caller's settled Smooth
+  // eligibility is the sole admission proof: Local, Grains, moving particles,
+  // holes, thin structures, and unlike contacts never enter this response.
+  // Compact true-8x supplies literal Off, so this normal-HDR B refinement is
+  // RGB-only and cannot alter coverage, alpha, or the compact material grammar.
+  float powderCountershade = powder * lightingExperimentB * bodySupport;
+  float powderShallowKey = powderCountershade * (1.0 - core)
+    * (0.050 + max(facing, 0.0) * 0.025) * finishResponse.x;
+  float powderDeepFill = powderCountershade * core
+    * (0.040 + max(-facing, 0.0) * 0.016) * finishResponse.y;
+  color += (vec3(1.10) - clamp(color, 0.0, 1.10))
+    * keyTint * powderShallowKey;
+  color *= vec3(1.0) - shadowTint * powderDeepFill;
+
   // Dense volumes keep their pigment instead of collapsing toward grey. This
   // is a bounded saturation lift over existing RGB and cannot affect alpha.
   float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
