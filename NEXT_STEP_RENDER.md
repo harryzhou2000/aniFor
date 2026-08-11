@@ -334,8 +334,11 @@ and control geometry while giving the broad Device casings clearer depth. The
 complete four-candidate checkpoint at
 `.artifacts/visual-lab-reviews/material-lighting-b2a695f3-9d1c-4368-8045-274917621520`
 passes all normal candidates and the derived 4896x3072 217-material atlas with
-all projections visible and zero browser errors. This source increment is not
-deployed until its revision and live closure pass.
+all projections visible and zero browser errors. Revision
+`1300f6482a62b825543eec6734f98accc58cd1ec` deployed this increment through
+workflow run `31515192326`; the full build/test package, Pages deployment,
+exact 19-resource closure, hosted completed-frame receipt capture, portable
+verification, and retained smoke evidence all passed.
 
 Success means:
 

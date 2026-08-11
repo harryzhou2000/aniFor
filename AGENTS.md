@@ -89,7 +89,10 @@ normal candidate passed WebGL/HDR with exact semantic/field/framebuffer-alpha
 evidence and zero browser errors; Volumetric changes broad source casings while
 the state-owned target accents remain authoritative. The complete four-recipe
 material-lighting checkpoint and its true-8x 217-material companion pass. It is
-not deployed until its own revision and live closure pass.
+deployed at revision `1300f6482a62b825543eec6734f98accc58cd1ec` through
+workflow run `31515192326`; the full build/test package, Pages deployment,
+exact 19-resource closure, hosted completed-frame receipt capture, portable
+verification, and retained smoke evidence all passed.
 
 When reviewing that dark solid atlas, do not infer lost support merely because
 the B broad-body treatment reduces contrast around a one-cell control. Compare
