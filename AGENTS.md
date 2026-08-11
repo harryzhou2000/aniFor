@@ -144,7 +144,11 @@ zero browser errors passed. Off-to-B changes 72,062 RGB pixels with total
 absolute delta 914,929, channel peak 11, and zero alpha changes. Direct
 inspection retains holes, thin controls, crisp boundaries, and opaque-family
 restraint while giving translucent rigid bodies a more coherent interior-to-
-edge read. Do not pin its PNG hashes.
+edge read. Do not pin its PNG hashes. Revision
+`eb7e6da039ad54a74fa72fbbc7aa1f51854b3485` deployed this combined material
+checkpoint through workflow run `31518942179`; cached build, Pages deployment,
+exact 19-resource closure, hosted completed-frame capture, portable
+verification, and an independent live closure check all passed.
 
 When reviewing that dark solid atlas, do not infer lost support merely because
 the B broad-body treatment reduces contrast around a one-cell control. Compare

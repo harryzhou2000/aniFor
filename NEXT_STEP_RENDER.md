@@ -391,7 +391,11 @@ retains opaque-family restraint while translucent cards retain their holes, thin
 controls, and crisp boundary with a more coherent interior-to-edge read.
 Off-to-B changes 72,062 RGB pixels with total absolute delta 914,929, channel
 peak 11, and zero alpha changes. The real compact 4896x3072 atlas also rendered
-all 217 projections with zero browser errors.
+all 217 projections with zero browser errors. Revision
+`eb7e6da039ad54a74fa72fbbc7aa1f51854b3485` deployed this combined material
+checkpoint through workflow run `31518942179`; cached build, Pages deployment,
+exact 19-resource closure, hosted completed-frame capture, portable
+verification, and an independent live closure check all passed.
 
 Success means:
 
