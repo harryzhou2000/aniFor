@@ -6242,7 +6242,7 @@ void main() {
   // Volumetric/B may reuse a phase-local outward emission probe below. Keep
   // the carried result data-only and centre-seeded so Off/Balanced and lower
   // quality paths retain their established sampling and colour behavior.
-  vec4 profileIrradianceEmission = emissionState;
+  vec4 profileIrradianceOutwardEmission = emissionState;
   float profileIrradianceIncidence = 0.0;
   float profileIrradianceProbeResolved = 0.0;
   vec2 liquidBackdropOffset = vec2(0.0);
@@ -6551,8 +6551,8 @@ void main() {
       gasLightIncidence = smoothstep(0.0, 0.12, outwardLight.a - emissionState.a);
       profileIrradianceIncidence = gasLightIncidence;
       profileIrradianceProbeResolved = 1.0;
+      profileIrradianceOutwardEmission = outwardLight;
       if (outwardLight.a > emissionState.a) gasLightColor = outwardLight.rgb;
-      if (outwardLight.a > emissionState.a) profileIrradianceEmission = outwardLight;
       gasLightReach = max(gasLightReach, smoothstep(0.002, 0.42, outwardLight.a) * 0.86);
     }
     float gasLightScatter = gasLightReach
@@ -8547,9 +8547,7 @@ void main() {
             );
             profileIrradianceIncidence = outwardIncidence;
             profileIrradianceProbeResolved = 1.0;
-            if (outwardEmission.a > emissionState.a) {
-              profileIrradianceEmission = outwardEmission;
-            }
+            profileIrradianceOutwardEmission = outwardEmission;
             solidFieldIncidence = outwardReach * outwardIncidence * 0.12;
             if (outwardEmission.a > emissionState.a) solidFieldColor = outwardEmission.rgb;
           } else {
@@ -11652,11 +11650,11 @@ void main() {
     vec4 profileIrradianceResponse = materialBodyFinishParameters(
       profileIrradiancePhase, optics, uMaterialBodyFinish
     );
-    // Resolve one shared source-facing proof only when a phase-local gas/solid
-    // branch did not already perform the same outward probe. Liquid and stable
-    // Smooth powder therefore gain directionality for one bounded normal-HDR
-    // sample, while gas/solid reuse their existing sample and compact true 8x
-    // never enters this shader branch.
+    // Resolve one shared outward probe only when a phase-local gas/solid branch
+    // did not already perform it. Then compare it with one opposing material-
+    // side sample: a genuine external source has positive outward contrast,
+    // while symmetric/internal emission no longer lights both sides of a void.
+    // Compact true 8x never enters this normal-HDR shader branch.
     float profileIrradianceNormalLength = length(normal.xy);
     if (profileIrradianceB > 0.5 && uHighQuality > 0.5
       && profileIrradianceEligibility > 0.001
@@ -11667,13 +11665,26 @@ void main() {
         uEmissionTexture,
         fieldUv + profileIrradianceOutward * uEmissionTexel * 2.0
       );
-      profileIrradianceIncidence = smoothstep(
-        0.0, 0.12, outwardIrradiance.a - emissionState.a
-      );
-      if (outwardIrradiance.a > emissionState.a) {
-        profileIrradianceEmission = outwardIrradiance;
-      }
+      profileIrradianceOutwardEmission = outwardIrradiance;
       profileIrradianceProbeResolved = 1.0;
+    }
+    vec4 profileIrradianceEmission = emissionState;
+    if (profileIrradianceB > 0.5 && uHighQuality > 0.5
+      && profileIrradianceEligibility > 0.001
+      && profileIrradianceProbeResolved > 0.5
+      && max(emissionState.a, profileIrradianceOutwardEmission.a) > 0.002
+      && profileIrradianceNormalLength > 0.0001) {
+      vec2 profileIrradianceOutward = normal.xy / profileIrradianceNormalLength;
+      vec4 inwardIrradiance = texture(
+        uEmissionTexture,
+        fieldUv - profileIrradianceOutward * uEmissionTexel * 2.0
+      );
+      profileIrradianceIncidence = smoothstep(
+        0.0, 0.12, profileIrradianceOutwardEmission.a - inwardIrradiance.a
+      );
+      if (profileIrradianceOutwardEmission.a > inwardIrradiance.a) {
+        profileIrradianceEmission = profileIrradianceOutwardEmission;
+      }
     }
     float legacyIrradianceShare = profileIrradianceB
       * profileIrradianceEligibility

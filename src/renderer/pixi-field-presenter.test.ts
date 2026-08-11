@@ -441,6 +441,25 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).toContain(
       'fieldUv + profileIrradianceOutward * uEmissionTexel * 2.0',
     );
+    expect(normal).toContain(
+      'fieldUv - profileIrradianceOutward * uEmissionTexel * 2.0',
+    );
+    expect(normal).toContain(
+      'profileIrradianceOutwardEmission.a - inwardIrradiance.a',
+    );
+    expect(normal).toContain(
+      'max(emissionState.a, profileIrradianceOutwardEmission.a) > 0.002',
+    );
+    expect(eight).not.toContain('inwardIrradiance');
+    expect(normal).toContain(
+      'profileIrradianceOutwardEmission = outwardLight;',
+    );
+    expect(normal).toContain(
+      'profileIrradianceOutwardEmission = outwardEmission;',
+    );
+    expect(normal).not.toContain(
+      'profileIrradianceEmission = outwardLight;',
+    );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       '* mix(0.18, 0.52, lightingExperimentB);',
     );
@@ -747,7 +766,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(powderLightVfx).not.toContain('uTime');
     expect(powderLightVfx).not.toContain('gl_FragCoord');
     expect(powderLightVfx).not.toMatch(/\balpha\s*[+*]?=/);
-    expect(normal.match(/texture\(\s*uEmissionTexture/g)).toHaveLength(8);
+    expect(normal.match(/texture\(\s*uEmissionTexture/g)).toHaveLength(9);
 
     // E09 decodes exact value 254 from the already-sampled presenter-owned
     // stability byte. The Canvas fallback retains ordinary settled value 255,

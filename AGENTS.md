@@ -299,6 +299,25 @@ Do not strengthen the mild cavity-adjacent response without first improving its
 outer-source discrimination. Current PNG bytes and RGB deltas remain diagnostic,
 not acceptance gates.
 
+The retained external-source-contrast increment resolves the remaining
+symmetric-emission ambiguity inside that same shared B-only composition seam.
+After reusing or resolving the outward emission probe, normal high quality takes
+one opposing material-side sample and admits source colour only from positive
+outward-versus-inward contrast. A source-presence guard avoids this extra read
+on unlit bodies. Gas and solid retain their phase-local outward-versus-centre
+lighting; only the shared profile response uses the new contrast. Off/A, low
+quality, Canvas, and compact true 8x remain unchanged. Add no sampler, field,
+texture, pass, target, allocation, alpha, support, topology, or physics rule.
+
+The retained current-only checkpoint is
+`.artifacts/visual-lab-reviews/material-lighting-e6d613e0-388d-4676-ad1a-b49ca8d2583c`.
+All five candidates passed stable-snapshot shared-host WebGL/HDR capture, exact
+geometry and semantic/field/framebuffer-alpha evidence, and strict portable
+verification. The real 4896x3072 true-8x atlas kept all 217 projections visible
+with zero browser errors. Direct and independent review must inspect the A/B
+board for cavity halos and hue shifts; PNG hashes remain package-integrity data,
+not cross-revision visual acceptance gates.
+
 Stable-snapshot v1 gives SwiftShader 60 seconds for its two complete convergence
 reads, and each `snapshotState` CDP command consumes that same driver-owned
 stability budget rather than the unrelated generic 20-second command timeout.
