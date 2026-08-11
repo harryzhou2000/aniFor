@@ -94,6 +94,12 @@ gas through one typed same-page control. The experiment changes RGB only inside
 the existing phase-local ownership guards; alpha, topology, fields, Canvas, and
 the compact true-8× compositor remain unchanged.
 
+Volumetric is also the ordinary `realistic` product default at normal 1×–4×
+WebGL/HDR. The focused atlas still begins at exact Off so all three responses
+remain inspectable. Classic, Neon Lab, Canvas2D, inactive-HDR fallback, and the
+compact true-8× compositor report and render profile Off; the live presenter is
+the authoritative readback after WebGL promotion or fallback.
+
 The liquid row uses its focused compact scene because Visual Lab deliberately
 stops at Detail 4×. Do not imply that the normal OFF/A/B board covers Detail
 8×, or duplicate Visual Lab's browser lifecycle to make it appear to do so.

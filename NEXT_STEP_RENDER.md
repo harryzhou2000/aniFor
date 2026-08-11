@@ -52,10 +52,26 @@ passed WebGL/HDR with zero browser errors and exact alpha in every pair.
 Off→Balanced changed 69,244 RGB pixels with channel peak 5; Off→Volumetric
 changed 73,898 with peak 9. Direct inspection prefers Volumetric: liquid
 surface/core separation and powder bounce are more legible without flattening
-grain, holes, columns, or gas support. This remains an opt-in experiment rather
-than a production default, and it is deliberately absent from compact true 8×.
-Keep `material-optics` and `release` byte-stable until this focused profile is
-intentionally promoted into their composition.
+grain, holes, columns, or gas support. Revision `5398b88` intentionally promotes
+that reviewed Volumetric response into the ordinary normal-HDR `realistic`
+product look at 1×–4×. One pure render-look resolver owns the default; the
+existing same-page driver still selects exact Off/Balanced/Volumetric states,
+and live readback now follows the presenter so product defaults, capture
+overrides, and HDR fallback cannot disagree. Classic, Neon Lab, Canvas, and the
+compact true-8× compositor remain exact Off.
+
+The promotion retained a fresh five-candidate current-only board at
+`.artifacts/visual-lab-reviews/material-optics-dc49a204-7c64-4992-8fa5-a37138a16a9f`.
+Direct inspection preferred the promoted product view: connected gas remained
+soft and continuous, Water/Oil retained coherent translucent depth and
+highlights, and Smooth powder kept mineral grain, holes, columns, and fine
+controls. All captures used WebGL/HDR with zero browser errors and exact alpha.
+The 1× product screenshot passed; a loaded 4× generic screenshot timer expired,
+then the authoritative renderer-owned 4× successor receipt completed with zero
+browser errors. Separate true 4896×3072 Powder, 17-gas, and liquid compact gates
+passed with exact topology/alpha and no Chrome residue. Keep `material-optics`
+and `release` recipe-set bytes stable: production default selection is a
+renderer concern and does not add the focused lighting recipe to those cohorts.
 
 The follow-up atlas-only checkpoint `9f4a1ca` replaces the dense rectangular
 Smoke/FOG controls with deterministic overlapping lobes. Direct compositor
@@ -89,10 +105,11 @@ Success means:
 
 Priority order from this checkpoint:
 
-1. Use the consolidated `material-optics` board for shared optical/lighting
-   experiments across representative powder,
-   liquid, and atmosphere fixtures; retain visually preferred checkpoints after
-   a lightweight human/agent review.
+1. Treat the shared Volumetric product promotion as the first completed use of
+   the consolidated `material-optics` board. Use the same board for the next
+   sampler-free, scale-safe optical experiment across representative powder,
+   liquid, and atmosphere fixtures; prefer improvements to coherent fluid depth,
+   surface/core separation, and gas extinction over another exact-material leaf.
 2. Reduce experiment-authoring friction further only where a new experiment
    still requires duplicated registration or lifecycle code.
 3. Harden only regressions that threaten geometry, semantic/topology
