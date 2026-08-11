@@ -313,8 +313,29 @@ Independent inspection retained the restrained Wood and ISZS response and the
 tuned deeper BTRY casing, while thin controls and the separated emitter stayed
 unchanged. The paired compact checkpoint also passed its true-8x 217-material
 atlas with all 217 projections visible under the intentionally inactive compact
-profile. This remains a source checkpoint until its revision and live closure
-pass the release workflow.
+profile. Exact revision `293b0806785d521a64ea8a1262c97e6197040842` deployed
+this checkpoint through workflow run `31512690708`; build, Pages deployment,
+exact 19-resource closure, hosted receipt capture, and portable verification
+all passed.
+
+The following retained framework increment expands review coverage without a
+new scene or renderer path. The existing 42-card configured-source graphics
+atlas is now a declarative `source-target-material-lighting-atlas` recipe under
+the same `material-lighting-profile` driver. Its six CLNE/BCLN/PCLN/PBCN/CONV/
+CRAY owner rows span seven target families and already contain holes, notches,
+thin and isolated owners, zero-state and wrong-owner controls, target controls,
+native-wall coexistence, and guarded blanks. The single-candidate review at
+`.artifacts/visual-lab-reviews/source-target-material-lighting-atlas-b9555743-2915-4a3c-a2c0-573771591f4c`
+passed WebGL/HDR with exact semantic, field-alpha, and framebuffer-alpha
+evidence, zero warnings/browser errors, and strict teardown. Off-to-Volumetric
+changes 61,327 RGB pixels with total absolute delta 609,469, channel peak 27,
+and zero alpha differences. Direct inspection retains the target-family badges
+and control geometry while giving the broad Device casings clearer depth. The
+complete four-candidate checkpoint at
+`.artifacts/visual-lab-reviews/material-lighting-b2a695f3-9d1c-4368-8045-274917621520`
+passes all normal candidates and the derived 4896x3072 217-material atlas with
+all projections visible and zero browser errors. This source increment is not
+deployed until its revision and live closure pass.
 
 Success means:
 
@@ -340,19 +361,21 @@ Success means:
 
 Priority order from this checkpoint:
 
-1. Checkpoint and deploy the retained solid phase/profile authoring increment
-   together with the optical-family sooty-gas response. Preserve the explicit
-   compact evidence relationship: normal Volumetric/HDR behavior is inactive at
-   8x, while the compact atlas proves broad material and phase health only.
-2. Use the new solid atlas to author tailored Organic, Device, and Radioactive
-   responses only when they improve those families beyond their existing
-   semantic/lifecycle treatments. Keep Wood, BTRY, and ISZS exact until a
-   separately reviewable family response is visibly preferable.
+1. Checkpoint and deploy the retained configured-source material-lighting
+   recipe. Preserve the explicit compact evidence relationship: normal
+   Volumetric/HDR behavior is inactive at 8x, while the compact atlas proves
+   broad material and phase health only.
+2. Reuse existing state-rich force/mechanism/device fixtures as declarative
+   material-lighting recipes where they expose a genuine Device-profile review
+   gap. Do not create another fixture when an existing typed preparer already
+   owns the required semantics and controls.
 3. Harden only regressions that threaten geometry, semantic/topology
    correctness, WebGL lifecycle, true-8× completion, package integrity, or live
    Pages loading. Do not grow exact-pixel tests for evolving aesthetics.
-4. Resume the wider material/element and responsive-UI roadmap after the
-   renderer loop makes those additions cheap to author and compare.
+4. Continue the wider material and responsive-UI roadmap from audited gaps,
+   not assumed omissions: the current catalog already exposes selectable and
+   render-only products, configured sources, forces, radioactive families,
+   growth materials, and all 24 native LIFE presets.
 
 Prioritize finishing the current design goals through an effective
 rendering-experiment framework over further evidence ceremony or isolated

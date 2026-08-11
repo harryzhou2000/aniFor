@@ -75,8 +75,21 @@ review retained restrained Wood warmth, absorption-led ISZS depth, and the
 deeper BTRY casing profile; thin controls and the separated emitter remained
 unchanged. The complete material-lighting checkpoint passed all three normal
 candidates and the true-8x 217-material atlas with all projections visible.
-This source checkpoint is not deployed until its revision and live resource
-closure have passed the release workflow.
+Revision `293b0806785d521a64ea8a1262c97e6197040842` deployed this checkpoint
+through workflow run `31512690708`; build, Pages upload, exact 19-resource
+closure, hosted receipt capture, and portable verification passed.
+
+The next retained authoring increment reuses the existing 42-card configured-
+source graphics atlas as a fourth `material-lighting-profile` recipe. It covers
+all six native source owners across powder, liquid, gas, energy, rigid,
+organic, and high-ID targets, including target badges, holes, notches, thin and
+isolated owners, zero-state/wrong-owner controls, wall coexistence, and blanks.
+Do not add another fixture or capture driver for this coverage. The current
+normal candidate passed WebGL/HDR with exact semantic/field/framebuffer-alpha
+evidence and zero browser errors; Volumetric changes broad source casings while
+the state-owned target accents remain authoritative. The complete four-recipe
+material-lighting checkpoint and its true-8x 217-material companion pass. It is
+not deployed until its own revision and live closure pass.
 
 When reviewing that dark solid atlas, do not infer lost support merely because
 the B broad-body treatment reduces contrast around a one-cell control. Compare
