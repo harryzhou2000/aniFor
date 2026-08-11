@@ -437,6 +437,18 @@ describe('Pixi presenter startup configuration', () => {
       'lightIncidence\n      + max(dot(bodyNormal',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('sourceFacing * 0.140');
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'finishResponse.y / max(finishResponse.w, 0.50)',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'powder + liquid * 0.78 + gas * 0.58 + solid * 0.92',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'float externalTransport = mix(0.30, 1.0, clamp(lightIncidence, 0.0, 1.0));',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'mix(0.55, 1.15, transmissionReserve) * externalTransport',
+    );
     expect(normal).toContain('profileIrradianceProbeResolved < 0.5');
     expect(normal).toContain(
       'fieldUv + profileIrradianceOutward * uEmissionTexel * 2.0',

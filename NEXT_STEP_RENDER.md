@@ -41,11 +41,29 @@ all candidates passed WebGL/HDR capture and portable verification with zero
 browser errors, and its independent true-8x 217-material companion rendered all
 projections at 4896x3072. Direct review keeps powder grain and fine topology,
 fluid bodies, gas support, solid holes/contacts, and source-target separation.
-The next high-leverage visual experiment is profile-governed external-light
-penetration in the existing shared material-body finish: transmission should
-carry source colour deeper through clean gas, liquid, Glass, and Ice, while
-absorption should keep powder, soot, and opaque solids shallow. Keep it B-only,
-RGB-only, arithmetic-only, and current-review driven.
+The next high-leverage visual experiment is now retained: profile-governed
+external-light penetration in the existing shared material-body finish.
+`applyMaterialProfileIrradiance` derives one bounded rational attenuation from
+fill/absorption, transmission, phase path length, body depth, and the existing
+outward-versus-inward source contrast. Transmission carries source colour
+deeper through clean gas, aqueous/cryogenic liquid, Glass, and Ice; absorption
+keeps powder, soot, oily/viscous liquid, opaque rigid, and Device bodies shell-
+led. A 30% deep fallback avoids a hard quality seam for flat bodies, while full
+through-body reach requires positive external incidence. The change is B-only,
+RGB-only, arithmetic-only, and adds no sample, field, texture, target, pass,
+allocation, profile entry, material selector, support, alpha, or topology rule.
+
+The retained current-only package is
+`.artifacts/visual-lab-reviews/material-lighting-f848b752-c30b-40f8-8cf0-d2adcd5ea12f`.
+All five material-lighting candidates passed shared-host WebGL/HDR capture and
+portable verification with zero browser errors. Direct review retains powder
+grain/fine topology, liquid boundaries, gas holes/channels, solid cavities,
+thin structures, contacts, blanks, and source-colour separation. The independent
+true-8x atlas rendered all 217 materials at 4896x3072 with zero browser errors;
+compact remains literal Off. The next framework increment should expose a
+current-only thermal-source scene through the existing typed Visual Lab fixture
+and material-lighting driver, replacing reliance on the legacy E82 exact-pixel
+gate when judging hot ordinary matter and temperature-derived scene light.
 
 The next authoring increment centralizes the capture-facing projection of the
 normal-HDR and source-stage static contracts. One pure, recursively frozen

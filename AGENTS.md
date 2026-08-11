@@ -36,9 +36,33 @@ solid holes and contacts, and source-colour separation. The independent true
 The older focused Ceramic check reports only a stable one-channel bloom spill
 (`rgbPeak=1`, zero coverage change) in an authored hole; retain that as current
 visual evidence and do not weaken its historical exact-pixel assertion. The
-next shared-lighting experiment should use the existing appearance-profile
+following shared-lighting experiment uses the existing appearance-profile
 transport seam to distinguish shallow external-light penetration from deep
 absorption, without another sampler, field, pass, or fixture lifecycle.
+
+That profile-governed penetration increment is retained in
+`applyMaterialProfileIrradiance`. It replaces the old positive body-depth lift
+with a bounded rational optical envelope derived from fill/absorption divided
+by transmission, phase path length, and the caller-owned two-sided source
+contrast. Clean gas, aqueous/cryogenic liquid, Glass, and Ice retain a broader
+source-coloured middle; soot, powder, Oil/viscous liquid, opaque rigid, and
+Device families keep the lift near the illuminated shell. Deep carriage takes
+the exact outward-versus-inward incidence at full strength and retains only a
+30% continuous fallback for flat/low-quality bodies. This is B-only,
+normal-HDR, RGB-only scalar arithmetic; Off/A, Canvas, alpha, support, topology,
+profile data, resources, and compact true-8x remain unchanged.
+
+The retained current-only package is
+`.artifacts/visual-lab-reviews/material-lighting-f848b752-c30b-40f8-8cf0-d2adcd5ea12f`.
+All five candidates passed shared-host WebGL/HDR capture, portable verification,
+strict teardown, and zero browser errors. Direct review retains powder grain,
+fluid boundaries, gas holes/channels, solid cavities, thin structures, contacts,
+blanks, and source-colour separation while preserving the intended optical-
+family ordering. The real 4896x3072 compact atlas rendered all 217 projections
+with zero browser errors. Do not pin its PNG bytes or current RGB deltas. The
+next framework leverage should author a current-only thermal-source review scene
+through the existing typed fixture/driver path, so hot ordinary matter and the
+new shared transport can be judged without depending on E82's legacy pixel gate.
 
 The domain-derived checkpoint launcher is deployed at revision
 `21fe52c96dd0d30152d2b2cec3a3d4b589a53630` by workflow run `31500138353`.

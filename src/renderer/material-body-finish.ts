@@ -212,8 +212,35 @@ vec3 applyMaterialProfileIrradiance(
       finishResponse.x * 0.38 + finishResponse.w * 0.26
     );
   float phaseGain = powder * 0.62 + liquid + gas * 0.82 + solid * 0.76;
+
+  // Carry external light through the body according to the same profile lanes
+  // used by every phase finish. Absorption divided by transmission is a compact
+  // optical-thickness proxy: clean gas, clear liquid, Glass, and Ice preserve a
+  // broader illuminated middle, while soot, powder, and opaque rigid bodies
+  // keep the source-facing lift close to their shell. The rational envelope is
+  // bounded, branch-free, and uses no additional field or texture sample.
+  float opticalAbsorption = clamp(
+    finishResponse.y / max(finishResponse.w, 0.50), 0.35, 2.40
+  );
+  float transmissionReserve = clamp(
+    (finishResponse.w - 0.50) / 1.0, 0.0, 1.0
+  );
+  float penetrationPath = bodyDepth
+    * (powder + liquid * 0.78 + gas * 0.58 + solid * 0.92);
+  float penetration = 1.0 / (
+    1.0 + penetrationPath * opticalAbsorption * 1.10
+  );
+  float shallowTransport = (0.020 + sourceFacing * 0.140)
+    * mix(0.88, 1.0, penetration);
+  // Deep carriage is primarily an external-source response. Retain a small
+  // continuous fallback for flat/low-quality bodies, but symmetric or internal
+  // field light cannot receive the same through-body reach as positive outward
+  // contrast from the caller's two-sided probe.
+  float externalTransport = mix(0.30, 1.0, clamp(lightIncidence, 0.0, 1.0));
+  float deepTransport = bodyDepth * (0.026 + gas * 0.018)
+    * penetration * mix(0.55, 1.15, transmissionReserve) * externalTransport;
   float irradiance = lightReach * body * transport * phaseGain
-    * (0.020 + sourceFacing * 0.140 + bodyDepth * (0.018 + gas * 0.016));
+    * (shallowTransport + deepTransport);
 
   float lightPeak = max(max(emissionState.r, emissionState.g), max(emissionState.b, 0.08));
   vec3 lightTint = clamp(emissionState.rgb / lightPeak, 0.0, 1.0);
