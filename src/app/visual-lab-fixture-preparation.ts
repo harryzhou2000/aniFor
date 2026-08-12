@@ -5,6 +5,7 @@ import { prepareGasMaterialLightingAtlasFixture } from './gas-material-lighting-
 import { prepareForceActivityGraphicsAuditFixture } from './force-activity-graphics-audit';
 import { prepareLiquidMotionVfxFixture } from './liquid-motion-vfx-audit';
 import { prepareMaterialLightingAtlasFixture } from './material-lighting-atlas-fixture';
+import { prepareMultiMetalMaterialLightingAtlasFixture } from './multi-metal-material-lighting-atlas-fixture';
 import { prepareOilMotionVfxFixture } from './oil-motion-vfx-audit';
 import { preparePowderLightVfxFixture } from './powder-light-vfx-audit';
 import { preparePowderStyleAtlasFixture } from './powder-style-atlas-fixture';
@@ -56,6 +57,7 @@ const VISUAL_LAB_FIXTURE_PREPARERS = Object.freeze({
   'material-lighting-atlas': prepareMaterialLightingAtlasFixture,
   'gas-material-lighting-atlas': prepareGasMaterialLightingAtlasFixture,
   'solid-material-lighting-atlas': prepareSolidMaterialLightingAtlasFixture,
+  'multi-metal-material-lighting-atlas': prepareMultiMetalMaterialLightingAtlasFixture,
   'source-target-material-lighting-atlas': prepareSourceTargetGraphicsAuditFixture,
   'force-activity-material-lighting-atlas': prepareForceActivityGraphicsAuditFixture,
   'thermal-source-material-lighting-atlas': prepareCeramicTemperatureVfxFixture,

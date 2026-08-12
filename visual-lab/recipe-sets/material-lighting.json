@@ -1,6 +1,6 @@
 {
   "schema": "anifor.visual-lab.recipe-set/v1",
-  "id": "sha256:0fc08c709e9d1962977eed504cee4593fdb694c94614c99a8aeef51968beb6bf",
+  "id": "sha256:08c65744f2c43c2496d8c39665c91e0bf060a9474834c4d320642a84aebcd402",
   "name": "material-lighting",
   "recipes": [
     {
@@ -24,6 +24,14 @@
       "domain": "material-lighting",
       "target": 0,
       "fixture": "solid-material-lighting-atlas",
+      "gain": 1,
+      "renderScale": 2
+    },
+    {
+      "name": "multi-metal-material-lighting-atlas",
+      "domain": "material-lighting",
+      "target": 0,
+      "fixture": "multi-metal-material-lighting-atlas",
       "gain": 1,
       "renderScale": 2
     },

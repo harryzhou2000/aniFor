@@ -7,6 +7,7 @@ import { prepareForceActivityGraphicsAuditFixture } from './force-activity-graph
 import { prepareLiquidMotionVfxFixture } from './liquid-motion-vfx-audit';
 import { prepareOilMotionVfxFixture } from './oil-motion-vfx-audit';
 import { prepareMaterialLightingAtlasFixture } from './material-lighting-atlas-fixture';
+import { prepareMultiMetalMaterialLightingAtlasFixture } from './multi-metal-material-lighting-atlas-fixture';
 import { preparePowderLightVfxFixture } from './powder-light-vfx-audit';
 import { preparePowderStyleAtlasFixture } from './powder-style-atlas-fixture';
 import { prepareSolidMaterialLightingAtlasFixture } from './solid-material-lighting-atlas-fixture';
@@ -22,6 +23,7 @@ describe('Visual Lab fixture preparation registry', () => {
     expect(VISUAL_LAB_FIXTURE_IDS).toEqual([
       'showcase', 'oil-motion', 'water-motion', 'powder-style-atlas', 'material-lighting-atlas',
       'gas-material-lighting-atlas', 'solid-material-lighting-atlas',
+      'multi-metal-material-lighting-atlas',
       'source-target-material-lighting-atlas',
       'force-activity-material-lighting-atlas',
       'thermal-source-material-lighting-atlas',
@@ -34,6 +36,7 @@ describe('Visual Lab fixture preparation registry', () => {
     expect(VISUAL_LAB_PREPARED_FIXTURE_IDS).toEqual([
       'oil-motion', 'water-motion', 'powder-style-atlas', 'material-lighting-atlas',
       'gas-material-lighting-atlas', 'solid-material-lighting-atlas',
+      'multi-metal-material-lighting-atlas',
       'source-target-material-lighting-atlas',
       'force-activity-material-lighting-atlas',
       'thermal-source-material-lighting-atlas',
@@ -49,6 +52,7 @@ describe('Visual Lab fixture preparation registry', () => {
     ['material-lighting-atlas', prepareMaterialLightingAtlasFixture],
     ['gas-material-lighting-atlas', prepareGasMaterialLightingAtlasFixture],
     ['solid-material-lighting-atlas', prepareSolidMaterialLightingAtlasFixture],
+    ['multi-metal-material-lighting-atlas', prepareMultiMetalMaterialLightingAtlasFixture],
     ['source-target-material-lighting-atlas', prepareSourceTargetGraphicsAuditFixture],
     ['force-activity-material-lighting-atlas', prepareForceActivityGraphicsAuditFixture],
     ['thermal-source-material-lighting-atlas', prepareCeramicTemperatureVfxFixture],

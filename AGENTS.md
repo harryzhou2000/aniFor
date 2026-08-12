@@ -54,6 +54,27 @@ Visual Lab fixture package passed in 1m45s. This deploy confirms the append-only
 class seam on the production origin; it does not promote or pin the changed
 Volumetric PNGs as cross-revision visual requirements.
 
+The next framework increment is a reusable declarative solid-atlas authoring
+seam plus `multi-metal-material-lighting-atlas`. One frozen descriptor now owns
+card layout, broad bodies, holes, exterior notches, one-cell structures,
+isolated cells, unlike-owner contacts, native-wall coexistence, separated Fire
+emitters, and guarded blanks; the established cross-family solid board is
+migrated through the same helper byte-for-byte. The new 3x2 board covers exactly
+Metal, BMTL, GOLD, IRON, PTNM, and TTAN with larger 112x82 bodies. HEAC and TUNG
+remain excluded by design. One authored static-contract row projects the board
+through the existing material-lighting driver, fixture registry, recipe catalog,
+cohort compiler, execution plan, portable verifier, and CI default; there is no
+new driver, browser method, renderer branch, resource, or lifecycle route.
+
+The retained current-only evidence is
+`.artifacts/visual-lab-reviews/multi-metal-material-lighting-atlas-57d8ce56-dd46-42b6-81ba-5afbec985cea`.
+It passed WebGL/HDR capture, completed-frame receipts, portable verification,
+strict teardown, and zero browser errors. Off and Balanced are byte-identical;
+Volumetric changes the class-wide broad-body response while all visible holes,
+notches, bars, isolated cells, unlike contacts, wall overlays, and pigments
+remain legible. Direct inspection favors the larger board as useful optical-
+class evidence. Treat its hashes as package integrity only.
+
 The four-phase analytic environment-transport increment is deployed at exact
 revision `f46ad843777c948135a59760781c57366c8922e7` by workflow run
 `31593915673`. One declarative `environmentTransport` composition lane and one

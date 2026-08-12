@@ -6265,6 +6265,35 @@ runtime-resource closure plus the hosted Visual Lab fixture package in 1m45s.
 Treat those current captures as review evidence, not a new accepted baseline or
 an exact cross-revision PNG contract.
 
+The next framework increment implements the requested declarative multi-metal
+review board without another capture or renderer route. A reusable frozen
+solid-atlas descriptor now authors broad bodies, holes, open notches, one-cell
+structures, isolated cells, unlike-material contacts, native-wall overlap,
+separated Fire strips, and guarded blanks. The pre-existing cross-family solid
+atlas is migrated through this helper with its historical geometry unchanged.
+The new `multi-metal-material-lighting-atlas` uses a 3x2 layout and larger
+112x82 bodies for the exact MetallicRigid family: Metal, BMTL, GOLD, IRON, PTNM,
+and TTAN. HEAC stays SmoothRigid and TUNG stays Device.
+
+One `authoredCapture` row projects the scene through the existing material-
+lighting driver, typed preparer registry, canonical recipe catalog, declarative
+cohort compiler, immutable execution plan, portable verifier, and CI review
+default. No new driver, CDP method, renderer branch, shader path, resource,
+lifecycle route, or visual hash gate was added. The regenerated material-
+lighting recipe set is
+`sha256:08c65744f2c43c2496d8c39665c91e0bf060a9474834c4d320642a84aebcd402`.
+
+The favored current-only package is
+`.artifacts/visual-lab-reviews/multi-metal-material-lighting-atlas-57d8ce56-dd46-42b6-81ba-5afbec985cea`.
+WebGL/HDR, completed-frame receipts, portable verification, strict teardown,
+and zero browser errors passed. Off and Balanced are byte-identical, while
+Volumetric changes the six broad metal bodies without losing their distinct
+pigments, holes, notches, thin bars, isolated cells, contacts, or wall overlays.
+The full repository gate passed 1,536 source and 344 tooling tests; the
+production build transformed 947 modules and retained exact 19-resource
+closure. This establishes descriptor reuse as the preferred way to broaden
+optical-class evidence before adding more material parameters or shader logic.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

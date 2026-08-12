@@ -117,6 +117,7 @@ describe('Visual Lab fixture adapters', () => {
     expect(visualCaptureFixtureNames()).toEqual([
       'showcase', 'oil-motion', 'water-motion', 'powder-style-atlas', 'material-lighting-atlas',
       'gas-material-lighting-atlas', 'solid-material-lighting-atlas',
+      'multi-metal-material-lighting-atlas',
       'source-target-material-lighting-atlas',
       'force-activity-material-lighting-atlas',
       'thermal-source-material-lighting-atlas',
@@ -158,6 +159,12 @@ describe('Visual Lab fixture adapters', () => {
         scene: 'showcase',
         captureDriver: 'material-lighting-profile',
         preparation: { reportLabel: 'prepareSolidMaterialLightingAtlasFixture' },
+      });
+    expect(resolveVisualCaptureFixture('multi-metal-material-lighting-atlas', 'material-lighting', 0))
+      .toMatchObject({
+        scene: 'showcase',
+        captureDriver: 'material-lighting-profile',
+        preparation: { reportLabel: 'prepareMultiMetalMaterialLightingAtlasFixture' },
       });
     expect(resolveVisualCaptureFixture('source-target-material-lighting-atlas', 'material-lighting', 0))
       .toMatchObject({
@@ -401,6 +408,8 @@ describe('Visual Lab fixture adapters', () => {
       [{ domain: 'material-lighting', target: 0, fixture: 'gas-material-lighting-atlas' },
         'material-lighting-profile'],
       [{ domain: 'material-lighting', target: 0, fixture: 'solid-material-lighting-atlas' },
+        'material-lighting-profile'],
+      [{ domain: 'material-lighting', target: 0, fixture: 'multi-metal-material-lighting-atlas' },
         'material-lighting-profile'],
       [{ domain: 'material-lighting', target: 0, fixture: 'source-target-material-lighting-atlas' },
         'material-lighting-profile'],

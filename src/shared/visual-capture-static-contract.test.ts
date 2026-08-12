@@ -97,6 +97,13 @@ describe('visual capture driver static contract', () => {
         requirement: '--domain=material-lighting --target=0',
       },
       {
+        name: 'multi-metal-material-lighting-atlas', scene: 'showcase',
+        driver: 'material-lighting-profile',
+        constraints: [{ domain: 'material-lighting', targets: [0] }],
+        preparationReportLabel: 'prepareMultiMetalMaterialLightingAtlasFixture',
+        requirement: '--domain=material-lighting --target=0',
+      },
+      {
         name: 'source-target-material-lighting-atlas', scene: 'showcase',
         driver: 'material-lighting-profile',
         constraints: [{ domain: 'material-lighting', targets: [0] }],
@@ -156,6 +163,7 @@ describe('visual capture driver static contract', () => {
       ['material-lighting-atlas', 'material-lighting-profile'],
       ['gas-material-lighting-atlas', 'material-lighting-profile'],
       ['solid-material-lighting-atlas', 'material-lighting-profile'],
+      ['multi-metal-material-lighting-atlas', 'material-lighting-profile'],
       ['source-target-material-lighting-atlas', 'material-lighting-profile'],
       ['force-activity-material-lighting-atlas', 'material-lighting-profile'],
       ['thermal-source-material-lighting-atlas', 'material-lighting-profile'],
@@ -164,6 +172,7 @@ describe('visual capture driver static contract', () => {
     expect(VISUAL_CAPTURE_STATIC_RECIPES.map(({ name }) => name)).toEqual([
       'gas-showcase', 'oxygen-showcase', 'oil-motion', 'water-motion', 'powder-style-atlas',
       'material-lighting-atlas', 'gas-material-lighting-atlas', 'solid-material-lighting-atlas',
+      'multi-metal-material-lighting-atlas',
       'source-target-material-lighting-atlas',
       'force-activity-material-lighting-atlas',
       'thermal-source-material-lighting-atlas',

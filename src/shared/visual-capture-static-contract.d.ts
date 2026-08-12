@@ -197,6 +197,21 @@ export declare const VISUAL_CAPTURE_STATIC_CONTRACT: Readonly<{
       readonly "requirement": "--domain=material-lighting --target=0";
     }>,
     Readonly<{
+      readonly "name": "multi-metal-material-lighting-atlas";
+      readonly "scene": "showcase";
+      readonly "driver": "material-lighting-profile";
+      readonly "constraints": readonly [
+        Readonly<{
+          readonly "domain": "material-lighting";
+          readonly "targets": readonly [
+            0,
+          ];
+        }>,
+      ];
+      readonly "preparationReportLabel": "prepareMultiMetalMaterialLightingAtlasFixture";
+      readonly "requirement": "--domain=material-lighting --target=0";
+    }>,
+    Readonly<{
       readonly "name": "source-target-material-lighting-atlas";
       readonly "scene": "showcase";
       readonly "driver": "material-lighting-profile";
@@ -287,6 +302,14 @@ export declare const VISUAL_CAPTURE_STATIC_CONTRACT: Readonly<{
       readonly "domain": "material-lighting";
       readonly "target": 0;
       readonly "fixture": "solid-material-lighting-atlas";
+      readonly "gain": 1;
+      readonly "renderScale": 2;
+    }>,
+    Readonly<{
+      readonly "name": "multi-metal-material-lighting-atlas";
+      readonly "domain": "material-lighting";
+      readonly "target": 0;
+      readonly "fixture": "multi-metal-material-lighting-atlas";
       readonly "gain": 1;
       readonly "renderScale": 2;
     }>,

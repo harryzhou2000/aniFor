@@ -41,6 +41,8 @@ const AUTHORED_CAPTURE_FIXTURES = [
     'prepareGasMaterialLightingAtlasFixture'),
   authoredCapture('solid-material-lighting-atlas', 'material-lighting', 'material-lighting-profile',
     'prepareSolidMaterialLightingAtlasFixture'),
+  authoredCapture('multi-metal-material-lighting-atlas', 'material-lighting',
+    'material-lighting-profile', 'prepareMultiMetalMaterialLightingAtlasFixture'),
   authoredCapture('source-target-material-lighting-atlas', 'material-lighting',
     'material-lighting-profile', 'prepareSourceTargetGraphicsAuditFixture'),
   authoredCapture('force-activity-material-lighting-atlas', 'material-lighting',

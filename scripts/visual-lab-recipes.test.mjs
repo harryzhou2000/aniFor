@@ -57,6 +57,10 @@ describe('Visual Lab capture recipes', () => {
         fixture: 'solid-material-lighting-atlas', gain: 1, renderScale: 2,
       },
       {
+        name: 'multi-metal-material-lighting-atlas', domain: 'material-lighting', target: 0,
+        fixture: 'multi-metal-material-lighting-atlas', gain: 1, renderScale: 2,
+      },
+      {
         name: 'source-target-material-lighting-atlas', domain: 'material-lighting', target: 0,
         fixture: 'source-target-material-lighting-atlas', gain: 1, renderScale: 2,
       },
@@ -76,7 +80,8 @@ describe('Visual Lab capture recipes', () => {
     expect(visualLabCaptureRecipeNames()).toEqual([
       'gas-showcase', 'oxygen-showcase', 'oil-motion', 'water-motion',
       'powder-style-atlas', 'material-lighting-atlas', 'gas-material-lighting-atlas',
-      'solid-material-lighting-atlas', 'source-target-material-lighting-atlas',
+      'solid-material-lighting-atlas', 'multi-metal-material-lighting-atlas',
+      'source-target-material-lighting-atlas',
       'force-activity-material-lighting-atlas',
       'thermal-source-material-lighting-atlas',
       'opposed-source-material-lighting-atlas',
@@ -106,7 +111,7 @@ describe('Visual Lab capture recipes', () => {
 
     const names = visualLabCaptureRecipeNames();
     names.pop();
-    expect(visualLabCaptureRecipeNames()).toHaveLength(12);
+    expect(visualLabCaptureRecipeNames()).toHaveLength(13);
   });
 
   it('requires an array of exact data objects', () => {
@@ -168,7 +173,8 @@ describe('Visual Lab capture recipes', () => {
       .toThrow(
         'has an incompatible fixture: --fixture must be showcase, oil-motion, water-motion,'
         + ' powder-style-atlas, material-lighting-atlas, gas-material-lighting-atlas,'
-        + ' solid-material-lighting-atlas, source-target-material-lighting-atlas,'
+        + ' solid-material-lighting-atlas, multi-metal-material-lighting-atlas,'
+        + ' source-target-material-lighting-atlas,'
         + ' force-activity-material-lighting-atlas, thermal-source-material-lighting-atlas,'
         + ' or opposed-source-material-lighting-atlas',
       );
@@ -197,7 +203,8 @@ describe('Visual Lab capture recipes', () => {
       .toThrow(
         'Unknown Visual Lab capture candidate "missing"; --candidate must be one of: '
         + 'gas-showcase, oxygen-showcase, oil-motion, water-motion, powder-style-atlas, material-lighting-atlas,'
-        + ' gas-material-lighting-atlas, solid-material-lighting-atlas, source-target-material-lighting-atlas,'
+        + ' gas-material-lighting-atlas, solid-material-lighting-atlas,'
+        + ' multi-metal-material-lighting-atlas, source-target-material-lighting-atlas,'
         + ' force-activity-material-lighting-atlas, thermal-source-material-lighting-atlas,'
         + ' opposed-source-material-lighting-atlas',
       );
