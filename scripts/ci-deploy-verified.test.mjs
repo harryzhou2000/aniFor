@@ -207,9 +207,9 @@ describe('deploy-verified CI workflow contract', () => {
     expect(review).toContain('--require-execution-tuning-plan=1');
     expect(review).toContain('--require-experiment-response=1');
     expect(review).toContain('--require-region-response=1');
-    expect(capture).toContain('--browser-host=fresh');
-    expect(capture.match(/--browser-host=fresh/g)).toHaveLength(1);
-    expect(capture).not.toContain('--browser-host=shared');
+    expect(capture).toContain('--browser-host=shared');
+    expect(capture.match(/--browser-host=shared/g)).toHaveLength(1);
+    expect(capture).not.toContain('--browser-host=fresh');
     expect(capture).toContain(
       'VISUAL_LAB_CAPTURE_PROOF: ${{ inputs.visual_lab_capture_proof }}',
     );

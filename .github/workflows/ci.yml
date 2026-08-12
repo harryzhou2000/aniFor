@@ -243,10 +243,11 @@ jobs:
             --bundle=dist/index.html
             --output-dir=artifacts/visual-lab-review
             --gpu=swiftshader
-            # Hosted SwiftShader can accumulate long CDP/readback stalls across
-            # a larger cohort. Keep CI release evidence candidate-isolated;
-            # shared-host reuse remains an explicit local performance option.
-            --browser-host=fresh
+            # Route compatible normal-scale candidates sequentially through one
+            # supervised SwiftShader process. Every candidate still receives a
+            # fresh incognito context/target, and any capture, teardown, or GPU
+            # failure recycles the complete host before the next candidate.
+            --browser-host=shared
             "--capture-proof=${VISUAL_LAB_CAPTURE_PROOF}"
           )
           candidate_request="${VISUAL_LAB_CANDIDATES//[[:space:]]/}"
