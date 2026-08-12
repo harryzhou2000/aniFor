@@ -6169,14 +6169,18 @@ E66 remains deferred until its sample budget fits the fixed HDR seam. Powder is
 already supported through the source-stage `powder-render-style` driver and
 must not be reinterpreted as an HDR domain or split into another framework.
 
-The next broad framework increment adds an analytic environment-transport seam
-without introducing an environment resource. `MaterialCompositionProfile` now
-owns a bounded `environmentTransport` lane; powder is explicitly zero, liquid
-is strongest, and gas/solid retain moderate responses. One B-only normal-HDR
-helper reconstructs a cool-sky/warm-ground hemisphere from each caller's
-already-live slope, then separates a transmission-gated shell/profile lift from
-a lower-energy, low-slope body carry. Exact species still enter only through
-the existing appearance profile, and callers retain density, depth, contact,
+The broad framework increment is now a four-phase analytic
+environment-transport seam without an environment resource.
+`MaterialCompositionProfile` owns the bounded `environmentTransport` lane;
+liquid is strongest, gas/solid retain moderate responses, and powder uses a
+restrained `0.34` only for eligible settled Smooth broad bodies. One B-only
+normal-HDR helper reconstructs a cool-sky/warm-ground hemisphere from each
+caller's already-live slope, then separates a transmission-gated shell/profile
+lift from a lower-energy, low-slope body carry. Powder enters only after its
+established ambient grounding through `powderLightBodyGate`; Local, Grains,
+moving/unsupported grains, fine controls, wet/contact exclusions, and compact
+true 8x have no environment call. Exact species still enter only through the
+existing appearance profile, and callers retain density, depth, contact,
 support, topology, and alpha authority. No sample, texture, field, target,
 pass, uniform, allocation, clock, or compact true-8x call was added. Do not
 replace it with a read from foreground HDR: that would reflect neighbouring
@@ -6203,6 +6207,24 @@ deployed in 12s, and post-deploy exact revision/resource closure plus hosted
 receipt-v2 capture and portable verification passed in 1m41s. Keep promotion
 readiness and loaded-runner completion latency distinct, and retry this
 transient class before altering the protected receipt contract.
+
+The powder completion is deployed at exact revision
+`f46ad843777c948135a59760781c57366c8922e7` by workflow run `31593915673`.
+The favored current-only seven-scene package is
+`.artifacts/visual-lab-reviews/material-lighting-d41528db-19f2-4533-8450-68d0afad067a`;
+the focused style-control package is
+`.artifacts/visual-lab-reviews/powder-style-c86f5b30-d8ff-4a69-a63d-cb7531c00451`.
+Inspection retains curved Smooth piles and fine structures, angular Local
+reference, square-particle Grains reference, coherent mixed-material contacts,
+and exact alpha. Against the preceding environment package, captures without
+eligible powder are byte-identical. Direct true 8x again rendered all 217
+material projections at 4896x3072 with zero browser errors. CI built in 3m40s
+and saved ccache only after success, captured and round-trip verified all seven
+hosted candidates in 8m54s, deployed Pages in 10s, and passed exact live
+revision/resource closure plus the hosted Water receipt-v2 package in 1m43s.
+Treat this as completion of the reusable resource-free environment seam; the
+next experiment should add a similarly declarative material-class capability,
+not another fixture-specific lighting branch.
 
 ## Deferred long-term visual roadmap
 

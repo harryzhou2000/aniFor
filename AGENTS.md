@@ -14,28 +14,34 @@ visual requirement or deploy gate. Keep `accepted-v1`, baseline comparison, and
 promotion readable only for legacy packages or an explicit ad-hoc reference;
 developer review and CI must move to current-only evidence by default.
 
-The shared analytic environment-transport increment is deployed at exact
-revision `2f44627575a0d6d750dafd9289f978702c272e52` by workflow run
-`31591110445`. One declarative `environmentTransport` composition lane and one
-source-independent normal-HDR helper give liquid, gas, and supported solid
-bodies a restrained cool-sky/warm-ground response using only existing density,
-depth, slope, eligibility, roughness, and appearance-profile lanes. It is
-B-only and RGB-only: no environment texture, sample, field, target, pass,
-uniform, topology decision, or alpha path was added. Powder remains authored at
-zero, and compact true 8x has no call site. Keep this as the broad reusable
-environment seam; do not generalize the Water/Oil/Acid post-scene refraction
-pass or sample foreground HDR as a universal environment.
+The four-phase analytic environment-transport increment is deployed at exact
+revision `f46ad843777c948135a59760781c57366c8922e7` by workflow run
+`31593915673`. One declarative `environmentTransport` composition lane and one
+source-independent normal-HDR helper give liquid, gas, supported solid bodies,
+and eligible settled Smooth powder bodies a restrained cool-sky/warm-ground
+response using only existing density, depth, slope, eligibility, roughness,
+appearance-profile, and powder broad-body lanes. It is B-only and RGB-only: no
+environment texture, sample, field, target, pass, uniform, topology decision,
+or alpha path was added. Powder uses weight `0.34` only after its established
+ambient grounding and only through `powderLightBodyGate`; Local, Grains,
+moving/unsupported grains, fine controls, wet/contact exclusions, and compact
+true 8x retain their prior paths. Keep this as the broad reusable environment
+seam; do not generalize the Water/Oil/Acid post-scene refraction pass or sample
+foreground HDR as a universal environment.
 
-The current-only seven-candidate material-lighting review passed WebGL/HDR,
-completed-frame receipts, portable artifact round-trip verification, strict
-teardown, and alpha invariance. Direct true 8x rendered all 217 projections at
-4896x3072 with zero browser errors. The first hosted review attempt completed
-three candidates but four Off receipts exceeded the loaded SwiftShader window;
-the failed-job retry reused the exact built artifact and passed all seven in
-5m26s without a timeout or source change. Treat this as transient runner load,
-not a visual or packaging regression. The cached build completed in 3m24s,
-Pages deployed in 12s, and post-deploy exact resource closure plus hosted
-receipt-v2 smoke passed in 1m41s.
+The retained current-only seven-candidate review is
+`.artifacts/visual-lab-reviews/material-lighting-d41528db-19f2-4533-8450-68d0afad067a`;
+it passed WebGL/HDR, completed-frame receipts, portable artifact round-trip
+verification, strict teardown, and alpha invariance. The focused style-control
+package is `.artifacts/visual-lab-reviews/powder-style-c86f5b30-d8ff-4a69-a63d-cb7531c00451`;
+it retains distinct Smooth, Local, and square-particle Grains presentations.
+Against the preceding environment package, gas, liquid, solid, source, and
+thermal captures remain byte-identical; only scenes containing eligible powder
+changed. Direct true 8x rendered all 217 projections at 4896x3072 with zero
+browser errors. The cached CI build completed in 3m40s and saved ccache only
+after success, all seven hosted candidates and the downloaded package verified
+in 8m54s, Pages deployed in 10s, and post-deploy exact revision/resource closure
+plus the hosted Water receipt-v2 package passed in 1m43s.
 
 The active renderer increment makes the existing compact RGB emission field
 temperature-aware instead of adding another light pass. Its CPU eligibility
