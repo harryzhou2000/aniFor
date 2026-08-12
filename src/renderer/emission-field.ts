@@ -10,6 +10,15 @@ const DOWNSAMPLE = 3;
 // compact and the shader still performs exactly its established centre sample.
 const KERNEL = [1, 8, 28, 56, 70, 56, 28, 8, 1] as const;
 const KERNEL_RADIUS = 4;
+// A second, B-only carrier reaches eighteen world cells while preserving the
+// established emission bytes used by ordinary lighting and OFF/A captures.
+const TRANSPORT_KERNEL = [
+  93, 113, 139, 169, 207, 253, 308, 377, 460, 562, 686, 838, 1024,
+  838, 686, 562, 460, 377, 308, 253, 207, 169, 139, 113, 93,
+] as const;
+const TRANSPORT_KERNEL_RADIUS = 12;
+const TRANSPORT_KERNEL_SUM = 9_434;
+const TRANSPORT_GAIN = 64;
 const GLOW_GAIN = 8;
 const BLACKBODY_LUT_STRIDE = 4;
 const BLACKBODY_SOURCE_THRESHOLD = 0.001;
@@ -38,6 +47,8 @@ export class EmissionField {
   readonly width: number;
   readonly height: number;
   readonly bytes: Uint8Array;
+  /** B-only long-range radiance; legacy emission bytes remain unchanged. */
+  transportBytes?: Uint8Array;
   hasLight = false;
   hasThermalCandidate = false;
   private minimumLightX = 0;
@@ -47,6 +58,7 @@ export class EmissionField {
   private readonly seed: Float32Array;
   private readonly horizontal: Float32Array;
   private readonly blurred: Float32Array;
+  private transmittance?: Uint8Array;
 
   constructor(
     private readonly worldWidth: number,
@@ -63,20 +75,39 @@ export class EmissionField {
     this.blurred = new Float32Array(this.bytes.length);
   }
 
-  update(materials: Uint8Array, temperatures?: Uint16Array): void {
+  /** Opt-in normal-WebGL carrier; Canvas and compact 8x never allocate it. */
+  enableLongRangeTransport(): void {
+    this.transportBytes ??= new Uint8Array(this.bytes.length);
+    this.transmittance ??= new Uint8Array(this.width * this.height);
+  }
+
+  get longRangeTransportEnabled(): boolean { return this.transportBytes !== undefined; }
+
+  update(materials: Uint8Array, temperatures?: Uint16Array, walls?: Uint8Array): void {
     if (materials.length !== this.worldWidth * this.worldHeight) throw new Error('Emission field size mismatch');
     if (temperatures && temperatures.length !== materials.length) {
       throw new Error('Emission temperature field size mismatch');
+    }
+    if (walls && walls.length !== materials.length) {
+      throw new Error('Emission wall field size mismatch');
     }
     this.seed.fill(0);
     this.seedSources(materials, temperatures);
     this.blurHorizontal();
     this.blurVertical();
     this.packBytes();
+    if (this.longRangeTransportEnabled) {
+      this.buildTransmittance(materials, walls);
+      this.transportHorizontal();
+      this.transportVertical();
+      this.packTransportBytes();
+    }
   }
 
   get allocatedByteLength(): number {
-    return this.bytes.byteLength + this.seed.byteLength + this.horizontal.byteLength + this.blurred.byteLength;
+    return this.bytes.byteLength + (this.transportBytes?.byteLength ?? 0)
+      + this.seed.byteLength + this.horizontal.byteLength + this.blurred.byteLength
+      + (this.transmittance?.byteLength ?? 0);
   }
 
   /** Cheap rejection before a caller pays for a four-tap coloured sample. */
@@ -273,6 +304,132 @@ export class EmissionField {
         this.maximumLightY = Math.max(this.maximumLightY, y);
         this.hasLight = true;
       }
+    }
+  }
+
+  private buildTransmittance(materials: Uint8Array, walls?: Uint8Array): void {
+    const transmittance = this.transmittance;
+    if (!transmittance) return;
+    for (let fieldY = 0; fieldY < this.height; fieldY++) for (let fieldX = 0; fieldX < this.width; fieldX++) {
+      let occupied = 0;
+      let minimum = 1;
+      let hardBlock = false;
+      for (let offsetY = 0; offsetY < DOWNSAMPLE; offsetY++) {
+        const y = fieldY * DOWNSAMPLE + offsetY;
+        if (y >= this.worldHeight) continue;
+        for (let offsetX = 0; offsetX < DOWNSAMPLE; offsetX++) {
+          const x = fieldX * DOWNSAMPLE + offsetX;
+          if (x >= this.worldWidth) continue;
+          const worldIndex = y * this.worldWidth + x;
+          const material = materials[worldIndex];
+          if (walls?.[worldIndex] || material === Material.Wall) {
+            hardBlock = true;
+            continue;
+          }
+          if (material === Material.Empty) continue;
+          occupied++;
+          const styleOffset = material * 4;
+          const phase = this.styleBytes?.[styleOffset] ?? RenderPhase.Solid;
+          const traits = this.styleBytes?.[styleOffset + 3] ?? 0;
+          if ((traits & 0x0e) !== 0 || phase === RenderPhase.Field) {
+            hardBlock = true;
+          } else if (phase === RenderPhase.Solid) minimum = Math.min(minimum, 0.92);
+          else if (phase === RenderPhase.Powder) minimum = Math.min(minimum, 0.94);
+          else if (phase === RenderPhase.Liquid) minimum = Math.min(minimum, 0.97);
+          else if (phase === RenderPhase.Gas) minimum = Math.min(minimum, 0.99);
+        }
+      }
+      const coverage = occupied / (DOWNSAMPLE * DOWNSAMPLE);
+      const value = hardBlock ? 0 : 1 - coverage * (1 - minimum);
+      transmittance[fieldY * this.width + fieldX] = Math.round(value * 255);
+    }
+  }
+
+  private transportHorizontal(): void {
+    const transmittance = this.transmittance;
+    if (!transmittance) return;
+    this.horizontal.fill(0);
+    for (let y = 0; y < this.height; y++) for (let x = 0; x < this.width; x++) {
+      const target = (y * this.width + x) * 4;
+      this.accumulateTransportSample(this.seed, this.horizontal, target, target,
+        TRANSPORT_KERNEL[TRANSPORT_KERNEL_RADIUS] / TRANSPORT_KERNEL_SUM);
+      let path = 1;
+      for (let delta = 1; delta <= TRANSPORT_KERNEL_RADIUS; delta++) {
+        const sourceX = x + delta;
+        if (sourceX >= this.width) break;
+        path *= transmittance[y * this.width + sourceX] / 255;
+        if (path <= 1e-5) break;
+        const source = (y * this.width + sourceX) * 4;
+        this.accumulateTransportSample(this.seed, this.horizontal, target, source,
+          TRANSPORT_KERNEL[delta + TRANSPORT_KERNEL_RADIUS] / TRANSPORT_KERNEL_SUM * path);
+      }
+      path = 1;
+      for (let delta = 1; delta <= TRANSPORT_KERNEL_RADIUS; delta++) {
+        const sourceX = x - delta;
+        if (sourceX < 0) break;
+        path *= transmittance[y * this.width + sourceX] / 255;
+        if (path <= 1e-5) break;
+        const source = (y * this.width + sourceX) * 4;
+        this.accumulateTransportSample(this.seed, this.horizontal, target, source,
+          TRANSPORT_KERNEL[TRANSPORT_KERNEL_RADIUS - delta] / TRANSPORT_KERNEL_SUM * path);
+      }
+    }
+  }
+
+  private transportVertical(): void {
+    const transmittance = this.transmittance;
+    if (!transmittance) return;
+    this.blurred.fill(0);
+    for (let y = 0; y < this.height; y++) for (let x = 0; x < this.width; x++) {
+      const target = (y * this.width + x) * 4;
+      this.accumulateTransportSample(this.horizontal, this.blurred, target, target,
+        TRANSPORT_KERNEL[TRANSPORT_KERNEL_RADIUS] / TRANSPORT_KERNEL_SUM);
+      let path = 1;
+      for (let delta = 1; delta <= TRANSPORT_KERNEL_RADIUS; delta++) {
+        const sourceY = y + delta;
+        if (sourceY >= this.height) break;
+        path *= transmittance[sourceY * this.width + x] / 255;
+        if (path <= 1e-5) break;
+        const source = (sourceY * this.width + x) * 4;
+        this.accumulateTransportSample(this.horizontal, this.blurred, target, source,
+          TRANSPORT_KERNEL[delta + TRANSPORT_KERNEL_RADIUS] / TRANSPORT_KERNEL_SUM * path);
+      }
+      path = 1;
+      for (let delta = 1; delta <= TRANSPORT_KERNEL_RADIUS; delta++) {
+        const sourceY = y - delta;
+        if (sourceY < 0) break;
+        path *= transmittance[sourceY * this.width + x] / 255;
+        if (path <= 1e-5) break;
+        const source = (sourceY * this.width + x) * 4;
+        this.accumulateTransportSample(this.horizontal, this.blurred, target, source,
+          TRANSPORT_KERNEL[TRANSPORT_KERNEL_RADIUS - delta] / TRANSPORT_KERNEL_SUM * path);
+      }
+    }
+  }
+
+  private accumulateTransportSample(
+    sourcePlane: Float32Array, targetPlane: Float32Array,
+    target: number, source: number, weight: number,
+  ): void {
+    targetPlane[target] += sourcePlane[source] * weight;
+    targetPlane[target + 1] += sourcePlane[source + 1] * weight;
+    targetPlane[target + 2] += sourcePlane[source + 2] * weight;
+    targetPlane[target + 3] += sourcePlane[source + 3] * weight;
+  }
+
+  private packTransportBytes(): void {
+    const transportBytes = this.transportBytes;
+    if (!transportBytes) return;
+    for (let offset = 0; offset < transportBytes.length; offset += 4) {
+      const density = this.blurred[offset + 3];
+      if (density <= 1e-6) {
+        transportBytes.fill(0, offset, offset + 4);
+        continue;
+      }
+      transportBytes[offset] = Math.min(255, Math.round(this.blurred[offset] / density * 255));
+      transportBytes[offset + 1] = Math.min(255, Math.round(this.blurred[offset + 1] / density * 255));
+      transportBytes[offset + 2] = Math.min(255, Math.round(this.blurred[offset + 2] / density * 255));
+      transportBytes[offset + 3] = Math.min(255, Math.round(density * TRANSPORT_GAIN * 255));
     }
   }
 }

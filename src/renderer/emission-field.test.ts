@@ -35,6 +35,10 @@ function alphaAt(field: EmissionField, x: number, y: number): number {
   return field.bytes[(y * field.width + x) * 4 + 3];
 }
 
+function transportAlphaAt(field: EmissionField, x: number, y: number): number {
+  return field.transportBytes?.[(y * field.width + x) * 4 + 3] ?? 0;
+}
+
 describe('emission field', () => {
   it('matches the HDR thermal-core and ordinary-matter eligibility set', () => {
     const { field } = fixture();
@@ -89,6 +93,52 @@ describe('emission field', () => {
     expect(field.bytes[middle]).toBeGreaterThan(80);
     expect(field.bytes[middle + 2]).toBeGreaterThan(180);
     expect(field.bytes[middle + 3]).toBeGreaterThan(0);
+  });
+
+  it('keeps long-range transport opt-in and blocks it with a one-cell native wall', () => {
+    const { field, materials } = fixture(81, 21);
+    const walls = new Uint8Array(materials.length);
+    for (let y = 9; y < 12; y++) for (let x = 6; x < 9; x++) {
+      materials[y * 81 + x] = Material.Fire;
+    }
+    field.update(materials, undefined, walls);
+    expect(field.transportBytes).toBeUndefined();
+
+    field.enableLongRangeTransport();
+    field.update(materials, undefined, walls);
+    const open = transportAlphaAt(field, 8, 3);
+    expect(open).toBeGreaterThan(0);
+
+    walls[10 * 81 + 21] = 1;
+    field.update(materials, undefined, walls);
+    expect(transportAlphaAt(field, 8, 3)).toBeLessThan(open);
+  });
+
+  it('attenuates bulk phases without changing legacy emission bytes', () => {
+    const results = new Map<number, number>();
+    for (const phaseMaterial of [
+      Material.Empty, Material.Smoke, Material.Water, Material.Sand, Material.Brick,
+    ]) {
+      const { field, materials } = fixture(81, 21);
+      for (let y = 9; y < 12; y++) for (let x = 6; x < 9; x++) {
+        materials[y * 81 + x] = Material.Fire;
+      }
+      if (phaseMaterial !== Material.Empty) {
+        for (let y = 0; y < 21; y++) for (let x = 18; x < 45; x++) {
+          materials[y * 81 + x] = phaseMaterial;
+        }
+      }
+      field.update(materials);
+      const legacy = field.bytes.slice();
+      field.enableLongRangeTransport();
+      field.update(materials);
+      expect(field.bytes).toEqual(legacy);
+      results.set(phaseMaterial, transportAlphaAt(field, 8, 3));
+    }
+    expect(results.get(Material.Empty)).toBeGreaterThanOrEqual(results.get(Material.Smoke)!);
+    expect(results.get(Material.Smoke)).toBeGreaterThanOrEqual(results.get(Material.Water)!);
+    expect(results.get(Material.Water)).toBeGreaterThanOrEqual(results.get(Material.Sand)!);
+    expect(results.get(Material.Sand)).toBeGreaterThanOrEqual(results.get(Material.Brick)!);
   });
 
   it('keeps absent and sub-incandescent temperature input byte-identical', () => {
@@ -173,6 +223,9 @@ describe('emission field', () => {
   it('stays within its explicit 612x384 CPU allocation budget', () => {
     const { field } = fixture(612, 384);
     expect(field.allocatedByteLength).toBe(1_357_824);
+    expect(field.allocatedByteLength).toBeLessThan(1.5 * 1024 * 1024);
+    field.enableLongRangeTransport();
+    expect(field.allocatedByteLength).toBe(1_488_384);
     expect(field.allocatedByteLength).toBeLessThan(1.5 * 1024 * 1024);
   });
 });

@@ -150,6 +150,37 @@ describe('shared render field set', () => {
     expect(fields.updateNext(materials, 102, walls)).toBeUndefined();
   });
 
+  it('hydrates opt-in long-range emission after Canvas produced clean shared fields', () => {
+    const materials = new Uint8Array(16);
+    materials[5] = Material.PHOT;
+    const fields = new RenderFieldSet(4, 4, ALL_MATERIALS);
+    fields.updateNext(materials, 0);
+    fields.updateNext(materials, 1);
+    fields.updateNext(materials, 2);
+    expect(fields.updateNext(materials, 3)).toBeUndefined();
+
+    fields.enableLongRangeEmissionTransport();
+    expect(fields.emission.transportBytes?.some(Boolean)).toBe(false);
+    expect(fields.updateNext(materials, 100)).toBe('emission');
+    expect(fields.emission.transportBytes?.some(Boolean)).toBe(true);
+  });
+
+  it('redirties opt-in long-range emission when a native wall changes', () => {
+    const materials = new Uint8Array(16);
+    const walls = new Uint8Array(16);
+    materials[5] = Material.PHOT;
+    const fields = new RenderFieldSet(4, 4, ALL_MATERIALS);
+    fields.enableLongRangeEmissionTransport();
+    fields.updateNext(materials, 0, walls);
+    fields.updateNext(materials, 1, walls);
+    fields.updateNext(materials, 2, walls);
+
+    walls[6] = 1;
+    fields.markAtmosphereBlockerDirty(6);
+    expect(fields.updateNext(materials, 100, walls)).toBe('liquid');
+    expect(fields.updateNext(materials, 101, walls)).toBe('emission');
+  });
+
   it('reuses the atmosphere cadence when only coherent gas motion changes', () => {
     const width = 8;
     const height = 8;

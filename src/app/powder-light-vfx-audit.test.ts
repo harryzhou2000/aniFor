@@ -56,6 +56,13 @@ describe('powder light VFX audit fixture', () => {
     expect(rectInside(POWDER_LIGHT_VFX_AUDIT.wetSuspension.gap, world)).toBe(true);
     expect(pointInside(POWDER_LIGHT_VFX_AUDIT.wetSuspension.lightFacingSand, world)).toBe(true);
     expect(pointInside(POWDER_LIGHT_VFX_AUDIT.nativeWall, world)).toBe(true);
+    expect(rectInside(POWDER_LIGHT_VFX_AUDIT.transportOccluder.wall, world)).toBe(true);
+    expect(rectInside(POWDER_LIGHT_VFX_AUDIT.transportOccluder.litFrontShoulder,
+      POWDER_LIGHT_VFX_AUDIT.cards[0].body)).toBe(true);
+    expect(rectInside(POWDER_LIGHT_VFX_AUDIT.transportOccluder.umbra,
+      POWDER_LIGHT_VFX_AUDIT.cards[0].body)).toBe(true);
+    expect(rectInside(POWDER_LIGHT_VFX_AUDIT.transportOccluder.openShoulder,
+      POWDER_LIGHT_VFX_AUDIT.cards[0].body)).toBe(true);
     expect(rectInside(POWDER_LIGHT_VFX_AUDIT.wallFreeControl, world)).toBe(true);
   });
 
@@ -95,6 +102,10 @@ describe('powder light VFX audit fixture', () => {
     expect(materialAt(cells, POWDER_LIGHT_VFX_AUDIT.wetSuspension.lightFacingSand)).toBe(Material.Sand);
     expect(simulation.walls()[POWDER_LIGHT_VFX_AUDIT.nativeWall.y * WORLD_WIDTH
       + POWDER_LIGHT_VFX_AUDIT.nativeWall.x]).toBe(1);
+    forEachPoint(POWDER_LIGHT_VFX_AUDIT.transportOccluder.wall, (point) => {
+      expect(materialAt(cells, point)).toBe(Material.Empty);
+      expect(simulation.walls()[point.y * WORLD_WIDTH + point.x]).toBe(1);
+    });
     forEachPoint(POWDER_LIGHT_VFX_AUDIT.wallFreeControl, (point) => {
       expect(materialAt(cells, point)).toBe(Material.Empty);
       expect(simulation.walls()[point.y * WORLD_WIDTH + point.x]).toBe(0);

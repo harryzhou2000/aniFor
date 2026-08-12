@@ -24,7 +24,7 @@ describe('Visual Lab current region response', () => {
   it('maps world regions, authenticates captures, and retains signed response without a verdict', async () => {
     const response = await createVisualLabCurrentRegionResponse(batch(), async (_candidate, variant) => captures[variant]);
     expect(response.schema).toBe(VISUAL_LAB_CURRENT_REGION_RESPONSE_SCHEMA);
-    expect(response.candidates[0].regions).toHaveLength(8);
+    expect(response.candidates[0].regions).toHaveLength(11);
     expect(response.candidates[0].regions[0]).toMatchObject({
       name: 'clay-warm-flank', pixelRect: { x: 212, y: 88, width: 12, height: 24 },
       variants: { off: { pixels: 288, rgbaMeans: [10, expect.any(Number), expect.any(Number), 255] } },
@@ -39,4 +39,3 @@ describe('Visual Lab current region response', () => {
     await expect(createVisualLabCurrentRegionResponse(batch(), async (_candidate, variant) => tampered[variant])).rejects.toThrow('pinned capture SHA-256');
   });
 });
-

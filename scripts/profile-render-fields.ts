@@ -85,10 +85,15 @@ const liquid = new LiquidDensityField(width, height, liquidByMaterial, paletteBy
 const liquidAuxiliary = new Uint8Array(width * height);
 const solidDepthMaterials = new Uint8Array(width * height).fill(Material.Metal);
 const emission = new EmissionField(width, height, emissiveByMaterial, colorByMaterial);
+const transportedEmission = new EmissionField(
+  width, height, emissiveByMaterial, colorByMaterial, styleBytes,
+);
+transportedEmission.enableLongRangeTransport();
 for (let iteration = 0; iteration < 4; iteration++) {
   atmosphere.update(materials);
   liquid.update(materials);
   emission.update(materials);
+  transportedEmission.update(materials);
 }
 
 // A settled shallow heap forces the full-width slope reconstruction path. Toggle
@@ -552,6 +557,10 @@ console.log(JSON.stringify({
   emission: {
     allocatedBytes: emission.allocatedByteLength,
     update: sample(() => emission.update(materials)),
+    longRangeTransport: {
+      allocatedBytes: transportedEmission.allocatedByteLength,
+      update: sample(() => transportedEmission.update(materials)),
+    },
   },
   powderSurface: {
     allocatedBytes: powderSurface.allocatedByteLength,

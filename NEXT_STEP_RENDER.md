@@ -83,6 +83,43 @@ restarts, current experiment/region response, and downloaded-package portable
 verification. Pages deployed in 11s; exact 19-resource live closure and the
 hosted Water completed-frame receipt smoke then passed in 1m41s.
 
+The next reusable lighting-transport increment is now implemented locally. It
+keeps the established short-range emission bytes exact for Canvas, compact true
+8×, OFF, and Balanced, while normal WebGL opts into one additional 204×128
+RGBA8 radiance carrier for Volumetric/B. A radius-12 fixed exponential kernel
+transports premultiplied source colour and energy through a semantic/native-wall
+transmittance lattice at the existing emission refresh cadence. Fixed weight
+normalization turns blocked paths into missing energy rather than a normalized
+halo; one-cell native walls and field/sink/channel owners hard-block, while
+gas, liquid, powder, and solid attenuate in order. Wall edits now redirty this
+opt-in carrier, and Canvas-to-WebGL promotion atomically allocates and queues
+its first hydration instead of waiting for a later source mutation.
+
+The normal shader adds one centre radiance sample plus a two-sided carrier probe
+only in B. Local two-cell incidence remains authoritative at the shell; deep
+material uses the wider obstacle-aware contrast, so mesoscopic powder normals
+no longer redefine the source direction cell by cell. CPU storage grows from
+1,357,824 to 1,488,384 bytes only when enabled; GPU storage is 104,448 bytes.
+The production-shaped quick profile measures 45.03ms median / 56.02ms p90 for
+the transported refresh versus 12.07ms / 14.30ms for legacy emission, after a
+cumulative-walk optimization reduced the first prototype's 62.21ms median.
+
+Current-only opposed-source evidence is retained at
+`/tmp/anifortpt-transport-occluder`: WebGL/HDR capture passed with zero browser
+errors, the warm and cool Clay flanks diverge around a stable intermediate
+centre, and authored-hole, fine-structure, wet-suspension, native-wall, guarded-
+blank, and alpha controls remain intact. The same declarative fixture now owns a
+2×30 native-wall strip in Sand's warm source gap plus scripts-owned front,
+umbra, and matched-open probes; it adds no driver, browser method, or lifecycle
+branch. In B, the wall umbra changes by about -5.82/-4.10/-1.76 RGB versus
+-3.61/-2.33/-0.73 for the open shoulder and -2.97/-1.99/-0.35 for the lit front
+shoulder, all with zero alpha change and no visible wall halo. This proves actual
+blocked transport rather than only semantic attenuation. The independent true-
+8× 217-material audit passed at 4896×3072 with the carrier absent. Treat this as
+a favored current-only visual checkpoint; the next release gate is the ordinary
+seven-candidate shared-host review and deployed Water receipt smoke, not an
+exact PNG baseline comparison.
+
 Canvas evidence remains diagnostic only (`canonical: false`, `comparison:
 none`), carries no image-hash acceptance policy, and cannot fail the canonical
 WebGL checkpoint. The current multi-backend/scale board remains the place to

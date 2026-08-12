@@ -3445,6 +3445,7 @@ uniform sampler2D uAtmosphereTexture;
 uniform sampler2D uAtmosphereStyleTexture;
 uniform sampler2D uGasIdentityMotifTexture;
 uniform sampler2D uEmissionTexture;
+uniform sampler2D uLongRangeEmissionTexture;
 uniform sampler2D uLiquidTexture;
 uniform sampler2D uLiquidOpticsTexture;
 uniform sampler2D uBoundaryStabilityTexture;
@@ -11669,6 +11670,24 @@ void main() {
       profileIrradianceProbeResolved = 1.0;
     }
     vec4 profileIrradianceEmission = emissionState;
+    float longRangeIncidence = 0.0;
+    if (profileIrradianceB > 0.5 && uHighQuality > 0.5
+      && profileIrradianceEligibility > 0.001) {
+      vec4 longRangeEmission = texture(uLongRangeEmissionTexture, fieldUv);
+      profileIrradianceEmission = mix(
+        emissionState, longRangeEmission,
+        smoothstep(0.002, 0.035, longRangeEmission.a)
+      );
+      vec2 transportAxis = normalize(vec2(1.0, 0.18));
+      float transportTowardKey = texture(
+        uLongRangeEmissionTexture, fieldUv - transportAxis * uEmissionTexel * 2.0
+      ).a;
+      float transportAwayFromKey = texture(
+        uLongRangeEmissionTexture, fieldUv + transportAxis * uEmissionTexel * 2.0
+      ).a;
+      longRangeIncidence = sign(transportTowardKey - transportAwayFromKey)
+        * smoothstep(0.002, 0.05, abs(transportTowardKey - transportAwayFromKey));
+    }
     if (profileIrradianceB > 0.5 && uHighQuality > 0.5
       && profileIrradianceEligibility > 0.001
       && profileIrradianceProbeResolved > 0.5
@@ -11697,6 +11716,13 @@ void main() {
         emissionState, profileIrradianceOutwardEmission, directionalSourceShare
       );
     }
+    // Local two-cell contrast remains authoritative at the shell. Deeper
+    // material uses the obstacle-aware carrier, whose wider support avoids
+    // treating powder mesostructure as a new surface on every cell.
+    profileIrradianceIncidence = mix(
+      profileIrradianceIncidence, longRangeIncidence,
+      smoothstep(0.10, 0.38, profileIrradianceDepth)
+    );
     float legacyIrradianceShare = profileIrradianceB
       * profileIrradianceEligibility
       * (gasVolume > 0.5 ? 0.0 : (liquidVolume > 0.5 ? 0.30 : 0.24));
@@ -11983,6 +12009,7 @@ export class PixiFieldPresenter {
   private readonly atmosphereSource: BufferImageSource;
   private readonly atmosphereStyleSource: BufferImageSource;
   private readonly emissionSource: BufferImageSource;
+  private readonly longRangeEmissionSource?: BufferImageSource;
   private readonly liquidSource: BufferImageSource;
   private readonly liquidOpticsSource: BufferImageSource;
   private readonly boundaryStabilityBytes: Uint8Array;
@@ -12090,6 +12117,7 @@ export class PixiFieldPresenter {
       alphaMode: 'no-premultiply-alpha', scaleMode: 'nearest', autoGarbageCollect: false,
     });
     this.fieldSet = fieldSet ?? new RenderFieldSet(width, height, materials);
+    if (outputScale < 8) this.fieldSet.enableLongRangeEmissionTransport();
     const paletteTexture = textureFromBytes(this.fieldSet.lookups.paletteBytes);
     const styleTexture = textureFromBytes(this.fieldSet.lookups.styleBytes);
     this.atmosphereSource = new BufferImageSource({
@@ -12128,6 +12156,19 @@ export class PixiFieldPresenter {
       scaleMode: 'linear',
       autoGarbageCollect: false,
     });
+    if (outputScale < 8) {
+      const transportBytes = this.fieldSet.emission.transportBytes;
+      if (!transportBytes) throw new Error('Long-range emission transport was not allocated');
+      this.longRangeEmissionSource = new BufferImageSource({
+        resource: transportBytes,
+        width: this.fieldSet.emission.width,
+        height: this.fieldSet.emission.height,
+        format: 'rgba8unorm',
+        alphaMode: 'no-premultiply-alpha',
+        scaleMode: 'linear',
+        autoGarbageCollect: false,
+      });
+    }
     this.liquidSource = new BufferImageSource({
       resource: this.fieldSet.liquid.bytes,
       width,
@@ -12746,6 +12787,10 @@ export class PixiFieldPresenter {
       uGasIdentityMotifSampler: gasIdentityMotifSource.style,
       uEmissionTexture: this.emissionSource,
       uEmissionSampler: this.emissionSource.style,
+      ...(this.longRangeEmissionSource ? {
+        uLongRangeEmissionTexture: this.longRangeEmissionSource,
+        uLongRangeEmissionSampler: this.longRangeEmissionSource.style,
+      } : {}),
       uLiquidTexture: this.liquidSource,
       uLiquidSampler: this.liquidSource.style,
       uLiquidOpticsTexture: this.liquidOpticsSource,
@@ -14495,6 +14540,7 @@ export class PixiFieldPresenter {
       this.liquidOpticsSource.update();
     } else if (volumeField === 'emission') {
       this.emissionSource.update();
+      this.longRangeEmissionSource?.update();
     }
     if (boundaryTextureDirty) this.boundaryStabilitySource.update();
     this.uniforms.uniforms.uTime = visualTime * 0.001;

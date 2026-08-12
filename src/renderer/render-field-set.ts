@@ -105,6 +105,13 @@ export class RenderFieldSet {
     );
   }
 
+  /** Allocates and hydrates the normal-WebGL-only long-range lighting carrier. */
+  enableLongRangeEmissionTransport(): void {
+    if (this.emission.longRangeTransportEnabled) return;
+    this.emission.enableLongRangeTransport();
+    this.emissionDirty = true;
+  }
+
   markDirty(previousMaterial: number, nextMaterial: number, index = -1): void {
     if (this.lookups.gasByMaterial[previousMaterial] || this.lookups.gasByMaterial[nextMaterial]
       || this.atmosphere.mayHaveIdentityNearWorldIndex(index)) this.atmosphereDirty = true;
@@ -132,6 +139,7 @@ export class RenderFieldSet {
     // edit must therefore refresh that shared field too; otherwise valid bytes
     // can survive behind a newly placed wall until an unrelated material edit.
     this.suspensionDirty = true;
+    if (this.emission.longRangeTransportEnabled) this.emissionDirty = true;
   }
 
   /** Reuses the existing atmosphere cadence when only native gas flow changed. */
@@ -163,7 +171,7 @@ export class RenderFieldSet {
       this.liquidDirty = false;
       this.suspensionDirty = true;
     } else if (field === 'emission') {
-      this.emission.update(materials, temperatures);
+      this.emission.update(materials, temperatures, walls);
       this.emissionDirty = false;
     }
     if (field) this.schedule.refreshed(field, time);

@@ -13,7 +13,8 @@ describe('Visual Lab inspection-region catalog', () => {
     expect(fixture.candidate).toBe('opposed-source-material-lighting-atlas');
     expect(fixture.world).toEqual({ width: 612, height: 384 });
     expect(fixture.regions.map(({ name }) => name)).toEqual([
-      'clay-warm-flank', 'clay-cool-flank', 'clay-centre', 'authored-hole',
+      'clay-warm-flank', 'clay-cool-flank', 'clay-centre',
+      'sand-lit-front-shoulder', 'sand-wall-umbra', 'sand-open-shoulder', 'authored-hole',
       'fine-structure-context', 'wet-suspension', 'native-wall', 'guarded-blank',
     ]);
     expect(Object.isFrozen(VISUAL_LAB_INSPECTION_REGIONS)).toBe(true);
@@ -46,4 +47,3 @@ describe('Visual Lab inspection-region catalog', () => {
     });
   });
 });
-

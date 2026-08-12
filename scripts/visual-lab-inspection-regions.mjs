@@ -91,6 +91,9 @@ export const VISUAL_LAB_INSPECTION_REGIONS = normalizeVisualLabInspectionRegionC
       { name: 'clay-warm-flank', role: 'response', x: 212, y: 88, width: 12, height: 24 },
       { name: 'clay-cool-flank', role: 'response', x: 256, y: 88, width: 12, height: 24 },
       { name: 'clay-centre', role: 'response', x: 232, y: 88, width: 12, height: 20 },
+      { name: 'sand-lit-front-shoulder', role: 'response', x: 42, y: 52, width: 12, height: 14 },
+      { name: 'sand-wall-umbra', role: 'response', x: 42, y: 76, width: 12, height: 18 },
+      { name: 'sand-open-shoulder', role: 'response', x: 42, y: 106, width: 12, height: 14 },
       { name: 'authored-hole', role: 'control', x: 209, y: 71, width: 4, height: 5 },
       { name: 'fine-structure-context', role: 'response', x: 228, y: 139, width: 16, height: 16 },
       { name: 'wet-suspension', role: 'response', x: 84, y: 256, width: 16, height: 24 },
@@ -99,4 +102,3 @@ export const VISUAL_LAB_INSPECTION_REGIONS = normalizeVisualLabInspectionRegionC
     ],
   }],
 });
-

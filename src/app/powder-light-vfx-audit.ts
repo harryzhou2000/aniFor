@@ -43,6 +43,13 @@ export interface PowderLightVfxAuditSnapshot {
   };
   /** Native wall data stays an independent plane beside ordinary matter. */
   readonly nativeWall: PowderLightVfxAuditPoint;
+  /** Native-wall strip in Sand's warm source gap, with matched body probes. */
+  readonly transportOccluder: {
+    readonly wall: PowderLightVfxAuditRect;
+    readonly litFrontShoulder: PowderLightVfxAuditRect;
+    readonly umbra: PowderLightVfxAuditRect;
+    readonly openShoulder: PowderLightVfxAuditRect;
+  };
   /** This empty card is deliberately wall-free: light must not invent a wall owner. */
   readonly wallFreeControl: PowderLightVfxAuditRect;
 }
@@ -95,6 +102,12 @@ export const POWDER_LIGHT_VFX_AUDIT: PowderLightVfxAuditSnapshot = {
     lightFacingSand: { x: 85, y: 267 },
   },
   nativeWall: { x: 250, y: 224 },
+  transportOccluder: {
+    wall: { x: 38, y: 70, width: 2, height: 30 },
+    litFrontShoulder: { x: 42, y: 52, width: 12, height: 14 },
+    umbra: { x: 42, y: 76, width: 12, height: 18 },
+    openShoulder: { x: 42, y: 106, width: 12, height: 14 },
+  },
   wallFreeControl: { x: 270, y: 224, width: 68, height: 70 },
 };
 
@@ -123,6 +136,10 @@ export function preparePowderLightVfxFixture(simulation: SimulationBackend): voi
     paintPoint(simulation, point, Material.Sand);
   }
   simulation.paintWall(POWDER_LIGHT_VFX_AUDIT.nativeWall.x, POWDER_LIGHT_VFX_AUDIT.nativeWall.y, 1, 0);
+  const paintWall = simulation.paintWall.bind(simulation);
+  forEachPoint(POWDER_LIGHT_VFX_AUDIT.transportOccluder.wall, (point) => {
+    paintWall(point.x, point.y, 1, 0);
+  });
 }
 
 function paintRect(simulation: SimulationBackend, rect: PowderLightVfxAuditRect, material: Material): void {
@@ -139,6 +156,14 @@ function eraseRect(simulation: SimulationBackend, rect: PowderLightVfxAuditRect)
 
 function paintPoint(simulation: SimulationBackend, point: PowderLightVfxAuditPoint, material: Material): void {
   simulation.paint(point.x, point.y, material, 0);
+}
+
+function forEachPoint(
+  rect: PowderLightVfxAuditRect, visit: (point: PowderLightVfxAuditPoint) => void,
+): void {
+  for (let y = rect.y; y < rect.y + rect.height; y++) {
+    for (let x = rect.x; x < rect.x + rect.width; x++) visit({ x, y });
+  }
 }
 
 function buildWetSandPoints(x: number, y: number, width: number, height: number): readonly PowderLightVfxAuditPoint[] {
