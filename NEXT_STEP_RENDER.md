@@ -6694,6 +6694,18 @@ pass. This is a framework-authoring change, not a visual experiment, so the
 existing thermal WebGL capture plus the canonical release review provide the
 appropriate visual evidence.
 
+That release gate is complete. The manifest checkpoint is live at exact
+revision `d46029f63ab3f6f307f5c93edc5acc3970fee91b` through workflow run
+`31632838833`. The 3m56s build restored ccache with 269/270 compiler hits and
+verified the exact 19-resource closure. Canonical stable-v1 review passed all
+eight candidates in 5m34s through one shared host, eight isolated contexts and
+targets, zero restarts, and portable reconstruction of all 257 regions. Fresh
+encoded result IDs changed and are intentionally current-only review evidence,
+not cross-revision gates. Pages deployed in 11s, and the 1m23s live gate matched
+the exact revision and resource closure on its first attempt before passing the
+hosted Water WebGL receipt-v2 package. Continue with reusable measurement
+leverage; do not weaken the explicit typed fixture-preparer authority boundary.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

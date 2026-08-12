@@ -230,6 +230,19 @@ all 257 current regions, and frozen capture/result identities remain unchanged.
 Local validation passes typecheck, 1,556 source tests, 359 tooling tests,
 production build, and exact 19-resource closure.
 
+The declared-atlas manifest checkpoint is deployed at exact revision
+`d46029f63ab3f6f307f5c93edc5acc3970fee91b` by workflow run `31632838833`.
+The 3m56s build restored ccache, reported 269/270 compiler hits, saved it only
+after success, and verified the exact 19-resource closure. Canonical stable-v1
+review passed eight-for-eight in 5m34s with one shared host, eight fresh
+contexts/targets, zero restarts, and portable reconstruction of all 257 regions.
+Fresh encoded result IDs changed and remain current-only review evidence, not
+historical requirements. Pages deployed in 11s; the 1m23s live gate matched the
+exact revision and 19-resource closure on its first attempt, then passed the
+hosted Water WebGL receipt-v2 package and portable verifier. Continue toward
+reusable measurement leverage while keeping the explicit typed preparer
+boundary intact.
+
 The next retained material-class framework checkpoint is exact revision
 `d5ceedf940dfea3d1a194a6b8fff5ae4c3557bd2`. `RenderOptics.MetallicRigid`
 is appended as stable byte class `20`; no historical class ID moved. Only the
