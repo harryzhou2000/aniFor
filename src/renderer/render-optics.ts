@@ -22,9 +22,11 @@ export const enum RenderOptics {
   MetallicLiquid = 17,
   ViscousLiquid = 18,
   Cellular = 19,
+  /** Opaque rigid metals: polished transport without granular or liquid topology. */
+  MetallicRigid = 20,
 }
 
-export const RENDER_OPTICS_CLASS_COUNT = 20;
+export const RENDER_OPTICS_CLASS_COUNT = 21;
 
 /** Powder-like roughness classes that share topology but not material response. */
 export function isGranularOptics(optics: number): boolean {
@@ -88,6 +90,13 @@ export function renderOptics(material: RenderOpticsMaterial): RenderOptics {
     case Material.QRTZ:
     case Material.RIME:
       return RenderOptics.TranslucentRigid;
+    case Material.Metal:
+    case Material.BMTL:
+    case Material.GOLD:
+    case Material.IRON:
+    case Material.PTNM:
+    case Material.TTAN:
+      return RenderOptics.MetallicRigid;
     case Material.Salt:
     case Material.Snow:
     case Material.Quartz:

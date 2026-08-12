@@ -27,6 +27,8 @@ const KEY = new Float32Array([
   0.62, 0.90, 1.00, // CryogenicLiquid (defensive; matter callers exclude liquids)
   1.00, 0.98, 0.94, // MetallicLiquid
   0.82, 0.92, 1.00, // ViscousLiquid
+  0.00, 0.00, 0.00, // Cellular retains its historical zero-filled slot
+  0.76, 0.91, 1.00, // MetallicRigid inherits SmoothRigid in permissive Canvas
 ]);
 
 const SHADOW = new Float32Array([
@@ -49,6 +51,8 @@ const SHADOW = new Float32Array([
   0.78, 0.86, 1.00,
   0.58, 0.62, 0.70,
   0.70, 0.64, 0.58,
+  0.00, 0.00, 0.00,
+  0.95, 0.72, 0.44,
 ]);
 
 /** Signed analytic key/fill response; dense cores and empty support are exact no-ops. */
@@ -68,7 +72,8 @@ export function canvasSurfaceChromaResponse(
     (gradientX * LIGHT_X + gradientY * LIGHT_Y) / Math.sqrt(gradientLengthSquared),
   ));
   const familyGain = optics === RenderOptics.TranslucentRigid ? 1
-    : optics === RenderOptics.SmoothRigid || optics === RenderOptics.Cellular ? 0.94
+    : optics === RenderOptics.SmoothRigid || optics === RenderOptics.Cellular
+      || optics === RenderOptics.MetallicRigid ? 0.94
     : optics === RenderOptics.Device ? 0.90
     : optics === RenderOptics.Radioactive ? 0.86
     : optics === RenderOptics.Organic ? 0.82

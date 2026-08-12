@@ -93,6 +93,7 @@ export function canvasSolidBodyFieldExposure(
   let familyExposure = 0.34;
   let reliefStrength = 6.5;
   if (optics === RenderOptics.SmoothRigid || optics === RenderOptics.Cellular
+    || optics === RenderOptics.MetallicRigid
     || profile === RenderProfile.Rigid) {
     familyExposure = 0.42; reliefStrength = 7;
   }

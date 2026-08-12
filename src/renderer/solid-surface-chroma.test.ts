@@ -15,6 +15,18 @@ describe('solid surface chroma', () => {
     expect(canvasSurfaceChromaResponse(0.5, 0, 0, RenderOptics.SmoothRigid)).toBe(0);
   });
 
+  it('keeps permissive Canvas metallic rigid chroma aligned with SmoothRigid', () => {
+    for (const [density, gradientX, gradientY] of [
+      [0.5, 0.4, 0.5], [0.5, -0.4, -0.5], [0.2, 0.8, -0.3],
+    ]) {
+      expect(canvasSurfaceChromaResponse(
+        density, gradientX, gradientY, RenderOptics.MetallicRigid,
+      )).toBe(canvasSurfaceChromaResponse(
+        density, gradientX, gradientY, RenderOptics.SmoothRigid,
+      ));
+    }
+  });
+
   it('uses bounded family-coloured key and fill without touching alpha', () => {
     const baseline = new Uint8ClampedArray([92, 112, 132, 173]);
     const device = baseline.slice();

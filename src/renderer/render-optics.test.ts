@@ -31,6 +31,7 @@ describe('render optics', () => {
       RenderOptics.MetallicLiquid,
       RenderOptics.ViscousLiquid,
       RenderOptics.Cellular,
+      RenderOptics.MetallicRigid,
     ]).toEqual(Array.from({ length: RENDER_OPTICS_CLASS_COUNT }, (_, index) => index));
   });
 
@@ -76,6 +77,12 @@ describe('render optics', () => {
     expect(optics(Material.SING)).toBe(RenderOptics.SootyGranular);
     expect(optics(Material.THDR)).toBe(RenderOptics.RoughGranular);
     expect(optics(Material.Wall)).toBe(RenderOptics.SmoothRigid);
+    for (const metal of [
+      Material.Metal, Material.BMTL, Material.GOLD,
+      Material.IRON, Material.PTNM, Material.TTAN,
+    ]) expect(optics(metal)).toBe(RenderOptics.MetallicRigid);
+    expect(optics(Material.HEAC)).toBe(RenderOptics.SmoothRigid);
+    expect(optics(Material.TUNG)).toBe(RenderOptics.Device);
     expect(optics(Material.LIFE_GOL)).toBe(RenderOptics.Cellular);
     expect(optics(Material.Plant)).toBe(RenderOptics.Organic);
     expect(optics(Material.SPRK)).toBe(RenderOptics.Device);

@@ -588,7 +588,7 @@ float thermalEightXOpticsGain(float optics) {
   if (optics == 14.0) return 0.62;
   if (optics == 15.0) return 0.90;
   if (optics == 7.0) return 0.72;
-  if (optics == 8.0 || optics == 19.0) return 1.0;
+  if (optics == 8.0 || optics == 19.0 || optics == 20.0) return 1.0;
   if (optics == 9.0) return 0.88;
   if (optics == 10.0) return 1.08;
   if (optics == 11.0) return 0.92;
@@ -1713,7 +1713,7 @@ bool solidEightXGranular(float optics) {
 }
 float solidEightXCurvatureGain(float optics) {
   if (solidEightXGranular(optics)) return 0.0;
-  if (optics == 8.0 || optics == 19.0) return 1.25;
+  if (optics == 8.0 || optics == 19.0 || optics == 20.0) return 1.25;
   if (optics == 10.0) return 0.82;
   if (optics == 11.0) return 0.70;
   if (optics == 12.0) return 0.62;
@@ -1722,7 +1722,7 @@ float solidEightXCurvatureGain(float optics) {
 }
 float solidEightXShellSpecularGain(float optics) {
   if (solidEightXGranular(optics)) return 0.0;
-  if (optics == 8.0 || optics == 19.0) return 1.00;
+  if (optics == 8.0 || optics == 19.0 || optics == 20.0) return 1.00;
   if (optics == 10.0) return 0.76;
   if (optics == 12.0) return 0.82;
   if (optics == 11.0) return 0.62;
@@ -1730,7 +1730,7 @@ float solidEightXShellSpecularGain(float optics) {
   return 0.54;
 }
 vec3 solidEightXBodyKey(float optics) {
-  if (optics == 8.0 || optics == 19.0) return vec3(0.3704, 0.6667, 1.0000);
+  if (optics == 8.0 || optics == 19.0 || optics == 20.0) return vec3(0.3704, 0.6667, 1.0000);
   if (optics == 9.0) return vec3(0.5417, 1.0000, 0.4583);
   if (optics == 10.0) return vec3(0.2424, 0.6970, 1.0000);
   if (optics == 11.0) return vec3(0.2414, 1.0000, 0.4828);
@@ -1738,7 +1738,7 @@ vec3 solidEightXBodyKey(float optics) {
   return vec3(0.8000, 0.9000, 1.0000);
 }
 vec3 solidEightXBodyShadow(float optics) {
-  if (optics == 8.0 || optics == 19.0) return vec3(0.94, 0.84, 0.70);
+  if (optics == 8.0 || optics == 19.0 || optics == 20.0) return vec3(0.94, 0.84, 0.70);
   if (optics == 9.0) return vec3(0.94, 0.72, 0.96);
   if (optics == 10.0) return vec3(1.00, 0.84, 0.62);
   if (optics == 11.0) return vec3(0.96, 0.62, 0.92);
@@ -2375,7 +2375,7 @@ void main() {
       float depthT = smoothstep(6.0 / 255.0, 42.0 / 255.0, depth);
       float linearThickness = clamp((depth * 255.0 - 6.0) / 249.0, 0.0, 1.0);
       float shapedThickness = linearThickness * (1.4 - linearThickness * 0.4);
-      float thicknessGain = optics == 8.0 || optics == 19.0 ? 23.0
+      float thicknessGain = optics == 8.0 || optics == 19.0 || optics == 20.0 ? 23.0
         : optics == 9.0 ? 18.0 : optics == 10.0 ? 25.0
           : optics == 11.0 ? 21.0 : optics == 12.0 ? 13.0 : 16.0;
       vec2 bodyAxis = optics == 9.0 ? vec2(1.0, 4.0)
@@ -3631,7 +3631,7 @@ float surfaceLightGain(float profile) {
 }
 vec3 surfaceChromaKey(float optics) {
   if (optics == 7.0) return vec3(1.00, 0.82, 0.56);
-  if (optics == 8.0 || optics == 19.0) return vec3(0.76, 0.91, 1.00);
+  if (optics == 8.0 || optics == 19.0 || optics == 20.0) return vec3(0.76, 0.91, 1.00);
   if (optics == 9.0) return vec3(0.82, 1.00, 0.66);
   if (optics == 10.0) return vec3(0.60, 0.88, 1.00);
   if (optics == 11.0) return vec3(0.62, 1.00, 0.72);
@@ -3643,7 +3643,7 @@ vec3 surfaceChromaKey(float optics) {
 }
 vec3 surfaceChromaShadow(float optics) {
   if (optics == 7.0) return vec3(0.72, 0.62, 0.50);
-  if (optics == 8.0 || optics == 19.0) return vec3(0.95, 0.72, 0.44);
+  if (optics == 8.0 || optics == 19.0 || optics == 20.0) return vec3(0.95, 0.72, 0.44);
   if (optics == 9.0) return vec3(0.78, 0.66, 0.45);
   if (optics == 10.0) return vec3(0.96, 0.70, 0.38);
   if (optics == 11.0) return vec3(0.74, 0.62, 0.42);
@@ -3663,7 +3663,7 @@ float surfaceChromaResponse(float density, vec2 gradient, float optics) {
     : (optics == 14.0 ? 0.58
     : (optics == 15.0 ? 1.0
     : (optics == 12.0 ? 1.0
-    : (optics == 8.0 || optics == 19.0 ? 0.94
+    : (optics == 8.0 || optics == 19.0 || optics == 20.0 ? 0.94
     : (optics == 10.0 ? 0.90
     : (optics == 11.0 ? 0.86
     : (optics == 9.0 ? 0.82
@@ -4356,7 +4356,7 @@ float thermalOpticsGain(float optics) {
   if (optics == 14.0) return 0.62;
   if (optics == 15.0) return 0.90;
   if (optics == 7.0) return 0.72;
-  if (optics == 8.0 || optics == 19.0) return 1.0;
+  if (optics == 8.0 || optics == 19.0 || optics == 20.0) return 1.0;
   if (optics == 9.0) return 0.88;
   if (optics == 10.0) return 1.08;
   if (optics == 11.0) return 0.92;
@@ -5824,7 +5824,7 @@ float triangleWave(float value, float period) {
 }
 vec3 solidReliefParameters(float optics, float profile) {
   if (granularOptics(optics) > 0.5 || profile == 1.0) return vec3(0.0);
-  if (optics == 8.0 || optics == 19.0) return vec3(2.0, 1.0, 7.0);
+  if (optics == 8.0 || optics == 19.0 || optics == 20.0) return vec3(2.0, 1.0, 7.0);
   if (optics == 9.0) return vec3(1.0, 4.0, 6.0);
   if (optics == 10.0) return vec3(4.0, 0.0, 4.5);
   if (optics == 11.0) return vec3(3.0, -2.0, 5.5);
@@ -5836,7 +5836,7 @@ vec3 solidReliefParameters(float optics, float profile) {
   return vec3(2.0, 1.0, 6.5);
 }
 vec3 solidBodyMacroKey(float optics) {
-  if (optics == 8.0 || optics == 19.0) return vec3(0.3704, 0.6667, 1.0);
+  if (optics == 8.0 || optics == 19.0 || optics == 20.0) return vec3(0.3704, 0.6667, 1.0);
   if (optics == 9.0) return vec3(0.5417, 1.0, 0.4583);
   if (optics == 10.0) return vec3(0.2424, 0.6970, 1.0);
   if (optics == 11.0) return vec3(0.2414, 1.0, 0.4828);
@@ -5844,7 +5844,7 @@ vec3 solidBodyMacroKey(float optics) {
   return vec3(0.80, 0.90, 1.0);
 }
 vec3 solidBodyMacroShadow(float optics) {
-  if (optics == 8.0 || optics == 19.0) return vec3(0.94, 0.84, 0.70);
+  if (optics == 8.0 || optics == 19.0 || optics == 20.0) return vec3(0.94, 0.84, 0.70);
   if (optics == 9.0) return vec3(0.94, 0.72, 0.96);
   if (optics == 10.0) return vec3(1.00, 0.84, 0.62);
   if (optics == 11.0) return vec3(0.96, 0.62, 0.92);
@@ -5852,7 +5852,7 @@ vec3 solidBodyMacroShadow(float optics) {
   return vec3(0.88, 0.80, 0.68);
 }
 float solidBodyMacroGain(float optics) {
-  if (optics == 8.0 || optics == 19.0 || optics == 11.0) return 9.36 / 255.0;
+  if (optics == 8.0 || optics == 19.0 || optics == 20.0 || optics == 11.0) return 9.36 / 255.0;
   if (optics == 9.0) return 8.10 / 255.0;
   if (optics == 10.0 || optics == 12.0) return 10.0 / 255.0;
   return 7.40 / 255.0;
@@ -5862,7 +5862,7 @@ float solidBodyFieldExposure(
 ) {
   float familyExposure = 0.34;
   float reliefStrength = 6.5;
-  if (optics == 8.0 || optics == 19.0 || profile == 2.0) {
+  if (optics == 8.0 || optics == 19.0 || optics == 20.0 || profile == 2.0) {
     familyExposure = 0.42; reliefStrength = 7.0;
   }
   if (optics == 9.0 || profile == 3.0) {
@@ -5891,7 +5891,7 @@ float solidBodyFieldTraitEligibility(float traits) {
   return 1.0 - step(0.5, blocked);
 }
 float solidInteriorMicroGain(float optics, float profile) {
-  if (optics == 8.0 || optics == 19.0 || (optics < 0.5 && profile == 2.0)) return 0.54;
+  if (optics == 8.0 || optics == 19.0 || optics == 20.0 || (optics < 0.5 && profile == 2.0)) return 0.54;
   if (optics == 9.0 || (optics < 0.5 && profile == 3.0)) return 0.70;
   if (optics == 10.0 || (optics < 0.5 && profile == 5.0)) return 0.56;
   if (optics == 11.0 || (optics < 0.5 && profile == 4.0)) return 0.74;
@@ -5908,7 +5908,7 @@ float solidDeepInteriorMicroGain(float optics, float profile) {
   // variation after their depth/crown pass. This is deliberately below the
   // normal interior gain, so it adds body character without restoring a
   // cell-grid overlay or touching density, alpha, or topology.
-  if (optics == 8.0 || optics == 19.0 || (optics < 0.5 && profile == 2.0)) return 0.34;
+  if (optics == 8.0 || optics == 19.0 || optics == 20.0 || (optics < 0.5 && profile == 2.0)) return 0.34;
   if (optics == 9.0 || (optics < 0.5 && profile == 3.0)) return 0.44;
   if (optics == 10.0 || (optics < 0.5 && profile == 5.0)) return 0.30;
   if (optics == 11.0 || (optics < 0.5 && profile == 4.0)) return 0.50;
@@ -5920,7 +5920,7 @@ float solidCurvatureGain(float optics, float profile) {
   // Runtime WebGL samples the curve at a different composed footprint from the
   // fixed Canvas contour tiles. The small rigid-only calibration keeps the
   // measured convex/concave response inside the paired visual contract.
-  if (optics == 8.0 || optics == 19.0 || profile == 2.0) return 1.25;
+  if (optics == 8.0 || optics == 19.0 || optics == 20.0 || profile == 2.0) return 1.25;
   if (optics == 10.0 || profile == 5.0) return 0.82;
   if (optics == 11.0 || profile == 4.0) return 0.70;
   if (optics == 12.0) return 0.62;
@@ -8414,7 +8414,8 @@ void main() {
     // move the first composed edge crossing from one slope column to another.
     float powderContourTextureRetention = 1.0;
     float roughSurface = granularOptics(optics);
-    float smoothSurface = optics == 8.0 || optics == 19.0 ? 1.0 : 0.0;
+    float metallicSurface = optics == 20.0 ? 1.0 : 0.0;
+    float smoothSurface = optics == 8.0 || optics == 19.0 || optics == 20.0 ? 1.0 : 0.0;
     float organicSurface = optics == 9.0 ? 1.0 : 0.0;
     float deviceSurface = optics == 10.0 ? 1.0 : 0.0;
     float radioactiveSurface = optics == 11.0 ? 1.0 : 0.0;
@@ -8468,7 +8469,7 @@ void main() {
       float shapedThickness = linearThickness * (1.4 - linearThickness * 0.4);
       float thicknessGain = 16.0;
       vec3 thicknessAbsorption = vec3(0.88, 0.80, 0.68);
-      if (optics == 8.0 || optics == 19.0) {
+      if (optics == 8.0 || optics == 19.0 || optics == 20.0) {
         thicknessGain = 23.0;
         thicknessAbsorption = vec3(0.94, 0.84, 0.70);
       } else if (optics == 9.0) {
@@ -8688,7 +8689,7 @@ void main() {
     // sole admission boundary; the helper changes RGB only and compact 8x has
     // no live material-lighting variant.
     float solidLightingFamily = max(
-      max(optics == 8.0 ? 1.0 : 0.0, organicSurface),
+      max(max(optics == 8.0 ? 1.0 : 0.0, metallicSurface), organicSurface),
       max(max(deviceSurface, radioactiveSurface), translucentSurface)
     );
     if (family == 0.0 && surfaceOnly < 0.5 && halo < 0.5
@@ -11102,7 +11103,8 @@ void main() {
     // cards instead of inheriting an unmeasured cool-key response.
     bool solidBodyOwner = material == 23.0 || material == 78.0;
     if (uSolidBodyVfx > 0.5 && solidBodyOwner
-      && family == 0.0 && optics == 8.0 && !materialEmissive && traits < 0.5
+      && family == 0.0 && (optics == 8.0 || optics == 20.0)
+      && !materialEmissive && traits < 0.5
       && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
       && wallOnly < 0.5 && emissionOnly < 0.5
       && granularSurface < 0.5 && translucentSurface < 0.5
@@ -11213,7 +11215,7 @@ void main() {
     // reconstructed support byte-identical. This changes RGB only and adds no
     // sample, texture, field, target, time term, or compact true-8x branch.
     if (uPlatinumBodyVfx > 0.5 && material == 75.0
-      && family == 0.0 && profile == 2.0 && optics == 8.0
+      && family == 0.0 && profile == 2.0 && optics == 20.0
       && !materialEmissive && traits < 0.5
       && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
       && wallOnly < 0.5 && emissionOnly < 0.5
@@ -12070,7 +12072,7 @@ void main() {
       // interior proof; alpha, support, ownership, state, topology, physics,
       // and every compact-8x resource remain unchanged.
       if (uPhotonMetalIrradianceVfx > 0.5 && uSolidBodyVfx > 0.5
-        && material == 23.0 && family == 0.0 && profile == 2.0 && optics == 8.0
+        && material == 23.0 && family == 0.0 && profile == 2.0 && optics == 20.0
         && traits < 0.5 && !materialEmissive
         && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
         && wallOnly < 0.5 && emissionOnly < 0.5

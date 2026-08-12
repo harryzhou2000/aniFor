@@ -1349,7 +1349,7 @@ describe('Pixi presenter startup configuration', () => {
       expect(e18).not.toContain(`material == ${protectedOwner}`);
     }
     expect(e18).toContain('profile == 2.0');
-    expect(e18).toContain('optics == 8.0');
+    expect(e18).toContain('optics == 20.0');
     expect(e18).toContain('surfaceOnly < 0.5');
     expect(e18).toContain('halo < 0.5');
     expect(e18).toContain('wall < 0.5');
@@ -3843,7 +3843,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(canvasSource).not.toContain('resolvePhotonMetalIrradianceVfxEnabled');
     for (const guard of [
       'uPhotonMetalIrradianceVfx > 0.5', 'uSolidBodyVfx > 0.5',
-      'material == 23.0', 'family == 0.0', 'profile == 2.0', 'optics == 8.0',
+      'material == 23.0', 'family == 0.0', 'profile == 2.0', 'optics == 20.0',
       'traits < 0.5', '!materialEmissive', 'surfaceOnly < 0.5', 'halo < 0.5',
       'wall < 0.5', 'wallOnly < 0.5', 'emissionOnly < 0.5',
       'uSolidOpticalDepth > 0.5', 'solidOpticalDepth > 6.0 / 255.0',
@@ -6721,7 +6721,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(blockEnd).toBeGreaterThan(blockStart);
     expect(eight).toContain('uniform float uSolidCurvatureDepth;');
     expect(helper).toContain('if (solidEightXGranular(optics)) return 0.0;');
-    expect(helper).toContain('if (optics == 8.0 || optics == 19.0) return 1.25;');
+    expect(helper).toContain('if (optics == 8.0 || optics == 19.0 || optics == 20.0) return 1.25;');
     expect(block).toContain('uSolidCurvatureDepth > 0.5 && !materialEmissive');
     expect(block).toContain('vec2 hermite = blend * blend * (3.0 - 2.0 * blend);');
     expect(block).toContain('vec2 hermiteSlope = 6.0 * blend * (1.0 - blend);');
@@ -8639,9 +8639,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(start).toBeGreaterThan(0);
     expect(end).toBeGreaterThan(start);
     expect(source).toContain('uniform float uCellularMaterialStyling;');
-    expect(source).toContain('float smoothSurface = optics == 8.0 || optics == 19.0 ? 1.0 : 0.0;');
-    expect(source).toContain('if (optics == 8.0 || optics == 19.0) return vec3(2.0, 1.0, 7.0);');
-    expect(source).toContain('if (optics == 8.0 || optics == 19.0) {\n        thicknessGain = 23.0;');
+    expect(source).toContain('float smoothSurface = optics == 8.0 || optics == 19.0 || optics == 20.0 ? 1.0 : 0.0;');
+    expect(source).toContain('if (optics == 8.0 || optics == 19.0 || optics == 20.0) return vec3(2.0, 1.0, 7.0);');
+    expect(source).toContain('if (optics == 8.0 || optics == 19.0 || optics == 20.0) {\n        thicknessGain = 23.0;');
     expect(cellularBlock).toContain('uCellularMaterialStyling > 0.5 && surfaceOnly < 0.5');
     expect(cellularBlock).toContain('float junctionCoordinate = motif < 0.5');
     expect(cellularBlock).toContain('float junction = step(18.5, cellularRadiusSquared)');

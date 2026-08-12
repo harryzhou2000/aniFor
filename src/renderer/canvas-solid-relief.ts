@@ -49,7 +49,8 @@ for (let index = 0; index < OPTICS_PROFILE_COUNT; index++) {
     bodyDepth = 4; bodyRelief = 0.20; bodySpecular = 0.35; bodyEdge = 0.50;
     tintRed = 0.90; tintGreen = 0.90; tintBlue = 0.85;
     bodyThickness = 10; absorbRed = 0.82; absorbGreen = 0.78; absorbBlue = 0.72;
-  } else if (optics === RenderOptics.SmoothRigid || optics === RenderOptics.Cellular) {
+  } else if (optics === RenderOptics.SmoothRigid || optics === RenderOptics.Cellular
+    || optics === RenderOptics.MetallicRigid) {
     axisX = 2; axisY = 1; strength = 7.0; cohesion = 0.46;
     // Preserve a restrained amount of the already-authored material cadence
     // in a genuinely thick rigid core. The old 78% pull toward canonical
@@ -209,7 +210,8 @@ export function applyCanvasSolidContourFresnelRim(
   const normalZ = 1 / Math.sqrt(1 + gradientLengthSquared * 0.90);
   const fresnel = (1 - normalZ) * (1 - normalZ);
   const gain = optics === RenderOptics.TranslucentRigid ? 0.19
-    : optics === RenderOptics.SmoothRigid || optics === RenderOptics.Cellular ? 0.17
+    : optics === RenderOptics.SmoothRigid || optics === RenderOptics.Cellular
+      || optics === RenderOptics.MetallicRigid ? 0.17
     : optics === RenderOptics.Device ? 0.16
     : optics === RenderOptics.Radioactive ? 0.14
     : optics === RenderOptics.Organic ? 0.12 : 0.11;
@@ -224,7 +226,8 @@ export function applyCanvasSolidContourFresnelRim(
   let red = 0.50;
   let green = 0.68;
   let blue = 0.90;
-  if (optics === RenderOptics.SmoothRigid || optics === RenderOptics.Cellular) {
+  if (optics === RenderOptics.SmoothRigid || optics === RenderOptics.Cellular
+    || optics === RenderOptics.MetallicRigid) {
     red = 0.46; green = 0.80; blue = 1;
   } else if (optics === RenderOptics.Organic) {
     red = 0.56; green = 0.82; blue = 0.48;

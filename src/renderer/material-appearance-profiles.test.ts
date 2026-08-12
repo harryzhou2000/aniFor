@@ -79,6 +79,7 @@ describe('material appearance profiles', () => {
     expect(first).toContain('if (abs(optics - 10.0) < 0.5) return MaterialBodyFinishResponse(vec4(1.12, 1.5, 1.04, 0.5), 0.88);');
     expect(first).toContain('if (abs(optics - 11.0) < 0.5) return MaterialBodyFinishResponse(vec4(0.98, 1.24, 1.1, 0.8), 1.04);');
     expect(first).toContain('if (abs(optics - 12.0) < 0.5) return MaterialBodyFinishResponse(vec4(1.34, 0.82, 0.84, 1.42), 0.76);');
+    expect(first).toContain('if (abs(optics - 20.0) < 0.5) return MaterialBodyFinishResponse(vec4(1.42, 1.08, 1.12, 0.56), 0.62);');
     expect(first).toContain('if (enabled < 0.5 || optics < 0.5) return MaterialBodyFinishResponse(vec4(1.0), 1.0);');
     expect(first).not.toContain('Material.');
   });
@@ -96,6 +97,8 @@ describe('material appearance profiles', () => {
       .toBeLessThan(1);
     expect(MATERIAL_APPEARANCE_PROFILES.solid.overrides[RenderOptics.TranslucentRigid]?.[4])
       .toBeLessThan(1);
+    expect(MATERIAL_APPEARANCE_PROFILES.solid.overrides[RenderOptics.MetallicRigid]?.[4])
+      .toBeLessThan(MATERIAL_APPEARANCE_PROFILES.solid.overrides[RenderOptics.SmoothRigid]![4]);
   });
 
   it('resolves the same frozen phase override or fallback without allocating', () => {
@@ -113,5 +116,7 @@ describe('material appearance profiles', () => {
       .toBe(MATERIAL_APPEARANCE_PROFILES.solid.overrides[RenderOptics.TranslucentRigid]);
     expect(resolveMaterialAppearanceProfile('solid', RenderOptics.Device))
       .toBe(MATERIAL_APPEARANCE_PROFILES.solid.overrides[RenderOptics.Device]);
+    expect(resolveMaterialAppearanceProfile('solid', RenderOptics.MetallicRigid))
+      .toBe(MATERIAL_APPEARANCE_PROFILES.solid.overrides[RenderOptics.MetallicRigid]);
   });
 });
