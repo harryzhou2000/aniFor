@@ -1079,6 +1079,32 @@ passed after a correct host recycle. Preserve every semantic, field-alpha,
 framebuffer-alpha, repeated-snapshot, strict-disposal, and portable-package
 proof; this changes only the allowed transport/convergence clock.
 
+The first readback-leverage increment is deployed at exact revision
+`0a6f6dbd609efd31beee5371627a2262f973592d` by workflow run
+`31574958175`. Every complete evidence transaction still performs the same
+semantic digest, authoritative field-alpha walk, full default-framebuffer
+`gl.readPixels`, exact alpha digest, and stable-v1 repetition. The only change
+is a candidate-page-owned, exact-length `Uint8Array` scratch buffer: canonical
+2x geometry reuses 3,774,528 bytes instead of allocating and zero-filling that
+storage on every transaction. Stable-v1 therefore removes at least 26,421,696
+bytes of transient allocation per candidate while retaining the complete
+same-frame evidence shape and candidate-page disposal boundary.
+
+The real atmosphere performance runner passed its fixed
+fresh/shared/shared/fresh order with both candidates portable-verified and
+result-identical across all four legs. Each shared leg used one host for both
+candidates with zero restart; each fresh leg retained two independent browsers.
+Readiness and Off/A/B readback timings remained consistent across the paired
+host modes, establishing lifecycle and evidence neutrality; this is directional
+local SwiftShader evidence, not a machine-independent speed threshold. The
+canonical build passed 1,529 source and 344 tooling tests with 269/270 ccache
+hits. Its seven-candidate shared-host review passed seven-for-seven and portable
+verification, Pages deployed in 10 seconds, exact live closure passed all 19
+resources on attempt one, and a fresh hosted Water package verified against the
+exact deployed revision. The next capture-performance step must bulk-read the
+authoritative field through one typed audit bridge while preserving the exact
+field digest grammar; it must not delete proof or split the atomic transaction.
+
 Revision `813066c81735da2e9b2752c9ddff276cc1c8f0da` deployed the retained
 profile sheen through workflow run `31528453927`. The ccache-backed build,
 two-candidate stable-snapshot review, downloaded-package verification, Pages
