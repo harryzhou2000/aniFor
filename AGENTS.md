@@ -66,6 +66,15 @@ Direct inspection favored the established Smooth curved bulk boundary while
 Local/Grains retained the square-cell reference and fine topology. This is
 current visual evidence, not a hash pin or cross-revision baseline.
 
+This Powder-style cross-driver checkpoint is deployed at exact revision
+`4d088a86c2d335cb92d8d39be54fa017bff13308` by workflow run
+`31618880351`. The 3m37s build restored the preceding cache, reported 269/270
+compiler hits, and saved the new success-only ccache. The production-artifact
+Powder review and downloaded portable verification passed in 1m35s with one
+candidate and all sixteen regions. Pages deployed in 10s. The 1m42s live gate
+matched the exact revision and 19-resource closure on its first attempt, then
+passed the hosted Water WebGL package and bounded success evidence.
+
 The next retained material-class framework checkpoint is exact revision
 `d5ceedf940dfea3d1a194a6b8fff5ae4c3557bd2`. `RenderOptics.MetallicRigid`
 is appended as stable byte class `20`; no historical class ID moved. Only the

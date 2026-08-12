@@ -6513,6 +6513,16 @@ structures, isolated grains, hole, wet contact, wall block, and blank remained
 inspectable. Treat this as current loose visual evidence, not an exact visual
 pin.
 
+This Powder-style cross-driver checkpoint is deployed at exact revision
+`4d088a86c2d335cb92d8d39be54fa017bff13308` by workflow run
+`31618880351`. The 3m37s build restored ccache, reported 269/270 compiler hits,
+and saved it only after success. The production-artifact Powder review and
+downloaded portable verification passed in 1m35s with all sixteen regions.
+Pages deployed in 10s. The 1m42s live gate matched the exact revision and
+19-resource closure on its first attempt and passed the hosted Water WebGL
+package plus bounded smoke evidence. Treat this as the production checkpoint
+for cross-driver data-only fixture and inspection authoring.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
