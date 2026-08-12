@@ -13,6 +13,7 @@ describe('material composition profiles', () => {
     for (const response of Object.values(MATERIAL_COMPOSITION_PROFILES)) {
       expect(Object.isFrozen(response)).toBe(true);
     }
+    expect(MATERIAL_COMPOSITION_PROFILES.powder.environmentTransport).toBe(0.34);
     expect(MATERIAL_COMPOSITION_PROFILES.gas).toEqual({
       bodyLighting: 1.14, profileSheen: 1.02, irradiance: 1.08,
       penetrationPath: 0.32, pigmentCoupling: 0.24, volumeScatter: 1.36,

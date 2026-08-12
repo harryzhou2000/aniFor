@@ -416,9 +416,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal.match(/applyFluidVolumeLobe\(/g)).toHaveLength(2);
     expect(eight.match(/applyFluidVolumeLobe\(/g)).toHaveLength(4);
     expect(normal.match(/uMaterialBodyFinish,\s*uMaterialLightingVariant\s*\)/g))
-      .toHaveLength(14);
+      .toHaveLength(15);
     expect(eight.match(/uMaterialBodyFinish,\s*0\.0\s*\)/g)).toHaveLength(9);
-    expect(normal.match(/applyMaterialEnvironmentTransport\(/g)).toHaveLength(3);
+    expect(normal.match(/applyMaterialEnvironmentTransport\(/g)).toHaveLength(4);
     expect(eight).not.toContain('applyMaterialEnvironmentTransport(');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'float lightingExperimentB = step(1.5, materialLightingVariant);',

@@ -11571,6 +11571,11 @@ void main() {
       density, powderLightBodyDepth, widePowderShape.yz,
       powderLightBodyGate, uMaterialBodyFinish, uMaterialLightingVariant
     );
+    color = applyMaterialEnvironmentTransport(
+      color, 0.0, powderFinishProfile.optics, powderFinishProfile.roughness,
+      density, powderLightBodyDepth, widePowderShape.yz,
+      powderLightBodyGate, uMaterialBodyFinish, uMaterialLightingVariant
+    );
   }
   // E11: Wax and genuinely hydrated PLNT carry a shallow, coloured
   // subsurface wrap through a proven broad body. The existing exact-species

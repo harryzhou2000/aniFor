@@ -378,7 +378,8 @@ vec3 applyMaterialAmbientGrounding(
 // matter cannot leak across a contact and no environment texture or pass is
 // needed. The two terms intentionally separate a shell/profile reflection from
 // a low-slope interior carry. Both are B-only RGB arithmetic in normal WebGL;
-// compact true-8x has no call site and powder's composition weight is zero.
+// compact true-8x has no call site. Powder enters only through the caller's
+// settled Smooth broad-body proof and carries the lowest phase weight.
 vec3 applyMaterialEnvironmentTransport(
   vec3 color,
   float phase,
@@ -392,7 +393,7 @@ vec3 applyMaterialEnvironmentTransport(
   float materialLightingVariant
 ) {
   if (enabled < 0.5 || materialLightingVariant < 1.5
-    || phase < 0.5 || eligibility <= 0.0001) return color;
+    || eligibility <= 0.0001) return color;
 
   float gas = step(1.5, phase) * (1.0 - step(2.5, phase));
   float solid = step(2.5, phase);
