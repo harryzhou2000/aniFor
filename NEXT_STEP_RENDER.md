@@ -6793,6 +6793,36 @@ focused appearance tests, and exact 19-resource closure. Pages deployed in 10s;
 the live gate matched the exact revision and all 19 resources on its first
 attempt, then passed the hosted Water receipt-v2 package in 1m7s.
 
+The shared solid-roughness checkpoint is live at exact revision
+`fc3d2a4f75840fdf44e1dfdd50d5f1308c627e81` through workflow run
+`31645607580`. The build passed in 3m21s, restored the pinned Powder Toy package
+cache and correctly skipped its success-only save, while retaining the exact
+19-resource closure. Canonical current-only review passed all eight candidates
+in 5m24s and the downloaded package verified. Pages deployed in 10s; the 1m37s
+live gate matched the exact revision and closure, then passed the hosted Water
+WebGL receipt-v2 capture and portable verification.
+
+The next framework checkpoint upgrades the existing additive
+`region-appearance.html` from a numeric table into a deterministic visual
+inspection surface. Each declared inspection region now shows bounded OFF/A/B
+crops directly from the package's authenticated full captures beside its luma,
+spread, and neighbour-contrast deltas. Crop geometry comes only from the
+already-verified `pixelRect`; links remain portable relative paths, images stay
+the existing pinned PNGs, and the verifier exact-rerenders the board. This adds
+no image copies, evidence schema, frozen identity, scoring, threshold, ranking,
+acceptance, or promotion authority. It makes material experiments reviewable at
+the authored response/control scale without hand-cropping full atlases.
+
+A proposed shared contact-cavity shader was explicitly rejected during this
+increment. Four real normal-WebGL captures across the material and gas atlases
+were byte-identical to the deployed solid-roughness package: the existing
+signed Hermite contact derivative and broad-body eligibility do not overlap in
+those fixtures. Do not resurrect the helper by weakening topology gates or
+claiming dormant GLSL as visual progress. A future contact/AO experiment must
+first author a stable contact carrier or fixture proof whose response is visible
+on the region crop board, while preserving Local/Grains, Canvas, and compact
+true-8x controls.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

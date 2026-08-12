@@ -45,11 +45,21 @@ hashes remain current-only evidence.
 Current-only region appearance evidence is descriptive navigation, not a
 visual gate. `region-appearance.json` may report fixed-luma spread, range, and
 neighbour contrast for declared inspection regions, and its static HTML view
-may help a human or agent compare OFF/A/B texture and edges. Never turn these
+must show portable OFF/A/B crops from the existing authenticated captures so a
+human or agent can compare texture, boundaries, and volume at authored region
+scale. Derive crop geometry only from verified `pixelRect`; do not create new
+PNGs or another identity/evidence schema. Never turn these
 values into an aesthetic score, threshold, ranking, acceptance decision,
 promotion rule, or cross-revision requirement. When the optional JSON/HTML pair
 is published, reconstruct it from pinned PNG bytes and exact-rerender it during
 portable verification; legacy packages may omit it.
+
+Do not add a shared contact-cavity shader until a stable contact carrier and
+declared fixture region overlap a broad-body proof. The first prototype compiled
+but produced byte-identical material/gas atlas captures because the existing
+Hermite contact derivative and deep-body admission are disjoint. Reject dormant
+GLSL rather than weakening topology/contact ownership or presenting it as a
+visual improvement.
 
 ## Current direction
 

@@ -1662,6 +1662,11 @@ describe('Visual Lab batch runner', () => {
     const appearanceBoard = await readFile(generated.regionAppearanceBoardPath, 'utf8');
     expect(appearanceBoard).toContain('Current region appearance');
     expect(appearanceBoard).toContain('without scoring or deciding aesthetics');
+    expect(appearanceBoard).toContain('class="crops"');
+    expect(appearanceBoard).toContain(
+      `./candidates/${candidate}/off.png`,
+    );
+    expect(appearanceBoard).toContain('clay-warm-flank off');
 
     const before = await snapshotPackageTree(outputDirectory);
     const verified = await verifyVisualLabBatchPackage({
