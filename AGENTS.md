@@ -113,9 +113,17 @@ order. Migration-only SHA-256 oracles over ordered region JSON prove exact
 pre/post record parity for Gas (18), Solid (64), and multi-metal (48); these are
 semantic authoring checks, never PNG baselines or aesthetic gates. Local proof
 passes 1,552 source and 355 permission-correct tooling tests, typecheck,
-production build, and exact 19-resource closure. The next release gate is the
-canonical material-lighting review so its downloaded package reconstructs all
-161 applicable regions from the data-only catalogs.
+production build, and exact 19-resource closure.
+
+This all-declared inspection checkpoint is deployed at exact revision
+`e2de8f2d0259daa3a7ac9a38a7eccb64dbdd1db8` by workflow run `31624088511`.
+The 3m49s build restored ccache, reported 269/270 hits, saved it only after
+success, and verified the exact 19-resource site closure. The canonical
+eight-candidate shared-host review passed eight-for-eight in 10m19s with one
+host, eight fresh contexts/targets, zero restarts, and successful downloaded-
+package reconstruction of all 161 applicable regions. Pages deployed in 10s;
+the 1m35s live gate matched the exact revision and closure on its first attempt,
+then passed the hosted Water WebGL receipt-v2 package and portable verifier.
 
 The next retained material-class framework checkpoint is exact revision
 `d5ceedf940dfea3d1a194a6b8fff5ae4c3557bd2`. `RenderOptics.MetallicRigid`

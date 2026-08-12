@@ -6577,6 +6577,17 @@ method, driver, recipe-set, cohort, CI, or frozen evidence identity changed.
 The next release gate is the canonical material-lighting review and portable
 reconstruction of all 161 applicable regions from the downloaded package.
 
+That release gate is complete. The all-declared inspection checkpoint is live
+at exact revision `e2de8f2d0259daa3a7ac9a38a7eccb64dbdd1db8` through workflow
+run `31624088511`. The 3m49s build restored ccache, reported 269/270 compiler
+hits, saved it only after success, and verified the exact 19-resource closure.
+The canonical eight-candidate shared-host review passed eight-for-eight in
+10m19s with one host, eight fresh contexts/targets, zero restarts, all 161
+applicable regions, and successful reconstruction from the downloaded package.
+Pages deployed in 10s. The 1m35s live gate matched the exact revision and
+closure on its first attempt and passed the hosted Water WebGL receipt-v2
+package plus portable verifier; its OFF/A/B async alpha readbacks were 36-44ms.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
