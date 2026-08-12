@@ -6410,6 +6410,20 @@ remained exact; small void controls intentionally expose only neighbouring
 reconstructed-field spill, not semantic ownership. Keep this as current-package
 review evidence rather than a hash pin or aesthetic verdict.
 
+This cross-phase authoring increment is deployed at exact revision
+`12ff5a3e4f8a259a38bde7b90e37c5dd15a4ca6f` by workflow run
+`31611995533`. The 3m41s build restored the project-local Emscripten and C++
+caches, reported 269/270 compilation hits, and saved the success-only ccache
+under the new revision. All eight material-lighting candidates captured on one
+sequential shared SwiftShader host and the downloaded portable package verified
+in 5m24s, including five declared-region candidates and 161 total region
+responses. Pages deployed in 45s. The 1m37s live gate then matched the exact
+revision and 19-resource closure on its first attempt and passed the hosted
+Water WebGL package, portable verification, and bounded success evidence.
+Treat this as the production checkpoint for generic declared-region authoring;
+the next fixture migration should reuse this seam rather than add another
+candidate-specific projector.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
