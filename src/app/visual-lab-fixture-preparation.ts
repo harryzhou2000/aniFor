@@ -6,6 +6,7 @@ import { prepareForceActivityGraphicsAuditFixture } from './force-activity-graph
 import { prepareLiquidMotionVfxFixture } from './liquid-motion-vfx-audit';
 import { prepareMaterialLightingAtlasFixture } from './material-lighting-atlas-fixture';
 import { prepareOilMotionVfxFixture } from './oil-motion-vfx-audit';
+import { preparePowderLightVfxFixture } from './powder-light-vfx-audit';
 import { preparePowderStyleAtlasFixture } from './powder-style-atlas-fixture';
 import { prepareSolidMaterialLightingAtlasFixture } from './solid-material-lighting-atlas-fixture';
 import { prepareSourceTargetGraphicsAuditFixture } from './source-target-graphics-audit';
@@ -58,6 +59,7 @@ const VISUAL_LAB_FIXTURE_PREPARERS = Object.freeze({
   'source-target-material-lighting-atlas': prepareSourceTargetGraphicsAuditFixture,
   'force-activity-material-lighting-atlas': prepareForceActivityGraphicsAuditFixture,
   'thermal-source-material-lighting-atlas': prepareCeramicTemperatureVfxFixture,
+  'opposed-source-material-lighting-atlas': preparePowderLightVfxFixture,
 } satisfies Record<VisualLabPreparedFixtureId, VisualLabFixturePreparer>);
 
 const REGISTERED_PREPARER_IDS = Object.keys(VISUAL_LAB_FIXTURE_PREPARERS);

@@ -7,6 +7,7 @@ import { prepareForceActivityGraphicsAuditFixture } from './force-activity-graph
 import { prepareLiquidMotionVfxFixture } from './liquid-motion-vfx-audit';
 import { prepareOilMotionVfxFixture } from './oil-motion-vfx-audit';
 import { prepareMaterialLightingAtlasFixture } from './material-lighting-atlas-fixture';
+import { preparePowderLightVfxFixture } from './powder-light-vfx-audit';
 import { preparePowderStyleAtlasFixture } from './powder-style-atlas-fixture';
 import { prepareSolidMaterialLightingAtlasFixture } from './solid-material-lighting-atlas-fixture';
 import { prepareSourceTargetGraphicsAuditFixture } from './source-target-graphics-audit';
@@ -24,6 +25,7 @@ describe('Visual Lab fixture preparation registry', () => {
       'source-target-material-lighting-atlas',
       'force-activity-material-lighting-atlas',
       'thermal-source-material-lighting-atlas',
+      'opposed-source-material-lighting-atlas',
     ]);
     expect(Object.isFrozen(VISUAL_LAB_FIXTURE_IDS)).toBe(true);
   });
@@ -35,6 +37,7 @@ describe('Visual Lab fixture preparation registry', () => {
       'source-target-material-lighting-atlas',
       'force-activity-material-lighting-atlas',
       'thermal-source-material-lighting-atlas',
+      'opposed-source-material-lighting-atlas',
     ]);
     expect(Object.isFrozen(VISUAL_LAB_PREPARED_FIXTURE_IDS)).toBe(true);
   });
@@ -49,6 +52,7 @@ describe('Visual Lab fixture preparation registry', () => {
     ['source-target-material-lighting-atlas', prepareSourceTargetGraphicsAuditFixture],
     ['force-activity-material-lighting-atlas', prepareForceActivityGraphicsAuditFixture],
     ['thermal-source-material-lighting-atlas', prepareCeramicTemperatureVfxFixture],
+    ['opposed-source-material-lighting-atlas', preparePowderLightVfxFixture],
   ] as const)('prepares %s byte-identically to its direct moving builder', (id, prepareDirect) => {
     const generic = new RenderLabBackend();
     const direct = new RenderLabBackend();

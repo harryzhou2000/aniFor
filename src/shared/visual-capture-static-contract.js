@@ -127,6 +127,14 @@ const contract = {
       preparationReportLabel: 'prepareCeramicTemperatureVfxFixture',
       requirement: '--domain=material-lighting --target=0',
     },
+    {
+      name: 'opposed-source-material-lighting-atlas',
+      scene: 'showcase',
+      driver: 'material-lighting-profile',
+      constraints: [{ domain: 'material-lighting', targets: [0] }],
+      preparationReportLabel: 'preparePowderLightVfxFixture',
+      requirement: '--domain=material-lighting --target=0',
+    },
   ],
   captureRecipes: [
     {
@@ -182,6 +190,14 @@ const contract = {
       domain: 'material-lighting',
       target: 0,
       fixture: 'thermal-source-material-lighting-atlas',
+      gain: 1,
+      renderScale: 2,
+    },
+    {
+      name: 'opposed-source-material-lighting-atlas',
+      domain: 'material-lighting',
+      target: 0,
+      fixture: 'opposed-source-material-lighting-atlas',
       gain: 1,
       renderScale: 2,
     },

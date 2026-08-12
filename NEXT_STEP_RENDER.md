@@ -163,6 +163,25 @@ after rerunning only a transient pre-DevTools Chrome-launch failure; zero host,
 context, target, or capture had been created in the failed attempt, so it was
 not renderer evidence.
 
+The next authoring-leverage increment exposes the already-tested E06 Powder
+Light scene as the declarative `opposed-source-material-lighting-atlas` fixture
+and recipe. It reuses `preparePowderLightVfxFixture`, the existing
+`material-lighting-profile` driver, emission-alpha evidence, generic typed
+preparation bridge, and ordinary portable review lifecycle. The same Sand,
+Clay, and Concrete bodies each sit between a separated warm Fire strip and cool
+ELEC strip, while authored holes, dark cores, a one-cell fine structure,
+isolated Sand, genuine Sand/Water suspension, native wall, and wall-free blank
+remain controls. No new geometry builder, browser method, renderer branch,
+driver, evidence plane, or lifecycle was added. Authoring sync derives the
+declarations and expands the tracked material-lighting cohort to seven recipes.
+The focused portable package is
+`.artifacts/visual-lab-reviews/opposed-source-material-lighting-atlas-f9b7029d-6807-41ad-84d9-4f0939c639a6`:
+WebGL/HDR OFF/A/B, exact semantic/field/framebuffer evidence, completed-frame
+receipt, fresh-browser teardown, and portable verification passed with zero
+browser errors. Direct review retained source separation, grain, voids, fine
+structure, wet suspension, wall, and blank controls. Use this board for future
+mixed-source/reversal tuning before authoring a broader cross-phase scene.
+
 The next authoring increment centralizes the capture-facing projection of the
 normal-HDR and source-stage static contracts. One pure, recursively frozen
 `anifor.visual-capture.static-catalog/v1` now owns the ordered fixture/driver

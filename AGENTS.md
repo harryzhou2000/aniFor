@@ -141,6 +141,20 @@ before DevTools with zero hosts/contexts/targets/captures and passed when only
 that failed job was rerun; treat such a pre-session launch failure as runner
 infrastructure evidence, not a renderer regression.
 
+The declarative opposed-source review now reuses the existing E06 Powder Light
+fixture under recipe `opposed-source-material-lighting-atlas`. Its retained
+portable package is
+`.artifacts/visual-lab-reviews/opposed-source-material-lighting-atlas-f9b7029d-6807-41ad-84d9-4f0939c639a6`.
+Keep its Fire/ELEC strips externally separated from the same Sand/Clay/Concrete
+bodies and preserve authored holes, dark cores, fine structure, isolated Sand,
+wet suspension, native wall, and blank controls. It uses the existing typed
+preparer, `material-lighting-profile` driver, emission-alpha evidence, and
+generic capture lifecycle; do not add another browser method, driver, or shader
+branch. WebGL/HDR OFF/A/B, completed-frame evidence, fresh teardown, and
+portable verification passed with zero browser errors. The tracked
+material-lighting cohort now contains seven recipes and the manual CI default
+must stay derived-equivalent to that current cohort.
+
 The domain-derived checkpoint launcher is deployed at revision
 `21fe52c96dd0d30152d2b2cec3a3d4b589a53630` by workflow run `31500138353`.
 Its next retained visual candidate strengthens only the shared gas

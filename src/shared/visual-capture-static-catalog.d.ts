@@ -158,6 +158,21 @@ export declare const VISUAL_CAPTURE_STATIC_CATALOG: Readonly<{
       readonly "preparationReportLabel": "prepareCeramicTemperatureVfxFixture";
       readonly "requirement": "--domain=material-lighting --target=0";
     }>,
+    Readonly<{
+      readonly "name": "opposed-source-material-lighting-atlas";
+      readonly "scene": "showcase";
+      readonly "driver": "material-lighting-profile";
+      readonly "constraints": readonly [
+        Readonly<{
+          readonly "domain": "material-lighting";
+          readonly "targets": readonly [
+            0,
+          ];
+        }>,
+      ];
+      readonly "preparationReportLabel": "preparePowderLightVfxFixture";
+      readonly "requirement": "--domain=material-lighting --target=0";
+    }>,
   ];
   readonly "captureRecipes": readonly [
     Readonly<{
@@ -245,6 +260,14 @@ export declare const VISUAL_CAPTURE_STATIC_CATALOG: Readonly<{
       readonly "domain": "material-lighting";
       readonly "target": 0;
       readonly "fixture": "thermal-source-material-lighting-atlas";
+      readonly "gain": 1;
+      readonly "renderScale": 2;
+    }>,
+    Readonly<{
+      readonly "name": "opposed-source-material-lighting-atlas";
+      readonly "domain": "material-lighting";
+      readonly "target": 0;
+      readonly "fixture": "opposed-source-material-lighting-atlas";
       readonly "gain": 1;
       readonly "renderScale": 2;
     }>,
