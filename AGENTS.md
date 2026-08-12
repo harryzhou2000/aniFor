@@ -120,6 +120,16 @@ structured controls. Direct inspection favors the retained metallic response.
 The measurements are review context only and must never become aesthetic
 thresholds or cross-revision visual requirements.
 
+That atlas-to-region framework is deployed at exact revision
+`f780627ad155e61f7dbe9dac319b8678346b8402` by workflow run `31606268563`.
+The cached build and complete 1,538-source/348-tooling test plus static-site gate
+passed in 3m31s. The eight-candidate shared-host stable-snapshot review,
+artifact round trip, generated region-response reconstruction, and portable
+verification passed in 9m17s; Pages deployed in 10s. Post-deploy exact revision
+and 19-resource closure plus the hosted Water fixture package passed in 1m33s.
+This closes the first generated inspection-authoring increment on production;
+it does not elevate additive region measurements into a deploy verdict.
+
 The four-phase analytic environment-transport increment is deployed at exact
 revision `f46ad843777c948135a59760781c57366c8922e7` by workflow run
 `31593915673`. One declarative `environmentTransport` composition lane and one

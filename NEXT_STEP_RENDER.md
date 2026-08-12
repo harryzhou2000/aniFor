@@ -6343,6 +6343,17 @@ remained inspectable. Treat those values only as current-package navigation and
 measurement context. Continue by generalizing this data-only projection to the
 next authored fixture family rather than hand-registering regions.
 
+The increment is live at exact revision
+`f780627ad155e61f7dbe9dac319b8678346b8402` through workflow run
+`31606268563`. The cached build and full 1,538-source/348-tooling test plus
+static-site gate passed in 3m31s. The complete eight-candidate shared-host
+stable-snapshot package, artifact upload/download, generated region-response
+reconstruction, and portable verification passed in 9m17s. Pages deployed in
+10s; exact revision and 19-resource closure plus the hosted Water fixture
+package passed in the 1m33s live-verification job. Treat this as the production
+checkpoint for generated atlas inspection evidence, not a visual threshold or
+baseline promotion.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
