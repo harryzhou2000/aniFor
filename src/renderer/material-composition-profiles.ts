@@ -15,6 +15,8 @@ export interface MaterialCompositionProfile {
   readonly ambientGrounding: number;
   /** Phase-wide strength of B-only shallow-to-core form; topology stays caller-owned. */
   readonly interiorContrast: number;
+  /** B-only analytic sky/ground transport; zero keeps a phase outside the response. */
+  readonly environmentTransport: number;
 }
 
 export type MaterialCompositionProfiles = Readonly<Record<
@@ -36,9 +38,11 @@ const profile = (
   bodyLighting: number, profileSheen: number, irradiance: number,
   penetrationPath: number, pigmentCoupling: number, volumeScatter: number,
   farSideShadow: number, ambientGrounding: number, interiorContrast: number,
+  environmentTransport: number,
 ): MaterialCompositionProfile => Object.freeze({
   bodyLighting, profileSheen, irradiance, penetrationPath,
   pigmentCoupling, volumeScatter, farSideShadow, ambientGrounding, interiorContrast,
+  environmentTransport,
 });
 
 /**
@@ -47,16 +51,16 @@ const profile = (
  * a clearer transmissive body, and let gases carry light through their middle.
  */
 export const MATERIAL_COMPOSITION_PROFILES: MaterialCompositionProfiles = Object.freeze({
-  powder: profile(0.94, 0.30, 0.80, 0.84, 0.58, 0.34, 0.84, 1.08, 0.90),
-  liquid: profile(1.18, 1.28, 1.16, 0.56, 0.34, 1.30, 0.74, 0.78, 1.14),
-  gas: profile(1.14, 1.02, 1.08, 0.32, 0.24, 1.36, 0.56, 0.58, 1.18),
-  solid: profile(1.10, 1.10, 0.94, 0.74, 0.44, 0.00, 0.98, 0.94, 1.00),
+  powder: profile(0.94, 0.30, 0.80, 0.84, 0.58, 0.34, 0.84, 1.08, 0.90, 0.00),
+  liquid: profile(1.18, 1.28, 1.16, 0.56, 0.34, 1.30, 0.74, 0.78, 1.14, 1.22),
+  gas: profile(1.14, 1.02, 1.08, 0.32, 0.24, 1.36, 0.56, 0.58, 1.18, 0.92),
+  solid: profile(1.10, 1.10, 0.94, 0.74, 0.44, 0.00, 0.98, 0.94, 1.00, 1.05),
 });
 
 const PROFILE_FIELDS = Object.freeze([
   'bodyLighting', 'profileSheen', 'irradiance', 'penetrationPath',
   'pigmentCoupling', 'volumeScatter', 'farSideShadow', 'ambientGrounding',
-  'interiorContrast',
+  'interiorContrast', 'environmentTransport',
 ] as const satisfies readonly (keyof MaterialCompositionProfile)[]);
 
 export function validateMaterialCompositionProfiles(

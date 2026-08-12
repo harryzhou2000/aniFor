@@ -6659,6 +6659,11 @@ void main() {
       gasShadeDensity, opticalDepth, volumeSlope, gasInterior,
       uMaterialBodyFinish, uMaterialLightingVariant
     );
+    color = applyMaterialEnvironmentTransport(
+      color, 2.0, gasFinishResponse, gasFinishProfile.roughness,
+      gasShadeDensity, opticalDepth, volumeSlope, gasInterior,
+      uMaterialBodyFinish, uMaterialLightingVariant
+    );
     // E04: turn the existing field normal and curvature into a readable
     // connected billow without inventing particle-scale noise. The shared
     // atmosphere remains the sole owner of mass, colour mixture, support, and
@@ -8385,6 +8390,11 @@ void main() {
         liquidSurfaceDensity, liquidFinishDepth, semanticSlope + volumeSlope,
         liquidFinishEligibility, uMaterialBodyFinish, uMaterialLightingVariant
       );
+      color = applyMaterialEnvironmentTransport(
+        color, 1.0, liquidFinishResponse, liquidFinishProfile.roughness,
+        liquidSurfaceDensity, liquidFinishDepth, semanticSlope + volumeSlope,
+        liquidFinishEligibility, uMaterialBodyFinish, uMaterialLightingVariant
+      );
     }
   } else {
     float powderVisualCohesion = 0.0;
@@ -8698,6 +8708,12 @@ void main() {
       color = applyMaterialAmbientGrounding(
         color, 3.0, solidFinishProfile.optics, solidFinishProfile.roughness,
         density, solidOpticalDepth, shape.yz,
+        solidInterior * solidLightingFamily, uMaterialBodyFinish,
+        uMaterialLightingVariant
+      );
+      color = applyMaterialEnvironmentTransport(
+        color, 3.0, solidFinishProfile.optics, solidFinishProfile.roughness,
+        density, solidOpticalDepth, normal.xy,
         solidInterior * solidLightingFamily, uMaterialBodyFinish,
         uMaterialLightingVariant
       );

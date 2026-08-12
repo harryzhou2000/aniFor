@@ -371,6 +371,79 @@ vec3 applyMaterialAmbientGrounding(
   return max(color, vec3(0.0));
 }
 
+// Source-independent environment transport for reconstructed transmissive
+// matter. The compositor already owns body support, optical depth, slope, and
+// contact rejection; this helper turns only those proofs into a quiet analytic
+// cool-sky/warm-ground hemisphere. It never samples scene colour, so adjacent
+// matter cannot leak across a contact and no environment texture or pass is
+// needed. The two terms intentionally separate a shell/profile reflection from
+// a low-slope interior carry. Both are B-only RGB arithmetic in normal WebGL;
+// compact true-8x has no call site and powder's composition weight is zero.
+vec3 applyMaterialEnvironmentTransport(
+  vec3 color,
+  float phase,
+  vec4 finishResponse,
+  float finishRoughness,
+  float density,
+  float depth,
+  vec2 slope,
+  float eligibility,
+  float enabled,
+  float materialLightingVariant
+) {
+  if (enabled < 0.5 || materialLightingVariant < 1.5
+    || phase < 0.5 || eligibility <= 0.0001) return color;
+
+  float gas = step(1.5, phase) * (1.0 - step(2.5, phase));
+  float solid = step(2.5, phase);
+  MaterialCompositionResponse composition = materialCompositionParameters(phase);
+  float responseWeight = composition.environmentTransport;
+  if (responseWeight <= 0.0001) return color;
+
+  float body = smoothstep(0.05 - gas * 0.04, 0.46 - gas * 0.22, density)
+    * eligibility;
+  float bodyDepth = mix(
+    clamp(depth, 0.0, 1.0),
+    smoothstep(6.0 / 255.0, 108.0 / 255.0, depth),
+    solid
+  );
+  float slopeLength = length(slope);
+  vec3 bodyNormal = normalize(vec3(-slope * 2.2, 1.0));
+  float skyFacing = clamp(
+    bodyNormal.z * 0.64 - bodyNormal.y * 0.30 + bodyNormal.x * 0.16,
+    0.0, 1.0
+  );
+  float groundFacing = clamp(
+    0.42 + bodyNormal.y * 0.42 - bodyNormal.x * 0.10,
+    0.0, 1.0
+  );
+  vec3 environmentTint = mix(
+    vec3(0.24, 0.14, 0.075), vec3(0.18, 0.42, 0.68), skyFacing
+  );
+  environmentTint += vec3(0.20, 0.095, 0.035) * groundFacing * 0.24;
+
+  float transmission = clamp((finishResponse.w - 0.50) / 1.0, 0.0, 1.0);
+  float roughness = clamp((finishRoughness - 0.5) / 1.0, 0.0, 1.0);
+  float shell = body * (1.0 - smoothstep(0.28, 0.82, bodyDepth));
+  float horizon = pow(1.0 - clamp(bodyNormal.z, 0.0, 1.0), mix(3.2, 1.15, roughness));
+  float shellTransport = shell * finishResponse.x
+    * mix(0.22, 1.0, transmission)
+    * (0.012 + horizon * mix(0.080, 0.040, roughness));
+
+  float quietInterior = body * smoothstep(0.20, 0.76, bodyDepth)
+    * (1.0 - smoothstep(0.025, 0.20, slopeLength));
+  float bodyCarry = quietInterior * finishResponse.w
+    * mix(0.18, 1.0, transmission) * (0.006 + skyFacing * 0.012);
+  float transport = responseWeight * (shellTransport + bodyCarry);
+
+  float identityPeak = max(max(color.r, color.g), max(color.b, 0.12));
+  vec3 identityTint = clamp(color / identityPeak, 0.0, 1.0);
+  vec3 transportTint = mix(environmentTint, identityTint, 0.28 + roughness * 0.18);
+  color += (vec3(1.10) - clamp(color, 0.0, 1.10))
+    * transportTint * transport;
+  return max(color, vec3(0.0));
+}
+
 // B-only normal-HDR lighting for exact, supported solid bodies. The solid
 // compositor already owns normals, optical depth, contact rejection, and
 // family classification; this helper only turns those proofs into a shared

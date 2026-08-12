@@ -383,6 +383,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('float lobeExponent = mix(2.30, 0.72, roughnessProgress);');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('profileSheenShape * 0.300');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('vec3 applyMaterialAmbientGrounding(');
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain('vec3 applyMaterialEnvironmentTransport(');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'MaterialCompositionResponse materialCompositionParameters(float phase)',
     );
@@ -391,6 +392,9 @@ describe('Pixi presenter startup configuration', () => {
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'float interiorContrast = composition.interiorContrast;',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'float responseWeight = composition.environmentTransport;',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('mix(1.08, 0.62, transmission)');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('float gasCompactMacroRelief(vec2 position)');
@@ -412,8 +416,10 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal.match(/applyFluidVolumeLobe\(/g)).toHaveLength(2);
     expect(eight.match(/applyFluidVolumeLobe\(/g)).toHaveLength(4);
     expect(normal.match(/uMaterialBodyFinish,\s*uMaterialLightingVariant\s*\)/g))
-      .toHaveLength(11);
+      .toHaveLength(14);
     expect(eight.match(/uMaterialBodyFinish,\s*0\.0\s*\)/g)).toHaveLength(9);
+    expect(normal.match(/applyMaterialEnvironmentTransport\(/g)).toHaveLength(3);
+    expect(eight).not.toContain('applyMaterialEnvironmentTransport(');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'float lightingExperimentB = step(1.5, materialLightingVariant);',
     );
