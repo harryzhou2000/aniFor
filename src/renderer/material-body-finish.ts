@@ -264,22 +264,6 @@ vec3 applyMaterialProfileIrradiance(
   color += (vec3(1.12) - clamp(color, 0.0, 1.12))
     * irradianceTint * irradiance;
 
-  // Restore a restrained source-facing wrap after pigment absorption. The
-  // existing irradiance term establishes transport through the body; this
-  // smaller complement keeps its lit shell readable against the signed far-
-  // side shadow without flattening the core. Phase weights share one grammar:
-  // liquid receives the clearest curved skin, gas a soft lobe, and powder/
-  // solid a quieter face that preserves grain and relief. This remains B-only,
-  // RGB-only, and uses only values already proven by the caller.
-  float directSource = max(lightIncidence, 0.0);
-  float wrapPhase = powder * 0.42 + liquid * 0.82 + gas * 0.70 + solid * 0.58;
-  float sourceWrap = lightReach * body * directSource * wrapPhase
-    * finishResponse.x
-    * (0.010 + 0.030 * (1.0 - bodyDepth)
-      + 0.020 * transmissionReserve * bodyDepth);
-  color += (vec3(1.10) - clamp(color, 0.0, 1.10))
-    * irradianceTint * sourceWrap;
-
   // The same two-sided probe also carries a signed far-side response. Turn
   // only that negative half into a broad profile-governed shadow: opaque,
   // absorbent bodies keep a clearer grounded side while transmissive gas,
