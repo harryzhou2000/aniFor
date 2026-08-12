@@ -97,7 +97,11 @@ all six WebGL/HDR candidates passed with zero browser errors, direct inspection
 retained authored voids, thin structures, contacts, and optical-family
 separation, and true-8x rendered all 217 projections at 4896x3072 with zero
 browser errors. Compact stays literal Off and historical PNG bytes remain
-non-gating.
+non-gating. This increment is deployed at revision
+`dcb2fbc96c40071b27220767e047e59973316a66` by workflow run `31549614609`.
+That run passed 1,523 source tests, 331 tooling tests, 269/270 ccache hits, six
+fresh-host candidates, downloaded portable verification, Pages deployment,
+first-attempt exact 19-resource closure, and the hosted Water receipt package.
 
 The domain-derived checkpoint launcher is deployed at revision
 `21fe52c96dd0d30152d2b2cec3a3d4b589a53630` by workflow run `31500138353`.

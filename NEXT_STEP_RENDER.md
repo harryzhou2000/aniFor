@@ -88,6 +88,12 @@ and downloaded-package verification with 269/270 ccache hits.
 
 The retained temperature-derived scene-light experiment is
 `.artifacts/visual-lab-reviews/material-lighting-893bbf14-28db-4027-949f-8830208451df`.
+It is deployed at revision `dcb2fbc96c40071b27220767e047e59973316a66`
+by workflow run `31549614609`: 1,523 source and 331 tooling tests passed,
+ccache restored 269/270 hits and saved the exact revision key, all six fresh-
+host review candidates plus their downloaded portable package passed, Pages
+deployed, and exact 19-resource live closure plus the hosted Water receipt
+package passed on the first attempt.
 Ordinary incandescent Solid/Powder sources now enter the existing emission
 field through a bounded rational shoulder: useful orange-hot stages are more
 visible, hotter stages remain graded, and native emissive sources keep their
