@@ -6169,6 +6169,41 @@ E66 remains deferred until its sample budget fits the fixed HDR seam. Powder is
 already supported through the source-stage `powder-render-style` driver and
 must not be reinterpreted as an HDR domain or split into another framework.
 
+The next broad framework increment adds an analytic environment-transport seam
+without introducing an environment resource. `MaterialCompositionProfile` now
+owns a bounded `environmentTransport` lane; powder is explicitly zero, liquid
+is strongest, and gas/solid retain moderate responses. One B-only normal-HDR
+helper reconstructs a cool-sky/warm-ground hemisphere from each caller's
+already-live slope, then separates a transmission-gated shell/profile lift from
+a lower-energy, low-slope body carry. Exact species still enter only through
+the existing appearance profile, and callers retain density, depth, contact,
+support, topology, and alpha authority. No sample, texture, field, target,
+pass, uniform, allocation, clock, or compact true-8x call was added. Do not
+replace it with a read from foreground HDR: that would reflect neighbouring
+simulation matter across contacts rather than describe a stable environment.
+
+The favored current-only package is
+`.artifacts/visual-lab-reviews/material-lighting-4b50da79-d3db-4fce-bb7a-ec2a5fd16fe1`.
+All seven material-lighting candidates passed shared-host WebGL/HDR capture,
+completed-frame receipts, portable verification, exact alpha, strict teardown,
+and zero browser errors. Direct inspection favors the subtle cool upper/warm
+lower separation in Water, connected gas, Glass/Ice, and other supported solid
+bodies while retaining material pigment, holes, contacts, thin controls, and
+powder grain. The independent true-8x production-bundle atlas rendered all 217
+material projections at 4896x3072 with zero browser errors.
+
+This increment is deployed at exact revision
+`2f44627575a0d6d750dafd9289f978702c272e52` by workflow run `31591110445`.
+The build completed in 3m24s and saved ccache only after success. The first
+hosted seven-scene review attempt passed three candidates while four Off-frame
+completed receipts timed out on loaded SwiftShader; the failed-job retry reused
+the identical built artifact, passed all seven plus downloaded-package
+verification in 5m26s, and required no timeout or renderer change. Pages then
+deployed in 12s, and post-deploy exact revision/resource closure plus hosted
+receipt-v2 capture and portable verification passed in 1m41s. Keep promotion
+readiness and loaded-runner completion latency distinct, and retry this
+transient class before altering the protected receipt contract.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

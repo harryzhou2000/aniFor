@@ -14,6 +14,29 @@ visual requirement or deploy gate. Keep `accepted-v1`, baseline comparison, and
 promotion readable only for legacy packages or an explicit ad-hoc reference;
 developer review and CI must move to current-only evidence by default.
 
+The shared analytic environment-transport increment is deployed at exact
+revision `2f44627575a0d6d750dafd9289f978702c272e52` by workflow run
+`31591110445`. One declarative `environmentTransport` composition lane and one
+source-independent normal-HDR helper give liquid, gas, and supported solid
+bodies a restrained cool-sky/warm-ground response using only existing density,
+depth, slope, eligibility, roughness, and appearance-profile lanes. It is
+B-only and RGB-only: no environment texture, sample, field, target, pass,
+uniform, topology decision, or alpha path was added. Powder remains authored at
+zero, and compact true 8x has no call site. Keep this as the broad reusable
+environment seam; do not generalize the Water/Oil/Acid post-scene refraction
+pass or sample foreground HDR as a universal environment.
+
+The current-only seven-candidate material-lighting review passed WebGL/HDR,
+completed-frame receipts, portable artifact round-trip verification, strict
+teardown, and alpha invariance. Direct true 8x rendered all 217 projections at
+4896x3072 with zero browser errors. The first hosted review attempt completed
+three candidates but four Off receipts exceeded the loaded SwiftShader window;
+the failed-job retry reused the exact built artifact and passed all seven in
+5m26s without a timeout or source change. Treat this as transient runner load,
+not a visual or packaging regression. The cached build completed in 3m24s,
+Pages deployed in 12s, and post-deploy exact resource closure plus hosted
+receipt-v2 smoke passed in 1m41s.
+
 The active renderer increment makes the existing compact RGB emission field
 temperature-aware instead of adding another light pass. Its CPU eligibility
 must remain identical to normal HDR blackbody admission: Fire, Lava, Plasma,
