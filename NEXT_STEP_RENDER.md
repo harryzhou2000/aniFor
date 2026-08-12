@@ -6377,6 +6377,16 @@ they are neither exact visual pins nor deploy gates. Continue by extracting the
 next reusable static fixture family, while leaving protected liquid-motion
 velocity/state authoring on its existing typed path.
 
+This gas authoring increment is deployed at exact revision
+`73e115b4db974e549a2f2d953225bce6ac62b7d3` by workflow run
+`31609037362`. The 3m43s build restored the prior exact toolchain ccache,
+reported 269/270 compilation hits, and saved the success-only cache under the
+new revision. All eight material-lighting candidates captured and the
+downloaded portable package verified in 10m36s. Pages deployed in 38s, then the
+1m18s live gate matched the exact revision and 19-resource closure and passed
+the hosted Water Visual Lab package plus bounded success evidence. Treat this
+as the production checkpoint for generated gas-region evidence.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
