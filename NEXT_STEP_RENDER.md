@@ -6444,6 +6444,18 @@ Its result remained
 byte-identical to the prior deployed candidate. Treat that equality as migration
 evidence, not a cross-revision visual pin.
 
+This opposed-source catalog migration is deployed at exact revision
+`f9ce41fba053dcf5608f7efe8ac59bb3b8e09e43` by workflow run
+`31614355350`. The 3m43s build restored ccache and project-local Emscripten,
+reported 269/270 compilation hits, and saved the success-only cache under this
+revision. All eight material-lighting candidates and the downloaded portable
+package passed in 5m19s, retaining the same eight result IDs and five-fixture,
+161-region response package. Pages deployed in 11s. The 1m20s live gate matched
+the exact revision and 19-resource closure on its first attempt, then passed the
+hosted Water WebGL package, portable verification, and bounded success evidence.
+Treat this as the production checkpoint for shared runtime/review fixture
+authoring across both cross-phase and opposed-source catalogs.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
