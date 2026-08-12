@@ -181,6 +181,18 @@ should cover the opposed Clay warm flank, cool flank, centre, authored hole,
 fine structure, wet suspension, native wall, and blank without adding a browser
 method, renderer path, capture, or Chrome lifecycle.
 
+The scripts-only region-response framework is checkpointed at `7046134`. Its
+first real package is
+`.artifacts/visual-lab-reviews/region-response-7046134`: the opposed-source
+candidate passed fresh SwiftShader WebGL/HDR OFF/A/B capture, completed-frame
+evidence, teardown, and portable verification with eight reconstructed regions.
+The response keeps alpha delta zero in every region; the Clay warm flank has a
+larger signed B response than the cool flank, the centre is intermediate, the
+native wall and guarded blank are unchanged, and wet suspension changes only
+slightly. These measurements are review context, not thresholds or acceptance
+criteria. Keep conservative floor/ceil world-to-PNG coverage so bounded regions
+remain nonempty even in structurally valid low-resolution legacy/test captures.
+
 The domain-derived checkpoint launcher is deployed at revision
 `21fe52c96dd0d30152d2b2cec3a3d4b589a53630` by workflow run `31500138353`.
 Its next retained visual candidate strengthens only the shared gas

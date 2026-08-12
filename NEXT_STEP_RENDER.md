@@ -206,6 +206,27 @@ centre, authored hole, fine-structure context, wet suspension, native wall, and
 blank. This supplies reusable spatial/source-reversal evidence with no renderer,
 browser bridge, extra capture, or Chrome-lifecycle change.
 
+The first implementation is checkpointed at `7046134`. A strict scripts-only
+catalog owns eight bounded opposed-source regions; the generic measurement
+layer authenticates all OFF/A/B PNG bytes, maps world rectangles through actual
+decoded dimensions, and records per-variant RGBA sums/means plus signed pair
+deltas. Batch generation publishes optional `region-response.json` and
+`region-response.html` before the contact sheet and completion marker, while the
+read-only portable verifier recomputes both when present. Legacy/no-region
+packages omit them. Focused authoring, measurement, batch, and verifier checks
+passed 65/65.
+
+The first real package is
+`.artifacts/visual-lab-reviews/region-response-7046134`. One fresh SwiftShader
+WebGL/HDR opposed-source capture passed completed-frame evidence, strict
+teardown, and portable verification with all eight regions. The Clay warm flank
+responds more strongly than its cool flank and the centre is intermediate;
+native wall and guarded blank are unchanged, wet suspension changes only
+slightly, and every region retains zero alpha delta. Direct B-frame inspection
+retains source separation, powder grain, authored holes, the fine feature, wet
+suspension, wall, and blank. These values remain current-only review context,
+never a visual threshold or cross-revision pin.
+
 The next authoring increment centralizes the capture-facing projection of the
 normal-HDR and source-stage static contracts. One pure, recursively frozen
 `anifor.visual-capture.static-catalog/v1` now owns the ordered fixture/driver
