@@ -182,6 +182,36 @@ function validateSourceJobs(responseInput, sourceRunId, expectedSha) {
   if (build.status !== 'completed' || build.conclusion !== 'success') {
     throw new Error('source build job must be completed with conclusion success');
   }
+  return build;
+}
+
+function requireTimestamp(value, label) {
+  if (typeof value !== 'string' || value.length === 0) {
+    throw new TypeError(`${label} must be a nonempty timestamp`);
+  }
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) throw new TypeError(`${label} must be a valid timestamp`);
+  return timestamp;
+}
+
+function validateFailedSourceJobs(sourceJobs, build) {
+  const buildCompletedAt = requireTimestamp(
+    build.completed_at,
+    'source build job completed_at',
+  );
+  const failed = sourceJobs.jobs.filter(({ conclusion }) => conclusion === 'failure');
+  if (failed.length !== 1 || failed[0].name !== 'visual-lab-review') {
+    throw new Error(
+      'failed source run may contain only one failed visual-lab-review job',
+    );
+  }
+  const reviewStartedAt = requireTimestamp(
+    failed[0].started_at,
+    'failed visual-lab-review job started_at',
+  );
+  if (reviewStartedAt < buildCompletedAt) {
+    throw new Error('failed visual-lab-review job must start after the source build completed');
+  }
 }
 
 /**
@@ -225,8 +255,17 @@ export function validatePagesArtifactSource({
   if (current.run.head_sha !== expectedSha) {
     throw new Error('current run does not use the expected commit');
   }
-  if (source.run.status !== 'completed' || source.run.conclusion !== 'success') {
-    throw new Error('source run must be completed with conclusion success');
+  // The site artifact is produced and uploaded by the independently verified
+  // build job. A later optional review may fail closed after that immutable
+  // artifact exists; requiring the aggregate workflow conclusion to be success
+  // would make the exact-artifact recovery path unusable for precisely that
+  // case. Keep the source run terminal, allow only success/failure aggregate
+  // conclusions, and let validateSourceJobs prove the single successful build.
+  if (source.run.status !== 'completed') {
+    throw new Error('source run must be completed');
+  }
+  if (source.run.conclusion !== 'success' && source.run.conclusion !== 'failure') {
+    throw new Error('source run conclusion must be success or failure');
   }
   if (!SOURCE_EVENTS.has(source.run.event)) {
     throw new Error('source run event must be push or workflow_dispatch');
@@ -235,7 +274,8 @@ export function validatePagesArtifactSource({
     throw new Error('source run must use the exact current expected commit');
   }
 
-  validateSourceJobs(sourceJobs, sourceRunId, expectedSha);
+  const build = validateSourceJobs(sourceJobs, sourceRunId, expectedSha);
+  if (source.run.conclusion === 'failure') validateFailedSourceJobs(sourceJobs, build);
 
   const artifact = validateArtifactResponse(
     artifacts,

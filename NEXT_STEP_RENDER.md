@@ -157,6 +157,22 @@ correctness checkpoint, not an exact-pixel baseline. The next evidence step is
 the canonical current-only multi-scene package, with special inspection of
 liquid and gas source-facing lobes before deployment.
 
+The first canonical run for this correction, `31567016417`, built the exact
+revision successfully and captured six of seven scenes. Its final opposed-
+source child then hit a loaded shared-host CDP readback timeout followed by the
+bounded disposal timeout; the supervisor recorded `candidate-process-fault`
+and deployment failed closed. This is the established software-GPU lifecycle
+failure class, not a shader compile or package-schema failure. It exposed one
+recovery-loop defect: `deploy-verified` rejected the immutable site artifact
+because the aggregate source workflow failed after its successful build job.
+Exact-artifact reuse is being narrowed to accept that case only when the source
+run is terminal failure, its unique `build` completed successfully, the sole
+failed job is `visual-lab-review`, and that review started after build
+completion. Repository, workflow, exact SHA, artifact ID/digest, build-job
+uniqueness, fresh temporary extraction, symlink-free closure, and live gates
+remain unchanged. A failed/cancelled build or any other failed job remains
+ineligible.
+
 Canvas evidence remains diagnostic only (`canonical: false`, `comparison:
 none`), carries no image-hash acceptance policy, and cannot fail the canonical
 WebGL checkpoint. The current multi-backend/scale board remains the place to

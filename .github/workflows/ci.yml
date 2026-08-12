@@ -17,7 +17,7 @@ on:
           - build-and-deploy
           - deploy-verified
       verified_build_run_id:
-        description: Successful exact-SHA build run to reuse for deploy-verified
+        description: Exact-SHA run with a successful build job to reuse for deploy-verified
         required: false
         default: ''
         type: string

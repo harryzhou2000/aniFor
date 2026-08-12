@@ -65,6 +65,8 @@ function fixture() {
           name: 'build',
           status: 'completed',
           conclusion: 'success',
+          started_at: '2026-08-12T05:00:00Z',
+          completed_at: '2026-08-12T05:04:00Z',
         },
         {
           id: 782,
@@ -73,6 +75,8 @@ function fixture() {
           name: 'verify-deployment',
           status: 'completed',
           conclusion: 'success',
+          started_at: '2026-08-12T05:10:00Z',
+          completed_at: '2026-08-12T05:11:00Z',
         },
       ],
     },
@@ -154,6 +158,39 @@ describe('Pages artifact source provenance', () => {
     expect(validatePagesArtifactSource(evidence).artifactId).toBe(551);
   });
 
+  it('accepts a failed aggregate source run when its unique build and artifact passed', () => {
+    const evidence = fixture();
+    evidence.sourceRun.conclusion = 'failure';
+    evidence.sourceJobs.jobs[1].name = 'visual-lab-review';
+    evidence.sourceJobs.jobs[1].conclusion = 'failure';
+    expect(validatePagesArtifactSource(evidence)).toEqual({
+      artifactId: 551,
+      sourceRunId: SOURCE_RUN_ID,
+      artifactDigest: DIGEST,
+    });
+  });
+
+  it.each([
+    ['failed non-review job', (value) => {
+      value.sourceJobs.jobs[1].conclusion = 'failure';
+    }, 'only one failed visual-lab-review'],
+    ['review failed before build completed', (value) => {
+      value.sourceJobs.jobs[1].name = 'visual-lab-review';
+      value.sourceJobs.jobs[1].conclusion = 'failure';
+      value.sourceJobs.jobs[1].started_at = '2026-08-12T05:03:59Z';
+    }, 'after the source build completed'],
+    ['missing build completion time', (value) => {
+      value.sourceJobs.jobs[1].name = 'visual-lab-review';
+      value.sourceJobs.jobs[1].conclusion = 'failure';
+      delete value.sourceJobs.jobs[0].completed_at;
+    }, 'nonempty timestamp'],
+  ])('rejects unsafe failed-run artifact reuse: %s', (_name, mutate, message) => {
+    const evidence = fixture();
+    evidence.sourceRun.conclusion = 'failure';
+    mutate(evidence);
+    expect(() => validatePagesArtifactSource(evidence)).toThrow(message);
+  });
+
   it.each([
     ['nonnumeric current ID', (value) => { value.currentRunId = String(CURRENT_RUN_ID); }, 'safe integer'],
     ['zero source ID', (value) => { value.sourceRunId = 0; }, 'safe integer'],
@@ -202,7 +239,8 @@ describe('Pages artifact source provenance', () => {
     ['non-dispatch current run', (value) => { value.currentRun.event = 'push'; }, 'workflow_dispatch'],
     ['wrong current SHA', (value) => { value.currentRun.head_sha = OTHER_SHA; }, 'expected commit'],
     ['incomplete source run', (value) => { value.sourceRun.status = 'in_progress'; }, 'completed'],
-    ['failed source run', (value) => { value.sourceRun.conclusion = 'failure'; }, 'conclusion success'],
+    ['cancelled source run', (value) => { value.sourceRun.conclusion = 'cancelled'; }, 'success or failure'],
+    ['missing source conclusion', (value) => { value.sourceRun.conclusion = null; }, 'success or failure'],
     ['untrusted source event', (value) => { value.sourceRun.event = 'pull_request'; }, 'push or workflow_dispatch'],
     ['wrong source SHA', (value) => { value.sourceRun.head_sha = OTHER_SHA; }, 'exact current expected'],
   ])('rejects an ineligible current/source run: %s', (_name, mutate, message) => {
