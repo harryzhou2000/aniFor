@@ -52,13 +52,14 @@ import {
   VISUAL_LAB_CURRENT_EXPERIMENT_RESPONSE_SCHEMA,
 } from './visual-lab-comparison-metrics.mjs';
 import {
-  createVisualLabCurrentRegionResponse,
   VISUAL_LAB_CURRENT_REGION_RESPONSE_SCHEMA,
 } from './visual-lab-region-response.mjs';
 import {
-  createVisualLabCurrentRegionAppearance,
   VISUAL_LAB_CURRENT_REGION_APPEARANCE_SCHEMA,
 } from './visual-lab-region-appearance.mjs';
+import {
+  createVisualLabCurrentRegionMeasurements,
+} from './visual-lab-region-measurements.mjs';
 import {
   createVisualLabBrowserHostPlan,
   normalizeVisualLabBrowserHostPlan,
@@ -1652,6 +1653,19 @@ export async function verifyVisualLabBatchPackage(options = {}) {
     throw new TypeError('Visual Lab batch package is missing current region response evidence');
   }
   let regionResponse = null;
+  let regionMeasurementsPromise = null;
+  const readRegionMeasurements = () => {
+    regionMeasurementsPromise ??= createVisualLabCurrentRegionMeasurements(
+      canonical,
+      async (candidate, variant) => readStableRegularFile(
+        path.join(batchRoot, canonical.candidates.find((entry) => (
+          entry.candidate === candidate
+        )).artifacts[variant]),
+        `Visual Lab ${candidate} ${variant} region capture`,
+      ),
+    );
+    return regionMeasurementsPromise;
+  };
   if (regionResponseDetails) {
     if (!canonical.complete) {
       throw new TypeError('Incomplete Visual Lab batches cannot publish region response evidence');
@@ -1661,13 +1675,7 @@ export async function verifyVisualLabBatchPackage(options = {}) {
       readStableRegularFile(regionBoardPath, 'Visual Lab region response board', 'utf8', EXPERIMENT_EVIDENCE_MAX_BYTES),
     ]);
     const published = parsePortableJson(publishedSource, 'Visual Lab region response');
-    regionResponse = await createVisualLabCurrentRegionResponse(
-      canonical,
-      async (candidate, variant) => readStableRegularFile(
-        path.join(batchRoot, canonical.candidates.find((entry) => entry.candidate === candidate).artifacts[variant]),
-        `Visual Lab ${candidate} ${variant} region capture`,
-      ),
-    );
+    regionResponse = (await readRegionMeasurements())?.response ?? null;
     if (regionResponse === null || !isDeepStrictEqual(published, regionResponse)) {
       throw new TypeError('Visual Lab region response does not match current captures');
     }
@@ -1696,13 +1704,7 @@ export async function verifyVisualLabBatchPackage(options = {}) {
       readStableRegularFile(regionAppearanceBoardPath, 'Visual Lab region appearance board', 'utf8', EXPERIMENT_EVIDENCE_MAX_BYTES),
     ]);
     const published = parsePortableJson(publishedSource, 'Visual Lab region appearance');
-    regionAppearance = await createVisualLabCurrentRegionAppearance(
-      canonical,
-      async (candidate, variant) => readStableRegularFile(
-        path.join(batchRoot, canonical.candidates.find((entry) => entry.candidate === candidate).artifacts[variant]),
-        `Visual Lab ${candidate} ${variant} appearance capture`,
-      ),
-    );
+    regionAppearance = (await readRegionMeasurements())?.appearance ?? null;
     if (regionAppearance === null || !isDeepStrictEqual(published, regionAppearance)) {
       throw new TypeError('Visual Lab region appearance does not match current captures');
     }
@@ -2697,13 +2699,14 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
     }
     await publishFile(responsePath, responseSource);
     await publishFile(experimentBoardPath, experimentBoard);
-    regionResponse = await createVisualLabCurrentRegionResponse(
+    const regionMeasurements = await createVisualLabCurrentRegionMeasurements(
       index,
       async (candidate, variant) => readStableRegularFile(
         path.join(outputDirectory, index.candidates.find((entry) => entry.candidate === candidate).artifacts[variant]),
-        `Visual Lab ${candidate} ${variant} region capture`,
+        `Visual Lab ${candidate} ${variant} region measurement capture`,
       ),
     );
+    regionResponse = regionMeasurements?.response ?? null;
     if (regionResponse !== null) {
       const regionSource = `${JSON.stringify(regionResponse, null, 2)}\n`;
       const regionBoard = renderVisualLabRegionResponseBoard(regionResponse);
@@ -2714,13 +2717,7 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
       await publishFile(regionResponsePath, regionSource);
       await publishFile(regionResponseBoardPath, regionBoard);
     }
-    regionAppearance = await createVisualLabCurrentRegionAppearance(
-      index,
-      async (candidate, variant) => readStableRegularFile(
-        path.join(outputDirectory, index.candidates.find((entry) => entry.candidate === candidate).artifacts[variant]),
-        `Visual Lab ${candidate} ${variant} appearance capture`,
-      ),
-    );
+    regionAppearance = regionMeasurements?.appearance ?? null;
     if (regionAppearance !== null) {
       const appearanceSource = `${JSON.stringify(regionAppearance, null, 2)}\n`;
       const appearanceBoard = renderVisualLabRegionAppearanceBoard(regionAppearance);

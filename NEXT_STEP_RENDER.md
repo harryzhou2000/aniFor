@@ -9,6 +9,27 @@ permissive, non-gating compatibility companion. Preserve correct viewport/input
 geometry and robust 1×–8× rendering, including the dedicated compact true-8×
 compositor, while avoiding renderer branches that duplicate material semantics.
 
+The active scripts-framework increment removes duplicate spatial-evidence work.
+Current region response and appearance must be projected from one authenticated
+decode, conservative world-to-pixel mapping, and pixel traversal per configured
+candidate/variant/region. Preserve the two existing portable v1 schemas and
+separate static review boards exactly; keep their combined decoded source
+ephemeral and outside every frozen identity. Existing response-only or
+appearance-only callers and legacy optional-package behavior remain compatible.
+This change is measurement infrastructure, not a visual verdict or cross-
+revision requirement. After it is proven through the portable package path,
+return to reusable renderer/material experimentation rather than adding another
+isolated evidence format.
+
+Local proof is complete: 1,556 source and 360 tooling tests, typecheck, build,
+and exact 19-resource closure passed. The real shared-host SwiftShader review
+passed all eight material-lighting WebGL/HDR candidates with one host and zero
+restarts; portable verification reconstructed both 257-region records from the
+same 24 pinned PNG reads. Retain the package at
+`.artifacts/visual-lab-reviews/material-lighting-18cd894f-211a-4d53-b6e6-fd55cb29e464`
+as current-only evidence, not a baseline or cross-revision requirement. The
+implementation is ready for a checkpoint and canonical CI review/deploy.
+
 The current framework checkpoint is deployed at
 `c51f874ca1b453f07d4975d9fe00cd1767f14c60` by workflow run `31559035589`.
 The ccache-backed build passed in 3m44s; all seven current material-lighting

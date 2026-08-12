@@ -5,6 +5,7 @@ import {
   createVisualLabCurrentRegionResponse,
   VISUAL_LAB_CURRENT_REGION_RESPONSE_SCHEMA,
 } from './visual-lab-region-response.mjs';
+import { createVisualLabCurrentRegionMeasurements } from './visual-lab-region-measurements.mjs';
 
 const signature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const crc32 = (bytes) => { let crc = 0xFFFFFFFF; for (const byte of bytes) { crc ^= byte; for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ (crc & 1 ? 0xEDB88320 : 0); } return (crc ^ 0xFFFFFFFF) >>> 0; };
@@ -17,6 +18,26 @@ const result = (salt = 'opposed') => ({ schema: 'anifor.visual-lab.result/v1', i
 const batch = (candidate = 'opposed-source-material-lighting-atlas') => ({ schema: 'anifor.visual-lab.batch/v1', complete: true, candidates: [{ candidate, status: 'passed', result: result(candidate) }] });
 
 describe('Visual Lab current region response', () => {
+  it('compiles both spatial records with one authenticated read per variant', async () => {
+    const reads = [];
+    const measurements = await createVisualLabCurrentRegionMeasurements(
+      batch(),
+      async (candidate, variant) => {
+        reads.push(`${candidate}:${variant}`);
+        return captures[variant];
+      },
+    );
+    expect(reads).toEqual([
+      'opposed-source-material-lighting-atlas:off',
+      'opposed-source-material-lighting-atlas:a',
+      'opposed-source-material-lighting-atlas:b',
+    ]);
+    expect(measurements.response.candidates[0].regions).toHaveLength(11);
+    expect(measurements.appearance.candidates[0].regions).toHaveLength(11);
+    expect(measurements.response.batch).toEqual(measurements.appearance.batch);
+    expect(Object.isFrozen(measurements)).toBe(true);
+  });
+
   it('returns null when the complete batch has no configured regions', async () => {
     await expect(createVisualLabCurrentRegionResponse(batch('gas-showcase'), async (_candidate, variant) => captures[variant])).resolves.toBeNull();
   });

@@ -1,5 +1,28 @@
 # AniforTPT agent guidance
 
+The active measurement-framework increment consolidates current-only region
+response and appearance extraction behind one scripts-owned compiler. It must
+authenticate and decode each configured OFF/A/B PNG once, conservatively map
+each declared region once, and accumulate the existing RGBA response and fixed-
+luma appearance values in one pixel traversal. Keep the two portable v1 JSON
+records and their separate static boards byte-shape compatible; the combined
+decoded measurement is ephemeral and must never become a package identity or
+browser/static-contract concern. Existing single-record APIs remain
+compatibility projections. Publication and portable verification should request
+both projections from the same compiler so geometry, pinning, and dimension
+rules cannot drift. This is an efficiency and authoring-seam change only: it
+adds no visual score, threshold, ranking, decision, promotion, or historical
+hash gate.
+
+Local proof for the consolidated compiler passed 1,556 source and 360 tooling
+tests, typecheck, production build, and the exact 19-resource closure. A real
+shared-host SwiftShader material-lighting review passed all eight WebGL/HDR
+candidates with one host and zero restarts. The portable verifier reconstructed
+both unchanged v1 records from the same 24 pinned captures: eight candidates
+and 257 regions in each projection. The retained current-only package is
+`.artifacts/visual-lab-reviews/material-lighting-18cd894f-211a-4d53-b6e6-fd55cb29e464`;
+its hashes authenticate that package only.
+
 Current-only region appearance evidence is descriptive navigation, not a
 visual gate. `region-appearance.json` may report fixed-luma spread, range, and
 neighbour contrast for declared inspection regions, and its static HTML view
