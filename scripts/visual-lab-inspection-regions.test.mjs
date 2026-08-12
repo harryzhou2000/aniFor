@@ -26,6 +26,7 @@ describe('Visual Lab inspection-region catalog', () => {
       'solid-material-lighting-atlas',
       'multi-metal-material-lighting-atlas',
       'source-target-material-lighting-atlas',
+      'force-activity-material-lighting-atlas',
       'opposed-source-material-lighting-atlas',
     ]);
     expect(Object.isFrozen(VISUAL_CAPTURE_INSPECTION_SOURCE_CATALOG)).toBe(true);
@@ -133,6 +134,32 @@ describe('Visual Lab inspection-region catalog', () => {
       { name: 'bcln-watr-wrong-owner', role: 'control' },
     ]);
     expect(Object.isFrozen(sourceTarget.regions[0])).toBe(true);
+  });
+
+  it('projects force activity state responses and topology controls through declared authoring', () => {
+    const force = fixture('force-activity-material-lighting-atlas');
+    expect(force.world).toEqual({ width: 612, height: 384 });
+    expect(force.regions).toHaveLength(17);
+    expect(force.regions.map(({ name, role }) => ({ name, role }))).toEqual([
+      { name: 'acel-inactive-body', role: 'response' },
+      { name: 'acel-active-body', role: 'response' },
+      { name: 'dcel-inactive-body', role: 'response' },
+      { name: 'dcel-active-body', role: 'response' },
+      { name: 'acel-active-motif-arrow', role: 'response' },
+      { name: 'dcel-active-motif-arrow', role: 'response' },
+      { name: 'acel-inactive-motif-background', role: 'control' },
+      { name: 'dcel-inactive-motif-background', role: 'control' },
+      { name: 'acel-active-authored-hole', role: 'control' },
+      { name: 'acel-active-open-notch', role: 'control' },
+      { name: 'acel-active-thin-structure', role: 'control' },
+      { name: 'acel-active-isolated', role: 'control' },
+      { name: 'acel-active-wrong-owner', role: 'control' },
+      { name: 'acel-active-water-control', role: 'control' },
+      { name: 'acel-active-metal-control', role: 'control' },
+      { name: 'acel-active-emitter', role: 'control' },
+      { name: 'acel-active-guarded-blank', role: 'control' },
+    ]);
+    expect(Object.isFrozen(force.regions[0])).toBe(true);
   });
 
   it('derives gas response and control regions from shared data-only atlas authoring', () => {

@@ -1,4 +1,5 @@
 import { GAS_MATERIAL_LIGHTING_ATLAS_CATALOG } from './gas-material-lighting-atlas-catalog.js';
+import { FORCE_ACTIVITY_MATERIAL_LIGHTING_ATLAS_CATALOG } from './force-activity-material-lighting-atlas-catalog.js';
 import { MATERIAL_LIGHTING_ATLAS_CATALOG } from './material-lighting-atlas-catalog.js';
 import { OPPOSED_SOURCE_MATERIAL_LIGHTING_ATLAS_CATALOG } from './opposed-source-material-lighting-atlas-catalog.js';
 import { POWDER_STYLE_ATLAS_CATALOG } from './powder-style-atlas-catalog.js';
@@ -31,6 +32,7 @@ export const VISUAL_CAPTURE_INSPECTION_SOURCE_CATALOG = deepFreeze({
     { name: 'gas', projection: 'declared', atlases: GAS_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases },
     { name: 'solid', projection: 'declared', atlases: SOLID_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases },
     { name: 'source-target', projection: 'declared', atlases: SOURCE_TARGET_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases },
+    { name: 'force-activity', projection: 'declared', atlases: FORCE_ACTIVITY_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases },
     { name: 'opposed-source', projection: 'declared', atlases: OPPOSED_SOURCE_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases },
     { name: 'powder-style', projection: 'declared', atlases: POWDER_STYLE_ATLAS_CATALOG.atlases },
   ],

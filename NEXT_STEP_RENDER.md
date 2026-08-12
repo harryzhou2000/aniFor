@@ -6625,6 +6625,30 @@ on its first attempt, then passed the hosted Water WebGL receipt-v2 package and
 portable verifier. Keep the next increment on reusable framework leverage;
 these fixture hashes prove migration parity but do not pin evolving aesthetics.
 
+The next reusable authoring increment is implemented locally for the existing
+ACEL/DCEL force-activity atlas. A frozen data-only catalog owns the exact 2x2
+owner/state topology, authoritative inactive/active Uint16 values `0/1`, all
+body/motif/topology/control geometry, and a bounded 17-region review board. A
+typed app authoring module validates and direct-fills the descriptor while the
+historical `force-activity-graphics-audit.ts` API remains a compatibility
+facade. The existing fixture registration, browser bridge, material-lighting
+driver, recipe, capture, renderer, workflow, and frozen evidence identities are
+unchanged; inspection metadata grants no execution authority.
+
+Semantic migration oracles prove the public snapshot JSON, complete material
+plane, and little-endian Uint16 state plane byte-identical to the manual
+implementation. They are fixture migration checks, not visual hashes. Local
+proof passes 1,555 source and 357 permission-correct tooling tests, typecheck,
+production build, and exact 19-resource closure. The real SwiftShader package
+at `/tmp/anifortpt-force-declared-gRvC39` passed stable-v1 WebGL/HDR in 32.0s
+with one shared host, zero restarts, strict teardown, and portable verification
+of all 17 regions. Its result remained
+`sha256:8c9bc8a5823a89f27dc41d688778dea10dab141ffaf26ccaf50603af658f7136`.
+Direct inspection retained all four owner/state bodies, force motifs, topology,
+unrelated active controls, emitters, and blank space. The next release gate is
+the canonical material-lighting review and downloaded-package reconstruction
+of the resulting 242 applicable regions.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

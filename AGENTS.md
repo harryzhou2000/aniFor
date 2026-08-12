@@ -158,6 +158,30 @@ receipt-v2 package and portable verifier. Continue with another reusable
 authoring/measurement seam rather than treating these semantic hashes as visual
 requirements.
 
+The next reusable authoring increment is implemented locally for the existing
+ACEL/DCEL force-activity atlas. One frozen data-only catalog now owns its exact
+2x2 owner/state card order, authoritative inactive/active Uint16 values `0/1`,
+all body/motif/topology/control geometry, and a bounded 17-region inspection
+board. A typed app module validates and direct-fills that descriptor while
+`force-activity-graphics-audit.ts` remains the established compatibility
+facade. The prepared-fixture registry, browser method, driver, recipe, capture,
+renderer, and CI remain unchanged. Fixture preparation ignores inspection
+metadata.
+
+Migration-only SHA-256 oracles prove that the public audit JSON, raw material
+plane, and little-endian Uint16 presentation-state plane remain byte-identical;
+they are semantic authoring checks, not PNG baselines or aesthetic gates. Local
+proof passes 1,555 source and 357 permission-correct tooling tests, typecheck,
+production build, and exact 19-resource closure. The real SwiftShader package
+at `/tmp/anifortpt-force-declared-gRvC39` passed stable-v1 WebGL/HDR capture in
+32.0s with one shared host, zero restarts, clean teardown, and portable
+reconstruction of all 17 regions. Its result remained
+`sha256:8c9bc8a5823a89f27dc41d688778dea10dab141ffaf26ccaf50603af658f7136`;
+direct inspection retained all four owner/state bodies, activity motifs, holes,
+notches, fine/isolated topology, unrelated active controls, emitters, and blank
+space. The next release gate is the canonical material-lighting review and
+downloaded-package reconstruction with 242 applicable regions.
+
 The next retained material-class framework checkpoint is exact revision
 `d5ceedf940dfea3d1a194a6b8fff5ae4c3557bd2`. `RenderOptics.MetallicRigid`
 is appended as stable byte class `20`; no historical class ID moved. Only the

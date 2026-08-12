@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createHash } from 'node:crypto';
 import { Material } from '../shared/materials';
 import { DeterministicBackend } from '../simulation/deterministic-backend';
 import { RenderLabBackend } from '../simulation/render-lab-backend';
@@ -125,7 +126,27 @@ describe('ACEL/DCEL activity-state graphics audit', () => {
     expect(() => prepareForceActivityGraphicsAuditFixture(new DeterministicBackend(612, 384)))
       .toThrow('requires a render-lab state plane');
   });
+
+  it('preserves the pre-migration public snapshot and exact authored planes', () => {
+    const simulation = new RenderLabBackend();
+    prepareForceActivityGraphicsAuditFixture(simulation);
+    const stateBytes = Buffer.alloc(simulation.presentationState().byteLength);
+    simulation.presentationState().forEach((value, index) => stateBytes.writeUInt16LE(value, index * 2));
+    expect(digest(JSON.stringify(FORCE_ACTIVITY_GRAPHICS_AUDIT))).toBe(
+      '06dbefefa8746fd6e6d14e5781c36c11e77bdbd77d1feeddf2aa779d4a8cd0f2',
+    );
+    expect(digest(simulation.cells())).toBe(
+      'c55c8b8d4a034bb64636ca48ca5d90eae786e8c9b7c2f3ca004f3d778f054b4d',
+    );
+    expect(digest(stateBytes)).toBe(
+      '0b3cca7c06e0cb1c9b4b258c88a71480639a2a535bbba6f17231098b17956dba',
+    );
+  });
 });
+
+function digest(value: string | NodeJS.ArrayBufferView): string {
+  return createHash('sha256').update(value).digest('hex');
+}
 
 function expectExactRect(
   simulation: RenderLabBackend,
