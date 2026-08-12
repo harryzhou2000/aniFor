@@ -1105,6 +1105,40 @@ exact deployed revision. The next capture-performance step must bulk-read the
 authoritative field through one typed audit bridge while preserving the exact
 field digest grammar; it must not delete proof or split the atomic transaction.
 
+That bulk authoritative-field step is implemented at revision
+`a023e1a41459d2a2d39f16b4128cb8b7c122cf61`. One fixed typed app bridge now
+dispatches the already-validated evidence plane once, walks every renderer cell
+inside the renderer, and returns the exact prior byte/index FNV, support-hash,
+alpha-sum, and nonzero grammar. Semantic and framebuffer evidence remain in the
+same atomic snapshot; the full framebuffer readback and digest are unchanged.
+The protected execution/tuning plans and result/package identities do not gain
+a new serialized expression. A real atmosphere ABBA run kept both Gas/Oxygen
+result IDs and all six PNG hashes identical to the preceding readback-storage
+checkpoint, while its directional local timings generally reduced the dominant
+Off readback. This is leverage evidence, not a universal benchmark.
+
+The first hosted seven-scene attempt, run `31576998135`, completed six scenes
+but exposed one remaining clock mismatch on the final opposed-source readiness
+snapshot: the complete atomic read exceeded the generic 20-second CDP bound,
+then teardown hit its separate five-second bound. Revision
+`3c485cd13ec12c41f48b0bc6f300a112ae758ffc` makes readiness snapshots consume
+the existing driver-owned bounded readiness budget, matching capture snapshots;
+it skips no evidence and changes no identity. A focused real opposed-source
+SwiftShader capture passed semantic, field, framebuffer, geometry, strict
+teardown, and zero-browser-error checks.
+
+The next broad authoring seam is checkpointed at revision `3f7da77`:
+`material-composition-profiles.ts` owns one frozen, validated
+powder/liquid/gas/solid table for body lighting, sheen, irradiance, penetration,
+pigment coupling, volume scatter, far-side shadow, and ambient grounding. The
+generated arithmetic-only GLSL selector adds no uniform, sampler, texture,
+target, or runtime material plane. Current coefficients were extracted without
+intentional visual change, so the next cross-phase composition experiment is a
+single typed data edit rather than coordinated surgery across several shader
+helpers. A current mixed-material WebGL capture compiled and passed all evidence
+with zero browser errors; the protected 4896x3072 true-8x atlas kept all 217
+materials visible and left no Chrome process. Canvas remains unchanged.
+
 Revision `813066c81735da2e9b2752c9ddff276cc1c8f0da` deployed the retained
 profile sheen through workflow run `31528453927`. The ccache-backed build,
 two-candidate stable-snapshot review, downloaded-package verification, Pages
@@ -1137,15 +1171,16 @@ Success means:
 
 Priority order from this checkpoint:
 
-1. Shorten the dominant `snapshotState` readback/hash path without weakening
+1. Finish deploying the bulk-digest/readiness-clock checkpoint, then use the
+   declarative composition table for a deliberately broad current-only
+   powder/liquid/gas/solid experiment rather than another exact-material branch.
+2. Continue shortening the remaining framebuffer `gl.readPixels`/alpha-digest
+   path without weakening
    semantic, authoritative-field, framebuffer-alpha, convergence, strict-
    disposal, or portable verification. Keep stable snapshots as the release
    default; receipt-v2 has now failed the seven-scene shared-host cohort and
    remains an explicit diagnostic until a renderer-level completion change can
    pass that exact workload.
-2. Use the same current-only framework for the next broad material-composition
-   pass; prefer an existing proof/resource shared by multiple families over an
-   exact-material branch.
 3. Harden only regressions that threaten geometry, semantic/topology
    correctness, WebGL lifecycle, true-8× completion, package integrity, or live
    Pages loading. Do not grow exact-pixel tests for evolving aesthetics.
