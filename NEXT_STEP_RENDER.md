@@ -1246,6 +1246,20 @@ retained an 8px toolbox gap, reachable 112px vertical filter overflow, reachable
 work should start from a reproduced current failure, not overwrite these
 established responsive contracts.
 
+The selected gas-volume renderer increment is deployed at exact revision
+`c596160497e7dbe0d48c73acf4dfa0d066b5211a` by workflow run
+`31586270680`. The 4m09s build passed 1,533 source and 344 tooling tests,
+restored 269/270 ccache hits, and verified the exact 19-resource bundle. The
+tracked `material-lighting` cohort passed all seven current-only candidates in
+5m11s through one shared host with zero restarts, and the downloaded package
+verified with recipe-set ID
+`sha256:0fc08c709e9d1962977eed504cee4593fdb694c94614c99a8aeef51968beb6bf`.
+Pages deployed in 10 seconds; live closure passed all 19 resources on attempt
+one, and the fresh hosted Water receipt-v2 capture plus portable verification
+passed against that exact revision. The exact-breakpoint audit in revision
+`97e2c4b` is a test-only follow-up and does not change the deployed application
+bytes.
+
 Revision `813066c81735da2e9b2752c9ddff276cc1c8f0da` deployed the retained
 profile sheen through workflow run `31528453927`. The ccache-backed build,
 two-candidate stable-snapshot review, downloaded-package verification, Pages
