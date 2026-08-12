@@ -216,6 +216,21 @@ live Pages verification; after deployment, prefer another reusable
 material/transport carrier or measurement improvement over fixture-specific
 detail.
 
+This transport-volume checkpoint is deployed at exact revision
+`7d1ca4d3f9e4c8ed6fb46e63c9be49378da381e4` by workflow run
+`31570304653`. The ccache-backed build completed in 3m34s, passed 1,528
+source and 344 tooling tests, restored the nearest exact compiler lineage, and
+saved the new cache only after success. The canonical seven-scene stable-v1
+review passed in 3m56s through one shared SwiftShader host, seven fresh
+contexts/targets, zero restarts, and only the planned `cohort-complete` recycle;
+the downloaded package then passed portable verification with current
+experiment and all eleven opposed-source region probes required. Pages deployed
+in 10s. Exact revision and 19-resource closure passed on the first attempt, and
+the hosted Water receipt-v2 package plus portable verifier completed in the
+1m40s live-verification job. Treat this current-only package and live closure as
+the completed release evidence for the lobe; do not promote its PNG bytes into
+a future visual gate.
+
 Canvas evidence remains diagnostic only (`canonical: false`, `comparison:
 none`), carries no image-hash acceptance policy, and cannot fail the canonical
 WebGL checkpoint. The current multi-backend/scale board remains the place to
