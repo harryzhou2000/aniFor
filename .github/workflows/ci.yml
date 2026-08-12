@@ -334,6 +334,7 @@ jobs:
             --require-execution-tuning-plan=1
             --require-experiment-response=1
             --require-region-response=1
+            --require-region-appearance=1
           )
           if [[ -n "${VISUAL_LAB_RECIPE_SET//[[:space:]]/}" ]]; then
             verify_args+=("--recipe-set-source=${VISUAL_LAB_RECIPE_SET}")

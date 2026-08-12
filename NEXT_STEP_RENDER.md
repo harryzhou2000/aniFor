@@ -6706,6 +6706,21 @@ the exact revision and resource closure on its first attempt before passing the
 hosted Water WebGL receipt-v2 package. Continue with reusable measurement
 leverage; do not weaken the explicit typed fixture-preparer authority boundary.
 
+The next measurement-leverage increment is implemented locally. Complete
+current batches with declared inspection regions now publish optional
+`region-appearance.json` and `region-appearance.html` beside the existing
+region-response evidence. The additive v1 record derives fixed integer luma,
+range, standard deviation, and horizontal/vertical neighbouring absolute
+contrast from each pinned OFF/A/B PNG, then exposes signed pair deltas. These
+values make retained grain, edge activity, and tonal variation easier to review
+without assigning a score, threshold, rank, verdict, acceptance, or promotion
+rule. The package verifier reconstructs the record from captured bytes and
+exact-renders its bounded static board; JSON and HTML must appear together when
+present, while legacy packages may omit both. The sidecar remains outside every
+frozen plan/result/batch/baseline/comparison/recipe-set identity. A real
+SwiftShader capture and canonical release review are the remaining gates for
+this checkpoint.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

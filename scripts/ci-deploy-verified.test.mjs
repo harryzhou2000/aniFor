@@ -220,6 +220,7 @@ describe('deploy-verified CI workflow contract', () => {
     expect(review).toContain('--require-execution-tuning-plan=1');
     expect(review).toContain('--require-experiment-response=1');
     expect(review).toContain('--require-region-response=1');
+    expect(review).toContain('--require-region-appearance=1');
     expect(capture).toContain(
       'VISUAL_LAB_BROWSER_HOST: ${{ inputs.visual_lab_browser_host }}',
     );

@@ -87,6 +87,7 @@ describe('Visual Lab portable package verifier', () => {
       requireExecutionTuningPlan: false,
       requireExperimentResponse: false,
       requireRegionResponse: false,
+      requireRegionAppearance: false,
       requireOriginAttestation: false,
       requireComplete: true,
       requireRecipeSet: false,
@@ -103,6 +104,7 @@ describe('Visual Lab portable package verifier', () => {
       '--require-execution-tuning-plan=1',
       '--require-experiment-response=1',
       '--require-region-response=1',
+      '--require-region-appearance=1',
       '--require-origin-attestation=1',
     ])).toEqual({
       help: false,
@@ -116,6 +118,7 @@ describe('Visual Lab portable package verifier', () => {
       requireExecutionTuningPlan: true,
       requireExperimentResponse: true,
       requireRegionResponse: true,
+      requireRegionAppearance: true,
       requireOriginAttestation: true,
       requireComplete: false,
       requireRecipeSet: true,
@@ -155,6 +158,7 @@ describe('Visual Lab portable package verifier', () => {
       requireExecutionTuningPlan: true,
       requireExperimentResponse: true,
       requireRegionResponse: false,
+      requireRegionAppearance: false,
       requireOriginAttestation: true,
       requireComplete: true,
       requireRecipeSet: true,
@@ -174,6 +178,7 @@ describe('Visual Lab portable package verifier', () => {
         requireExecutionTuningPlan: true,
         requireExperimentResponse: true,
         requireRegionResponse: false,
+        requireRegionAppearance: false,
         requireOriginAttestation: true,
         requireComplete: true,
         requireRecipeSet: true,
@@ -211,6 +216,7 @@ describe('Visual Lab portable package verifier', () => {
         candidateCount: 1,
       },
       regionResponse: null,
+      regionAppearance: null,
       comparison: comparisonEvidence.comparison,
     });
     expect(Object.isFrozen(result)).toBe(true);
@@ -233,6 +239,7 @@ describe('Visual Lab portable package verifier', () => {
       schema: 'anifor.visual-lab.current-experiment-response/v1', candidateCount: 1,
     });
     expect(batchOnly.regionResponse).toBeNull();
+    expect(batchOnly.regionAppearance).toBeNull();
     expect(batchOnly.comparison).toBeNull();
 
     let legacyComparisonOptions;
@@ -305,12 +312,14 @@ describe('Visual Lab portable package verifier', () => {
     expect(workflow).toContain('--require-execution-tuning-plan=1');
     expect(workflow).toContain('--require-experiment-response=1');
     expect(workflow).toContain('--require-region-response=1');
+    expect(workflow).toContain('--require-region-appearance=1');
     expect(deployVerification).toBeGreaterThan(verify);
     expect(deploySuccessGuard).toBeGreaterThan(deployVerification);
     expect(liveVerification).toBeGreaterThan(deploySuccessGuard);
     expect(liveFunctionalSmoke).toBeGreaterThan(liveVerification);
     expect(workflow.slice(deployVerification)).toContain('--candidates=water-motion');
     expect(workflow.slice(deployVerification)).not.toContain('--require-region-response=1');
+    expect(workflow.slice(deployVerification)).not.toContain('--require-region-appearance=1');
     expect(workflow.slice(liveFunctionalSmoke)).toContain(
       '--capture-proof=completed-frame-receipt',
     );

@@ -1,5 +1,14 @@
 # AniforTPT agent guidance
 
+Current-only region appearance evidence is descriptive navigation, not a
+visual gate. `region-appearance.json` may report fixed-luma spread, range, and
+neighbour contrast for declared inspection regions, and its static HTML view
+may help a human or agent compare OFF/A/B texture and edges. Never turn these
+values into an aesthetic score, threshold, ranking, acceptance decision,
+promotion rule, or cross-revision requirement. When the optional JSON/HTML pair
+is published, reconstruct it from pinned PNG bytes and exact-rerender it during
+portable verification; legacy packages may omit it.
+
 ## Current direction
 
 Pause the detail-first E-number ladder until the current design goals have an

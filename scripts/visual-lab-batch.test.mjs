@@ -1646,13 +1646,43 @@ describe('Visual Lab batch runner', () => {
     const board = await readFile(generated.regionResponseBoardPath, 'utf8');
     expect(board).toContain('Current region response');
     expect(board).toContain('no aesthetic score, verdict');
+    expect(generated.regionAppearancePath).toBe(
+      path.join(outputDirectory, 'region-appearance.json'),
+    );
+    expect(generated.regionAppearanceBoardPath).toBe(
+      path.join(outputDirectory, 'region-appearance.html'),
+    );
+    expect(generated.regionAppearance).toMatchObject({
+      schema: 'anifor.visual-lab.current-region-appearance/v1',
+      candidates: [{ candidate, regions: expect.arrayContaining([
+        expect.objectContaining({ name: 'clay-warm-flank', role: 'response' }),
+        expect.objectContaining({ name: 'guarded-blank', role: 'control' }),
+      ]) }],
+    });
+    const appearanceBoard = await readFile(generated.regionAppearanceBoardPath, 'utf8');
+    expect(appearanceBoard).toContain('Current region appearance');
+    expect(appearanceBoard).toContain('without scoring or deciding aesthetics');
 
     const before = await snapshotPackageTree(outputDirectory);
     const verified = await verifyVisualLabBatchPackage({
       batchRoot: outputDirectory, requireComplete: true, requireRegionResponse: true,
     });
     expect(verified.regionResponse).toStrictEqual(generated.regionResponse);
+    expect(verified.regionAppearance).toStrictEqual(generated.regionAppearance);
     expect(await snapshotPackageTree(outputDirectory)).toStrictEqual(before);
+
+    const appearanceSource = await readFile(generated.regionAppearancePath, 'utf8');
+    const tamperedAppearance = JSON.parse(appearanceSource);
+    tamperedAppearance.candidates[0].regions[0]
+      .pairs.offToB.signedLumaNeighbourAbsoluteMeanDelta += 1;
+    await writeFile(
+      generated.regionAppearancePath,
+      `${JSON.stringify(tamperedAppearance, null, 2)}\n`,
+    );
+    await expect(verifyVisualLabBatchPackage({
+      batchRoot: outputDirectory, requireComplete: true,
+    })).rejects.toThrow('region appearance does not match current captures');
+    await writeFile(generated.regionAppearancePath, appearanceSource);
 
     const source = await readFile(generated.regionResponsePath, 'utf8');
     const tampered = JSON.parse(source);

@@ -56,6 +56,10 @@ import {
   VISUAL_LAB_CURRENT_REGION_RESPONSE_SCHEMA,
 } from './visual-lab-region-response.mjs';
 import {
+  createVisualLabCurrentRegionAppearance,
+  VISUAL_LAB_CURRENT_REGION_APPEARANCE_SCHEMA,
+} from './visual-lab-region-appearance.mjs';
+import {
   createVisualLabBrowserHostPlan,
   normalizeVisualLabBrowserHostPlan,
   resolveVisualLabBrowserHostPlanEntry,
@@ -838,6 +842,22 @@ export function renderVisualLabRegionResponseBoard(response) {
   return `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Visual Lab region response</title><style>:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#11151b;color:#eaf0f7}body{margin:0 auto;max-width:1400px;padding:24px}article{overflow:auto;background:#1b222c;border:1px solid #344252;border-radius:12px;padding:16px}table{border-collapse:collapse;width:100%}th,td{padding:7px;border-bottom:1px solid #344252;text-align:left}</style></head><body><h1>Current region response</h1><p>Spatial measurements from this batch only. Hashes authenticate package files; values provide no aesthetic score, verdict, or cross-revision visual requirement. Full data is in <a href="./region-response.json">region-response.json</a>.</p>${cards}</body></html>\n`;
 }
 
+/** Descriptive local-structure evidence with no ranking or acceptance controls. */
+export function renderVisualLabRegionAppearanceBoard(appearance) {
+  if (appearance?.schema !== VISUAL_LAB_CURRENT_REGION_APPEARANCE_SCHEMA
+    || !Array.isArray(appearance.candidates) || appearance.candidates.length === 0) {
+    throw new TypeError('Region-appearance board requires current spatial evidence');
+  }
+  const cards = appearance.candidates.map((candidate) => {
+    const rows = candidate.regions.map((region) => {
+      const delta = region.pairs.offToB;
+      return `<tr><th>${escapeHtml(region.name)}</th><td>${escapeHtml(region.role)}</td><td>${escapeHtml(`${region.x},${region.y} ${region.width}×${region.height}`)}</td><td>${escapeHtml(delta.signedLumaMeanDelta.toFixed(3))}</td><td>${escapeHtml(delta.signedLumaStandardDeviationDelta.toFixed(3))}</td><td>${escapeHtml(delta.signedLumaNeighbourAbsoluteMeanDelta.toFixed(3))}</td></tr>`;
+    }).join('');
+    return `<article><h2>${escapeHtml(candidate.candidate)}</h2><table><thead><tr><th>Region</th><th>Role</th><th>World rect</th><th>OFF→B Δ luma mean</th><th>Δ luma spread</th><th>Δ neighbour contrast</th></tr></thead><tbody>${rows}</tbody></table></article>`;
+  }).join('');
+  return `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Visual Lab region appearance</title><style>:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#11151b;color:#eaf0f7}body{margin:0 auto;max-width:1500px;padding:24px}article{overflow:auto;background:#1b222c;border:1px solid #344252;border-radius:12px;padding:16px;margin:18px 0}table{border-collapse:collapse;width:100%}th,td{padding:7px;border-bottom:1px solid #344252;text-align:left}</style></head><body><h1>Current region appearance</h1><p>Local luminance spread and neighbour contrast navigate this batch only. They describe texture, edges, and tonal variation without scoring or deciding aesthetics, and never pin visuals across revisions. Full data is in <a href="./region-appearance.json">region-appearance.json</a>.</p>${cards}</body></html>\n`;
+}
+
 const assertCurrentCaptureContract = (report, executionPlan, hashes) => {
   const {
     recipe, request, domainAdapter: domain, fixtureAdapter: fixture,
@@ -1510,6 +1530,7 @@ export async function verifyVisualLabBatchPackage(options = {}) {
     'batchRoot', 'requireBrowserHostPlan', 'requireExecutionTuningPlan',
     'requireCaptureGeometry', 'requireComplete', 'requireOriginAttestation', 'requireRecipeSet',
     'recipeSetSourcePath', 'requireExperimentResponse', 'requireRegionResponse',
+    'requireRegionAppearance',
   ]);
   const unexpected = Reflect.ownKeys(options).filter((key) => !allowed.has(key));
   if (unexpected.length > 0) {
@@ -1526,6 +1547,7 @@ export async function verifyVisualLabBatchPackage(options = {}) {
   const requireRecipeSet = options.requireRecipeSet ?? false;
   const requireExperimentResponse = options.requireExperimentResponse ?? false;
   const requireRegionResponse = options.requireRegionResponse ?? false;
+  const requireRegionAppearance = options.requireRegionAppearance ?? false;
   if (typeof requireComplete !== 'boolean'
     || typeof requireBrowserHostPlan !== 'boolean'
     || typeof requireExecutionTuningPlan !== 'boolean'
@@ -1533,7 +1555,8 @@ export async function verifyVisualLabBatchPackage(options = {}) {
     || typeof requireOriginAttestation !== 'boolean'
     || typeof requireRecipeSet !== 'boolean'
     || typeof requireExperimentResponse !== 'boolean'
-    || typeof requireRegionResponse !== 'boolean') {
+    || typeof requireRegionResponse !== 'boolean'
+    || typeof requireRegionAppearance !== 'boolean') {
     throw new TypeError('Visual Lab batch verification requirement flags must be booleans');
   }
 
@@ -1652,6 +1675,41 @@ export async function verifyVisualLabBatchPackage(options = {}) {
       throw new TypeError('Visual Lab region response board does not match current evidence');
     }
   }
+  const regionAppearancePath = path.join(batchRoot, 'region-appearance.json');
+  const regionAppearanceBoardPath = path.join(batchRoot, 'region-appearance.html');
+  const [regionAppearanceDetails, regionAppearanceBoardDetails] = await Promise.all([
+    pathDetails(regionAppearancePath), pathDetails(regionAppearanceBoardPath),
+  ]);
+  if (Boolean(regionAppearanceDetails) !== Boolean(regionAppearanceBoardDetails)) {
+    throw new TypeError('Visual Lab region appearance JSON and board must be present together');
+  }
+  if (requireRegionAppearance && !regionAppearanceDetails) {
+    throw new TypeError('Visual Lab batch package is missing current region appearance evidence');
+  }
+  let regionAppearance = null;
+  if (regionAppearanceDetails) {
+    if (!canonical.complete) {
+      throw new TypeError('Incomplete Visual Lab batches cannot publish region appearance evidence');
+    }
+    const [publishedSource, boardSource] = await Promise.all([
+      readStableRegularFile(regionAppearancePath, 'Visual Lab region appearance', 'utf8', EXPERIMENT_EVIDENCE_MAX_BYTES),
+      readStableRegularFile(regionAppearanceBoardPath, 'Visual Lab region appearance board', 'utf8', EXPERIMENT_EVIDENCE_MAX_BYTES),
+    ]);
+    const published = parsePortableJson(publishedSource, 'Visual Lab region appearance');
+    regionAppearance = await createVisualLabCurrentRegionAppearance(
+      canonical,
+      async (candidate, variant) => readStableRegularFile(
+        path.join(batchRoot, canonical.candidates.find((entry) => entry.candidate === candidate).artifacts[variant]),
+        `Visual Lab ${candidate} ${variant} appearance capture`,
+      ),
+    );
+    if (regionAppearance === null || !isDeepStrictEqual(published, regionAppearance)) {
+      throw new TypeError('Visual Lab region appearance does not match current captures');
+    }
+    if (boardSource !== renderVisualLabRegionAppearanceBoard(regionAppearance)) {
+      throw new TypeError('Visual Lab region appearance board does not match current evidence');
+    }
+  }
   if (requireCaptureGeometry) {
     const missing = entries.filter((entry) => (
       entry.status === 'passed' && entry.captureDiagnostic.captureGeometry === undefined
@@ -1750,6 +1808,9 @@ export async function verifyVisualLabBatchPackage(options = {}) {
     regionResponse,
     regionResponsePath: regionResponseDetails ? regionResponsePath : null,
     regionResponseBoardPath: regionBoardDetails ? regionBoardPath : null,
+    regionAppearance,
+    regionAppearancePath: regionAppearanceDetails ? regionAppearancePath : null,
+    regionAppearanceBoardPath: regionAppearanceBoardDetails ? regionAppearanceBoardPath : null,
     captureDiagnostics: entries.flatMap((entry) => (
       entry.status === 'passed' ? [entry.captureDiagnostic] : []
     )),
@@ -2137,6 +2198,8 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   const experimentBoardPath = path.join(outputDirectory, 'experiment-board.html');
   const regionResponsePath = path.join(outputDirectory, 'region-response.json');
   const regionResponseBoardPath = path.join(outputDirectory, 'region-response.html');
+  const regionAppearancePath = path.join(outputDirectory, 'region-appearance.json');
+  const regionAppearanceBoardPath = path.join(outputDirectory, 'region-appearance.html');
   const recipeSetPath = path.join(outputDirectory, 'recipe-set.json');
   const browserHostPlanPath = path.join(outputDirectory, BROWSER_HOST_PLAN_FILE_NAME);
   const executionTuningPlanPath = path.join(
@@ -2615,6 +2678,7 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   const captureSubphaseSummary = summarizeEntryCaptureSubphases(entries);
   let experimentResponse = null;
   let regionResponse = null;
+  let regionAppearance = null;
   if (index.complete) {
     experimentResponse = await createVisualLabBatchExperimentResponse(
       index,
@@ -2650,6 +2714,23 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
       await publishFile(regionResponsePath, regionSource);
       await publishFile(regionResponseBoardPath, regionBoard);
     }
+    regionAppearance = await createVisualLabCurrentRegionAppearance(
+      index,
+      async (candidate, variant) => readStableRegularFile(
+        path.join(outputDirectory, index.candidates.find((entry) => entry.candidate === candidate).artifacts[variant]),
+        `Visual Lab ${candidate} ${variant} appearance capture`,
+      ),
+    );
+    if (regionAppearance !== null) {
+      const appearanceSource = `${JSON.stringify(regionAppearance, null, 2)}\n`;
+      const appearanceBoard = renderVisualLabRegionAppearanceBoard(regionAppearance);
+      if (Buffer.byteLength(appearanceSource) > EXPERIMENT_EVIDENCE_MAX_BYTES
+        || Buffer.byteLength(appearanceBoard) > EXPERIMENT_EVIDENCE_MAX_BYTES) {
+        throw new Error('Visual Lab current region appearance exceeds the 1 MiB bound');
+      }
+      await publishFile(regionAppearancePath, appearanceSource);
+      await publishFile(regionAppearanceBoardPath, appearanceBoard);
+    }
   }
   // Publish the human sheet first and the machine-readable completion marker
   // last. A crash or sheet error therefore cannot leave complete:true without
@@ -2668,6 +2749,9 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
     regionResponse,
     regionResponsePath: regionResponse === null ? null : regionResponsePath,
     regionResponseBoardPath: regionResponse === null ? null : regionResponseBoardPath,
+    regionAppearance,
+    regionAppearancePath: regionAppearance === null ? null : regionAppearancePath,
+    regionAppearanceBoardPath: regionAppearance === null ? null : regionAppearanceBoardPath,
     recipeSet,
     recipeSetPath,
     plan: executionPlan.inspection,

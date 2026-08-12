@@ -16,7 +16,8 @@ const HELP = `Usage:
     [--require-browser-host-plan=0|1] [--require-execution-tuning-plan=0|1] \
     [--require-origin-attestation=0|1] [--require-capture-geometry=0|1] \
     [--require-baseline-capture-provenance=0|1] \
-    [--require-experiment-response=0|1] [--require-region-response=0|1]
+    [--require-experiment-response=0|1] [--require-region-response=0|1] \
+    [--require-region-appearance=0|1]
 
 The verifier is read-only. It reconstructs the batch from reports and PNGs,
 checks the deterministic contact sheet and optional recipe-set sidecar, and can
@@ -27,7 +28,8 @@ const BOOLEAN_OPTIONS = new Set([
   'require-baseline-capture-provenance',
   'require-browser-host-plan', 'require-execution-tuning-plan',
   'require-capture-geometry', 'require-complete', 'require-origin-attestation',
-  'require-experiment-response', 'require-region-response', 'require-recipe-set',
+  'require-experiment-response', 'require-region-response',
+  'require-region-appearance', 'require-recipe-set',
 ]);
 const PATH_OPTIONS = new Set([
   'batch-root', 'baseline-root', 'comparison-root', 'recipe-set-source',
@@ -82,6 +84,7 @@ export function parseVisualLabVerifyArguments(argv) {
     ),
     requireExperimentResponse: parseBoolean(values, 'require-experiment-response', false),
     requireRegionResponse: parseBoolean(values, 'require-region-response', false),
+    requireRegionAppearance: parseBoolean(values, 'require-region-appearance', false),
     requireCaptureGeometry: parseBoolean(values, 'require-capture-geometry', false),
     requireOriginAttestation: parseBoolean(
       values, 'require-origin-attestation', false,
@@ -106,7 +109,7 @@ export async function runVisualLabPackageVerification(options, dependencies = {}
     'requireBaselineCaptureProvenance',
     'requireBrowserHostPlan', 'requireExecutionTuningPlan',
     'requireCaptureGeometry', 'requireComplete', 'requireExperimentResponse',
-    'requireRegionResponse',
+    'requireRegionResponse', 'requireRegionAppearance',
     'requireOriginAttestation', 'requireRecipeSet',
   ]);
   const unexpected = Reflect.ownKeys(options).filter((key) => !allowed.has(key));
@@ -133,6 +136,7 @@ export async function runVisualLabPackageVerification(options, dependencies = {}
     requireRecipeSet: options.requireRecipeSet ?? false,
     requireExperimentResponse: options.requireExperimentResponse ?? false,
     requireRegionResponse: options.requireRegionResponse ?? false,
+    requireRegionAppearance: options.requireRegionAppearance ?? false,
     ...(options.recipeSetSourcePath === undefined
       ? {} : { recipeSetSourcePath: options.recipeSetSourcePath }),
   });
@@ -190,6 +194,13 @@ export async function runVisualLabPackageVerification(options, dependencies = {}
       schema: batch.regionResponse.schema,
       candidateCount: batch.regionResponse.candidates.length,
       regionCount: batch.regionResponse.candidates.reduce(
+        (count, candidate) => count + candidate.regions.length, 0,
+      ),
+    },
+    regionAppearance: batch.regionAppearance == null ? null : {
+      schema: batch.regionAppearance.schema,
+      candidateCount: batch.regionAppearance.candidates.length,
+      regionCount: batch.regionAppearance.candidates.reduce(
         (count, candidate) => count + candidate.regions.length, 0,
       ),
     },
