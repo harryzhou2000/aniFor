@@ -133,6 +133,30 @@ a favored current-only and now-deployed visual checkpoint. Future work should
 reuse the transport carrier for broader material presentation or measurement
 leverage; it must not reopen this checkpoint merely to pin exact pixels.
 
+The next framework correction is implemented locally on top of that deployed
+carrier. Deep B lighting no longer tests transported energy along the arbitrary
+world axis `(1, 0.18)`. Normal WebGL reconstructs the actual two-dimensional
+radiance gradient from four cardinal carrier samples, derives a bounded
+confidence from its magnitude, and projects the resulting source direction
+against the already-supported material-body outward normal. The existing local
+two-cell probe remains authoritative near a shell; only the established depth
+blend hands broad powder, liquid, gas, and solid interiors to this transported
+direction. The change adds two B-only texture reads relative to the old
+fixed-axis probe and adds no CPU field, texture, pass, allocation, material
+branch, Canvas path, or compact true-8× code.
+
+Current-only SwiftShader evidence is retained at
+`/tmp/anifortpt-transport-gradient`. The opposed-source scene compiled and
+captured with WebGL/HDR, exact semantic/field/framebuffer invariants, zero
+browser errors, and clean teardown. Its Clay centre and fine-structure,
+native-wall, and guarded-blank controls remain stable while both opposed flanks
+retain distinct response; the authored wall umbra remains a separate response
+from its lit/open shoulders. The protected 217-material true-8× audit also
+passed after a fresh production build. Treat this as a source-direction
+correctness checkpoint, not an exact-pixel baseline. The next evidence step is
+the canonical current-only multi-scene package, with special inspection of
+liquid and gas source-facing lobes before deployment.
+
 Canvas evidence remains diagnostic only (`canonical: false`, `comparison:
 none`), carries no image-hash acceptance policy, and cannot fail the canonical
 WebGL checkpoint. The current multi-backend/scale board remains the place to

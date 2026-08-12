@@ -471,6 +471,14 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).toContain(
       'emissionState, profileIrradianceOutwardEmission, directionalSourceShare',
     );
+    expect(normal).toContain(
+      'transportRight - transportLeft, transportBottom - transportTop',
+    );
+    expect(normal).toContain(
+      'dot(profileIrradianceOutward, transportDirection)',
+    );
+    expect(normal).not.toContain('normalize(vec2(1.0, 0.18))');
+    expect(eight).not.toContain('transportGradient');
     expect(normal).not.toContain(
       'if (profileIrradianceOutwardEmission.a > inwardIrradiance.a)',
     );

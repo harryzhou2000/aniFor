@@ -11672,21 +11672,44 @@ void main() {
     vec4 profileIrradianceEmission = emissionState;
     float longRangeIncidence = 0.0;
     if (profileIrradianceB > 0.5 && uHighQuality > 0.5
-      && profileIrradianceEligibility > 0.001) {
+      && profileIrradianceEligibility > 0.001
+      && profileIrradianceNormalLength > 0.0001) {
       vec4 longRangeEmission = texture(uLongRangeEmissionTexture, fieldUv);
       profileIrradianceEmission = mix(
         emissionState, longRangeEmission,
         smoothstep(0.002, 0.035, longRangeEmission.a)
       );
-      vec2 transportAxis = normalize(vec2(1.0, 0.18));
-      float transportTowardKey = texture(
-        uLongRangeEmissionTexture, fieldUv - transportAxis * uEmissionTexel * 2.0
+      // Reconstruct the actual source direction from the transported energy
+      // rather than imposing a world-space diagonal. Four cardinal reads cost
+      // only two more samples than the previous fixed-axis probe and add no
+      // field, texture, or pass. The gradient points toward increasing
+      // radiance; projecting it onto the already-supported outward body normal
+      // yields one signed key/shadow response for every material phase.
+      vec2 transportProbe = uEmissionTexel * 2.0;
+      float transportLeft = texture(
+        uLongRangeEmissionTexture, fieldUv - vec2(transportProbe.x, 0.0)
       ).a;
-      float transportAwayFromKey = texture(
-        uLongRangeEmissionTexture, fieldUv + transportAxis * uEmissionTexel * 2.0
+      float transportRight = texture(
+        uLongRangeEmissionTexture, fieldUv + vec2(transportProbe.x, 0.0)
       ).a;
-      longRangeIncidence = sign(transportTowardKey - transportAwayFromKey)
-        * smoothstep(0.002, 0.05, abs(transportTowardKey - transportAwayFromKey));
+      float transportTop = texture(
+        uLongRangeEmissionTexture, fieldUv - vec2(0.0, transportProbe.y)
+      ).a;
+      float transportBottom = texture(
+        uLongRangeEmissionTexture, fieldUv + vec2(0.0, transportProbe.y)
+      ).a;
+      vec2 transportGradient = vec2(
+        transportRight - transportLeft, transportBottom - transportTop
+      );
+      float transportGradientMagnitude = length(transportGradient);
+      vec2 transportDirection = transportGradient
+        / max(transportGradientMagnitude, 0.0001);
+      vec2 profileIrradianceOutward = normal.xy / profileIrradianceNormalLength;
+      float transportConfidence = smoothstep(
+        0.002, 0.05, transportGradientMagnitude
+      );
+      longRangeIncidence = dot(profileIrradianceOutward, transportDirection)
+        * transportConfidence;
     }
     if (profileIrradianceB > 0.5 && uHighQuality > 0.5
       && profileIrradianceEligibility > 0.001
