@@ -1,13 +1,6 @@
-import { GAS_MATERIAL_LIGHTING_ATLAS_CATALOG } from './gas-material-lighting-atlas-catalog.js';
-import { FORCE_ACTIVITY_MATERIAL_LIGHTING_ATLAS_CATALOG } from './force-activity-material-lighting-atlas-catalog.js';
-import { MATERIAL_LIGHTING_ATLAS_CATALOG } from './material-lighting-atlas-catalog.js';
-import { OPPOSED_SOURCE_MATERIAL_LIGHTING_ATLAS_CATALOG } from './opposed-source-material-lighting-atlas-catalog.js';
-import { POWDER_STYLE_ATLAS_CATALOG } from './powder-style-atlas-catalog.js';
-import { SOLID_MATERIAL_LIGHTING_ATLAS_CATALOG } from './solid-material-lighting-atlas-catalog.js';
-import { THERMAL_SOURCE_MATERIAL_LIGHTING_ATLAS_CATALOG } from './thermal-source-material-lighting-atlas-catalog.js';
 import {
-  SOURCE_TARGET_MATERIAL_LIGHTING_ATLAS_CATALOG,
-} from './source-target-material-lighting-atlas-catalog.js';
+  VISUAL_CAPTURE_DECLARED_ATLAS_MANIFEST,
+} from './visual-capture-declared-atlas-manifest.js';
 
 /**
  * Data-only source registry for current inspection projection. Every atlas owns
@@ -28,14 +21,7 @@ const deepFreeze = (value) => {
 
 export const VISUAL_CAPTURE_INSPECTION_SOURCE_CATALOG = deepFreeze({
   schema: VISUAL_CAPTURE_INSPECTION_SOURCE_CATALOG_SCHEMA,
-  sources: [
-    { name: 'cross-phase', projection: 'declared', atlases: MATERIAL_LIGHTING_ATLAS_CATALOG.atlases },
-    { name: 'gas', projection: 'declared', atlases: GAS_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases },
-    { name: 'solid', projection: 'declared', atlases: SOLID_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases },
-    { name: 'source-target', projection: 'declared', atlases: SOURCE_TARGET_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases },
-    { name: 'force-activity', projection: 'declared', atlases: FORCE_ACTIVITY_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases },
-    { name: 'thermal-source', projection: 'declared', atlases: THERMAL_SOURCE_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases },
-    { name: 'opposed-source', projection: 'declared', atlases: OPPOSED_SOURCE_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases },
-    { name: 'powder-style', projection: 'declared', atlases: POWDER_STYLE_ATLAS_CATALOG.atlases },
-  ],
+  sources: VISUAL_CAPTURE_DECLARED_ATLAS_MANIFEST.map(({ name, atlases }) => ({
+    name, projection: 'declared', atlases,
+  })),
 });

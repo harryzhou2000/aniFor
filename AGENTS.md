@@ -215,6 +215,21 @@ coexistence, Water contact, and foreign hot-owner controls. The next framework
 work should remove residual registration effort or improve measurement leverage,
 not add another fixture-specific harness path.
 
+That next registration increment is implemented locally. One recursively frozen
+data-only `visual-capture-declared-atlas-manifest` now owns the eight declared
+inspection source groups and their existing atlas arrays. The public v1
+inspection-source catalog mechanically adds the sole `declared` projection, so
+a future review atlas needs one manifest row rather than a duplicated import and
+source record. The manifest validates safe unique source names, nonempty arrays,
+and globally unique candidate names. It carries no module paths as data,
+callbacks, preparation labels, browser methods, ordering, or executable
+authority. Keep `VISUAL_LAB_FIXTURE_PREPARERS` explicit and typed; app-side
+preparation is the intentional irreducible security boundary and must not be
+auto-discovered. The exact inspection catalog shape, canonical recipe ordering,
+all 257 current regions, and frozen capture/result identities remain unchanged.
+Local validation passes typecheck, 1,556 source tests, 359 tooling tests,
+production build, and exact 19-resource closure.
+
 The next retained material-class framework checkpoint is exact revision
 `d5ceedf940dfea3d1a194a6b8fff5ae4c3557bd2`. `RenderOptics.MetallicRigid`
 is appended as stable byte class `20`; no historical class ID moved. Only the

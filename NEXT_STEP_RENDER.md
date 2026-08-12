@@ -6679,6 +6679,21 @@ contact, wall, blank, and wrong-owner controls. The release workflow is the next
 gate. After it passes, prioritize automatic registration or reusable measurement
 leverage rather than another fixture-specific capture branch.
 
+The follow-on registration cleanup is also complete locally. A single frozen,
+data-only declared-atlas manifest owns the eight inspection source groups and
+their existing atlas arrays; the unchanged public v1 inspection-source catalog
+now mechanically projects each one through the sole `declared` projector. This
+removes the duplicate import-plus-source-row registration without giving static
+data preparation, browser, renderer, ordering, or execution authority. Safe
+unique source names, nonempty atlas arrays, and globally unique candidates fail
+closed. App fixture preparers deliberately remain explicit typed bindings; they
+must never be discovered from diagnostic labels or module paths. The canonical
+recipe order and exact 257-region projection are unchanged. Typecheck, 1,556
+source tests, 359 tooling tests, production build, and exact 19-resource closure
+pass. This is a framework-authoring change, not a visual experiment, so the
+existing thermal WebGL capture plus the canonical release review provide the
+appropriate visual evidence.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

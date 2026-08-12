@@ -10,6 +10,10 @@ import {
 import {
   VISUAL_CAPTURE_INSPECTION_SOURCE_CATALOG,
 } from '../src/shared/visual-capture-inspection-source-catalog.js';
+import {
+  normalizeVisualCaptureDeclaredAtlasManifest,
+  VISUAL_CAPTURE_DECLARED_ATLAS_MANIFEST,
+} from '../src/shared/visual-capture-declared-atlas-manifest.js';
 
 const valid = () => structuredClone(VISUAL_LAB_INSPECTION_REGIONS);
 
@@ -35,6 +39,25 @@ describe('Visual Lab inspection-region catalog', () => {
     expect(VISUAL_CAPTURE_INSPECTION_SOURCE_CATALOG.sources.every(
       ({ projection }) => projection === 'declared',
     )).toBe(true);
+    expect(VISUAL_CAPTURE_INSPECTION_SOURCE_CATALOG.sources.map(({ name, atlases }) => (
+      { name, atlases }
+    ))).toEqual(VISUAL_CAPTURE_DECLARED_ATLAS_MANIFEST);
+    expect(Object.isFrozen(VISUAL_CAPTURE_DECLARED_ATLAS_MANIFEST)).toBe(true);
+    expect(Object.isFrozen(VISUAL_CAPTURE_DECLARED_ATLAS_MANIFEST[0])).toBe(true);
+  });
+
+  it('rejects malformed, empty, duplicate-name, and duplicate-candidate manifest sources', () => {
+    const atlas = VISUAL_CAPTURE_DECLARED_ATLAS_MANIFEST[0].atlases[0];
+    expect(() => normalizeVisualCaptureDeclaredAtlasManifest({})).toThrow('manifest is malformed');
+    expect(() => normalizeVisualCaptureDeclaredAtlasManifest([
+      { name: 'empty', atlases: [] },
+    ])).toThrow('source is malformed');
+    expect(() => normalizeVisualCaptureDeclaredAtlasManifest([
+      { name: 'same', atlases: [atlas] }, { name: 'same', atlases: [atlas] },
+    ])).toThrow('source is malformed');
+    expect(() => normalizeVisualCaptureDeclaredAtlasManifest([
+      { name: 'first', atlases: [atlas] }, { name: 'second', atlases: [atlas] },
+    ])).toThrow('candidate is malformed or duplicated');
   });
 
   it('projects Powder style response and topology controls through the declared seam', () => {
