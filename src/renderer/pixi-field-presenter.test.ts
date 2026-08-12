@@ -383,7 +383,12 @@ describe('Pixi presenter startup configuration', () => {
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('float lobeExponent = mix(2.30, 0.72, roughnessProgress);');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('profileSheenShape * 0.300');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('vec3 applyMaterialAmbientGrounding(');
-    expect(MATERIAL_BODY_FINISH_GLSL).toContain('float phaseGrounding = powder * 0.92');
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'MaterialCompositionResponse materialCompositionParameters(float phase)',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'float phaseGrounding = composition.ambientGrounding;',
+    );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('mix(1.08, 0.62, transmission)');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('float gasCompactMacroRelief(vec2 position)');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('float liquidBodyFinishDepth(');
@@ -428,7 +433,7 @@ describe('Pixi presenter startup configuration', () => {
       '* (liquid * deepColumn * 0.016 + gasDeepAbsorption * 0.024);',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
-      'float profileSheenWeight = powder * 0.18 + liquid + gas * 0.78;',
+      'float profileSheenWeight = composition.profileSheen;',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       '* (0.100 + profileSheenShape * 0.300)',
@@ -447,7 +452,7 @@ describe('Pixi presenter startup configuration', () => {
       'finishResponse.y / max(finishResponse.w, 0.50)',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
-      'powder + liquid * 0.78 + gas * 0.58 + solid * 0.92',
+      'float penetrationPath = bodyDepth * composition.penetrationPath;',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'float externalTransport = mix(0.30, 1.0, clamp(lightIncidence, 0.0, 1.0));',
@@ -459,7 +464,7 @@ describe('Pixi presenter startup configuration', () => {
       'float midPath = 4.0 * bodyDepth * (1.0 - bodyDepth);',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
-      'float phaseScatter = powder * 0.22 + liquid + gas * 0.82;',
+      'float phaseScatter = composition.volumeScatter;',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'positiveExternal * midPath',

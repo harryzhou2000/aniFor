@@ -1,4 +1,5 @@
 import { MATERIAL_APPEARANCE_PROFILE_GLSL_SELECTOR } from './material-appearance-profiles';
+import { MATERIAL_COMPOSITION_PROFILE_GLSL_SELECTOR } from './material-composition-profiles';
 import { RECONSTRUCTED_VOLUME_OPTICS_GLSL } from './reconstructed-volume-optics';
 
 /**
@@ -34,6 +35,7 @@ float liquidBodyFinishDepth(
 // shade roughly fifteen million true-8x fragments. The closed numeric values
 // are RenderOptics classes, never exact material IDs.
 ${MATERIAL_APPEARANCE_PROFILE_GLSL_SELECTOR}
+${MATERIAL_COMPOSITION_PROFILE_GLSL_SELECTOR}
 ${RECONSTRUCTED_VOLUME_OPTICS_GLSL}
 
 vec3 applyMaterialBodyFinish(
@@ -61,12 +63,13 @@ vec3 applyMaterialBodyFinish(
   float powder = 1.0 - step(0.5, phase);
   float gas = step(1.5, phase);
   float liquid = 1.0 - powder - gas;
+  MaterialCompositionResponse composition = materialCompositionParameters(phase);
   // One shared profile response replaces phase-specific A/B lighting deltas.
   // Off remains an exact multiplicative identity. Normal HDR supplies the
   // live profile; compact true-8x passes literal Off and retains exact output.
   float lightingExperiment = step(0.5, materialLightingVariant);
   float lightingExperimentB = step(1.5, materialLightingVariant);
-  float sharedLightingWeight = powder * 0.78 + liquid + gas * 0.90;
+  float sharedLightingWeight = composition.bodyLighting;
   float sharedKeyScale = 1.0 + lightingExperiment * sharedLightingWeight
     * mix(0.18, 0.52, lightingExperimentB);
   float sharedFillScale = 1.0 + lightingExperiment * sharedLightingWeight
@@ -138,7 +141,7 @@ vec3 applyMaterialBodyFinish(
   // so mineral grain remains dominant; liquid and gas receive the clearer
   // curved-shell cue. This B-only term is RGB-only and compact true-8x passes
   // literal Off, so it cannot alter support, topology, or the bounded path.
-  float profileSheenWeight = powder * 0.18 + liquid + gas * 0.78;
+  float profileSheenWeight = composition.profileSheen;
   float profileGrazing = 1.0 - abs(clamp(facing, -1.0, 1.0));
   // The fifth appearance-profile lane controls lobe width without consuming a
   // palette/style byte or adding a runtime material lookup. Low roughness keeps
@@ -199,6 +202,7 @@ vec3 applyMaterialProfileIrradiance(
   float liquid = step(0.5, phase) * (1.0 - step(1.5, phase));
   float gas = step(1.5, phase) * (1.0 - step(2.5, phase));
   float solid = step(2.5, phase);
+  MaterialCompositionResponse composition = materialCompositionParameters(phase);
   float body = smoothstep(0.035, 0.42, density) * eligibility;
   float bodyDepth = clamp(depth, 0.0, 1.0);
   float slopeLength = length(slope);
@@ -224,7 +228,7 @@ vec3 applyMaterialProfileIrradiance(
     ) + solid * (
       finishResponse.x * 0.38 + finishResponse.w * 0.26
     );
-  float phaseGain = powder * 0.62 + liquid + gas * 0.82 + solid * 0.76;
+  float phaseGain = composition.irradiance;
 
   // Carry external light through the body according to the same profile lanes
   // used by every phase finish. Absorption divided by transmission is a compact
@@ -238,8 +242,7 @@ vec3 applyMaterialProfileIrradiance(
   float transmissionReserve = clamp(
     (finishResponse.w - 0.50) / 1.0, 0.0, 1.0
   );
-  float penetrationPath = bodyDepth
-    * (powder + liquid * 0.78 + gas * 0.58 + solid * 0.92);
+  float penetrationPath = bodyDepth * composition.penetrationPath;
   float penetration = 1.0 / (
     1.0 + penetrationPath * opticalAbsorption * 1.10
   );
@@ -259,7 +262,7 @@ vec3 applyMaterialProfileIrradiance(
   vec3 lightTint = clamp(emissionState.rgb / lightPeak, 0.0, 1.0);
   float identityPeak = max(max(color.r, color.g), max(color.b, 0.12));
   vec3 identityTint = clamp(color / identityPeak, 0.0, 1.0);
-  float pigmentCoupling = powder * 0.44 + liquid * 0.24 + gas * 0.16 + solid * 0.34;
+  float pigmentCoupling = composition.pigmentCoupling;
   // Let receiver pigment absorb the shared source spectrum progressively with
   // optical depth.  High-transmission profiles retain the emitted hue through
   // clean gas, water, Glass, and Ice; low-transmission profiles move soot,
@@ -288,7 +291,7 @@ vec3 applyMaterialProfileIrradiance(
   // over existing proofs; it adds no sample, resource, support, or alpha path.
   float positiveExternal = max(lightIncidence, 0.0);
   float midPath = 4.0 * bodyDepth * (1.0 - bodyDepth);
-  float phaseScatter = powder * 0.22 + liquid + gas * 0.82;
+  float phaseScatter = composition.volumeScatter;
   float transportLobe = lightReach * body * positiveExternal * midPath
     * phaseScatter * transmissionReserve
     * (0.024 + finishResponse.x * 0.060);
@@ -308,7 +311,7 @@ vec3 applyMaterialProfileIrradiance(
   float shadowAbsorption = mix(
     0.55, 1.0, clamp((opticalAbsorption - 0.35) / 2.05, 0.0, 1.0)
   );
-  float shadowPhase = powder * 0.72 + liquid * 0.62 + gas * 0.44 + solid * 0.82;
+  float shadowPhase = composition.farSideShadow;
   float softShadow = lightReach * body * shadowFacing * shadowAbsorption
     * shadowPhase * (0.045 + bodyDepth * 0.105);
   vec3 shadowSpectrum = mix(
@@ -346,6 +349,7 @@ vec3 applyMaterialAmbientGrounding(
   float liquid = step(0.5, phase) * (1.0 - step(1.5, phase));
   float gas = step(1.5, phase) * (1.0 - step(2.5, phase));
   float solid = step(2.5, phase);
+  MaterialCompositionResponse composition = materialCompositionParameters(phase);
   float body = smoothstep(0.08 - gas * 0.06, 0.52 - gas * 0.28, density)
     * eligibility;
   float interior = smoothstep(0.24, 0.84, clamp(depth, 0.0, 1.0));
@@ -353,7 +357,7 @@ vec3 applyMaterialAmbientGrounding(
   float cavity = body * interior * mix(0.48, 1.0, slopeQuiet);
   float transmission = clamp((finishResponse.w - 0.50) / 1.0, 0.0, 1.0);
   float roughness = clamp((finishRoughness - 0.5) / 1.0, 0.0, 1.0);
-  float phaseGrounding = powder * 0.92 + liquid * 0.62 + gas * 0.42 + solid * 0.78;
+  float phaseGrounding = composition.ambientGrounding;
   float grounding = cavity * phaseGrounding
     * mix(1.08, 0.62, transmission) * mix(0.88, 1.10, roughness)
     * (0.026 + finishResponse.y * 0.032);
