@@ -1161,6 +1161,29 @@ and all semantic/field/framebuffer evidence. The protected 4896x3072 true-8x
 atlas again rendered all 217 materials with zero browser errors. This is an
 aesthetic current-image decision, not a cross-revision hash requirement.
 
+The selected broad composition is deployed at exact revision
+`be9a03dc8ac337f58b81859e49af921ecf318278` by workflow run
+`31582153353`; the visual table itself is checkpointed in `290fe26`. The first
+deployment attempt reached six of seven review scenes before the final
+opposed-source readiness refresh exceeded the generic 20-second CDP command
+clock. The deployed head makes that refresh use the same driver-owned bounded
+60-second readiness clock as the adjacent atomic snapshot; it skips no work and
+changes no visual or evidence identity. The 3m28s build passed 1,533 source and
+344 tooling tests with 269/270 ccache hits and verified the exact 19-resource
+bundle. The seven-scene shared-host review passed seven-for-seven in 9m15s with
+one host and zero restarts, and its downloaded portable package verified. Pages
+deployed in 8 seconds; live closure passed all 19 resources on attempt one, and
+a fresh hosted Water receipt-v2 package passed against the exact deployed
+revision.
+
+A WebGL2 asynchronous PBO prototype preserved the material-atlas result ID,
+all three PNGs, and framebuffer-alpha digest exactly, but its fixed local ABBA
+cohort increased OFF and A/B readback time instead of reducing it. The
+prototype was removed before checkpointing. Do not retry transport overlap as
+an assumed win: the next readback increment must reduce actual work or establish
+a renderer-owned compact proof while preserving the exact default-framebuffer
+alpha semantics.
+
 Revision `813066c81735da2e9b2752c9ddff276cc1c8f0da` deployed the retained
 profile sheen through workflow run `31528453927`. The ccache-backed build,
 two-candidate stable-snapshot review, downloaded-package verification, Pages
@@ -1193,19 +1216,18 @@ Success means:
 
 Priority order from this checkpoint:
 
-1. Deploy the retained broad composition profile and verify the exact live
-   revision/resource closure plus hosted Water package.
-2. Continue shortening the remaining framebuffer `gl.readPixels`/alpha-digest
+1. Continue shortening the remaining framebuffer `gl.readPixels`/alpha-digest
    path without weakening
    semantic, authoritative-field, framebuffer-alpha, convergence, strict-
    disposal, or portable verification. Keep stable snapshots as the release
    default; receipt-v2 has now failed the seven-scene shared-host cohort and
    remains an explicit diagnostic until a renderer-level completion change can
-   pass that exact workload.
-3. Harden only regressions that threaten geometry, semantic/topology
+   pass that exact workload. The exact-parity PBO overlap experiment regressed
+   its ABBA cohort and is not retained.
+2. Harden only regressions that threaten geometry, semantic/topology
    correctness, WebGL lifecycle, true-8× completion, package integrity, or live
    Pages loading. Do not grow exact-pixel tests for evolving aesthetics.
-4. Continue the wider material and responsive-UI roadmap from audited gaps,
+3. Continue the wider material and responsive-UI roadmap from audited gaps,
    not assumed omissions: the current catalog already exposes selectable and
    render-only products, configured sources, forces, radioactive families,
    growth materials, and all 24 native LIFE presets.
