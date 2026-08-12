@@ -6480,6 +6480,16 @@ an exact visual pin. Once deployed, use this seam to migrate the paused
 Powder-style atlas as the first non-normal-HDR declared-region fixture without
 adding a cohort, driver, browser method, or capture branch.
 
+This inspection-source compiler checkpoint is deployed at exact revision
+`429df4447d19ec9a664e01254e634d17e9206391` by workflow run
+`31616720564`. The cached build passed in 3m25s with 269/270 compiler hits and
+saved ccache only after success. The full eight-candidate review and downloaded
+portable verification passed in 9m19s, retaining five annotated candidates and
+161 regions. Pages deployed in 9s. The 53s live gate matched the exact revision
+and 19-resource closure on its first attempt and passed the hosted Water WebGL
+package plus bounded smoke evidence. Treat this as the production checkpoint
+for recipe-ordered declarative inspection sources.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

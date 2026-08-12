@@ -37,6 +37,15 @@ After deployment, prefer migrating the paused Powder-style atlas through the
 same declared authoring/inspection seam as the next cross-driver proof; do not
 add a cohort, browser control, or capture branch for it.
 
+This inspection-source compiler checkpoint is deployed at exact revision
+`429df4447d19ec9a664e01254e634d17e9206391` by workflow run
+`31616720564`. The 3m25s build restored the prior ccache, reported 269/270
+compiler hits, and saved the new success-only cache. The complete eight-
+candidate review and downloaded portable verification passed in 9m19s with the
+canonical five-candidate/161-region subset. Pages deployed in 9s; the 53s live
+gate matched the revision and exact 19-resource closure on its first attempt,
+then passed the hosted Water WebGL package and bounded success evidence.
+
 The next retained material-class framework checkpoint is exact revision
 `d5ceedf940dfea3d1a194a6b8fff5ae4c3557bd2`. `RenderOptics.MetallicRigid`
 is appended as stable byte class `20`; no historical class ID moved. Only the
