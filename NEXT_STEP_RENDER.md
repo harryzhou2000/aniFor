@@ -188,6 +188,34 @@ manual fresh control for an isolated retry after the recognized loaded-host
 fault, and use the now-narrow artifact-reuse path when its exact source build
 meets the post-build optional-review constraints.
 
+The next broad material experiment is now favored locally. Volumetric/B uses
+the existing transported radiance, signed source incidence, reconstructed body
+depth, phase, and appearance-profile transmission to add one source-shaped
+interior in-scattering lobe. A bounded mid-path parabola is zero at the exposed
+shell and deepest core, positive external incidence is mandatory, and profile
+transmission preserves source colour through Water and clean gas while Oil,
+soot, and powder absorb sooner. Liquid receives the strongest response, gas a
+slightly softer volume, and settled Smooth powder only a restrained mineral
+cue; solids retain their established finish. This is RGB-only arithmetic over
+existing proofs and adds no sample, texture, field, target, pass, allocation,
+uniform, material branch, support, alpha, topology, Canvas rule, or compact
+true-8x work.
+
+Current-only SwiftShader evidence is retained at
+`/tmp/anifortpt-mid-lobe2-material`, `/tmp/anifortpt-mid-lobe2-gas`, and
+`/tmp/anifortpt-mid-lobe2-opposed`. All three production-bundle captures passed
+WebGL/HDR semantic, authoritative-field, and framebuffer-alpha invariants with
+zero browser errors and clean teardown. Direct inspection favors the restrained
+result: source-facing middles broaden without moving silhouettes, filling
+authored holes, flattening powder grain, or lighting the opposed far side.
+OFF and Balanced remain controls; no historical image hash is a requirement.
+The independent protected true-8x audit then rendered all 217 material
+projections at 4896x3072 with zero browser errors while compact remained literal
+Off. The next release step is the canonical seven-scene shared-host package and
+live Pages verification; after deployment, prefer another reusable
+material/transport carrier or measurement improvement over fixture-specific
+detail.
+
 Canvas evidence remains diagnostic only (`canonical: false`, `comparison:
 none`), carries no image-hash acceptance policy, and cannot fail the canonical
 WebGL checkpoint. The current multi-backend/scale board remains the place to

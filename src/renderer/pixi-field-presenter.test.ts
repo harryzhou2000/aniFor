@@ -450,6 +450,18 @@ describe('Pixi presenter startup configuration', () => {
       'mix(0.55, 1.15, transmissionReserve) * externalTransport',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'float midPath = 4.0 * bodyDepth * (1.0 - bodyDepth);',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'float phaseScatter = powder * 0.22 + liquid + gas * 0.82;',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'positiveExternal * midPath',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      '* phaseScatter * transmissionReserve',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       '(1.0 - transmissionReserve) * bodyDepth * 0.85',
     );
     expect(normal).toContain('profileIrradianceProbeResolved < 0.5');

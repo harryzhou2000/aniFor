@@ -264,6 +264,27 @@ vec3 applyMaterialProfileIrradiance(
   color += (vec3(1.12) - clamp(color, 0.0, 1.12))
     * irradianceTint * irradiance;
 
+  // A source-shaped in-scattering lobe gives transmissive matter a readable
+  // interior rather than concentrating every cue on its silhouette. The
+  // parabola is zero at the exposed shell and deepest core, and the signed
+  // transported incidence admits only a genuine external source. Optical
+  // transmission controls both strength and retained source colour: Water and
+  // clean gas carry the broadest middle, Oil/soot absorb sooner, and settled
+  // Smooth powder receives only a restrained mineral-volume cue. Solids keep
+  // their separate body-lighting vocabulary. This is B-only RGB arithmetic
+  // over existing proofs; it adds no sample, resource, support, or alpha path.
+  float positiveExternal = max(lightIncidence, 0.0);
+  float midPath = 4.0 * bodyDepth * (1.0 - bodyDepth);
+  float phaseScatter = powder * 0.22 + liquid + gas * 0.82;
+  float transportLobe = lightReach * body * positiveExternal * midPath
+    * phaseScatter * transmissionReserve
+    * (0.024 + finishResponse.x * 0.060);
+  vec3 transportLobeTint = mix(
+    absorbedLightTint, lightTint, mix(0.28, 0.82, transmissionReserve)
+  );
+  color += (vec3(1.12) - clamp(color, 0.0, 1.12))
+    * transportLobeTint * transportLobe;
+
   // The same two-sided probe also carries a signed far-side response. Turn
   // only that negative half into a broad profile-governed shadow: opaque,
   // absorbent bodies keep a clearer grounded side while transmissive gas,
