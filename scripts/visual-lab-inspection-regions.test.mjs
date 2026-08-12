@@ -9,8 +9,8 @@ import {
   VISUAL_LAB_INSPECTION_REGION_CATALOG_SCHEMA,
 } from './visual-lab-inspection-regions.mjs';
 import {
-  MATERIAL_LIGHTING_INSPECTION_SOURCE_CATALOG,
-} from '../src/shared/material-lighting-inspection-source-catalog.js';
+  VISUAL_CAPTURE_INSPECTION_SOURCE_CATALOG,
+} from '../src/shared/visual-capture-inspection-source-catalog.js';
 
 const valid = () => structuredClone(VISUAL_LAB_INSPECTION_REGIONS);
 
@@ -21,14 +21,30 @@ describe('Visual Lab inspection-region catalog', () => {
 
   it('orders the covered subset by canonical capture-recipe order', () => {
     expect(VISUAL_LAB_INSPECTION_REGIONS.fixtures.map(({ candidate }) => candidate)).toEqual([
+      'powder-style-atlas',
       'material-lighting-atlas',
       'gas-material-lighting-atlas',
       'solid-material-lighting-atlas',
       'multi-metal-material-lighting-atlas',
       'opposed-source-material-lighting-atlas',
     ]);
-    expect(Object.isFrozen(MATERIAL_LIGHTING_INSPECTION_SOURCE_CATALOG)).toBe(true);
-    expect(Object.isFrozen(MATERIAL_LIGHTING_INSPECTION_SOURCE_CATALOG.sources[0])).toBe(true);
+    expect(Object.isFrozen(VISUAL_CAPTURE_INSPECTION_SOURCE_CATALOG)).toBe(true);
+    expect(Object.isFrozen(VISUAL_CAPTURE_INSPECTION_SOURCE_CATALOG.sources[0])).toBe(true);
+  });
+
+  it('projects Powder style response and topology controls through the declared seam', () => {
+    const powder = fixture('powder-style-atlas');
+    expect(powder.world).toEqual({ width: 612, height: 384 });
+    expect(powder.regions).toHaveLength(16);
+    expect(powder.regions.map(({ name }) => name)).toEqual([
+      'sand-pile-bulk', 'sand-pile-surface', 'clay-pile-bulk', 'clay-pile-surface',
+      'concrete-ridge', 'wet-powder', 'wet-water', 'clay-stem', 'clay-ledge',
+      'concrete-hole', 'sand-grain', 'clay-grain', 'concrete-diagonal',
+      'unstable-grains', 'wall-coexistence', 'guarded-blank',
+    ]);
+    expect(powder.regions.at(-1)).toEqual({
+      name: 'guarded-blank', role: 'control', x: 290, y: 334, width: 120, height: 28,
+    });
   });
 
   it('derives opposed-source review annotations from shared declared authoring', () => {

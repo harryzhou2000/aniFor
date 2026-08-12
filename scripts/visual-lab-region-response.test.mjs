@@ -49,6 +49,21 @@ describe('Visual Lab current region response', () => {
     });
   });
 
+  it('measures the cross-driver Powder-style atlas through the same response path', async () => {
+    const response = await createVisualLabCurrentRegionResponse(
+      batch('powder-style-atlas'),
+      async (_candidate, variant) => captures[variant],
+    );
+    expect(response.candidates[0].candidate).toBe('powder-style-atlas');
+    expect(response.candidates[0].regions).toHaveLength(16);
+    expect(response.candidates[0].regions[0]).toMatchObject({
+      name: 'sand-pile-bulk', role: 'response', x: 104, y: 206, width: 36, height: 52,
+    });
+    expect(response.candidates[0].regions.at(-1)).toMatchObject({
+      name: 'guarded-blank', role: 'control', x: 290, y: 334, width: 120, height: 28,
+    });
+  });
+
   it('rejects capture tampering and inconsistent variant dimensions', async () => {
     const tampered = { ...captures, b: png(16) };
     await expect(createVisualLabCurrentRegionResponse(batch(), async (_candidate, variant) => tampered[variant])).rejects.toThrow('pinned capture SHA-256');

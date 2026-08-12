@@ -6490,6 +6490,29 @@ and 19-resource closure on its first attempt and passed the hosted Water WebGL
 package plus bounded smoke evidence. Treat this as the production checkpoint
 for recipe-ordered declarative inspection sources.
 
+The first cross-driver proof now migrates the paused Powder-style atlas into
+the same data-only authoring and declared-region seam. Its frozen catalog owns
+the two piles, fine Clay/Concrete structures and hole, isolated and unstable
+grains, wet Powder/Water contact, native-wall coexistence, guarded blank,
+material/wall IDs, and sixteen response/control windows. A typed app helper
+validates and direct-fills that descriptor while the historical fixture path
+and exports remain a compatibility facade. Because review sources now span
+normal-HDR and `powder-render-style`, the aggregate is correctly named the
+visual-capture inspection-source catalog. It still contains only closed
+projection names and data—never execution callbacks or browser authority.
+
+This required no static-contract, cohort, recipe-set, app-preparer, driver,
+control, browser-method, capture, renderer, CI, or identity change. Local proof
+passed 1,546 source and 355 tooling tests, typecheck, production build, and
+exact 19-resource closure. The real SwiftShader package retained at
+`/tmp/anifortpt-powder-declared-regions-20260813` passed in 30.9s with one
+healthy shared host, zero restarts, clean teardown, and portable reconstruction
+of all sixteen regions. Direct visual review confirmed the Smooth curved bulk
+boundary and the intentionally square Local/Grains reference while fine
+structures, isolated grains, hole, wet contact, wall block, and blank remained
+inspectable. Treat this as current loose visual evidence, not an exact visual
+pin.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

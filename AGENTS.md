@@ -46,6 +46,26 @@ canonical five-candidate/161-region subset. Pages deployed in 9s; the 53s live
 gate matched the revision and exact 19-resource closure on its first attempt,
 then passed the hosted Water WebGL package and bounded success evidence.
 
+The active cross-driver increment migrates the existing paused Powder-style
+atlas through that same authoring seam. One frozen data-only catalog owns both
+piles, fine Clay/Concrete topology, isolated and unstable grains, wet contact,
+native-wall coexistence, guarded blank, material/wall IDs, and sixteen ordered
+inspection regions. A typed helper validates and direct-fills it while the
+historical fixture module remains a compatibility facade. The generalized
+`visual-capture` inspection-source registry now covers both normal-HDR material
+lighting and the existing `powder-render-style` driver; no static-contract row,
+cohort, recipe set, app preparer, control, browser method, capture branch,
+renderer path, or frozen identity changed.
+
+Local proof passed 1,546 source and 355 tooling tests, typecheck, production
+build, and exact 19-resource closure. The retained SwiftShader package at
+`/tmp/anifortpt-powder-declared-regions-20260813` passed the real Powder
+Smooth/Local/Grains selection in 30.9s with WebGL, one shared host, zero
+restarts, clean teardown, and portable verification of all sixteen regions.
+Direct inspection favored the established Smooth curved bulk boundary while
+Local/Grains retained the square-cell reference and fine topology. This is
+current visual evidence, not a hash pin or cross-revision baseline.
+
 The next retained material-class framework checkpoint is exact revision
 `d5ceedf940dfea3d1a194a6b8fff5ae4c3557bd2`. `RenderOptics.MetallicRigid`
 is appended as stable byte class `20`; no historical class ID moved. Only the

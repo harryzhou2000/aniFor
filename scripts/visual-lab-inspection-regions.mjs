@@ -2,8 +2,8 @@ import { pathToFileURL } from 'node:url';
 
 import { VISUAL_CAPTURE_STATIC_RECIPES } from '../src/shared/visual-capture-static-catalog.js';
 import {
-  MATERIAL_LIGHTING_INSPECTION_SOURCE_CATALOG,
-} from '../src/shared/material-lighting-inspection-source-catalog.js';
+  VISUAL_CAPTURE_INSPECTION_SOURCE_CATALOG,
+} from '../src/shared/visual-capture-inspection-source-catalog.js';
 
 /**
  * Scripts-owned current-only spatial review annotations. These records are
@@ -260,7 +260,7 @@ export function compileVisualLabInspectionFixtures(sourceCatalog, recipes) {
 }
 
 const INSPECTION_FIXTURES = compileVisualLabInspectionFixtures(
-  MATERIAL_LIGHTING_INSPECTION_SOURCE_CATALOG,
+  VISUAL_CAPTURE_INSPECTION_SOURCE_CATALOG,
   VISUAL_CAPTURE_STATIC_RECIPES,
 );
 
