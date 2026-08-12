@@ -304,11 +304,13 @@ describe('Visual Lab portable package verifier', () => {
     expect(workflow).toContain('--require-capture-geometry=1');
     expect(workflow).toContain('--require-execution-tuning-plan=1');
     expect(workflow).toContain('--require-experiment-response=1');
+    expect(workflow).toContain('--require-region-response=1');
     expect(deployVerification).toBeGreaterThan(verify);
     expect(deploySuccessGuard).toBeGreaterThan(deployVerification);
     expect(liveVerification).toBeGreaterThan(deploySuccessGuard);
     expect(liveFunctionalSmoke).toBeGreaterThan(liveVerification);
     expect(workflow.slice(deployVerification)).toContain('--candidates=water-motion');
+    expect(workflow.slice(deployVerification)).not.toContain('--require-region-response=1');
     expect(workflow.slice(liveFunctionalSmoke)).toContain(
       '--capture-proof=completed-frame-receipt',
     );
