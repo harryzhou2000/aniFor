@@ -6685,27 +6685,41 @@ void main() {
       );
       float gasVfxBodySupport = smoothstep(0.090, 0.32, gasShadeDensity)
         * gasInterior * (1.0 - opticalDepth * 0.35);
+      // The shared material-lighting B look turns this already-established
+      // static billow basis into a clearer interior volume. It changes only
+      // the strength of RGB key/pocket modulation after atmosphere support is
+      // proven; OFF/A, alpha, silhouette, sparse gaps, and compact true-8x
+      // remain on their existing paths.
+      float gasMaterialVolumeB = step(1.5, uMaterialLightingVariant);
+      float gasBillowKeyScale = mix(1.0, 4.20, gasMaterialVolumeB);
+      float gasBillowPocketScale = mix(1.0, 3.10, gasMaterialVolumeB);
       float gasVfxKey = min(
-        0.180,
+        mix(0.180, 0.285, gasMaterialVolumeB),
         (gasVfxCrown * 0.120
           + max(gasDirectionalRelief, 0.0) * (0.095 + gasVfxShoulder * 0.085)
           + max(gasCurvature, 0.0) * (0.090 + gasVfxShoulder * 0.045)
           + gasForwardScatter * 0.68 + silverLining * 0.140)
           * gasVfxSupport * (1.0 - opticalDepth * 0.20)
-          + max(gasVfxBillow, 0.0) * gasVfxBodySupport * 0.055
+          + max(gasVfxBillow, 0.0) * gasVfxBodySupport
+            * 0.055 * gasBillowKeyScale
       );
       float gasVfxPocket = min(
-        0.065,
+        mix(0.065, 0.125, gasMaterialVolumeB),
         (max(-gasDirectionalRelief, 0.0) * (0.020 + gasVfxShoulder * 0.030)
           + max(-gasCurvature, 0.0) * (0.032 + opticalDepth * 0.040)
           + gasVfxShoulder * (1.0 - smoothstep(0.48, 0.76, diffuse)) * 0.022)
           * gasVfxSupport
-          + max(-gasVfxBillow, 0.0) * gasVfxBodySupport * 0.040
+          + max(-gasVfxBillow, 0.0) * gasVfxBodySupport
+            * 0.040 * gasBillowPocketScale
       );
       vec3 gasVfxTint = mix(vec3(0.44, 0.68, 1.00), vividColor(gasBase, 1.12), 0.62);
       color += (vec3(1.35) - clamp(color, 0.0, 1.35))
         * gasVfxTint * gasVfxKey;
       color *= 1.0 - gasVfxPocket;
+      float gasMaterialBillowExposure = gasMaterialVolumeB * gasVfxBodySupport
+        * (max(gasVfxBillow, 0.0) * 0.070
+          - max(-gasVfxBillow, 0.0) * 0.060);
+      color *= 1.0 + gasMaterialBillowExposure;
 
       // E15: deepen only the connected atmosphere-owned cores selected by the
       // already propagated gas identity. The existing E04 static billow,

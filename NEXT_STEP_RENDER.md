@@ -1222,6 +1222,20 @@ Pages deployed in 9 seconds, live closure passed all 19 resources on attempt
 one, and the fresh hosted Water receipt-v2 package verified against the exact
 deployed revision.
 
+The first renderer increment authored through that streamlined path strengthens
+the material-lighting B gas volume without adding another fixture, resource, or
+control. The normal-HDR gas compositor already owns a stable three-wave world-
+space billow basis after connected atmosphere support is proven. B now gives
+that basis a bounded pigment-preserving interior exposure plus stronger key and
+pocket modulation; OFF/A, alpha, silhouette, authored gaps, sparse support, and
+Canvas remain unchanged. Direct inspection selected the third pass: broad smoke
+and blue-gas lobes become readable at normal scale without hard bands, opaque
+cloud slabs, or an embossed edge. A real Gas stable-v1 capture passed semantic,
+authoritative-field, framebuffer-alpha, convergence, strict teardown, and zero-
+browser-error evidence. The protected 4896x3072 true-8x atlas kept all 217
+materials visible with zero browser errors, confirming the literal-Off compact
+path remains independent.
+
 Revision `813066c81735da2e9b2752c9ddff276cc1c8f0da` deployed the retained
 profile sheen through workflow run `31528453927`. The ccache-backed build,
 two-candidate stable-snapshot review, downloaded-package verification, Pages
