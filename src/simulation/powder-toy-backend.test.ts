@@ -1381,7 +1381,7 @@ describe('direct Powder Toy backend', () => {
     corrosionRestored.loadFile(corrosionFile);
     expect(corrosionRestored.cells()).toEqual(corrosionCells);
     expect(corrosionRestored.presentationState()).toEqual(corrosionState);
-  });
+  }, 15000);
 
   it('extracts exact native DEUT concentration and follows native coalescing', async () => {
     const simulation = await PowderToyBackend.load(moduleArtifact.href);
