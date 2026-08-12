@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { PixiFieldPresenter } from './pixi-field-presenter';
+import { digestFramebufferAlpha, PixiFieldPresenter } from './pixi-field-presenter';
 import { MATERIAL_BODY_FINISH_GLSL } from './material-body-finish';
 import { POWDER_SMOOTH_COVERAGE_GLSL } from './powder-smooth-coverage';
 import { powderRenderStyleValue } from './powder-render-style';
@@ -12,7 +12,12 @@ import {
 interface PresenterHarness {
   readonly uniforms: { readonly uniforms: Record<string, number> };
   readonly app: {
-    readonly canvas: { readonly style: { transform: string }; readonly dataset: Record<string, string> };
+    readonly canvas: {
+      readonly style: { transform: string };
+      readonly dataset: Record<string, string>;
+      readonly width: number;
+      readonly height: number;
+    };
     readonly render: ReturnType<typeof vi.fn>;
     readonly renderer?: { readonly gl: Partial<WebGL2RenderingContext> };
   };
@@ -80,12 +85,17 @@ interface PresenterHarness {
   getWebGLPresentationTiming: PixiFieldPresenter['getWebGLPresentationTiming'];
   requestWebGLCompletedFrameReceipt: PixiFieldPresenter['requestWebGLCompletedFrameReceipt'];
   getWebGLCompletedFrameReceipt: PixiFieldPresenter['getWebGLCompletedFrameReceipt'];
+  requestWebGLFramebufferAlphaReadback: PixiFieldPresenter['requestWebGLFramebufferAlphaReadback'];
+  getWebGLFramebufferAlphaReadback: PixiFieldPresenter['getWebGLFramebufferAlphaReadback'];
   webGLTimingRequested: boolean;
   webGLTimingSequence: number;
   presentationSubmission: number;
   completedFrameTicketSequence: number;
   completedFrameFencePoll: number;
   completedFrameFenceWatchdog: ReturnType<typeof setTimeout> | undefined;
+  framebufferAlphaReadbackTicketSequence: number;
+  framebufferAlphaReadbackPoll: number;
+  framebufferAlphaReadbackWatchdog: ReturnType<typeof setTimeout> | undefined;
   renderFenceSubmission: number;
 }
 
@@ -94,7 +104,7 @@ function presenterHarness(outputScale = 2): PresenterHarness {
   Object.assign(presenter, {
     uniforms: { uniforms: {} },
     app: {
-      canvas: { style: { transform: '' }, dataset: {} },
+      canvas: { style: { transform: '' }, dataset: {}, width: 2, height: 1 },
       render: vi.fn(),
     },
     firstFrameReady: false,
@@ -114,6 +124,9 @@ function presenterHarness(outputScale = 2): PresenterHarness {
     completedFrameTicketSequence: 0,
     completedFrameFencePoll: 0,
     completedFrameFenceWatchdog: undefined,
+    framebufferAlphaReadbackTicketSequence: 0,
+    framebufferAlphaReadbackPoll: 0,
+    framebufferAlphaReadbackWatchdog: undefined,
     renderFencePoll: 0,
     renderFenceWatchdog: undefined,
     renderFenceSubmission: 0,
@@ -4844,6 +4857,122 @@ describe('Pixi presenter startup configuration', () => {
       ticket: 1, submission: 1, state: 'completed',
     });
     expect(gl.deleteSync).toHaveBeenCalledWith(fence);
+  });
+
+  it('preserves the historical framebuffer-alpha digest grammar', () => {
+    expect(digestFramebufferAlpha(new Uint8Array([
+      10, 20, 30, 0,
+      40, 50, 60, 255,
+    ]))).toEqual({
+      hash: 3547842867,
+      supportHash: 292984781,
+      alphaSum: 255,
+      nonzero: 1,
+    });
+  });
+
+  it('completes a pixel-pack framebuffer-alpha transfer without a synchronous readback', () => {
+    let status = 0x911b; // TIMEOUT_EXPIRED
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const buffer = {} as WebGLBuffer;
+    const fence = {} as WebGLSync;
+    const rgba = new Uint8Array([10, 20, 30, 0, 40, 50, 60, 255]);
+    const gl = {
+      PIXEL_PACK_BUFFER: 0x88eb,
+      STREAM_READ: 0x88e1,
+      RGBA: 0x1908,
+      UNSIGNED_BYTE: 0x1401,
+      SYNC_GPU_COMMANDS_COMPLETE: 0x9117,
+      SYNC_FLUSH_COMMANDS_BIT: 0x00000001,
+      TIMEOUT_EXPIRED: 0x911b,
+      WAIT_FAILED: 0x911d,
+      ALREADY_SIGNALED: 0x911a,
+      CONDITION_SATISFIED: 0x911c,
+      createBuffer: vi.fn(() => buffer),
+      bindBuffer: vi.fn(),
+      bufferData: vi.fn(),
+      readPixels: vi.fn(),
+      getBufferSubData: vi.fn((_target, _offset, destination: Uint8Array) => destination.set(rgba)),
+      deleteBuffer: vi.fn(),
+      fenceSync: vi.fn(() => fence),
+      flush: vi.fn(),
+      clientWaitSync: vi.fn(() => status),
+      deleteSync: vi.fn(),
+    } as unknown as WebGL2RenderingContext;
+    const presenter = presenterHarness();
+    Object.assign(presenter.app, { renderer: { gl } });
+    presenter.presentationSubmission = 1;
+
+    const ticket = presenter.requestWebGLFramebufferAlphaReadback();
+
+    expect(ticket).toBe(1);
+    expect(presenter.app.render).not.toHaveBeenCalled();
+    expect(gl.readPixels).toHaveBeenCalledWith(0, 0, 2, 1, gl.RGBA, gl.UNSIGNED_BYTE, 0);
+    expect(gl.getBufferSubData).not.toHaveBeenCalled();
+    expect(presenter.getWebGLFramebufferAlphaReadback(ticket!)).toMatchObject({
+      ticket: 1, submission: 1, state: 'pending',
+    });
+
+    status = gl.CONDITION_SATISFIED;
+    expect(presenter.getWebGLFramebufferAlphaReadback(ticket!)).toMatchObject({
+      ticket: 1,
+      submission: 1,
+      state: 'completed',
+      digest: digestFramebufferAlpha(rgba),
+    });
+    expect(gl.getBufferSubData).toHaveBeenCalledOnce();
+    expect(gl.deleteSync).toHaveBeenCalledWith(fence);
+    expect(gl.deleteBuffer).toHaveBeenCalledWith(buffer);
+  });
+
+  it('leaves unsupported and true-8x framebuffer-alpha requests on the direct fallback', () => {
+    const presenter = presenterHarness();
+    expect(presenter.requestWebGLFramebufferAlphaReadback()).toBeUndefined();
+
+    const eightX = presenterHarness(8);
+    Object.assign(eightX.app, { renderer: { gl: {
+      createBuffer: vi.fn(), getBufferSubData: vi.fn(),
+      fenceSync: vi.fn(), clientWaitSync: vi.fn(),
+    } } });
+    expect(eightX.requestWebGLFramebufferAlphaReadback()).toBeUndefined();
+  });
+
+  it('fails a framebuffer-alpha readback when a later presentation supersedes its submission', () => {
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const buffer = {} as WebGLBuffer;
+    const fence = {} as WebGLSync;
+    const gl = {
+      PIXEL_PACK_BUFFER: 0x88eb,
+      STREAM_READ: 0x88e1,
+      RGBA: 0x1908,
+      UNSIGNED_BYTE: 0x1401,
+      SYNC_GPU_COMMANDS_COMPLETE: 0x9117,
+      SYNC_FLUSH_COMMANDS_BIT: 1,
+      TIMEOUT_EXPIRED: 0x911b,
+      WAIT_FAILED: 0x911d,
+      ALREADY_SIGNALED: 0x911a,
+      CONDITION_SATISFIED: 0x911c,
+      createBuffer: vi.fn(() => buffer),
+      bindBuffer: vi.fn(), bufferData: vi.fn(), readPixels: vi.fn(),
+      getBufferSubData: vi.fn(), deleteBuffer: vi.fn(),
+      fenceSync: vi.fn(() => fence), flush: vi.fn(),
+      clientWaitSync: vi.fn(() => 0x911b), deleteSync: vi.fn(),
+    } as unknown as WebGL2RenderingContext;
+    const presenter = presenterHarness();
+    Object.assign(presenter.app, { renderer: { gl } });
+    presenter.presentationSubmission = 1;
+    const ticket = presenter.requestWebGLFramebufferAlphaReadback()!;
+
+    presenter.setGasFieldLightingEnabled(true);
+
+    expect(presenter.getWebGLFramebufferAlphaReadback(ticket)).toMatchObject({
+      ticket, submission: 1, state: 'failed',
+    });
+    expect(gl.getBufferSubData).not.toHaveBeenCalled();
+    expect(gl.deleteSync).toHaveBeenCalledWith(fence);
+    expect(gl.deleteBuffer).toHaveBeenCalledWith(buffer);
   });
 
   it('supersedes a completed-frame receipt when a later full presentation submits', () => {

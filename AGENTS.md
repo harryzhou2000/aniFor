@@ -75,6 +75,21 @@ candidate and all sixteen regions. Pages deployed in 10s. The 1m42s live gate
 matched the exact revision and 19-resource closure on its first attempt, then
 passed the hosted Water WebGL package and bounded success evidence.
 
+The current framework increment is renderer-owned asynchronous framebuffer-
+alpha readback for ordinary Visual Lab capture. Normal 1x-4x WebGL2 may bind a
+pixel-pack-buffer transfer to the latest completed presentation and return the
+historical alpha digest after its own nonblocking fence signals. A later
+presentation, timeout, context loss, or teardown must fail and release the
+ticket. Unsupported contexts keep the synchronous fallback, and true 8x must
+not acquire this second fence. Preserve stable-v1's one readiness plus two
+matching OFF/A/B snapshots, all three evidence planes, screenshot-after-proof,
+and every frozen identity. The real Gas and Powder+material-lighting packages
+passed portable verification and clean teardown; Gas total fell from 38.0s to
+27.1s and stable two-snapshot readback fell from about 4.2-5.0s to 1.78-1.84s.
+These timings are diagnostic, not CI thresholds. The next gate is the complete
+eight-candidate stable-v1 release review; do not make receipt-v2 the default or
+weaken fallback, lifecycle, or package validation.
+
 The next retained material-class framework checkpoint is exact revision
 `d5ceedf940dfea3d1a194a6b8fff5ae4c3557bd2`. `RenderOptics.MetallicRigid`
 is appended as stable byte class `20`; no historical class ID moved. Only the

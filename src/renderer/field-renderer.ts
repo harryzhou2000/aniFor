@@ -4,7 +4,8 @@ import type { SimulationBackend } from '../simulation';
 import { clientToViewport, ViewTransform, type Point, type ViewState } from './view-transform';
 import { clientToVisualViewport, contentBoxFromBounds, viewportToClient } from './client-coordinate-map';
 import type {
-  PixiFieldPresenter, WebGLCompletedFrameReceipt, WebGLPresentationTiming,
+  PixiFieldPresenter, WebGLCompletedFrameReceipt, WebGLFramebufferAlphaReadback,
+  WebGLPresentationTiming,
 } from './pixi-field-presenter';
 import type { VisualLabVariant } from './visual-lab';
 import {
@@ -898,6 +899,14 @@ export class MaterialRenderer {
 
   getWebGLCompletedFrameReceipt(ticket: number): WebGLCompletedFrameReceipt | undefined {
     return this.presenter?.getWebGLCompletedFrameReceipt(ticket);
+  }
+
+  requestWebGLFramebufferAlphaReadback(): number | undefined {
+    return this.presenter?.requestWebGLFramebufferAlphaReadback();
+  }
+
+  getWebGLFramebufferAlphaReadback(ticket: number): WebGLFramebufferAlphaReadback | undefined {
+    return this.presenter?.getWebGLFramebufferAlphaReadback(ticket);
   }
 
   forceEightXRenderStallForAudit(): boolean {

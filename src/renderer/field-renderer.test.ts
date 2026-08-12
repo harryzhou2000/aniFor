@@ -312,6 +312,38 @@ describe('field renderer layout scheduling', () => {
     expect(renderer.getWebGLCompletedFrameReceipt(7)).toBeUndefined();
   });
 
+  it('forwards framebuffer-alpha readback tickets only through an active WebGL presenter', () => {
+    const readback = {
+      schema: 'anifor.renderer.framebuffer-alpha-readback/v1' as const,
+      ticket: 5,
+      submission: 11,
+      state: 'completed' as const,
+      digest: { hash: 1, supportHash: 2, alphaSum: 3, nonzero: 4 },
+    };
+    const request = vi.fn(() => 5);
+    const get = vi.fn(() => readback);
+    const renderer = Object.create(MaterialRenderer.prototype) as {
+      presenter?: {
+        requestWebGLFramebufferAlphaReadback(): number | undefined;
+        getWebGLFramebufferAlphaReadback(ticket: number): typeof readback | undefined;
+      };
+      requestWebGLFramebufferAlphaReadback(): number | undefined;
+      getWebGLFramebufferAlphaReadback(ticket: number): typeof readback | undefined;
+    };
+    renderer.presenter = {
+      requestWebGLFramebufferAlphaReadback: request,
+      getWebGLFramebufferAlphaReadback: get,
+    };
+    expect(renderer.requestWebGLFramebufferAlphaReadback()).toBe(5);
+    expect(renderer.getWebGLFramebufferAlphaReadback(5)).toBe(readback);
+    expect(request).toHaveBeenCalledOnce();
+    expect(get).toHaveBeenCalledWith(5);
+
+    renderer.presenter = undefined;
+    expect(renderer.requestWebGLFramebufferAlphaReadback()).toBeUndefined();
+    expect(renderer.getWebGLFramebufferAlphaReadback(5)).toBeUndefined();
+  });
+
   it('ignores a queued frame after navigation has disposed the outgoing renderer', () => {
     const renderer = Object.create(MaterialRenderer.prototype) as {
       disposed: boolean;

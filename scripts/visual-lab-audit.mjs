@@ -71,6 +71,7 @@ const PAGE_STARTUP_TIMEOUT_MS = 60_000;
 const RENDERER_DISPOSAL_TIMEOUT_MS = 5_000;
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const COMPLETED_FRAME_RECEIPT_SCHEMA = 'anifor.renderer.completed-frame-receipt/v1';
+const FRAMEBUFFER_ALPHA_READBACK_SCHEMA = 'anifor.renderer.framebuffer-alpha-readback/v1';
 const COMPLETED_FRAME_RECEIPT_DESCRIPTOR = Object.freeze({
   capability: 'renderer-completed-frame-receipt/v1',
   receiptSchema: COMPLETED_FRAME_RECEIPT_SCHEMA,
@@ -1426,6 +1427,9 @@ async function snapshotState(cdp, executionPlan, commandTimeoutMs = CDP_COMMAND_
     executionPlan.compiled
   );
   const evidencePlane = executionPlan.domainAdapter.evidence.plane;
+  const asynchronousFramebufferAlpha = await readFramebufferAlphaDigest(
+    cdp, commandTimeoutMs,
+  );
   return evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     const canvas = document.querySelector('.semantic-field-canvas');
@@ -1442,15 +1446,19 @@ async function snapshotState(cdp, executionPlan, commandTimeoutMs = CDP_COMMAND_
       throw new Error('visual-capture evidence digest bridge is unavailable');
     }
     const fieldAlpha = audit.visualCaptureEvidenceDigest(${JSON.stringify(evidencePlane)});
-    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
-    if (!gl) throw new Error('semantic-field canvas has no readable WebGL context');
-    const readbackKey = Symbol.for('anifor.visual-lab.framebuffer-readback/v1');
-    const reuseReadback = ${reuseVisualLabFramebufferReadback.toString()};
-    const readbackByteLength = canvas.width * canvas.height * 4;
-    const rgba = reuseReadback(canvas[readbackKey], readbackByteLength);
-    canvas[readbackKey] = rgba;
-    gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, rgba);
-    const framebufferAlpha = digestRgbaAlpha(rgba);
+    const asynchronousFramebufferAlpha = ${JSON.stringify(asynchronousFramebufferAlpha)};
+    let framebufferAlpha = asynchronousFramebufferAlpha;
+    if (framebufferAlpha === null) {
+      const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+      if (!gl) throw new Error('semantic-field canvas has no readable WebGL context');
+      const readbackKey = Symbol.for('anifor.visual-lab.framebuffer-readback/v1');
+      const reuseReadback = ${reuseVisualLabFramebufferReadback.toString()};
+      const readbackByteLength = canvas.width * canvas.height * 4;
+      const rgba = reuseReadback(canvas[readbackKey], readbackByteLength);
+      canvas[readbackKey] = rgba;
+      gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, rgba);
+      framebufferAlpha = digestRgbaAlpha(rgba);
+    }
     const rect = canvas.getBoundingClientRect();
     return {
       world: { width: audit.width, height: audit.height },
@@ -1477,6 +1485,34 @@ async function snapshotState(cdp, executionPlan, commandTimeoutMs = CDP_COMMAND_
       },
     };
   })()`, commandTimeoutMs);
+}
+
+async function readFramebufferAlphaDigest(cdp, timeoutMs) {
+  const ticket = await evaluate(cdp, `(() => (
+    window.__ANIFOR_INPUT_AUDIT__?.requestWebGLFramebufferAlphaReadback?.()
+  ))()`);
+  if (!Number.isSafeInteger(ticket) || ticket <= 0) return null;
+  const readback = await waitFor(async () => {
+    const observation = await evaluate(cdp, `(() => (
+      window.__ANIFOR_INPUT_AUDIT__?.webGLFramebufferAlphaReadback?.(${ticket})
+    ))()`);
+    assert(observation !== null && typeof observation === 'object'
+      && !Array.isArray(observation),
+    `framebuffer-alpha readback ${ticket} is unavailable`);
+    assert(observation.schema === FRAMEBUFFER_ALPHA_READBACK_SCHEMA
+      && observation.ticket === ticket
+      && Number.isSafeInteger(observation.submission) && observation.submission > 0
+      && ['pending', 'completed', 'failed'].includes(observation.state),
+    `framebuffer-alpha readback ${ticket} is malformed`);
+    return observation.state === 'pending' ? false : observation;
+  }, timeoutMs, `framebuffer-alpha readback ${ticket}`, 25);
+  assert(readback.state === 'completed', `framebuffer-alpha readback ${ticket} failed`);
+  const digest = readback.digest;
+  assert(digest !== null && typeof digest === 'object' && !Array.isArray(digest)
+    && ['hash', 'supportHash', 'alphaSum', 'nonzero'].every((name) => (
+      Number.isSafeInteger(digest[name]) && digest[name] >= 0
+    )), `framebuffer-alpha readback ${ticket} digest is malformed`);
+  return digest;
 }
 
 function sameDigest(left, right) {

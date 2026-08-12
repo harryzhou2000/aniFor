@@ -6523,6 +6523,31 @@ Pages deployed in 10s. The 1m42s live gate matched the exact revision and
 package plus bounded smoke evidence. Treat this as the production checkpoint
 for cross-driver data-only fixture and inspection authoring.
 
+The next framework increment removes the synchronous default-framebuffer stall
+from ordinary Visual Lab snapshots without reducing proof. Normal 1x-4x WebGL2
+now binds one audit-only pixel-pack-buffer transfer to the latest completed
+presentation, polls its own fence without blocking the main thread, and computes
+the exact historical alpha digest only after the transfer is ready. A successor
+presentation, context loss, timeout, or teardown fails and releases the ticket;
+unsupported contexts retain the established direct `readPixels` fallback. True
+8x remains entirely on its protected single-fence route. Stable-v1 still takes
+one complete readiness snapshot and two matching semantic, authoritative-field,
+and framebuffer-alpha snapshots for each OFF/A/B variant. No result, batch,
+recipe-set, tuning-plan, host-plan, baseline, comparison, or PNG identity changes.
+
+Local verification passes 1,550 source and 355 permission-correct tooling tests,
+typecheck, production build, and exact 19-resource closure. Two real SwiftShader
+packages are retained at `/tmp/anifortpt-async-alpha-current-submission-20260813`
+and `/tmp/anifortpt-async-alpha-cross-driver-20260813`. The first keeps the Gas
+result ID byte-identical to the earlier extra-presentation prototype while
+reducing total capture from 38.0s to 27.1s and each two-snapshot OFF/A/B readback
+from roughly 4.2-5.0s to 1.78-1.84s. The shared-host cross-driver run passed
+Powder plus material lighting with two fresh contexts, zero restarts, clean
+cohort teardown, all 36 regions, and portable verification; its stable
+OFF/A/B readback means were 1.42-1.69s. Treat timings as diagnostic samples,
+not performance gates. The next release step is the canonical eight-candidate
+stable-v1 CI review and downloaded-package verification.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

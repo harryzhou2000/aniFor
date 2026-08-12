@@ -169,6 +169,52 @@ export interface WebGLCompletedFrameReceipt {
   readonly state: WebGLCompletedFrameReceiptState;
 }
 
+export const WEBGL_FRAMEBUFFER_ALPHA_READBACK_SCHEMA =
+  'anifor.renderer.framebuffer-alpha-readback/v1' as const;
+
+export interface WebGLFramebufferAlphaDigest {
+  readonly hash: number;
+  readonly supportHash: number;
+  readonly alphaSum: number;
+  readonly nonzero: number;
+}
+
+export type WebGLFramebufferAlphaReadbackState = 'pending' | 'completed' | 'failed';
+
+/** Audit-only asynchronous readback of one exact presented default framebuffer. */
+export interface WebGLFramebufferAlphaReadback {
+  readonly schema: typeof WEBGL_FRAMEBUFFER_ALPHA_READBACK_SCHEMA;
+  readonly ticket: number;
+  readonly submission: number;
+  readonly state: WebGLFramebufferAlphaReadbackState;
+  readonly digest?: WebGLFramebufferAlphaDigest;
+}
+
+/** Exact historical alpha digest grammar used by Visual Lab capture reports. */
+export function digestFramebufferAlpha(rgba: Uint8Array): WebGLFramebufferAlphaDigest {
+  let hash = 2166136261 >>> 0;
+  let supportHash = 2166136261 >>> 0;
+  let alphaSum = 0;
+  let nonzero = 0;
+  for (let offset = 3, index = 0; offset < rgba.length; offset += 4, index++) {
+    const byte = rgba[offset];
+    const supported = Number(byte > 0);
+    hash = Math.imul((hash ^ byte ^ index) >>> 0, 16777619) >>> 0;
+    supportHash = Math.imul((supportHash ^ supported ^ index) >>> 0, 16777619) >>> 0;
+    alphaSum += byte;
+    nonzero += supported;
+  }
+  return { hash, supportHash, alphaSum, nonzero };
+}
+
+interface MutableWebGLFramebufferAlphaReadback extends WebGLFramebufferAlphaReadback {
+  state: WebGLFramebufferAlphaReadbackState;
+  buffer?: WebGLBuffer;
+  fence?: WebGLSync;
+  fenceStartedAt: number;
+  digest?: WebGLFramebufferAlphaDigest;
+}
+
 interface MutableWebGLCompletedFrameReceipt extends WebGLCompletedFrameReceipt {
   state: WebGLCompletedFrameReceiptState;
   fence?: WebGLSync;
@@ -181,6 +227,7 @@ interface MutableWebGLCompletedFrameReceipt extends WebGLCompletedFrameReceipt {
 // optional precision source before it consumes that whole bounded window.
 const WEBGL_TIMING_QUERY_STALL_MS = 2_000;
 const WEBGL_COMPLETED_FRAME_RECEIPT_HISTORY = 4;
+const WEBGL_FRAMEBUFFER_ALPHA_READBACK_HISTORY = 4;
 
 const FIELD_VERTEX = `
 in vec2 aPosition;
@@ -12145,6 +12192,11 @@ export class PixiFieldPresenter {
   private completedFrameReceipts?: Map<number, MutableWebGLCompletedFrameReceipt>;
   private completedFrameFencePoll = 0;
   private completedFrameFenceWatchdog?: ReturnType<typeof setTimeout>;
+  private framebufferAlphaReadbackTicketSequence = 0;
+  private framebufferAlphaReadback?: MutableWebGLFramebufferAlphaReadback;
+  private framebufferAlphaReadbacks?: Map<number, MutableWebGLFramebufferAlphaReadback>;
+  private framebufferAlphaReadbackPoll = 0;
+  private framebufferAlphaReadbackWatchdog?: ReturnType<typeof setTimeout>;
   private powderSurfaceDirty = true;
   /** Bounded follow-up cadence while a slow powder owner evolves 0 -> 255. */
   private boundaryEvolutionPending = false;
@@ -12195,6 +12247,7 @@ export class PixiFieldPresenter {
       this.resolveFirstFrame(false);
       this.releaseRenderFence('failed');
       this.failCompletedFrameReceipt();
+      this.failFramebufferAlphaReadback();
       this.releaseWebGLTimingQuery();
       this.releaseWebGLTimingFence();
       this.contextLossHandler?.();
@@ -13442,6 +13495,7 @@ export class PixiFieldPresenter {
     this.removeContextLossListener();
     this.releaseRenderFence('failed');
     this.failCompletedFrameReceipt();
+    this.failFramebufferAlphaReadback();
     this.releaseWebGLTimingQuery();
     this.releaseWebGLTimingFence();
     try { this.hdrVfxPipeline?.destroy(); }
@@ -13485,6 +13539,7 @@ export class PixiFieldPresenter {
     attempt(() => this.removeContextLossListener());
     attempt(() => this.releaseRenderFence('failed'));
     attempt(() => this.failCompletedFrameReceipt());
+    attempt(() => this.failFramebufferAlphaReadback());
     attempt(() => this.releaseWebGLTimingQuery());
     attempt(() => this.releaseWebGLTimingFence());
     attempt(() => this.hdrVfxPipeline?.destroy());
@@ -14476,6 +14531,67 @@ export class PixiFieldPresenter {
     });
   }
 
+  /**
+   * Queues one normal-scale WebGL2 default-framebuffer transfer through a
+   * pixel-pack buffer, bound to the latest complete presentation. A successor
+   * presentation invalidates the ticket. This never shares the true-8x fence.
+   */
+  requestWebGLFramebufferAlphaReadback(): number | undefined {
+    this.pollFramebufferAlphaReadback();
+    if (this.destroyed || this.contextLost || this.outputScale === 8
+      || this.framebufferAlphaReadback?.state === 'pending') return undefined;
+    const gl = this.webGLContext();
+    if (!gl || typeof gl.createBuffer !== 'function'
+      || typeof gl.getBufferSubData !== 'function'
+      || typeof gl.fenceSync !== 'function' || typeof gl.clientWaitSync !== 'function') {
+      return undefined;
+    }
+    let buffer: WebGLBuffer | null = null;
+    try { buffer = gl.createBuffer(); } catch { /* use the established synchronous fallback */ }
+    if (!buffer) return undefined;
+
+    const ticket = (this.framebufferAlphaReadbackTicketSequence ?? 0) + 1;
+    this.framebufferAlphaReadbackTicketSequence = ticket;
+    const submission = this.presentationSubmission ?? 0;
+    if (submission <= 0) {
+      try { gl.deleteBuffer(buffer); } catch { /* context may already be invalid */ }
+      return undefined;
+    }
+    this.framebufferAlphaReadback = {
+      schema: WEBGL_FRAMEBUFFER_ALPHA_READBACK_SCHEMA,
+      ticket,
+      submission,
+      state: 'pending',
+      buffer,
+      fenceStartedAt: 0,
+    };
+    const readbacks = this.framebufferAlphaReadbacks ??= new Map();
+    readbacks.set(ticket, this.framebufferAlphaReadback);
+    while (readbacks.size > WEBGL_FRAMEBUFFER_ALPHA_READBACK_HISTORY) {
+      const oldest = readbacks.keys().next().value as number | undefined;
+      if (oldest === undefined) break;
+      const retired = readbacks.get(oldest);
+      if (retired?.state === 'pending') break;
+      readbacks.delete(oldest);
+    }
+    this.armFramebufferAlphaReadback(submission);
+    return ticket;
+  }
+
+  getWebGLFramebufferAlphaReadback(ticket: number): WebGLFramebufferAlphaReadback | undefined {
+    if (!Number.isSafeInteger(ticket) || ticket <= 0) return undefined;
+    this.pollFramebufferAlphaReadback();
+    const readback = this.framebufferAlphaReadbacks?.get(ticket);
+    if (!readback || readback.ticket !== ticket) return undefined;
+    return Object.freeze({
+      schema: readback.schema,
+      ticket: readback.ticket,
+      submission: readback.submission,
+      state: readback.state,
+      ...(readback.digest === undefined ? {} : { digest: Object.freeze({ ...readback.digest }) }),
+    });
+  }
+
   getWebGLPresentationTiming(): WebGLPresentationTiming | undefined {
     if (!this.webGLTimingEnabled) return undefined;
     this.pollWebGLTimingQuery();
@@ -14702,6 +14818,7 @@ export class PixiFieldPresenter {
     } else if (this.outputScale !== 8) {
       this.armCompletedFrameFence(submission);
     }
+    if (this.outputScale !== 8) this.armFramebufferAlphaReadback(submission);
   }
 
   private renderApplicationNow(): void {
@@ -14774,6 +14891,10 @@ export class PixiFieldPresenter {
         && submission > receipt.submission) {
         this.transitionCompletedFrameReceipt(receipt.submission, 'superseded');
       }
+    }
+    const readback = this.framebufferAlphaReadback;
+    if (readback?.state === 'pending' && submission > readback.submission) {
+      this.failFramebufferAlphaReadback(readback.submission);
     }
     return submission;
   }
@@ -14894,6 +15015,128 @@ export class PixiFieldPresenter {
     if (receipt) {
       receipt.fence = undefined;
       receipt.fenceStartedAt = 0;
+    }
+  }
+
+  private armFramebufferAlphaReadback(submission: number): void {
+    const readback = this.framebufferAlphaReadback;
+    if (!readback || readback.state !== 'pending' || readback.submission !== submission) return;
+    const gl = this.webGLContext();
+    const buffer = readback.buffer;
+    if (!gl || !buffer || this.contextLost || this.destroyed) {
+      this.failFramebufferAlphaReadback(submission);
+      return;
+    }
+    let fence: WebGLSync | null = null;
+    try {
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, buffer);
+      gl.bufferData(
+        gl.PIXEL_PACK_BUFFER,
+        this.app.canvas.width * this.app.canvas.height * 4,
+        gl.STREAM_READ,
+      );
+      gl.readPixels(
+        0, 0, this.app.canvas.width, this.app.canvas.height,
+        gl.RGBA, gl.UNSIGNED_BYTE, 0,
+      );
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+      fence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+      if (!fence) throw new Error('framebuffer-alpha readback fence creation failed');
+      readback.fence = fence;
+      readback.fenceStartedAt = performance.now();
+      gl.flush();
+    } catch {
+      try { gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null); } catch { /* context may be invalid */ }
+      if (fence) try { gl.deleteSync(fence); } catch { /* context may be invalid */ }
+      this.failFramebufferAlphaReadback(submission);
+      return;
+    }
+    this.scheduleFramebufferAlphaReadbackPoll(readback.ticket, fence);
+    this.framebufferAlphaReadbackWatchdog = setTimeout(() => {
+      const current = this.framebufferAlphaReadback;
+      if (current?.ticket === readback.ticket && current.fence === fence
+        && current.state === 'pending') this.failFramebufferAlphaReadback(submission);
+    }, WEBGL_COMPLETED_FRAME_RECEIPT_TIMEOUT_MS);
+  }
+
+  private scheduleFramebufferAlphaReadbackPoll(ticket: number, fence: WebGLSync): void {
+    if (this.framebufferAlphaReadbackPoll !== 0 || this.destroyed || this.contextLost) return;
+    this.framebufferAlphaReadbackPoll = requestAnimationFrame(() => {
+      this.framebufferAlphaReadbackPoll = 0;
+      const current = this.framebufferAlphaReadback;
+      if (current?.ticket !== ticket || current.fence !== fence || current.state !== 'pending') return;
+      this.pollFramebufferAlphaReadback();
+      if (this.framebufferAlphaReadback?.ticket === ticket
+        && this.framebufferAlphaReadback.state === 'pending') {
+        this.scheduleFramebufferAlphaReadbackPoll(ticket, fence);
+      }
+    });
+  }
+
+  private pollFramebufferAlphaReadback(): void {
+    const readback = this.framebufferAlphaReadback;
+    const fence = readback?.fence;
+    if (!readback || readback.state !== 'pending' || !fence) return;
+    if (performance.now() - readback.fenceStartedAt >= WEBGL_COMPLETED_FRAME_RECEIPT_TIMEOUT_MS) {
+      this.failFramebufferAlphaReadback(readback.submission);
+      return;
+    }
+    const gl = this.webGLContext();
+    if (!gl || this.contextLost || this.destroyed || !readback.buffer) {
+      this.failFramebufferAlphaReadback(readback.submission);
+      return;
+    }
+    let status: number;
+    try { status = gl.clientWaitSync(fence, gl.SYNC_FLUSH_COMMANDS_BIT, 0); }
+    catch { status = gl.WAIT_FAILED; }
+    if (status === gl.TIMEOUT_EXPIRED) return;
+    if (status !== gl.ALREADY_SIGNALED && status !== gl.CONDITION_SATISFIED) {
+      this.failFramebufferAlphaReadback(readback.submission);
+      return;
+    }
+    try {
+      const rgba = new Uint8Array(this.app.canvas.width * this.app.canvas.height * 4);
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, readback.buffer);
+      gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, rgba);
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+      readback.digest = digestFramebufferAlpha(rgba);
+      this.releaseFramebufferAlphaReadback(readback);
+      readback.state = 'completed';
+    } catch {
+      try { gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null); } catch { /* context may be invalid */ }
+      this.failFramebufferAlphaReadback(readback.submission);
+    }
+  }
+
+  private failFramebufferAlphaReadback(submission?: number): void {
+    const readback = this.framebufferAlphaReadback;
+    if (!readback || readback.state !== 'pending'
+      || (submission !== undefined && readback.submission !== submission)) return;
+    this.releaseFramebufferAlphaReadback(readback);
+    readback.state = 'failed';
+  }
+
+  private releaseFramebufferAlphaReadback(readback = this.framebufferAlphaReadback): void {
+    const isCurrent = readback === this.framebufferAlphaReadback;
+    if (isCurrent && this.framebufferAlphaReadbackWatchdog !== undefined) {
+      clearTimeout(this.framebufferAlphaReadbackWatchdog);
+      this.framebufferAlphaReadbackWatchdog = undefined;
+    }
+    if (isCurrent && this.framebufferAlphaReadbackPoll !== 0) {
+      cancelAnimationFrame(this.framebufferAlphaReadbackPoll);
+      this.framebufferAlphaReadbackPoll = 0;
+    }
+    const gl = this.webGLContext();
+    if (readback?.fence && gl) {
+      try { gl.deleteSync(readback.fence); } catch { /* context may already be invalid */ }
+    }
+    if (readback?.buffer && gl) {
+      try { gl.deleteBuffer(readback.buffer); } catch { /* context may already be invalid */ }
+    }
+    if (readback) {
+      readback.fence = undefined;
+      readback.buffer = undefined;
+      readback.fenceStartedAt = 0;
     }
   }
 

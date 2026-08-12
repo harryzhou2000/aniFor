@@ -3,7 +3,7 @@ import type {
   SuspensionSupportAudit,
 } from '../renderer/field-renderer';
 import type {
-  WebGLCompletedFrameReceipt, WebGLPresentationTiming,
+  WebGLCompletedFrameReceipt, WebGLFramebufferAlphaReadback, WebGLPresentationTiming,
 } from '../renderer/pixi-field-presenter';
 import type { PowderRenderStyle } from '../renderer/powder-render-style';
 import { Material } from '../shared/materials';
@@ -484,6 +484,8 @@ export interface BrowserInputAuditApi {
   webGLPresentationTiming(): WebGLPresentationTiming | undefined;
   requestWebGLCompletedFrameReceipt(): number | undefined;
   webGLCompletedFrameReceipt(ticket: number): WebGLCompletedFrameReceipt | undefined;
+  requestWebGLFramebufferAlphaReadback(): number | undefined;
+  webGLFramebufferAlphaReadback(ticket: number): WebGLFramebufferAlphaReadback | undefined;
   forceEightXRenderStall(): boolean;
   /** Audit-only strict outgoing-renderer teardown before target disposal. */
   disposeRendererForNavigation(): Promise<void>;
