@@ -179,8 +179,21 @@ reconstruction of all 17 regions. Its result remained
 `sha256:8c9bc8a5823a89f27dc41d688778dea10dab141ffaf26ccaf50603af658f7136`;
 direct inspection retained all four owner/state bodies, activity motifs, holes,
 notches, fine/isolated topology, unrelated active controls, emitters, and blank
-space. The next release gate is the canonical material-lighting review and
-downloaded-package reconstruction with 242 applicable regions.
+space.
+
+This force-activity authoring checkpoint is deployed at exact revision
+`8d4d957950d576b2655240a0a8d4332379dcac33` by workflow run `31629122794`.
+The 3m44s build restored ccache, reported 269/270 compiler hits, saved it only
+after success, and verified the exact 19-resource site closure. The canonical
+eight-candidate stable-v1 shared-host review passed eight-for-eight in 10m00s
+with one host, eight fresh contexts/targets, zero restarts, and successful
+downloaded-package reconstruction of all 242 applicable regions. The Force
+result remained
+`sha256:8c9bc8a5823a89f27dc41d688778dea10dab141ffaf26ccaf50603af658f7136`.
+Pages deployed in 11s; the 1m26s live gate matched the exact revision and
+19-resource closure on its first attempt, then passed the hosted Water WebGL
+receipt-v2 package and portable verifier. Continue the active framework goal
+with the next audited reusable authoring or measurement seam.
 
 The next retained material-class framework checkpoint is exact revision
 `d5ceedf940dfea3d1a194a6b8fff5ae4c3557bd2`. `RenderOptics.MetallicRigid`

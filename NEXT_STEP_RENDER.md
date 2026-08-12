@@ -6645,9 +6645,21 @@ with one shared host, zero restarts, strict teardown, and portable verification
 of all 17 regions. Its result remained
 `sha256:8c9bc8a5823a89f27dc41d688778dea10dab141ffaf26ccaf50603af658f7136`.
 Direct inspection retained all four owner/state bodies, force motifs, topology,
-unrelated active controls, emitters, and blank space. The next release gate is
-the canonical material-lighting review and downloaded-package reconstruction
-of the resulting 242 applicable regions.
+unrelated active controls, emitters, and blank space.
+
+That release gate is complete. The Force authoring checkpoint is live at exact
+revision `8d4d957950d576b2655240a0a8d4332379dcac33` through workflow run
+`31629122794`. The 3m44s build restored ccache, reported 269/270 compiler hits,
+saved it only after success, and verified the exact 19-resource closure. The
+canonical eight-candidate stable-v1 shared-host review passed eight-for-eight in
+10m00s with one host, eight fresh contexts/targets, zero restarts, and portable
+reconstruction of all 242 applicable regions. The Force result remained
+`sha256:8c9bc8a5823a89f27dc41d688778dea10dab141ffaf26ccaf50603af658f7136`.
+Pages deployed in 11s. The 1m26s live gate matched the exact revision and
+closure on its first attempt, then passed the hosted Water WebGL receipt-v2
+package and portable verifier. Continue with the next audited reusable
+authoring or measurement seam; do not promote the migration hashes into visual
+requirements.
 
 ## Deferred long-term visual roadmap
 
