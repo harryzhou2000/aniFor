@@ -8749,7 +8749,8 @@ void main() {
         3.0, optics, uMaterialBodyFinish
       );
       color = applySolidMaterialLighting(
-        color, solidFinishProfile.optics, solidOpticalDepth, normal,
+        color, solidFinishProfile.optics, solidFinishProfile.roughness,
+        solidOpticalDepth, normal,
         solidInterior * solidLightingFamily, uMaterialBodyFinish,
         uMaterialLightingVariant
       );

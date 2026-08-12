@@ -390,6 +390,18 @@ describe('Pixi presenter startup configuration', () => {
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('vec3 applyMaterialVolumeLobe(');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('vec3 applySolidMaterialLighting(');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'float lobeExponent = mix(3.0, 0.86, roughness);',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'float grazing = pow(grazingBase, lobeExponent) * lobeEnergy;',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'float reflectedFacing = pow(max(facing, 0.0), lobeExponent) * lobeEnergy;',
+    );
+    expect(normal).toContain(
+      'color, solidFinishProfile.optics, solidFinishProfile.roughness,',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'MaterialBodyFinishResponse materialBodyFinishParameters(float phase, float optics, float enabled)',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('float roughness;');

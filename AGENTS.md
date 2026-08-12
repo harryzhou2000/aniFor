@@ -30,6 +30,18 @@ use bounded retries on a miss, and save only after the full build succeeds. Do
 not cache a mutable checkout or relax the exact archive/hash contract merely to
 work around a GitHub Releases outage.
 
+The selected follow-up makes the existing solid body-lighting key roughness-
+aware through the already-authored appearance profile. Apply the energy-bounded
+roughness lobe to both directional facing and grazing terms inside the existing
+B-only supported-solid gate. Do not add live-source fallback light, a material
+ID branch, or another profile lane: earlier source-reflection and grazing-only
+prototypes were visually too sparse. OFF/A, Canvas2D, compact true-8x, topology,
+alpha, and resource ownership remain controls. Current proof is the eight-scene
+package at
+`.artifacts/visual-lab-reviews/material-lighting-f16df2c3-6724-45ba-8b81-aefdccfd0575`,
+the 217-material true-8x audit, and 1,556 source plus 361 tooling tests; package
+hashes remain current-only evidence.
+
 Current-only region appearance evidence is descriptive navigation, not a
 visual gate. `region-appearance.json` may report fixed-luma spread, range, and
 neighbour contrast for declared inspection regions, and its static HTML view

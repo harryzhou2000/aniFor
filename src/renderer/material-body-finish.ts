@@ -454,6 +454,7 @@ vec3 applyMaterialEnvironmentTransport(
 vec3 applySolidMaterialLighting(
   vec3 color,
   vec4 finishResponse,
+  float finishRoughness,
   float opticalDepth,
   vec3 normal,
   float eligibility,
@@ -467,11 +468,16 @@ vec3 applySolidMaterialLighting(
   float body = smoothstep(6.0 / 255.0, 42.0 / 255.0, opticalDepth) * eligibility;
   float core = smoothstep(24.0 / 255.0, 116.0 / 255.0, opticalDepth);
   float facing = dot(normal, normalize(vec3(-0.42, -0.62, 0.78)));
-  float grazing = pow(1.0 - clamp(normal.z, 0.0, 1.0), 2.0);
+  float grazingBase = 1.0 - clamp(normal.z, 0.0, 1.0);
+  float roughness = clamp((finishRoughness - 0.5) / 1.0, 0.0, 1.0);
+  float lobeExponent = mix(3.0, 0.86, roughness);
+  float lobeEnergy = mix(1.20, 0.72, roughness);
+  float grazing = pow(grazingBase, lobeExponent) * lobeEnergy;
+  float reflectedFacing = pow(max(facing, 0.0), lobeExponent) * lobeEnergy;
   float shell = body * (1.0 - core);
   float interiorContrast = materialCompositionParameters(3.0).interiorContrast;
 
-  float key = body * (max(facing, 0.0) * 0.040 + grazing * 0.025)
+  float key = body * (reflectedFacing * 0.040 + grazing * 0.025)
     * finishResponse.x * interiorContrast;
   float transmission = shell * (0.032 + grazing * 0.045) * finishResponse.w;
   // Optical classes which explicitly reserve extra transmission can carry a

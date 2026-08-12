@@ -45,6 +45,30 @@ a miss, and saves the cache only after the complete build succeeds. This is a
 dependency-availability repair, not a renderer or artifact-integrity bypass;
 ccache and the project-local Emscripten cache retain their existing ownership.
 
+The next selected class-level material increment completes the existing solid
+roughness seam. `applySolidMaterialLighting` now consumes the already-authored
+appearance-profile roughness and applies the same energy-bounded lobe grammar
+to both its directional key and grazing response. Metallic and translucent
+rigid families therefore keep a tighter reflection, while organic, device,
+radioactive, and ordinary rigid families retain broader diffuse light. This is
+B-only normal-WebGL RGB arithmetic at the existing supported-solid gate: OFF/A,
+Canvas2D, compact true-8x, alpha, support, contacts, holes, thin structures,
+isolated cells, fields, textures, targets, passes, and allocations are unchanged.
+
+Two rejected prototypes are intentionally absent: a live-source reflection
+inside shared irradiance changed only 251–311 pixels beside one emitter, and a
+grazing-only solid tune changed only 61 pixels against the deployed checkpoint.
+Shaping both already-live solid key terms produces the useful broad class-level
+response without amplifying a false glossy layer. The current solid atlas is
+retained at
+`.artifacts/visual-lab-reviews/solid-material-lighting-atlas-1c2b493c-ce00-47b7-8cfe-5446916ba6d5`;
+the canonical eight-scene package at
+`.artifacts/visual-lab-reviews/material-lighting-f16df2c3-6724-45ba-8b81-aefdccfd0575`
+passed eight-for-eight stable WebGL/HDR capture and portable verification. The
+complete 1,556 source and 361 tooling tests, typecheck, production build, exact
+19-resource closure, and independent 217-material true-8x audit pass. Treat
+these captures as current aesthetic evidence, never a historical pixel gate.
+
 The current framework checkpoint is deployed at
 `c51f874ca1b453f07d4975d9fe00cd1767f14c60` by workflow run `31559035589`.
 The ccache-backed build passed in 3m44s; all seven current material-lighting
