@@ -173,6 +173,21 @@ uniqueness, fresh temporary extraction, symlink-free closure, and live gates
 remain unchanged. A failed/cancelled build or any other failed job remains
 ineligible.
 
+The correction and recovery boundary are now deployed at revision
+`52326f13612c88c326117465119f1f80ae478e7d` by workflow run `31568175469`.
+The ccache-backed build completed in 2m56s, passed 1,528 source and 344 tooling
+tests, and restored 269/270 compiler calls. The fresh-browser stable-v1 review
+passed all seven current candidates in 7m01s using seven isolated SwiftShader
+hosts/contexts/targets with zero restarts; the downloaded package verified all
+results, current experiment response, and all eleven opposed-source regions.
+Pages deployed in 10s, exact 19-resource closure passed on the first attempt,
+and the hosted Water receipt-v2 package plus portable verifier passed in the
+1m34s live-verification job. This is the current deployed framework checkpoint.
+Return the normal release default to shared-host review for efficiency; use the
+manual fresh control for an isolated retry after the recognized loaded-host
+fault, and use the now-narrow artifact-reuse path when its exact source build
+meets the post-build optional-review constraints.
+
 Canvas evidence remains diagnostic only (`canonical: false`, `comparison:
 none`), carries no image-hash acceptance policy, and cannot fail the canonical
 WebGL checkpoint. The current multi-backend/scale board remains the place to
