@@ -14,9 +14,9 @@ describe('material composition profiles', () => {
       expect(Object.isFrozen(response)).toBe(true);
     }
     expect(MATERIAL_COMPOSITION_PROFILES.gas).toEqual({
-      bodyLighting: 0.90, profileSheen: 0.78, irradiance: 0.82,
-      penetrationPath: 0.58, pigmentCoupling: 0.16, volumeScatter: 0.82,
-      farSideShadow: 0.44, ambientGrounding: 0.42,
+      bodyLighting: 1.14, profileSheen: 1.02, irradiance: 1.08,
+      penetrationPath: 0.32, pigmentCoupling: 0.24, volumeScatter: 1.36,
+      farSideShadow: 0.56, ambientGrounding: 0.58,
     });
   });
 

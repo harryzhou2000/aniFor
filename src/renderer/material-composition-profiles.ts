@@ -39,12 +39,16 @@ const profile = (
   pigmentCoupling, volumeScatter, farSideShadow, ambientGrounding,
 });
 
-/** Values extracted without visual change from the former handwritten GLSL. */
+/**
+ * Broad phase balance for the shared Volumetric look. Family-specific optics
+ * still shape the response; these values keep powder restrained, give liquids
+ * a clearer transmissive body, and let gases carry light through their middle.
+ */
 export const MATERIAL_COMPOSITION_PROFILES: MaterialCompositionProfiles = Object.freeze({
-  powder: profile(0.78, 0.18, 0.62, 1.00, 0.44, 0.22, 0.72, 0.92),
-  liquid: profile(1.00, 1.00, 1.00, 0.78, 0.24, 1.00, 0.62, 0.62),
-  gas: profile(0.90, 0.78, 0.82, 0.58, 0.16, 0.82, 0.44, 0.42),
-  solid: profile(1.00, 1.00, 0.76, 0.92, 0.34, 0.00, 0.82, 0.78),
+  powder: profile(0.94, 0.30, 0.80, 0.84, 0.58, 0.34, 0.84, 1.08),
+  liquid: profile(1.18, 1.28, 1.16, 0.56, 0.34, 1.30, 0.74, 0.78),
+  gas: profile(1.14, 1.02, 1.08, 0.32, 0.24, 1.36, 0.56, 0.58),
+  solid: profile(1.10, 1.10, 0.94, 0.74, 0.44, 0.00, 0.98, 0.94),
 });
 
 const PROFILE_FIELDS = Object.freeze([

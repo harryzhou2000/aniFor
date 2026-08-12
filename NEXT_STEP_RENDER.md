@@ -1147,6 +1147,20 @@ helpers. A current mixed-material WebGL capture compiled and passed all evidence
 with zero browser errors; the protected 4896x3072 true-8x atlas kept all 217
 materials visible and left no Chrome process. Canvas remains unchanged.
 
+The first composition-profile experiment is retained after two current-only
+passes. The selected table strengthens liquid shell/core separation and
+transmission, opens the connected gas middle while keeping far-side absorption,
+adds restrained powder body light without suppressing grain, and gives solids a
+slightly firmer grounded response. Direct inspection of the mixed, gas, solid,
+and opposed-source atlases preferred the stronger second pass: gas remained
+porous rather than milky, Water/Oil did not converge on one plastic finish,
+powder grain and fine columns remained legible, and solid holes, open notches,
+single-cell structures, unlike contacts, walls, and guarded blanks stayed
+intact. Its four-scene shared-host batch passed four-for-four with zero restarts
+and all semantic/field/framebuffer evidence. The protected 4896x3072 true-8x
+atlas again rendered all 217 materials with zero browser errors. This is an
+aesthetic current-image decision, not a cross-revision hash requirement.
+
 Revision `813066c81735da2e9b2752c9ddff276cc1c8f0da` deployed the retained
 profile sheen through workflow run `31528453927`. The ccache-backed build,
 two-candidate stable-snapshot review, downloaded-package verification, Pages
@@ -1179,9 +1193,8 @@ Success means:
 
 Priority order from this checkpoint:
 
-1. Finish deploying the bulk-digest/readiness-clock checkpoint, then use the
-   declarative composition table for a deliberately broad current-only
-   powder/liquid/gas/solid experiment rather than another exact-material branch.
+1. Deploy the retained broad composition profile and verify the exact live
+   revision/resource closure plus hosted Water package.
 2. Continue shortening the remaining framebuffer `gl.readPixels`/alpha-digest
    path without weakening
    semantic, authoritative-field, framebuffer-alpha, convergence, strict-
