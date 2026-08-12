@@ -110,6 +110,26 @@ browser errors and remains literal Off. The next priority is to use the same
 current-only board for a more legible shared light-direction/soft-shadow cue,
 not to add a new capture lifecycle or cross-revision PNG requirement.
 
+That directional-light increment is retained at
+`.artifacts/visual-lab-reviews/material-lighting-c38bc3a4-e6ed-407e-9ce5-4f18a695dedf`.
+The existing high-quality outward/inward emission probes now preserve signed
+contrast instead of discarding the negative half. Positive contrast keeps the
+source-facing key and transmission behavior; negative contrast passes through
+a small dead band and becomes one B-only, depth/profile-weighted coloured soft
+shadow. Opaque Solid and Powder receive the clearest grounded far side, Liquid
+is restrained, and transmissive Gas remains soft. The change reuses the same
+two samples and adds no field, sampler, texture, target, pass, allocation,
+material selector, support, alpha, or topology rule. Direct inspection retains
+gas lobes, liquid bodies, powder grain, solid relief, thermal stages, holes,
+notches, thin structures, contacts, walls, and blanks. OFF and A stayed byte-
+identical to the deployed package; the B-only maximum delta was seven channel
+levels and is diagnostic, not a visual gate. All six WebGL/HDR candidates
+passed with zero browser errors, and true-8x again rendered 217/217 projections
+at 4896x3072 while remaining literal Off. The next useful lighting increment
+should improve spatial readability of mixed-source scenes or source direction
+reversal using this same signed transport, not add another sample or fixture-
+specific shader path.
+
 The next authoring increment centralizes the capture-facing projection of the
 normal-HDR and source-stage static contracts. One pure, recursively frozen
 `anifor.visual-capture.static-catalog/v1` now owns the ordered fixture/driver

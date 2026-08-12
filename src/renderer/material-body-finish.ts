@@ -263,6 +263,24 @@ vec3 applyMaterialProfileIrradiance(
   vec3 irradianceTint = mix(lightTint, absorbedLightTint, pigmentTransport);
   color += (vec3(1.12) - clamp(color, 0.0, 1.12))
     * irradianceTint * irradiance;
+
+  // The same two-sided probe also carries a signed far-side response. Turn
+  // only that negative half into a broad profile-governed shadow: opaque,
+  // absorbent bodies keep a clearer grounded side while transmissive gas,
+  // liquid, Glass, and Ice remain softly lit through their volume. Source hue
+  // gently colours the missing-light spectrum instead of applying a neutral
+  // grey overlay. No extra sample, support decision, or alpha path is added.
+  float shadowFacing = max(-lightIncidence, 0.0);
+  float shadowAbsorption = mix(
+    0.55, 1.0, clamp((opticalAbsorption - 0.35) / 2.05, 0.0, 1.0)
+  );
+  float shadowPhase = powder * 0.72 + liquid * 0.62 + gas * 0.44 + solid * 0.82;
+  float softShadow = lightReach * body * shadowFacing * shadowAbsorption
+    * shadowPhase * (0.045 + bodyDepth * 0.105);
+  vec3 shadowSpectrum = mix(
+    vec3(0.82), vec3(0.98) - lightTint * 0.28, 0.70
+  );
+  color *= vec3(1.0) - shadowSpectrum * softShadow;
   return max(color, vec3(0.0));
 }
 

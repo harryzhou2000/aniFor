@@ -11679,8 +11679,13 @@ void main() {
         uEmissionTexture,
         fieldUv - profileIrradianceOutward * uEmissionTexel * 2.0
       );
-      profileIrradianceIncidence = smoothstep(
-        0.0, 0.12, profileIrradianceOutwardEmission.a - inwardIrradiance.a
+      float profileIrradianceDifference =
+        profileIrradianceOutwardEmission.a - inwardIrradiance.a;
+      // Preserve both sides of the already-paid two-sided field probe. The
+      // positive half remains the source-facing key; the negative half lets
+      // the shared profile finish add a restrained far-side soft shadow.
+      profileIrradianceIncidence = sign(profileIrradianceDifference) * smoothstep(
+        0.012, 0.12, abs(profileIrradianceDifference)
       );
       if (profileIrradianceOutwardEmission.a > inwardIrradiance.a) {
         profileIrradianceEmission = profileIrradianceOutwardEmission;

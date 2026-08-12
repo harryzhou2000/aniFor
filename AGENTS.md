@@ -103,6 +103,20 @@ That run passed 1,523 source tests, 331 tooling tests, 269/270 ccache hits, six
 fresh-host candidates, downloaded portable verification, Pages deployment,
 first-attempt exact 19-resource closure, and the hosted Water receipt package.
 
+The retained signed-direction checkpoint is
+`.artifacts/visual-lab-reviews/material-lighting-c38bc3a4-e6ed-407e-9ce5-4f18a695dedf`.
+Preserve signed outward-minus-inward contrast from the two existing emission
+probes: positive is the source-facing key, while the negative half crosses a
+small noise dead band and drives one B-only profile/depth soft shadow. This is
+shared normal-HDR RGB arithmetic, not a new sample, resource, phase field,
+material branch, alpha rule, or topology decision. OFF/A remained byte-
+identical to the deployed package; the observed seven-level B maximum is
+diagnostic only and must not become an exact visual test. All six candidates
+passed with zero browser errors, and compact true-8x rendered all 217 material
+projections at 4896x3072 while remaining literal Off. Future source-direction
+work should reuse this signed scalar and the current board rather than adding a
+third field probe or a fixture-specific shader path.
+
 The domain-derived checkpoint launcher is deployed at revision
 `21fe52c96dd0d30152d2b2cec3a3d4b589a53630` by workflow run `31500138353`.
 Its next retained visual candidate strengthens only the shared gas

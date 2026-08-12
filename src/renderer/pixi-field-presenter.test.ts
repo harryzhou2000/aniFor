@@ -463,6 +463,15 @@ describe('Pixi presenter startup configuration', () => {
       'profileIrradianceOutwardEmission.a - inwardIrradiance.a',
     );
     expect(normal).toContain(
+      'sign(profileIrradianceDifference) * smoothstep(',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'float shadowFacing = max(-lightIncidence, 0.0);',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      '* shadowPhase * (0.045 + bodyDepth * 0.105);',
+    );
+    expect(normal).toContain(
       'max(emissionState.a, profileIrradianceOutwardEmission.a) > 0.002',
     );
     expect(eight).not.toContain('inwardIrradiance');
