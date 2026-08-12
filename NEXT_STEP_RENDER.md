@@ -53,6 +53,27 @@ stable-v1 as the CI default. Do not weaken the receipt watchdog, silently fall
 back to stable snapshots inside a v2 package, or describe the successful subset
 as a cohort performance win.
 
+The attempted source-facing wrap at `abf008b` was explicitly reverted by
+`3b1bbc7`: current opposed-source region evidence showed no useful broad-body
+directional improvement. Workflow run `31560943133` built that intermediate
+revision but its review failed during one CDP readback/disposal; cancellation
+left both deploy jobs unstarted, so the rejected revision never reached Pages.
+A follow-up precomputed direction-plane experiment also compiled and completed
+real SwiftShader review, but changed the intended Clay flank response by only
+about 0.05 RGB while costing 104,448 CPU bytes, one texture, and one normal-HDR
+sample. It is rejected rather than checkpointed. The current emission field has
+only a twelve-world-cell glow reach, so its local derivative cannot provide a
+meaningful direction through a 72-cell material body. A future directional-
+transport framework must therefore own a deliberately longer-range,
+obstacle-aware representation and prove opposed-source cancellation; do not
+infer body direction from chroma, noisy powder normals, or this short-range
+glow field.
+
+Manual CI now exposes `visual_lab_browser_host` (`shared` by default, `fresh`
+for isolated diagnosis). This does not relax the canonical release review:
+stable snapshots, the seven-scene catalog, current response sidecars, portable
+verification, and shared-host default all remain intact.
+
 Canvas evidence remains diagnostic only (`canonical: false`, `comparison:
 none`), carries no image-hash acceptance policy, and cannot fail the canonical
 WebGL checkpoint. The current multi-backend/scale board remains the place to

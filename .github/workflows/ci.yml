@@ -34,6 +34,14 @@ on:
         options:
           - stable-snapshots
           - completed-frame-receipt
+      visual_lab_browser_host:
+        description: Browser topology for optional Visual Lab diagnosis
+        required: true
+        default: shared
+        type: choice
+        options:
+          - shared
+          - fresh
       visual_lab_candidates:
         description: Comma-separated candidates; clear to run the frozen catalog
         required: false
@@ -236,6 +244,7 @@ jobs:
         continue-on-error: true
         env:
           VISUAL_LAB_CANDIDATES: ${{ inputs.visual_lab_candidates }}
+          VISUAL_LAB_BROWSER_HOST: ${{ inputs.visual_lab_browser_host }}
           VISUAL_LAB_CAPTURE_PROOF: ${{ inputs.visual_lab_capture_proof }}
           VISUAL_LAB_RECIPE_SET: ${{ inputs.visual_lab_recipe_set }}
         run: |
@@ -247,7 +256,7 @@ jobs:
             # supervised SwiftShader process. Every candidate still receives a
             # fresh incognito context/target, and any capture, teardown, or GPU
             # failure recycles the complete host before the next candidate.
-            --browser-host=shared
+            "--browser-host=${VISUAL_LAB_BROWSER_HOST}"
             "--capture-proof=${VISUAL_LAB_CAPTURE_PROOF}"
           )
           candidate_request="${VISUAL_LAB_CANDIDATES//[[:space:]]/}"

@@ -74,6 +74,22 @@ describe('deploy-verified CI workflow contract', () => {
     expect(inputReferences).toHaveLength(1);
   });
 
+  it('keeps shared hosting as the default while allowing manual fresh-host diagnosis', () => {
+    const browserHost = indentedEntry(workflow, 'visual_lab_browser_host', 6);
+    const choices = [...browserHost.matchAll(/^          - ([a-z-]+)\s*$/gm)]
+      .map(([, choice]) => choice);
+    expect(browserHost).toContain('description: Browser topology for optional Visual Lab diagnosis');
+    expect(browserHost).toContain('required: true');
+    expect(browserHost).toContain('default: shared');
+    expect(browserHost).toContain('type: choice');
+    expect(choices).toEqual(['shared', 'fresh']);
+
+    const inputReferences = workflow.match(
+      /\$\{\{\s*inputs\.visual_lab_browser_host\s*\}\}/g,
+    ) ?? [];
+    expect(inputReferences).toHaveLength(1);
+  });
+
   it('defaults manual review to the current material-lighting cohort', () => {
     const candidates = indentedEntry(workflow, 'visual_lab_candidates', 6);
     expect(candidates).toContain(
@@ -207,9 +223,11 @@ describe('deploy-verified CI workflow contract', () => {
     expect(review).toContain('--require-execution-tuning-plan=1');
     expect(review).toContain('--require-experiment-response=1');
     expect(review).toContain('--require-region-response=1');
-    expect(capture).toContain('--browser-host=shared');
-    expect(capture.match(/--browser-host=shared/g)).toHaveLength(1);
-    expect(capture).not.toContain('--browser-host=fresh');
+    expect(capture).toContain(
+      'VISUAL_LAB_BROWSER_HOST: ${{ inputs.visual_lab_browser_host }}',
+    );
+    expect(capture).toContain('"--browser-host=${VISUAL_LAB_BROWSER_HOST}"');
+    expect(capture.match(/--browser-host=/g)).toHaveLength(1);
     expect(capture).toContain(
       'VISUAL_LAB_CAPTURE_PROOF: ${{ inputs.visual_lab_capture_proof }}',
     );
