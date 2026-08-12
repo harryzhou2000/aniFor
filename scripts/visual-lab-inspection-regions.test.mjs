@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   normalizeVisualLabInspectionRegionCatalog,
+  projectDeclaredInspectionFixture,
   projectGasMaterialLightingAtlasInspectionFixture,
   projectSolidMaterialLightingAtlasInspectionFixture,
   VISUAL_LAB_INSPECTION_REGIONS,
@@ -75,6 +76,44 @@ describe('Visual Lab inspection-region catalog', () => {
       name: 'sparse-sooty-pair', role: 'control', x: 34, y: 352, width: 3, height: 1,
     });
     expect(Object.isFrozen(gas.regions.at(-1))).toBe(true);
+  });
+
+  it('projects an ordered cross-phase review board from declared data-only anchors', () => {
+    const mixed = VISUAL_LAB_INSPECTION_REGIONS.fixtures[4];
+    expect(mixed.candidate).toBe('material-lighting-atlas');
+    expect(mixed.regions).toHaveLength(20);
+    expect(mixed.regions.slice(0, 8).map(({ name, role }) => ({ name, role }))).toEqual([
+      { name: 'sand-body', role: 'response' },
+      { name: 'clay-body', role: 'response' },
+      { name: 'water-body', role: 'response' },
+      { name: 'oil-body', role: 'response' },
+      { name: 'smoke-warm-flank', role: 'response' },
+      { name: 'smoke-core', role: 'response' },
+      { name: 'fog-core', role: 'response' },
+      { name: 'fog-cool-flank', role: 'response' },
+    ]);
+    expect(mixed.regions.at(-1)).toEqual({
+      name: 'guarded-blank', role: 'control', x: 198, y: 334, width: 210, height: 28,
+    });
+    expect(Object.isFrozen(mixed.regions.at(-1))).toBe(true);
+  });
+
+  it('keeps declared review projection data-only and lets normalization reject unsafe records', () => {
+    const projected = projectDeclaredInspectionFixture({
+      candidate: 'declared', world: { width: 2, height: 2 }, descriptor: {
+        inspectionRegions: [{ name: 'whole', role: 'response', x: 0, y: 0, width: 2, height: 2 }],
+      },
+    });
+    expect(projected.regions[0]).toEqual({
+      name: 'whole', role: 'response', x: 0, y: 0, width: 2, height: 2,
+    });
+    projected.regions[0].width = 3;
+    expect(() => normalizeVisualLabInspectionRegionCatalog({
+      schema: VISUAL_LAB_INSPECTION_REGION_CATALOG_SCHEMA, fixtures: [projected],
+    })).toThrow(/malformed/);
+    expect(() => projectDeclaredInspectionFixture({
+      candidate: '../escape', world: { width: 1, height: 1 }, descriptor: { inspectionRegions: [] },
+    })).toThrow(/malformed/);
   });
 
   it('fails projection through catalog normalization when authored geometry escapes the world', () => {

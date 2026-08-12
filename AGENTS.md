@@ -1039,6 +1039,12 @@ gas atlas is the reference for irregular cloud lobes, voids, emitters, sparse
 carriers, mixed-phase contacts, native walls, and emissive controls; protected
 liquid-motion velocity/state fixtures are not candidates for mechanical catalog
 extraction.
+The cross-phase material-lighting atlas uses the same boundary and is the
+reference for a closed `inspectionRegions` projection: ordered data-only
+rectangles may be projected generically, but may not contain paths, callbacks,
+expressions, browser methods, or renderer selectors. Structural controls must
+reuse the authored geometry objects in the catalog; only deliberate visual
+sampling windows such as body/core/flank crops should remain separate geometry.
 The modular typed Visual Lab facade,
 executable capability profiles, named capture recipes, and content-addressed
 result records are deployed, as is the deterministic batch runner and static

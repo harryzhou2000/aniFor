@@ -4,6 +4,9 @@ import {
   GAS_MATERIAL_LIGHTING_ATLAS_CATALOG,
 } from '../src/shared/gas-material-lighting-atlas-catalog.js';
 import {
+  MATERIAL_LIGHTING_ATLAS_CATALOG,
+} from '../src/shared/material-lighting-atlas-catalog.js';
+import {
   SOLID_MATERIAL_LIGHTING_ATLAS_CATALOG,
 } from '../src/shared/solid-material-lighting-atlas-catalog.js';
 
@@ -112,6 +115,23 @@ const boundingRect = (left, right) => {
 const namedRegion = (name, role, region) => ({ name, role, ...region });
 
 /**
+ * Projects an ordered closed list of geometry-only review anchors. The shared
+ * data can name rectangles, but cannot run code or select browser/renderer work.
+ */
+export function projectDeclaredInspectionFixture(atlas) {
+  const { candidate, world, descriptor } = atlas;
+  if (!SAFE_NAME.test(candidate ?? '') || !Array.isArray(descriptor?.inspectionRegions)
+    || descriptor.inspectionRegions.length === 0) {
+    throw new TypeError('Declared inspection authoring is malformed');
+  }
+  return {
+    candidate,
+    world: { ...world },
+    regions: descriptor.inspectionRegions.map((region) => ({ ...region })),
+  };
+}
+
+/**
  * Projects one app-authored solid atlas into scripts-owned review annotations.
  * The projection carries geometry only: it grants no preparation, renderer,
  * capture, scoring, threshold, or promotion authority.
@@ -205,6 +225,9 @@ const SOLID_ATLAS_INSPECTION_FIXTURES = SOLID_MATERIAL_LIGHTING_ATLAS_CATALOG.at
 const GAS_ATLAS_INSPECTION_FIXTURES = GAS_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases.map(
   projectGasMaterialLightingAtlasInspectionFixture,
 );
+const DECLARED_INSPECTION_FIXTURES = MATERIAL_LIGHTING_ATLAS_CATALOG.atlases.map(
+  projectDeclaredInspectionFixture,
+);
 
 export const VISUAL_LAB_INSPECTION_REGIONS = normalizeVisualLabInspectionRegionCatalog({
   schema: VISUAL_LAB_INSPECTION_REGION_CATALOG_SCHEMA,
@@ -224,7 +247,8 @@ export const VISUAL_LAB_INSPECTION_REGIONS = normalizeVisualLabInspectionRegionC
       { name: 'native-wall', role: 'control', x: 246, y: 220, width: 12, height: 12 },
       { name: 'guarded-blank', role: 'control', x: 280, y: 240, width: 40, height: 35 },
     ],
-  }, ...SOLID_ATLAS_INSPECTION_FIXTURES, ...GAS_ATLAS_INSPECTION_FIXTURES],
+  }, ...SOLID_ATLAS_INSPECTION_FIXTURES, ...GAS_ATLAS_INSPECTION_FIXTURES,
+  ...DECLARED_INSPECTION_FIXTURES],
 });
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {

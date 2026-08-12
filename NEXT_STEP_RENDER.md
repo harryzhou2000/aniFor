@@ -6387,6 +6387,29 @@ downloaded portable package verified in 10m36s. Pages deployed in 38s, then the
 the hosted Water Visual Lab package plus bounded success evidence. Treat this
 as the production checkpoint for generated gas-region evidence.
 
+The next authoring increment extends the same seam to the paused cross-phase
+`material-lighting-atlas`. One frozen data-only catalog now owns exact Sand,
+Clay, Water, Oil, Smoke, FOG, source, void, fine/sparse, cloud-lobe, and guarded-
+blank geometry plus material IDs. The app validates and direct-fills that
+descriptor while retaining the fixture's established export and preparer. A
+closed generic declared-region projector consumes 20 ordered geometry-only
+review anchors, so this family adds no third candidate-specific scripts
+projector and no capture, renderer, browser, scoring, acceptance, or promotion
+authority. Exact structural controls reuse their source geometry objects;
+separate body/core/flank sampling windows remain explicit review data.
+
+The first real current-only package is retained at
+`/tmp/anifortpt-generated-region-mixed-20260812`. Fresh SwiftShader stable-
+snapshot capture passed in about 33.1s with WebGL/HDR, three captures, zero
+browser errors, and clean teardown. Portable verification rebuilt the complete
+batch, ad-hoc recipe set, host/tuning plans, geometry, experiment response, and
+all 20 region responses. Visual inspection favored the result: powders retain
+granular texture, liquids broad depth and authored voids/chimneys, gases smooth
+cloud silhouettes, and each phase has distinct lighting response. Guarded blank
+remained exact; small void controls intentionally expose only neighbouring
+reconstructed-field spill, not semantic ownership. Keep this as current-package
+review evidence rather than a hash pin or aesthetic verdict.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
