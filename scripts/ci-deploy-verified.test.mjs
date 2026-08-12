@@ -117,6 +117,21 @@ describe('deploy-verified CI workflow contract', () => {
     expect(build.indexOf(restore)).toBeLessThan(build.indexOf(save));
   });
 
+  it('restores and success-only saves the pinned Powder Toy library archive', () => {
+    const build = indentedEntry(workflow, 'build', 2);
+    const restore = namedStep(build, 'Restore pinned Powder Toy libraries');
+    const save = namedStep(build, 'Save pinned Powder Toy libraries after successful build');
+    expect(restore).toContain('id: tpt-libs-restore');
+    expect(restore).toContain('uses: actions/cache/restore@v6');
+    expect(restore).toContain('.cache/the-powder-toy/subprojects/packagecache');
+    expect(restore).toContain("hashFiles('third_party/the-powder-toy/REVISION',");
+    expect(restore).toContain("'scripts/build-tpt-wasm.sh') }}");
+    expect(save).toContain("if: success() && steps.tpt-libs-restore.outputs.cache-hit != 'true'");
+    expect(save).toContain('uses: actions/cache/save@v6');
+    expect(save).toContain('key: ${{ steps.tpt-libs-restore.outputs.cache-primary-key }}');
+    expect(build.indexOf(restore)).toBeLessThan(build.indexOf(save));
+  });
+
   it('makes build and exact-SHA reuse mutually exclusive and resolves provenance first', () => {
     const build = indentedEntry(workflow, 'build', 2);
     const verified = indentedEntry(workflow, 'verified_build', 2);

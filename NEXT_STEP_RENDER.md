@@ -36,6 +36,15 @@ current aesthetic evidence only. The next release step is the checkpoint and
 canonical CI deploy; do not introduce a new evidence schema or historical
 visual hash gate for this increment.
 
+The first CI attempt, workflow run `31642474495`, was correctly blocked before
+compilation when GitHub Releases returned repeated 503 responses for Powder
+Toy's pinned prebuilt Wasm library archive. The CI follow-up restores that exact
+Meson package-cache archive under a revision/build-script key, verifies the
+upstream SHA-256 declared by the pinned wrap, downloads with bounded retries on
+a miss, and saves the cache only after the complete build succeeds. This is a
+dependency-availability repair, not a renderer or artifact-integrity bypass;
+ccache and the project-local Emscripten cache retain their existing ownership.
+
 The current framework checkpoint is deployed at
 `c51f874ca1b453f07d4975d9fe00cd1767f14c60` by workflow run `31559035589`.
 The ccache-backed build passed in 3m44s; all seven current material-lighting

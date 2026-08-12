@@ -23,6 +23,13 @@ It also passed the independent 217-material true-8x production audit, complete
 source tests, all 360 tooling tests, typecheck, build, and exact 19-resource
 closure. The package is current-only evidence; its hashes are not a visual gate.
 
+CI must cache the pinned Powder Toy Wasm library archive separately from ccache
+and Emscripten. Restore only Meson's project-local `subprojects/packagecache`
+under the pinned revision/build-script key, verify the wrap-declared SHA-256,
+use bounded retries on a miss, and save only after the full build succeeds. Do
+not cache a mutable checkout or relax the exact archive/hash contract merely to
+work around a GitHub Releases outage.
+
 Current-only region appearance evidence is descriptive navigation, not a
 visual gate. `region-appearance.json` may report fixed-luma spread, range, and
 neighbour contrast for declared inspection regions, and its static HTML view

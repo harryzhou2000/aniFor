@@ -7,6 +7,7 @@ readonly EMSDK_DIR="${PROJECT_ROOT}/.toolchains/emsdk"
 readonly TPT_DIR="${PROJECT_ROOT}/.cache/the-powder-toy"
 readonly BUILD_DIR="${TPT_DIR}/build-wasm-headless"
 readonly MESON="${PROJECT_ROOT}/.venv/bin/meson"
+readonly TPT_WASM_LIBS_WRAP="tpt-libs-prebuilt-wasm32-emscripten-emscripten-static-release-v20251019131007.wrap"
 
 if [[ ! -f "${EMSDK_DIR}/emsdk_env.sh" ]]; then
   echo "Project-local Emscripten is not installed; run npm run setup:emsdk." >&2
@@ -33,6 +34,35 @@ elif ! git -C "${TPT_DIR}" apply --reverse --check "${PROJECT_ROOT}/patches/the-
   echo "Powder Toy checkout does not match the pinned headless patch." >&2
   exit 1
 fi
+
+# Meson can fetch this pinned archive itself, but a transient GitHub Releases
+# outage otherwise aborts before compilation and prevents the success-only CI
+# cache from ever being populated. Preseed Meson's ordinary package cache with
+# bounded retries and verify the upstream wrap hash before trusting the bytes.
+wrap_path="${TPT_DIR}/subprojects/${TPT_WASM_LIBS_WRAP}"
+package_url="$(sed -n 's/^source_url = //p' "${wrap_path}")"
+package_filename="$(sed -n 's/^source_filename = //p' "${wrap_path}")"
+package_hash="$(sed -n 's/^source_hash = //p' "${wrap_path}")"
+package_cache="${TPT_DIR}/subprojects/packagecache"
+package_archive="${package_cache}/${package_filename}"
+if [[ -z "${package_url}" || -z "${package_filename}" || ! "${package_hash}" =~ ^[0-9a-f]{64}$ ]]; then
+  echo "Pinned Powder Toy library wrap is incomplete." >&2
+  exit 1
+fi
+mkdir -p "${package_cache}"
+if [[ ! -f "${package_archive}" ]] || ! echo "${package_hash}  ${package_archive}" | sha256sum --check --status; then
+  partial_archive="${package_archive}.partial.$$"
+  trap 'rm -f "${partial_archive:-}"' EXIT
+  curl --fail --location --retry 8 --retry-all-errors --retry-delay 5 \
+    --connect-timeout 20 --max-time 300 --output "${partial_archive}" "${package_url}"
+  echo "${package_hash}  ${partial_archive}" | sha256sum --check --status || {
+    echo "Powder Toy library archive hash verification failed." >&2
+    exit 1
+  }
+  mv "${partial_archive}" "${package_archive}"
+  trap - EXIT
+fi
+echo "Verified cached Powder Toy libraries ${package_filename}"
 
 cp "${PROJECT_ROOT}/native/tpt/tpt_adapter.cpp" "${TPT_DIR}/src/StillroomAdapter.cpp"
 cp "${PROJECT_ROOT}/native/tpt/headless_gravity.cpp" "${TPT_DIR}/src/StillroomGravity.cpp"
