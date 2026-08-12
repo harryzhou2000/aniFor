@@ -131,6 +131,16 @@ Observed per-scene changed-pixel counts are diagnostic only, never a PNG or CI
 gate. A future opposed-source fixture may improve review leverage but must reuse
 the typed material-lighting driver and generic capture lifecycle.
 
+This mixed-source checkpoint is deployed at exact revision
+`c016e32055d57b0da9c247e90fbf60628f47b217` by workflow run `31552868142`.
+Build, all 218 source-test files and 32 tooling-test files, 269/270 ccache hits,
+six-candidate fresh-host review, downloaded portable verification, Pages
+deployment, exact live 19-resource closure, and hosted Water WebGL receipt
+verification passed. The prior soft-shadow run's first live-smoke attempt died
+before DevTools with zero hosts/contexts/targets/captures and passed when only
+that failed job was rerun; treat such a pre-session launch failure as runner
+infrastructure evidence, not a renderer regression.
+
 The domain-derived checkpoint launcher is deployed at revision
 `21fe52c96dd0d30152d2b2cec3a3d4b589a53630` by workflow run `31500138353`.
 Its next retained visual candidate strengthens only the shared gas

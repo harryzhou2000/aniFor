@@ -151,6 +151,18 @@ scene may later amplify and evaluate reversal readability, but it must reuse
 this transport and capture framework rather than add a fixture-specific shader
 branch.
 
+This checkpoint is deployed at exact revision
+`c016e32055d57b0da9c247e90fbf60628f47b217` by workflow run `31552868142`.
+The build completed in 3m50s with all 218 source-test files and 32 tooling-test
+files passing, 269/270 ccache hits, and the exact 19-resource Pages closure. The
+six-candidate fresh-host review passed in 7m06s and its downloaded portable
+package verified before the 9-second deployment. Live verification then passed
+the exact revision/resource closure and hosted Water WebGL receipt package in
+1m26s. The immediately preceding `f725c01` soft-shadow deployment also passed
+after rerunning only a transient pre-DevTools Chrome-launch failure; zero host,
+context, target, or capture had been created in the failed attempt, so it was
+not renderer evidence.
+
 The next authoring increment centralizes the capture-facing projection of the
 normal-HDR and source-stage static contracts. One pure, recursively frozen
 `anifor.visual-capture.static-catalog/v1` now owns the ordered fixture/driver
