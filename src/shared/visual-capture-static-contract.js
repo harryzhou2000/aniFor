@@ -12,6 +12,45 @@ const deepFreeze = (value) => {
   return Object.freeze(value);
 };
 
+const authoredCapture = (name, domain, driver, preparationReportLabel) => ({
+  fixture: {
+    name,
+    scene: 'showcase',
+    driver,
+    constraints: [{ domain, targets: [0] }],
+    preparationReportLabel,
+    requirement: `--domain=${domain} --target=0`,
+  },
+  recipe: {
+    name,
+    domain,
+    target: 0,
+    fixture: name,
+    gain: 1,
+    renderScale: 2,
+  },
+});
+
+/** One authored row projects to the existing fixture and recipe public arrays. */
+const AUTHORED_CAPTURE_FIXTURES = [
+  authoredCapture('powder-style-atlas', 'powder', 'powder-render-style',
+    'preparePowderStyleAtlasFixture'),
+  authoredCapture('material-lighting-atlas', 'material-lighting', 'material-lighting-profile',
+    'prepareMaterialLightingAtlasFixture'),
+  authoredCapture('gas-material-lighting-atlas', 'material-lighting', 'material-lighting-profile',
+    'prepareGasMaterialLightingAtlasFixture'),
+  authoredCapture('solid-material-lighting-atlas', 'material-lighting', 'material-lighting-profile',
+    'prepareSolidMaterialLightingAtlasFixture'),
+  authoredCapture('source-target-material-lighting-atlas', 'material-lighting',
+    'material-lighting-profile', 'prepareSourceTargetGraphicsAuditFixture'),
+  authoredCapture('force-activity-material-lighting-atlas', 'material-lighting',
+    'material-lighting-profile', 'prepareForceActivityGraphicsAuditFixture'),
+  authoredCapture('thermal-source-material-lighting-atlas', 'material-lighting',
+    'material-lighting-profile', 'prepareCeramicTemperatureVfxFixture'),
+  authoredCapture('opposed-source-material-lighting-atlas', 'material-lighting',
+    'material-lighting-profile', 'preparePowderLightVfxFixture'),
+];
+
 const contract = {
   schema: 'anifor.visual-capture.static-contract/v1',
   evidencePlanes: [
@@ -70,138 +109,8 @@ const contract = {
       fixedUrlParameters: {},
     },
   ],
-  fixtures: [
-    {
-      name: 'powder-style-atlas',
-      scene: 'showcase',
-      driver: 'powder-render-style',
-      constraints: [{ domain: 'powder', targets: [0] }],
-      preparationReportLabel: 'preparePowderStyleAtlasFixture',
-      requirement: '--domain=powder --target=0',
-    },
-    {
-      name: 'material-lighting-atlas',
-      scene: 'showcase',
-      driver: 'material-lighting-profile',
-      constraints: [{ domain: 'material-lighting', targets: [0] }],
-      preparationReportLabel: 'prepareMaterialLightingAtlasFixture',
-      requirement: '--domain=material-lighting --target=0',
-    },
-    {
-      name: 'gas-material-lighting-atlas',
-      scene: 'showcase',
-      driver: 'material-lighting-profile',
-      constraints: [{ domain: 'material-lighting', targets: [0] }],
-      preparationReportLabel: 'prepareGasMaterialLightingAtlasFixture',
-      requirement: '--domain=material-lighting --target=0',
-    },
-    {
-      name: 'solid-material-lighting-atlas',
-      scene: 'showcase',
-      driver: 'material-lighting-profile',
-      constraints: [{ domain: 'material-lighting', targets: [0] }],
-      preparationReportLabel: 'prepareSolidMaterialLightingAtlasFixture',
-      requirement: '--domain=material-lighting --target=0',
-    },
-    {
-      name: 'source-target-material-lighting-atlas',
-      scene: 'showcase',
-      driver: 'material-lighting-profile',
-      constraints: [{ domain: 'material-lighting', targets: [0] }],
-      preparationReportLabel: 'prepareSourceTargetGraphicsAuditFixture',
-      requirement: '--domain=material-lighting --target=0',
-    },
-    {
-      name: 'force-activity-material-lighting-atlas',
-      scene: 'showcase',
-      driver: 'material-lighting-profile',
-      constraints: [{ domain: 'material-lighting', targets: [0] }],
-      preparationReportLabel: 'prepareForceActivityGraphicsAuditFixture',
-      requirement: '--domain=material-lighting --target=0',
-    },
-    {
-      name: 'thermal-source-material-lighting-atlas',
-      scene: 'showcase',
-      driver: 'material-lighting-profile',
-      constraints: [{ domain: 'material-lighting', targets: [0] }],
-      preparationReportLabel: 'prepareCeramicTemperatureVfxFixture',
-      requirement: '--domain=material-lighting --target=0',
-    },
-    {
-      name: 'opposed-source-material-lighting-atlas',
-      scene: 'showcase',
-      driver: 'material-lighting-profile',
-      constraints: [{ domain: 'material-lighting', targets: [0] }],
-      preparationReportLabel: 'preparePowderLightVfxFixture',
-      requirement: '--domain=material-lighting --target=0',
-    },
-  ],
-  captureRecipes: [
-    {
-      name: 'powder-style-atlas',
-      domain: 'powder',
-      target: 0,
-      fixture: 'powder-style-atlas',
-      gain: 1,
-      renderScale: 2,
-    },
-    {
-      name: 'material-lighting-atlas',
-      domain: 'material-lighting',
-      target: 0,
-      fixture: 'material-lighting-atlas',
-      gain: 1,
-      renderScale: 2,
-    },
-    {
-      name: 'gas-material-lighting-atlas',
-      domain: 'material-lighting',
-      target: 0,
-      fixture: 'gas-material-lighting-atlas',
-      gain: 1,
-      renderScale: 2,
-    },
-    {
-      name: 'solid-material-lighting-atlas',
-      domain: 'material-lighting',
-      target: 0,
-      fixture: 'solid-material-lighting-atlas',
-      gain: 1,
-      renderScale: 2,
-    },
-    {
-      name: 'source-target-material-lighting-atlas',
-      domain: 'material-lighting',
-      target: 0,
-      fixture: 'source-target-material-lighting-atlas',
-      gain: 1,
-      renderScale: 2,
-    },
-    {
-      name: 'force-activity-material-lighting-atlas',
-      domain: 'material-lighting',
-      target: 0,
-      fixture: 'force-activity-material-lighting-atlas',
-      gain: 1,
-      renderScale: 2,
-    },
-    {
-      name: 'thermal-source-material-lighting-atlas',
-      domain: 'material-lighting',
-      target: 0,
-      fixture: 'thermal-source-material-lighting-atlas',
-      gain: 1,
-      renderScale: 2,
-    },
-    {
-      name: 'opposed-source-material-lighting-atlas',
-      domain: 'material-lighting',
-      target: 0,
-      fixture: 'opposed-source-material-lighting-atlas',
-      gain: 1,
-      renderScale: 2,
-    },
-  ],
+  fixtures: AUTHORED_CAPTURE_FIXTURES.map(({ fixture }) => fixture),
+  captureRecipes: AUTHORED_CAPTURE_FIXTURES.map(({ recipe }) => recipe),
 };
 
 const SAFE_NAME = /^[a-z][a-z0-9-]*$/;

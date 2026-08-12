@@ -93,14 +93,11 @@ describe('deploy-verified CI workflow contract', () => {
   it('defaults manual review to the current material-lighting cohort', () => {
     const candidates = indentedEntry(workflow, 'visual_lab_candidates', 6);
     expect(candidates).toContain(
-      'description: Comma-separated candidates; clear to run the frozen catalog',
+      'description: Optional ad-hoc comma-separated candidates; exclusive with recipe set',
     );
-    expect(candidates).toContain(
-      'default: material-lighting-atlas,gas-material-lighting-atlas,'
-      + 'solid-material-lighting-atlas,source-target-material-lighting-atlas,'
-      + 'force-activity-material-lighting-atlas,thermal-source-material-lighting-atlas,'
-      + 'opposed-source-material-lighting-atlas',
-    );
+    expect(candidates).toContain("default: ''");
+    const recipeSet = indentedEntry(workflow, 'visual_lab_recipe_set', 6);
+    expect(recipeSet).toContain('default: visual-lab/recipe-sets/material-lighting.json');
     expect(candidates).toContain('required: false');
     expect(candidates).toContain('type: string');
   });

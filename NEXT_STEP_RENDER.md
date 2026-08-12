@@ -1184,6 +1184,31 @@ an assumed win: the next readback increment must reduce actual work or establish
 a renderer-owned compact proof while preserving the exact default-framebuffer
 alpha semantics.
 
+A follow-up submission-keyed scalar-cache prototype was also rejected rather
+than retained. It kept the exact material-atlas result ID and framebuffer digest,
+but correct invalidation observed a new real presentation between convergence
+snapshots and therefore produced no useful timing reduction. Reusing across
+those submissions would assume the very framebuffer stability that stable-v1
+must independently prove. WebGL1 also has no portable alpha-only default-
+framebuffer readback, while a reduced or intermediate target would prove a
+different surface. Treat the complete RGBA readback as a protected evidence
+boundary until an implementation can reduce actual work with exact semantics;
+do not keep spending the active framework cycle on speculative transport or
+cache variants.
+
+The next authoring-leverage increment removes two remaining copies. Manual CI
+now defaults to the tracked `visual-lab/recipe-sets/material-lighting.json`
+instead of embedding the same seven candidate names in workflow YAML; ad-hoc
+candidate input remains available by explicitly clearing the recipe-set input.
+Inside the data-only capture static contract, one authored fixture+recipe row
+now projects to the existing public `fixtures` and `captureRecipes` arrays.
+Their order, fields, bytes, validation, capture paths, and frozen identities are
+unchanged. Adding a normal material review scene therefore requires its fixture
+implementation, one static authored row, and the intentionally executable typed
+preparer registration; the domain-selected cohort compiler, tracked recipe set,
+and CI default update from those declarations rather than another hand-copied
+list.
+
 Revision `813066c81735da2e9b2752c9ddff276cc1c8f0da` deployed the retained
 profile sheen through workflow run `31528453927`. The ccache-backed build,
 two-candidate stable-snapshot review, downloaded-package verification, Pages
@@ -1216,15 +1241,15 @@ Success means:
 
 Priority order from this checkpoint:
 
-1. Continue shortening the remaining framebuffer `gl.readPixels`/alpha-digest
-   path without weakening
-   semantic, authoritative-field, framebuffer-alpha, convergence, strict-
-   disposal, or portable verification. Keep stable snapshots as the release
-   default; receipt-v2 has now failed the seven-scene shared-host cohort and
-   remains an explicit diagnostic until a renderer-level completion change can
-   pass that exact workload. The exact-parity PBO overlap experiment regressed
-   its ABBA cohort and is not retained.
-2. Harden only regressions that threaten geometry, semantic/topology
+1. Move the active framework increment to declarative experiment/cohort
+   authoring and the wider material/UI roadmap. The exact framebuffer readback
+   remains a protected optimization opportunity, not a reason to stall useful
+   renderer work: PBO overlap regressed and safe submission-keyed reuse did not
+   hit in a real stable-v1 capture.
+2. Keep stable snapshots as the release default; receipt-v2 remains an explicit
+   diagnostic until a renderer-level completion change can pass the complete
+   seven-scene shared-host workload. Harden only regressions that threaten
+   geometry, semantic/topology
    correctness, WebGL lifecycle, true-8× completion, package integrity, or live
    Pages loading. Do not grow exact-pixel tests for evolving aesthetics.
 3. Continue the wider material and responsive-UI roadmap from audited gaps,
