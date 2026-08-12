@@ -83,12 +83,25 @@ restarts, current experiment/region response, and downloaded-package portable
 verification. Pages deployed in 11s; exact 19-resource live closure and the
 hosted Water completed-frame receipt smoke then passed in 1m41s.
 
-The next reusable lighting-transport increment is now implemented locally. It
-keeps the established short-range emission bytes exact for Canvas, compact true
-8×, OFF, and Balanced, while normal WebGL opts into one additional 204×128
-RGBA8 radiance carrier for Volumetric/B. A radius-12 fixed exponential kernel
-transports premultiplied source colour and energy through a semantic/native-wall
-transmittance lattice at the existing emission refresh cadence. Fixed weight
+The reusable lighting-transport increment is deployed at revision
+`86f27788081f69d640a8184a578a9f7979efea63` by workflow run `31565331596`.
+The 3m51s cached build passed 1,528 source and 339 tooling tests with 269/270
+ccache hits. The canonical stable-v1 review then passed all seven candidates in
+9m05s through one shared SwiftShader host, seven fresh contexts/targets, zero
+restarts, and only the planned `cohort-complete` recycle. Its downloaded package
+verified all seven results, current experiment response, and the opposed-source
+region response with all eleven declared probes. Pages deployed in 11s; exact
+revision and 19-resource closure plus the hosted Water receipt-v2 package then
+passed in 1m25s. The retained hosted attestation binds the live app to this
+exact revision. This closes the release gate without promoting any historical
+PNG hash to a visual requirement.
+
+The increment keeps the established short-range emission bytes exact for
+Canvas, compact true 8×, OFF, and Balanced, while normal WebGL opts into one
+additional 204×128 RGBA8 radiance carrier for Volumetric/B. A radius-12 fixed
+exponential kernel transports premultiplied source colour and energy through a
+semantic/native-wall transmittance lattice at the existing emission refresh
+cadence. Fixed weight
 normalization turns blocked paths into missing energy rather than a normalized
 halo; one-cell native walls and field/sink/channel owners hard-block, while
 gas, liquid, powder, and solid attenuate in order. Wall edits now redirty this
@@ -116,9 +129,9 @@ branch. In B, the wall umbra changes by about -5.82/-4.10/-1.76 RGB versus
 shoulder, all with zero alpha change and no visible wall halo. This proves actual
 blocked transport rather than only semantic attenuation. The independent true-
 8× 217-material audit passed at 4896×3072 with the carrier absent. Treat this as
-a favored current-only visual checkpoint; the next release gate is the ordinary
-seven-candidate shared-host review and deployed Water receipt smoke, not an
-exact PNG baseline comparison.
+a favored current-only and now-deployed visual checkpoint. Future work should
+reuse the transport carrier for broader material presentation or measurement
+leverage; it must not reopen this checkpoint merely to pin exact pixels.
 
 Canvas evidence remains diagnostic only (`canonical: false`, `comparison:
 none`), carries no image-hash acceptance policy, and cannot fail the canonical
