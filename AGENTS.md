@@ -86,9 +86,25 @@ matching OFF/A/B snapshots, all three evidence planes, screenshot-after-proof,
 and every frozen identity. The real Gas and Powder+material-lighting packages
 passed portable verification and clean teardown; Gas total fell from 38.0s to
 27.1s and stable two-snapshot readback fell from about 4.2-5.0s to 1.78-1.84s.
-These timings are diagnostic, not CI thresholds. The next gate is the complete
-eight-candidate stable-v1 release review; do not make receipt-v2 the default or
-weaken fallback, lifecycle, or package validation.
+These timings are diagnostic, not CI thresholds.
+
+This asynchronous-readback checkpoint is deployed at exact revision
+`862a682d6b268118487259f8683a67ce45584791` by workflow run `31621803144`.
+The 3m55s build restored the preceding compiler cache, reported 269/270 ccache
+hits, saved the new cache only after success, passed 1,551 source and 355
+tooling tests, and verified the exact 19-resource site closure. The canonical
+eight-candidate stable-v1 shared-host review passed eight-for-eight in 9m33s
+with one host, eight fresh contexts/targets, zero restarts, all 161 applicable
+regions, and successful downloaded-package reconstruction. Pages deployed in
+8s. The 1m37s live gate matched the exact revision and 19-resource closure on
+its first attempt, then passed the hosted Water WebGL completed-frame-receipt
+package and portable verifier. That live receipt-v2 sample reduced OFF/A/B
+framebuffer-alpha readback to 40-48ms each while preserving its one-snapshot
+proof. Keep stable-v1 as the release-review default; do not weaken fallback,
+lifecycle, or package validation. The next framework increment should remove
+the remaining gas/solid scripts-side inspection projectors by moving their
+ordered regions into the declarative catalogs, preserving all 177 current
+region records and their order without changing renderer or capture authority.
 
 The next retained material-class framework checkpoint is exact revision
 `d5ceedf940dfea3d1a194a6b8fff5ae4c3557bd2`. `RenderOptics.MetallicRigid`

@@ -6535,7 +6535,7 @@ one complete readiness snapshot and two matching semantic, authoritative-field,
 and framebuffer-alpha snapshots for each OFF/A/B variant. No result, batch,
 recipe-set, tuning-plan, host-plan, baseline, comparison, or PNG identity changes.
 
-Local verification passes 1,550 source and 355 permission-correct tooling tests,
+Local verification passes 1,551 source and 355 permission-correct tooling tests,
 typecheck, production build, and exact 19-resource closure. Two real SwiftShader
 packages are retained at `/tmp/anifortpt-async-alpha-current-submission-20260813`
 and `/tmp/anifortpt-async-alpha-cross-driver-20260813`. The first keeps the Gas
@@ -6545,8 +6545,29 @@ from roughly 4.2-5.0s to 1.78-1.84s. The shared-host cross-driver run passed
 Powder plus material lighting with two fresh contexts, zero restarts, clean
 cohort teardown, all 36 regions, and portable verification; its stable
 OFF/A/B readback means were 1.42-1.69s. Treat timings as diagnostic samples,
-not performance gates. The next release step is the canonical eight-candidate
-stable-v1 CI review and downloaded-package verification.
+not performance gates.
+
+This asynchronous-readback checkpoint is deployed at exact revision
+`862a682d6b268118487259f8683a67ce45584791` by workflow run `31621803144`.
+The 3m55s build restored ccache, reported 269/270 compiler hits, saved it only
+after the successful build, passed 1,551 source and 355 tooling tests, and
+verified the exact 19-resource site closure. The canonical eight-candidate
+stable-v1 shared-host review passed eight-for-eight in 9m33s with one host,
+eight fresh contexts/targets, zero restarts, all 161 applicable regions, and
+successful downloaded-package reconstruction. Pages deployed in 8s. The 1m37s
+live gate matched the exact revision and 19-resource closure on its first
+attempt, then passed the hosted Water WebGL completed-frame-receipt package and
+portable verifier. Its one-snapshot OFF/A/B framebuffer-alpha readbacks took
+40-48ms each. Keep stable-v1 as the release-review default; receipt-v2 remains
+an explicit live-smoke/performance capability.
+
+The next framework increment is a data-only migration of the remaining gas and
+solid inspection regions. Move their ordered region definitions into their
+declarative catalogs and use the shared `declared` projector, preserving all
+177 current region records and their exact order. Remove the obsolete
+scripts-side projection helpers only after parity proof. This must not add a
+renderer, capture, app-preparer, browser-method, recipe-set, cohort, CI, or
+identity branch.
 
 ## Deferred long-term visual roadmap
 
