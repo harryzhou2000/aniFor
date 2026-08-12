@@ -1127,6 +1127,14 @@ it skips no evidence and changes no identity. A focused real opposed-source
 SwiftShader capture passed semantic, field, framebuffer, geometry, strict
 teardown, and zero-browser-error checks.
 
+Workflow run `31578249634` deployed that exact revision. Its 3m59s build passed
+1,530 source and 344 tooling tests, restored 269/270 cacheable C++ compilations,
+and verified the exact 19-resource closure. The seven-scene shared-host review
+passed seven-for-seven in 9m12s with one host and zero restarts; the downloaded
+portable package verified. Pages deployed in 11 seconds, live closure passed
+all 19 resources on attempt one, and the hosted Water receipt-v2 package passed
+against the exact deployed revision.
+
 The next broad authoring seam is checkpointed at revision `3f7da77`:
 `material-composition-profiles.ts` owns one frozen, validated
 powder/liquid/gas/solid table for body lighting, sheen, irradiance, penetration,
