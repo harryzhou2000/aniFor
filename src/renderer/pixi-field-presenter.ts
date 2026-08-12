@@ -6691,8 +6691,13 @@ void main() {
       // proven; OFF/A, alpha, silhouette, sparse gaps, and compact true-8x
       // remain on their existing paths.
       float gasMaterialVolumeB = step(1.5, uMaterialLightingVariant);
-      float gasBillowKeyScale = mix(1.0, 4.20, gasMaterialVolumeB);
-      float gasBillowPocketScale = mix(1.0, 3.10, gasMaterialVolumeB);
+      float gasInteriorContrast = materialCompositionParameters(2.0).interiorContrast;
+      float gasBillowKeyScale = mix(
+        1.0, 4.20 * gasInteriorContrast, gasMaterialVolumeB
+      );
+      float gasBillowPocketScale = mix(
+        1.0, 3.10 * gasInteriorContrast, gasMaterialVolumeB
+      );
       float gasVfxKey = min(
         mix(0.180, 0.285, gasMaterialVolumeB),
         (gasVfxCrown * 0.120
@@ -6718,7 +6723,7 @@ void main() {
       color *= 1.0 - gasVfxPocket;
       float gasMaterialBillowExposure = gasMaterialVolumeB * gasVfxBodySupport
         * (max(gasVfxBillow, 0.0) * 0.070
-          - max(-gasVfxBillow, 0.0) * 0.060);
+          - max(-gasVfxBillow, 0.0) * 0.060) * gasInteriorContrast;
       color *= 1.0 + gasMaterialBillowExposure;
 
       // E15: deepen only the connected atmosphere-owned cores selected by the

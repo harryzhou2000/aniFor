@@ -1260,6 +1260,30 @@ passed against that exact revision. The exact-breakpoint audit in revision
 `97e2c4b` is a test-only follow-up and does not change the deployed application
 bytes.
 
+The next framework increment adds one bounded `interiorContrast` lane to the
+existing compile-time material-composition profile. It is phase-level, not an
+element selector: powder, liquid, gas, and solid author their broad shallow-to-
+core balance beside the existing body-lighting, sheen, irradiance, transport,
+shadow, and grounding weights. The generated GLSL response remains arithmetic-
+only and adds no uniform, sampler, texture, field, target, pass, upload, or
+allocation. Normal Volumetric/B uses the lane to coordinate settled-Smooth
+powder countershade, liquid shelf/core contrast, connected gas transmission/
+absorption and billow exposure, and supported solid key/fill. OFF/A, Canvas,
+alpha, support, topology, material identity, contacts, and the compact true-8x
+literal-Off route remain unchanged.
+
+Current-only evidence is retained at `/tmp/anifortpt-interior-contrast-v2`.
+The tracked seven-scene material-lighting cohort passed seven-for-seven through
+one shared SwiftShader host with WebGL/HDR, exact semantic/field/framebuffer
+evidence, portable verification, and zero browser errors. Direct inspection
+favors the conservative phase table: liquid keeps distinct Water/Oil bodies
+with a clearer shallow-to-core read; gas keeps porous silhouettes, holes, and
+sparse controls while strengthening internal lobes; powder retains mineral
+grain and fine structures; solids stay restrained. The protected true-8x atlas
+then rendered all 217 projections at 4896x3072 with every projection visible
+and zero browser errors. These images and deltas are current review evidence,
+not cross-revision visual requirements.
+
 Revision `813066c81735da2e9b2752c9ddff276cc1c8f0da` deployed the retained
 profile sheen through workflow run `31528453927`. The ccache-backed build,
 two-candidate stable-snapshot review, downloaded-package verification, Pages

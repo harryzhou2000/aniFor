@@ -389,6 +389,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'float phaseGrounding = composition.ambientGrounding;',
     );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'float interiorContrast = composition.interiorContrast;',
+    );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('mix(1.08, 0.62, transmission)');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('float gasCompactMacroRelief(vec2 position)');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('float liquidBodyFinishDepth(');
@@ -540,16 +543,18 @@ describe('Pixi presenter startup configuration', () => {
       'pocket * fieldBody * 0.022 + max(-facing, 0.0) * shoulder * 0.010',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
-      '* (0.060 + reflectedFacing * 0.045) * liquidSurfaceScale;',
+      '* (0.060 + reflectedFacing * 0.045) * liquidSurfaceScale\n'
+        + '    * mix(1.0, interiorContrast, opticalExperimentB);',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'float liquidShallowBand = transmittedShoulder * transmittedShoulder\n    * opticalExperimentB;',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
-      '* finishResponse.w * (0.160 + crown * 0.040);',
+      '* finishResponse.w * (0.160 + crown * 0.040) * interiorContrast;',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
-      'shade += gasDeepAbsorption * 0.024 * gasExtinctionScale;',
+      'shade += gasDeepAbsorption * 0.024 * gasExtinctionScale\n'
+        + '    * mix(1.0, interiorContrast, opticalExperimentB);',
     );
     expect(normal.match(/materialBodyFinishParameters\(/g)).toHaveLength(5);
     expect(eight.match(/materialBodyFinishParameters\(/g)).toHaveLength(5);

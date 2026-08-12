@@ -113,10 +113,13 @@ vec3 applyMaterialBodyFinish(
   // Compact true-8x supplies literal Off, so this normal-HDR B refinement is
   // RGB-only and cannot alter coverage, alpha, or the compact material grammar.
   float powderCountershade = powder * lightingExperimentB * bodySupport;
+  float interiorContrast = composition.interiorContrast;
   float powderShallowKey = powderCountershade * (1.0 - core)
-    * (0.050 + max(facing, 0.0) * 0.025) * finishResponse.x;
+    * (0.050 + max(facing, 0.0) * 0.025) * finishResponse.x
+    * interiorContrast;
   float powderDeepFill = powderCountershade * core
-    * (0.040 + max(-facing, 0.0) * 0.016) * finishResponse.y;
+    * (0.040 + max(-facing, 0.0) * 0.016) * finishResponse.y
+    * interiorContrast;
   color += (vec3(1.10) - clamp(color, 0.0, 1.10))
     * keyTint * powderShallowKey;
   color *= vec3(1.0) - shadowTint * powderDeepFill;
@@ -391,9 +394,10 @@ vec3 applySolidMaterialLighting(
   float facing = dot(normal, normalize(vec3(-0.42, -0.62, 0.78)));
   float grazing = pow(1.0 - clamp(normal.z, 0.0, 1.0), 2.0);
   float shell = body * (1.0 - core);
+  float interiorContrast = materialCompositionParameters(3.0).interiorContrast;
 
   float key = body * (max(facing, 0.0) * 0.040 + grazing * 0.025)
-    * finishResponse.x;
+    * finishResponse.x * interiorContrast;
   float transmission = shell * (0.032 + grazing * 0.045) * finishResponse.w;
   // Optical classes which explicitly reserve extra transmission can carry a
   // little light into the first connected body layers, rather than reading as
@@ -404,7 +408,7 @@ vec3 applySolidMaterialLighting(
     * (0.010 + grazing * 0.018 + max(facing, 0.0) * 0.010)
     * max(finishResponse.w - 1.0, 0.0);
   float fill = body * (core * 0.032 + max(-facing, 0.0) * 0.019)
-    * finishResponse.y;
+    * finishResponse.y * interiorContrast;
   // The ordinary linear lane stays restrained for rigid, translucent,
   // organic, and radioactive bodies. Profiles that deliberately reserve the
   // upper fill range gain a deeper core shoulder, allowing a dense enclosure
@@ -510,6 +514,7 @@ vec3 applyFluidVolumeLobe(
   // literal Off, keeping its established fifteen-million-fragment path exact.
   float opticalExperiment = step(0.5, materialLightingVariant);
   float opticalExperimentB = step(1.5, materialLightingVariant);
+  float interiorContrast = materialCompositionParameters(phase).interiorContrast;
   // Convert the static family roughness lane into an energy-bounded lobe width.
   // The original crown/facing response remains exact outside B. Tight optical
   // families concentrate their reflection; broad families trade peak for a
@@ -560,9 +565,10 @@ vec3 applyFluidVolumeLobe(
   float liquidShallowBand = transmittedShoulder * transmittedShoulder
     * opticalExperimentB;
   float liquidBroadTransmission = liquidShallowBand
-    * finishResponse.w * (0.160 + crown * 0.040);
+    * finishResponse.w * (0.160 + crown * 0.040) * interiorContrast;
   float liquidTransmissionCrest = transmittedShoulder * finishResponse.w
-    * (0.060 + reflectedFacing * 0.045) * liquidSurfaceScale;
+    * (0.060 + reflectedFacing * 0.045) * liquidSurfaceScale
+    * mix(1.0, interiorContrast, opticalExperimentB);
 
   // A broad convex crown and directional shoulder supply a coherent reflected
   // lobe. Concave/deep regions retain pigment through restrained absorption;
@@ -571,7 +577,8 @@ vec3 applyFluidVolumeLobe(
       + reflectedFacing * shoulder * mix(0.026, 0.034, gas))
     * (1.0 - core * mix(0.24, 0.36, gas));
   key += liquidTransmissionCrest;
-  key += gasMidTransmission * 0.036 * finishResponse.w * gasMidScale;
+  key += gasMidTransmission * 0.036 * finishResponse.w * gasMidScale
+    * mix(1.0, interiorContrast, opticalExperimentB);
   key += sootyGasCharacter * gasMidTransmission
     * (0.026 + max(macroRelief, 0.0) * 0.018) * finishResponse.x;
   key += max(macroRelief, 0.0) * gasMacroBody * 0.052;
@@ -586,8 +593,10 @@ vec3 applyFluidVolumeLobe(
   float shade = (pocket * mix(0.030, 0.038, gas)
       + max(-facing, 0.0) * shoulder * mix(0.010, 0.014, gas)
       + core * mix(0.010, 0.007, gas)) * fieldBody;
-  shade += deepColumn * 0.032 * liquidCoreScale;
-  shade += gasDeepAbsorption * 0.024 * gasExtinctionScale;
+  shade += deepColumn * 0.032 * liquidCoreScale
+    * mix(1.0, interiorContrast, opticalExperimentB);
+  shade += gasDeepAbsorption * 0.024 * gasExtinctionScale
+    * mix(1.0, interiorContrast, opticalExperimentB);
   shade += max(-macroRelief, 0.0) * gasMacroBody * 0.036;
   shade += gasOpticalCharacter
     * (pocket * fieldBody * 0.022 + max(-facing, 0.0) * shoulder * 0.010
