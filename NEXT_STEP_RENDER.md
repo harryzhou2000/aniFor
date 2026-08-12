@@ -130,6 +130,27 @@ should improve spatial readability of mixed-source scenes or source direction
 reversal using this same signed transport, not add another sample or fixture-
 specific shader path.
 
+That mixed-source increment is retained at
+`.artifacts/visual-lab-reviews/material-lighting-59d51b00-b86a-42e4-9dee-27fd27dae934`.
+The already-computed positive signed incidence now continuously blends the
+centre emission spectrum toward the locally dominant outward spectrum instead
+of switching the entire sample at the alpha-order crossing. Negative incidence
+continues to use the centre blend, so the far side remains a soft shadow rather
+than acquiring a false inward-facing key. The existing dead band therefore also
+stabilizes colour hand-off during source reversal. This is B-only scalar/mix
+arithmetic and adds no sample, field, resource, material selector, alpha, or
+topology rule. All six normal WebGL/HDR candidates and portable verification
+passed with zero browser errors; true-8x rendered all 217 projections at
+4896x3072 with zero browser errors and remains literal Off. Direct review
+retained gas/liquid continuity, powder grain, solid relief, thermal warm/cool
+separation, holes, notches, contacts, walls, and blanks. Relative to the prior
+signed-direction package, only 296 B-frame pixels changed across the six
+918x576 scenes (14/1/113/69/0/99 by catalog order); this count is diagnostic,
+not a cross-revision visual requirement. A broader opposed-source authored
+scene may later amplify and evaluate reversal readability, but it must reuse
+this transport and capture framework rather than add a fixture-specific shader
+branch.
+
 The next authoring increment centralizes the capture-facing projection of the
 normal-HDR and source-stage static contracts. One pure, recursively frozen
 `anifor.visual-capture.static-catalog/v1` now owns the ordered fixture/driver

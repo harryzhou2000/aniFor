@@ -11687,9 +11687,15 @@ void main() {
       profileIrradianceIncidence = sign(profileIrradianceDifference) * smoothstep(
         0.012, 0.12, abs(profileIrradianceDifference)
       );
-      if (profileIrradianceOutwardEmission.a > inwardIrradiance.a) {
-        profileIrradianceEmission = profileIrradianceOutwardEmission;
-      }
+      // Hand the locally dominant outward spectrum to the shared finish with
+      // the same signed/dead-banded response that owns key versus shadow. This
+      // avoids a hue pop when opposed sources cross while keeping negative
+      // contrast on the centre blend: the far side remains occlusion, not a
+      // false inward-facing second key.
+      float directionalSourceShare = max(profileIrradianceIncidence, 0.0);
+      profileIrradianceEmission = mix(
+        emissionState, profileIrradianceOutwardEmission, directionalSourceShare
+      );
     }
     float legacyIrradianceShare = profileIrradianceB
       * profileIrradianceEligibility

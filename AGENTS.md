@@ -117,6 +117,20 @@ projections at 4896x3072 while remaining literal Off. Future source-direction
 work should reuse this signed scalar and the current board rather than adding a
 third field probe or a fixture-specific shader path.
 
+The retained mixed-source colour hand-off package is
+`.artifacts/visual-lab-reviews/material-lighting-59d51b00-b86a-42e4-9dee-27fd27dae934`.
+Use the positive half of the existing signed/dead-banded incidence to blend the
+centre emission spectrum toward the outward spectrum; do not restore the binary
+alpha-order switch or blend toward inward emission for negative incidence.
+That negative half must remain the shared far-side shadow. All six WebGL/HDR
+candidates passed portable current-only review with zero browser errors, and
+compact true-8x rendered 217/217 at 4896x3072 while remaining literal Off.
+Direct inspection retained fluid continuity, powder grain, solid relief,
+thermal source-colour separation, holes, notches, contacts, walls, and blanks.
+Observed per-scene changed-pixel counts are diagnostic only, never a PNG or CI
+gate. A future opposed-source fixture may improve review leverage but must reuse
+the typed material-lighting driver and generic capture lifecycle.
+
 The domain-derived checkpoint launcher is deployed at revision
 `21fe52c96dd0d30152d2b2cec3a3d4b589a53630` by workflow run `31500138353`.
 Its next retained visual candidate strengthens only the shared gas
