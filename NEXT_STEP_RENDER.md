@@ -6661,6 +6661,24 @@ package and portable verifier. Continue with the next audited reusable
 authoring or measurement seam; do not promote the migration hashes into visual
 requirements.
 
+The thermal-source atlas now completes the local declarative-authoring migration
+for the canonical material-lighting cohort. One frozen data-only catalog owns
+the five exact Ceramic temperature cards, their material/state/wall expectations,
+and 15 response/control inspection regions. A typed authoring module validates
+that closed geometry and direct-fills it, while the historical Ceramic audit
+module is retained as a compatibility facade. Pre-migration snapshot, material,
+little-endian Uint16 temperature, and wall hashes remain byte-identical semantic
+oracles only; no PNG hash has become a gate. Typecheck, 1,556 source tests, 358
+tooling tests, production build, and exact 19-resource closure pass. The real
+SwiftShader package at `/tmp/anifortpt-thermal-declared-GTE23Q` passed stable-v1
+WebGL/HDR in 24.7s through one shared host with zero restarts, strict teardown,
+portable reconstruction, and all 15 regions. The result remains
+`sha256:c3b0fa6ba870c42e0e455d736d1384f79b8ae5629d4f1d218e0efe8ac709e72d`;
+direct inspection preserves the complete heat progression and all topology,
+contact, wall, blank, and wrong-owner controls. The release workflow is the next
+gate. After it passes, prioritize automatic registration or reusable measurement
+leverage rather than another fixture-specific capture branch.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

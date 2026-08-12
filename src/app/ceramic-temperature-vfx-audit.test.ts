@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createHash } from 'node:crypto';
 import { Material } from '../shared/materials';
 import { DeterministicBackend } from '../simulation/deterministic-backend';
 import { RenderLabBackend } from '../simulation/render-lab-backend';
@@ -102,7 +103,29 @@ describe('Ceramic temperature VFX audit fixture', () => {
       .toThrow('RenderLab temperature and native wall planes');
     expect(() => prepareCeramicTemperatureVfxFixture(new RenderLabBackend(32, 32))).toThrow('612x384');
   });
+
+  it('preserves the pre-migration snapshot and exact material, temperature, and wall planes', () => {
+    const simulation = preparedFixture();
+    const temperatureBytes = Buffer.alloc(simulation.temperature().byteLength);
+    simulation.temperature().forEach((value, index) => temperatureBytes.writeUInt16LE(value, index * 2));
+    expect(digest(JSON.stringify(CERAMIC_TEMPERATURE_VFX_AUDIT))).toBe(
+      '4538c106851a2e137368e87cc9ef7939dd7a4ff31652a604fbbfb858e7820c7e',
+    );
+    expect(digest(simulation.cells())).toBe(
+      'c44a48a6527831469c24aee261be0791dc7f8bcdaf597a6b5b25b583c8894bc8',
+    );
+    expect(digest(temperatureBytes)).toBe(
+      'eb8ea2f8f3d327f2c44068ce05247019334e54e2e133df5d98d74f08def76bd1',
+    );
+    expect(digest(simulation.walls())).toBe(
+      '6c0ffb9c0633b6028d72b7a1bcacfb6d579e0bffa4a1dccb4e9896dcddb8afcc',
+    );
+  });
 });
+
+function digest(value: string | NodeJS.ArrayBufferView): string {
+  return createHash('sha256').update(value).digest('hex');
+}
 
 function preparedFixture(): RenderLabBackend {
   const simulation = new RenderLabBackend();

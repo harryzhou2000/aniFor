@@ -27,6 +27,7 @@ describe('Visual Lab inspection-region catalog', () => {
       'multi-metal-material-lighting-atlas',
       'source-target-material-lighting-atlas',
       'force-activity-material-lighting-atlas',
+      'thermal-source-material-lighting-atlas',
       'opposed-source-material-lighting-atlas',
     ]);
     expect(Object.isFrozen(VISUAL_CAPTURE_INSPECTION_SOURCE_CATALOG)).toBe(true);
@@ -160,6 +161,30 @@ describe('Visual Lab inspection-region catalog', () => {
       { name: 'acel-active-guarded-blank', role: 'control' },
     ]);
     expect(Object.isFrozen(force.regions[0])).toBe(true);
+  });
+
+  it('projects thermal-source stages and exact-owner controls through declared authoring', () => {
+    const thermal = fixture('thermal-source-material-lighting-atlas');
+    expect(thermal.world).toEqual({ width: 612, height: 384 });
+    expect(thermal.regions).toHaveLength(15);
+    expect(thermal.regions.map(({ name, role }) => ({ name, role }))).toEqual([
+      { name: 'ambient-core', role: 'response' },
+      { name: 'onset-core', role: 'response' },
+      { name: 'warm-core', role: 'response' },
+      { name: 'orange-core', role: 'response' },
+      { name: 'bright-core', role: 'response' },
+      { name: 'bright-authored-hole', role: 'control' },
+      { name: 'bright-open-notch', role: 'control' },
+      { name: 'bright-thin-line', role: 'control' },
+      { name: 'bright-isolated', role: 'control' },
+      { name: 'bright-native-wall', role: 'control' },
+      { name: 'bright-ceramic-water-contact', role: 'response' },
+      { name: 'bright-water-control', role: 'control' },
+      { name: 'bright-hot-brick-control', role: 'control' },
+      { name: 'bright-hot-metal-control', role: 'control' },
+      { name: 'bright-guarded-blank', role: 'control' },
+    ]);
+    expect(Object.isFrozen(thermal.regions[0])).toBe(true);
   });
 
   it('derives gas response and control regions from shared data-only atlas authoring', () => {

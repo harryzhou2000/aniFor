@@ -195,6 +195,26 @@ Pages deployed in 11s; the 1m26s live gate matched the exact revision and
 receipt-v2 package and portable verifier. Continue the active framework goal
 with the next audited reusable authoring or measurement seam.
 
+The final canonical material-lighting fixture has now crossed the same
+declarative authoring boundary locally. A frozen data-only
+`thermal-source-material-lighting-atlas` catalog owns the five Ceramic
+temperature cards, exact material/state/wall expectations, and 15 bounded
+response/control regions. Typed app authoring validates that closed topology
+before direct-filling the established fixture; `ceramic-temperature-vfx-audit.ts`
+remains only the compatibility facade. Pre-migration hashes prove the public
+snapshot JSON and complete material, little-endian Uint16 temperature, and wall
+planes byte-identical; these are semantic migration oracles, never visual
+baselines. Local validation passes 1,556 source and 358 tooling tests, typecheck,
+production build, and exact 19-resource closure. The SwiftShader package at
+`/tmp/anifortpt-thermal-declared-GTE23Q` passed stable-v1 WebGL/HDR with one
+shared host, zero restarts, strict teardown, and portable verification of all
+15 regions. Its result remains
+`sha256:c3b0fa6ba870c42e0e455d736d1384f79b8ae5629d4f1d218e0efe8ac709e72d`.
+Direct inspection retains the five heat stages, voids, fine controls, wall
+coexistence, Water contact, and foreign hot-owner controls. The next framework
+work should remove residual registration effort or improve measurement leverage,
+not add another fixture-specific harness path.
+
 The next retained material-class framework checkpoint is exact revision
 `d5ceedf940dfea3d1a194a6b8fff5ae4c3557bd2`. `RenderOptics.MetallicRigid`
 is appended as stable byte class `20`; no historical class ID moved. Only the
