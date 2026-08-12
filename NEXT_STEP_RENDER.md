@@ -6255,6 +6255,16 @@ the permission-correct tooling suite passed 344. This establishes append-only
 optical classes as the next scalable material-authoring axis; broaden coverage
 with a declarative multi-metal board before adding exact-species shader logic.
 
+The checkpoint is deployed at exact revision
+`fd6f9c93b03768ea3c13bbcbb745c5c4122352d4` by workflow run `31597311645`.
+The cached build and complete test/static-site gate passed in 3m32s and saved
+ccache only after success. The seven-scene current-only WebGL/HDR capture,
+retained-artifact round trip, and portable verification passed in 9m11s; Pages
+deployed in 10s. The production-origin gate then passed exact revision and
+runtime-resource closure plus the hosted Visual Lab fixture package in 1m45s.
+Treat those current captures as review evidence, not a new accepted baseline or
+an exact cross-revision PNG contract.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

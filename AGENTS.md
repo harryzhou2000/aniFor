@@ -44,6 +44,16 @@ add an exact-material metal branch where this class profile can express the
 response; a later multi-metal fixture may broaden visual evidence without a new
 driver or renderer route.
 
+That metallic-rigid checkpoint is deployed at exact revision
+`fd6f9c93b03768ea3c13bbcbb745c5c4122352d4` by workflow run `31597311645`.
+The cached build and full test/static-site gate passed in 3m32s and saved ccache
+only after success. The seven-candidate current-only WebGL/HDR review, retained
+artifact round trip, and portable verification passed in 9m11s; Pages deployed
+in 10s. Post-deploy exact revision and runtime-resource closure plus the hosted
+Visual Lab fixture package passed in 1m45s. This deploy confirms the append-only
+class seam on the production origin; it does not promote or pin the changed
+Volumetric PNGs as cross-revision visual requirements.
+
 The four-phase analytic environment-transport increment is deployed at exact
 revision `f46ad843777c948135a59760781c57366c8922e7` by workflow run
 `31593915673`. One declarative `environmentTransport` composition lane and one
