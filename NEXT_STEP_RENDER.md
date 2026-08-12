@@ -6308,6 +6308,17 @@ without turning software-GPU fence completion into a visual deploy gate.
 Completed-frame receipt remains available as an explicit strict diagnostic;
 its watchdog and failure semantics are unchanged.
 
+The framework is deployed at exact revision
+`ebd236f0a3eca458a6a13faeeb885a9bd291af58` by workflow run `31602905319`.
+The cached build, full test/static-site gate, and success-only ccache save passed
+in 3m27s. All eight material-lighting recipes then passed shared-host stable-
+snapshot capture, artifact upload/download, and portable verification in
+10m11s. Pages deployed in 8s, and post-deploy exact revision plus 19-resource
+closure and the hosted Water fixture package passed in 1m32s. This closes the
+declarative multi-metal authoring increment on the production origin. Continue
+from this reusable descriptor/catalog seam rather than adding a fixture-specific
+capture branch or exact visual hashes.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

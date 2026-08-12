@@ -87,6 +87,17 @@ as the default review proof; completed-frame receipt remains an explicit strict
 diagnostic, not a visual-review deploy requirement. Do not weaken the receipt
 itself or mistake a partial package for successful evidence.
 
+The declarative multi-metal framework checkpoint is deployed at exact revision
+`ebd236f0a3eca458a6a13faeeb885a9bd291af58` by workflow run `31602905319`.
+The cached build, complete test gate, and exact static-site package passed in
+3m27s. The eight-candidate shared-host stable-snapshot review, retained artifact
+round trip, and portable verification passed in 10m11s; Pages deployed in 8s.
+Post-deploy exact revision and 19-resource closure plus the hosted Water Visual
+Lab package passed in 1m32s. This is the production checkpoint for reusable
+solid-atlas authoring and the six-material MetallicRigid cohort. It validates
+the ordinary current-only visual review path; it does not alter the independent
+strict completed-frame receipt contract or create a cross-revision PNG gate.
+
 The four-phase analytic environment-transport increment is deployed at exact
 revision `f46ad843777c948135a59760781c57366c8922e7` by workflow run
 `31593915673`. One declarative `environmentTransport` composition lane and one
