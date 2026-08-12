@@ -6164,6 +6164,10 @@ void main() {
   // samples on the true-8x fragment path.
   float emissionDirectional = 0.0;
   float liquidNeighbourMean = 0.0;
+  vec2 materialMesoscaleSlope = vec2(0.0);
+  float materialMesoscaleCurvature = 0.0;
+  float materialMesoscaleNeighbourMean = 0.0;
+  float materialMesoscaleCoherence = 0.0;
   float adjacentLiquidSupport = 0.0;
   float exposedLiquidSide = 0.0;
   // This packed state is consumed by the later gas-colour branch. Keep it in
@@ -6195,6 +6199,24 @@ void main() {
     float cloudBottom = texture(uAtmosphereTexture, fieldUv + vec2(0.0, uAtmosphereTexel.y)).a;
     cloudNeighbourMean = (cloudLeft + cloudRight + cloudTop + cloudBottom) * 0.25;
     volumeSlope = vec2(cloudRight - cloudLeft, cloudBottom - cloudTop) * 0.85;
+    if (uMaterialBodyFinish > 0.5 && uMaterialLightingVariant > 1.5) {
+      vec2 wide = uAtmosphereTexel * 3.0;
+      vec4 cloudWide = vec4(
+        texture(uAtmosphereTexture, fieldUv - vec2(wide.x, 0.0)).a,
+        texture(uAtmosphereTexture, fieldUv + vec2(wide.x, 0.0)).a,
+        texture(uAtmosphereTexture, fieldUv - vec2(0.0, wide.y)).a,
+        texture(uAtmosphereTexture, fieldUv + vec2(0.0, wide.y)).a
+      );
+      MaterialMesoscaleShape meso = materialMesoscaleShape(
+        atmosphereState.a,
+        vec4(cloudLeft, cloudRight, cloudTop, cloudBottom),
+        cloudWide, 0.018, 0.16
+      );
+      materialMesoscaleSlope = meso.slope * 0.85;
+      materialMesoscaleCurvature = meso.curvature;
+      materialMesoscaleNeighbourMean = meso.neighbourMean;
+      materialMesoscaleCoherence = meso.coherence;
+    }
   } else if (liquidVolume > 0.5) {
     vec4 liquidLeft = texture(uLiquidTexture, fieldUv - vec2(uTexel.x, 0.0));
     vec4 liquidRight = texture(uLiquidTexture, fieldUv + vec2(uTexel.x, 0.0));
@@ -6219,6 +6241,24 @@ void main() {
     volumeSlope = vec2(
       liquidRight.a - liquidLeft.a, liquidBottom.a - liquidTop.a
     ) * 0.65;
+    if (uMaterialBodyFinish > 0.5 && uMaterialLightingVariant > 1.5) {
+      vec2 wide = uTexel * 3.0;
+      vec4 liquidWide = vec4(
+        texture(uLiquidTexture, fieldUv - vec2(wide.x, 0.0)).a,
+        texture(uLiquidTexture, fieldUv + vec2(wide.x, 0.0)).a,
+        texture(uLiquidTexture, fieldUv - vec2(0.0, wide.y)).a,
+        texture(uLiquidTexture, fieldUv + vec2(0.0, wide.y)).a
+      );
+      MaterialMesoscaleShape meso = materialMesoscaleShape(
+        liquidDensity,
+        vec4(liquidLeft.a, liquidRight.a, liquidTop.a, liquidBottom.a),
+        liquidWide, 0.46, 0.82
+      );
+      materialMesoscaleSlope = meso.slope * 0.65;
+      materialMesoscaleCurvature = meso.curvature;
+      materialMesoscaleNeighbourMean = meso.neighbourMean;
+      materialMesoscaleCoherence = meso.coherence;
+    }
     // Union liquid alpha stays flat at a dense unlike-species contact. Canonical
     // field RGB therefore supplies a bounded optical normal at that interface.
     // Dense support on both samples rejects empty shores and isolated droplets;
@@ -6538,6 +6578,16 @@ void main() {
     float gasNeutralMix = gasInteriorScatter * 0.085;
     gasBase = mix(gasBase, vec3(gasBaseLuminance), gasNeutralMix);
     float gasCurvature = clamp((atmosphereState.a - cloudNeighbourMean) * 8.0, -1.0, 1.0);
+    vec2 gasLightingSlope = mix(
+      volumeSlope, materialMesoscaleSlope, materialMesoscaleCoherence * 0.76
+    );
+    float gasLightingCurvature = mix(
+      gasCurvature, materialMesoscaleCurvature, materialMesoscaleCoherence * 0.72
+    );
+    float gasLightingNeighbourMean = mix(
+      cloudNeighbourMean, materialMesoscaleNeighbourMean,
+      materialMesoscaleCoherence * 0.64
+    );
     float gasCrown = max(gasCurvature, 0.0);
     float gasPocket = max(-gasCurvature, 0.0);
     float opticalDepth = smoothstep(0.035, 0.62, gasShadeDensity);
@@ -6696,19 +6746,19 @@ void main() {
       1.0, uMaterialBodyFinish, uMaterialLightingVariant
     );
     color = applyMaterialVolumeLobe(
-      color, 2.0, gasFinishResponse, gasFinishProfile.roughness, gasShadeDensity, cloudNeighbourMean,
-      gasCurvature, opticalDepth,
-      volumeSlope, 0.0, gasInterior, uMaterialBodyFinish,
+      color, 2.0, gasFinishResponse, gasFinishProfile.roughness, gasShadeDensity, gasLightingNeighbourMean,
+      gasLightingCurvature, opticalDepth,
+      gasLightingSlope, 0.0, gasInterior, uMaterialBodyFinish,
       uMaterialLightingVariant
     );
     color = applyMaterialAmbientGrounding(
       color, 2.0, gasFinishResponse, gasFinishProfile.roughness,
-      gasShadeDensity, opticalDepth, volumeSlope, gasInterior,
+      gasShadeDensity, opticalDepth, gasLightingSlope, gasInterior,
       uMaterialBodyFinish, uMaterialLightingVariant
     );
     color = applyMaterialEnvironmentTransport(
       color, 2.0, gasFinishResponse, gasFinishProfile.roughness,
-      gasShadeDensity, opticalDepth, volumeSlope, gasInterior,
+      gasShadeDensity, opticalDepth, gasLightingSlope, gasInterior,
       uMaterialBodyFinish, uMaterialLightingVariant
     );
     // E04: turn the existing field normal and curvature into a readable
@@ -8426,20 +8476,34 @@ void main() {
         semanticSlope + volumeSlope, liquidFinishEligibility,
         uMaterialBodyFinish, uMaterialLightingVariant
       );
+      vec2 liquidLightingSlope = mix(
+        semanticSlope + volumeSlope,
+        semanticSlope + materialMesoscaleSlope,
+        materialMesoscaleCoherence * 0.72
+      );
+      float liquidLightingNeighbourMean = mix(
+        liquidNeighbourMean, materialMesoscaleNeighbourMean,
+        materialMesoscaleCoherence * 0.64
+      );
+      float liquidLightingCurvature = mix(
+        clamp((liquidDensity - liquidNeighbourMean) * 5.5, -1.0, 1.0),
+        materialMesoscaleCurvature, materialMesoscaleCoherence * 0.68
+      );
       color = applyMaterialVolumeLobe(
-        color, 1.0, liquidFinishResponse, liquidFinishProfile.roughness, liquidSurfaceDensity, liquidNeighbourMean,
-        clamp((liquidDensity - liquidNeighbourMean) * 5.5, -1.0, 1.0), liquidFinishDepth,
-        semanticSlope + volumeSlope, 0.0, liquidFinishEligibility,
+        color, 1.0, liquidFinishResponse, liquidFinishProfile.roughness,
+        liquidSurfaceDensity, liquidLightingNeighbourMean,
+        liquidLightingCurvature, liquidFinishDepth,
+        liquidLightingSlope, 0.0, liquidFinishEligibility,
         uMaterialBodyFinish, uMaterialLightingVariant
       );
       color = applyMaterialAmbientGrounding(
         color, 1.0, liquidFinishResponse, liquidFinishProfile.roughness,
-        liquidSurfaceDensity, liquidFinishDepth, semanticSlope + volumeSlope,
+        liquidSurfaceDensity, liquidFinishDepth, liquidLightingSlope,
         liquidFinishEligibility, uMaterialBodyFinish, uMaterialLightingVariant
       );
       color = applyMaterialEnvironmentTransport(
         color, 1.0, liquidFinishResponse, liquidFinishProfile.roughness,
-        liquidSurfaceDensity, liquidFinishDepth, semanticSlope + volumeSlope,
+        liquidSurfaceDensity, liquidFinishDepth, liquidLightingSlope,
         liquidFinishEligibility, uMaterialBodyFinish, uMaterialLightingVariant
       );
     }

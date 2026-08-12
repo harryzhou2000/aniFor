@@ -6823,6 +6823,21 @@ first author a stable contact carrier or fixture proof whose response is visible
 on the region crop board, while preserving Local/Grains, Canvas, and compact
 true-8x controls.
 
+The current retained framework increment is a reusable mesoscale material-shape
+probe. `MaterialMesoscaleShape` accepts near and fixed three-cell-wide cardinal
+samples from an already-owned phase field and produces one coherent
+slope/curvature/neighbour-mean tuple without owning a sampler, field, target,
+pass, or silhouette. Normal-WebGL Volumetric B currently uses it for liquid
+and gas volume-lobe/environment transport; Off, A, Canvas, and compact true-8x
+retain their established paths. Keep the wide signal subordinate to a dense
+near+wide support proof so holes, wisps, contacts, fine structures, and authored
+ownership remain authoritative. The real material and gas atlas capture passed
+with invariant alpha and completed-frame receipts. Next extend this primitive
+only where an existing powder/solid field can supply the same bounded stencil
+without a new resource, then compare declared region crops by eye. Do not turn
+its four extra B-only cardinal reads per fluid field into an unconditional or
+output-scale cost.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

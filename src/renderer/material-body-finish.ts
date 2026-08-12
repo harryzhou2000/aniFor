@@ -38,6 +38,50 @@ ${MATERIAL_APPEARANCE_PROFILE_GLSL_SELECTOR}
 ${MATERIAL_COMPOSITION_PROFILE_GLSL_SELECTOR}
 ${RECONSTRUCTED_VOLUME_OPTICS_GLSL}
 
+// Reusable fixed-cell probe for mesoscopic material form. Callers retain
+// ownership of the sampled field and pass one near and one wider cardinal
+// stencil from that same field; this helper performs no texture lookup and
+// cannot invent support. The wide response is admitted only by a coherent
+// occupied neighbourhood, so silhouettes, holes, fine columns, and contacts
+// keep the near reconstruction as their authority.
+struct MaterialMesoscaleShape {
+  vec2 slope;
+  float curvature;
+  float neighbourMean;
+  float coherence;
+};
+MaterialMesoscaleShape materialMesoscaleShape(
+  float centre,
+  vec4 nearCardinal,
+  vec4 wideCardinal,
+  float supportLow,
+  float supportHigh
+) {
+  float nearMean = dot(nearCardinal, vec4(0.25));
+  float wideMean = dot(wideCardinal, vec4(0.25));
+  float coherence = smoothstep(
+    supportLow, supportHigh, min(centre, min(nearMean, wideMean))
+  );
+  vec2 nearSlope = vec2(
+    nearCardinal.y - nearCardinal.x,
+    nearCardinal.w - nearCardinal.z
+  );
+  // Wide taps are three simulation cells from the centre. Normalize their
+  // derivative to the near-cell scale before blending the two observations.
+  vec2 wideSlope = vec2(
+    wideCardinal.y - wideCardinal.x,
+    wideCardinal.w - wideCardinal.z
+  ) / 3.0;
+  float nearCurvature = centre - nearMean;
+  float wideCurvature = centre - wideMean;
+  return MaterialMesoscaleShape(
+    mix(nearSlope, wideSlope, coherence * 0.72),
+    clamp(mix(nearCurvature, wideCurvature, coherence * 0.68) * 7.0, -1.0, 1.0),
+    mix(nearMean, wideMean, coherence * 0.64),
+    coherence
+  );
+}
+
 vec3 applyMaterialBodyFinish(
   vec3 color,
   float phase,

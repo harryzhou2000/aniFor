@@ -9,6 +9,15 @@ gate; Local/Grains, Canvas2D, OFF/A, and compact true-8x must not acquire that
 response. The B-only shader work is RGB-only and must not change support, alpha,
 topology, contacts, allocations, fields, textures, or targets.
 
+The retained normal-WebGL B framework now includes `MaterialMesoscaleShape`.
+It may reuse only fixed simulation-cell cardinal samples from a phase field the
+caller already owns, and its wide response must remain gated by coherent near
+and wide support. Liquid and gas currently pay four additional B-only reads;
+OFF/A, Canvas, and compact true-8x must not inherit those reads. Prefer extending
+this common shape vocabulary to an existing powder/solid field over adding an
+isolated material effect. Contact AO remains blocked until an owner-aware stable
+proximity carrier exists; categorical seam bits are not a substitute.
+
 Judge this work from current WebGL/HDR material-lighting and Powder-style boards,
 semantic/field/framebuffer health, and true-8x execution. Preserve holes, fine
 columns, internal grain, square-cell Grains reference, continuous liquid bodies,

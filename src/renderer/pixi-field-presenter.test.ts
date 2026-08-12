@@ -388,6 +388,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).toContain('uniform float uMaterialBodyFinish;');
     expect(eight).toContain('uniform float uMaterialBodyFinish;');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('vec3 applyMaterialVolumeLobe(');
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain('struct MaterialMesoscaleShape {');
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain('MaterialMesoscaleShape materialMesoscaleShape(');
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain('mix(nearSlope, wideSlope, coherence * 0.72)');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('vec3 applySolidMaterialLighting(');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'float lobeExponent = mix(3.0, 0.86, roughness);',
@@ -5720,7 +5723,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(`${helpers}${block}`).not.toMatch(/\balpha\s*[+*]?=/);
     expect(`${helpers}${block}`).not.toMatch(/\b(?:sin|pow|normalize|length)\s*\(/);
     const richFragment = source.slice(source.indexOf('const FIELD_FRAGMENT'));
-    expect(richFragment.match(/texture\(uLiquidTexture/g)).toHaveLength(5);
+    // The Volumetric B mesoscale probe adds one fixed wide cardinal stencil
+    // over the existing liquid field; no sampler/resource is added.
+    expect(richFragment.match(/texture\(uLiquidTexture/g)).toHaveLength(9);
     expect(source).not.toContain('sampler2D uLiquidVolumeChroma');
     expect(source).not.toContain('sampler2D uLiquidOpticalDepth');
   });
