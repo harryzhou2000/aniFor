@@ -228,6 +228,12 @@ export function digestVisualLabFramebufferAlpha(rgba) {
   return { hash, supportHash, alphaSum, nonzero };
 }
 
+/** Reuses candidate-page readback storage while preserving one complete read per proof. */
+export function reuseVisualLabFramebufferReadback(existing, byteLength) {
+  if (existing instanceof Uint8Array && existing.length === byteLength) return existing;
+  return new Uint8Array(byteLength);
+}
+
 const HELP = `Usage:
   node scripts/visual-lab-audit.mjs [options]
 
@@ -1441,7 +1447,11 @@ async function snapshotState(cdp, executionPlan, commandTimeoutMs = CDP_COMMAND_
     const fieldAlpha = digestBytes(readField, audit.width, audit.height);
     const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
     if (!gl) throw new Error('semantic-field canvas has no readable WebGL context');
-    const rgba = new Uint8Array(canvas.width * canvas.height * 4);
+    const readbackKey = Symbol.for('anifor.visual-lab.framebuffer-readback/v1');
+    const reuseReadback = ${reuseVisualLabFramebufferReadback.toString()};
+    const readbackByteLength = canvas.width * canvas.height * 4;
+    const rgba = reuseReadback(canvas[readbackKey], readbackByteLength);
+    canvas[readbackKey] = rgba;
     gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, rgba);
     const framebufferAlpha = digestRgbaAlpha(rgba);
     const rect = canvas.getBoundingClientRect();

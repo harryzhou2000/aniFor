@@ -429,7 +429,10 @@ describe('typed visual capture drivers', () => {
   });
 
   it('keeps the direct framebuffer-alpha digest byte-identical to the legacy grid walk', async () => {
-    const { digestVisualLabFramebufferAlpha } = await import('./visual-lab-audit.mjs');
+    const {
+      digestVisualLabFramebufferAlpha,
+      reuseVisualLabFramebufferReadback,
+    } = await import('./visual-lab-audit.mjs');
     const rgba = new Uint8Array([
       1, 2, 3, 0,
       4, 5, 6, 255,
@@ -456,6 +459,13 @@ describe('typed visual capture drivers', () => {
     expect(digestVisualLabFramebufferAlpha(rgba)).toEqual({
       hash, supportHash, alphaSum, nonzero,
     });
+    expect(reuseVisualLabFramebufferReadback(rgba, rgba.length)).toBe(rgba);
+    const resized = reuseVisualLabFramebufferReadback(rgba, rgba.length + 4);
+    expect(resized).toBeInstanceOf(Uint8Array);
+    expect(resized).not.toBe(rgba);
+    expect(resized).toHaveLength(rgba.length + 4);
+    expect(reuseVisualLabFramebufferReadback(new Uint8ClampedArray(rgba.length), rgba.length))
+      .toBeInstanceOf(Uint8Array);
   });
 
   it('requires explicit renderer disposal before a successful capture can publish', async () => {
