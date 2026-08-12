@@ -554,7 +554,7 @@ async function captureVisualLabCandidateEvidence({
           };
           requestAnimationFrame(advance);
         });
-      })()`));
+      })()`, snapshotCommandTimeoutMs));
     await waitFor(async () => {
       const snapshot = await captureSubphases.measureSnapshot(
         'readiness', () => snapshotState(
