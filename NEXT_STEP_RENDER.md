@@ -6354,6 +6354,29 @@ package passed in the 1m33s live-verification job. Treat this as the production
 checkpoint for generated atlas inspection evidence, not a visual threshold or
 baseline promotion.
 
+The same declarative authoring/inspection seam now covers the paused gas
+material-lighting atlas. One frozen data-only catalog owns its two lobe-union
+clouds, holes and channel, warm/cool emitters, sparse carriers, solid/liquid/
+foreign-gas contacts, native wall, emissive body, guarded blank, material IDs,
+and wall ID. The app validates and projects that descriptor into the established
+fixture; scripts project it into 18 current-only response/control regions. No
+static-contract row, fixture ID, preparer bridge, capture driver, renderer path,
+shader, lifecycle branch, or frozen evidence identity was added.
+
+The first real current-only package is retained at
+`/tmp/anifortpt-generated-region-gas-20260812`. Fresh SwiftShader stable-
+snapshot capture passed in about 26.1s with WebGL/HDR, three captures, zero
+browser errors, and clean teardown. Portable verification required and rebuilt
+the complete batch, ad-hoc recipe set, browser-host plan, tuning plan,
+experiment response, capture geometry, and all 18 generated region responses.
+Visual inspection favored the retained smooth cloud silhouettes and internal
+volume variation: OFF/A/B remain distinct at warm/cool flanks and cores, phase
+contacts remain readable, and void, sparse, native-wall, emissive, and blank
+controls remain inspectable. These measurements navigate the current package;
+they are neither exact visual pins nor deploy gates. Continue by extracting the
+next reusable static fixture family, while leaving protected liquid-motion
+velocity/state authoring on its existing typed path.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

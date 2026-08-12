@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   normalizeVisualLabInspectionRegionCatalog,
+  projectGasMaterialLightingAtlasInspectionFixture,
   projectSolidMaterialLightingAtlasInspectionFixture,
   VISUAL_LAB_INSPECTION_REGIONS,
   VISUAL_LAB_INSPECTION_REGION_CATALOG_SCHEMA,
@@ -44,6 +45,36 @@ describe('Visual Lab inspection-region catalog', () => {
       name: 'ttan-guarded-blank', role: 'control', x: 480, y: 314, width: 90, height: 18,
     });
     expect(Object.isFrozen(metals.regions.at(-1))).toBe(true);
+  });
+
+  it('derives gas response and control regions from shared data-only atlas authoring', () => {
+    const gas = VISUAL_LAB_INSPECTION_REGIONS.fixtures[3];
+    expect(gas.candidate).toBe('gas-material-lighting-atlas');
+    expect(gas.regions).toHaveLength(18);
+    expect(gas.regions.map(({ name, role }) => ({ name, role }))).toEqual([
+      { name: 'sooty-warm-flank', role: 'response' },
+      { name: 'sooty-core', role: 'response' },
+      { name: 'clean-core', role: 'response' },
+      { name: 'clean-cool-flank', role: 'response' },
+      { name: 'sooty-hole', role: 'control' },
+      { name: 'clean-channel', role: 'control' },
+      { name: 'warm-emitter', role: 'control' },
+      { name: 'cool-emitter', role: 'control' },
+      { name: 'sparse-sooty-pair', role: 'control' },
+      { name: 'sparse-clean-pair', role: 'control' },
+      { name: 'solid-contact-gas', role: 'response' },
+      { name: 'solid-contact-owner', role: 'control' },
+      { name: 'liquid-contact-gas', role: 'response' },
+      { name: 'liquid-contact-owner', role: 'control' },
+      { name: 'foreign-gas-contact', role: 'response' },
+      { name: 'native-wall-gas', role: 'control' },
+      { name: 'emissive-gas', role: 'response' },
+      { name: 'guarded-blank', role: 'control' },
+    ]);
+    expect(gas.regions[8]).toEqual({
+      name: 'sparse-sooty-pair', role: 'control', x: 34, y: 352, width: 3, height: 1,
+    });
+    expect(Object.isFrozen(gas.regions.at(-1))).toBe(true);
   });
 
   it('fails projection through catalog normalization when authored geometry escapes the world', () => {
@@ -94,6 +125,9 @@ describe('Visual Lab inspection-region catalog', () => {
       ...base,
       descriptor: { ...base.descriptor, definitions: [{ material: 23, code: '<bad>' }] },
     })).toThrow(/code is malformed/);
+    expect(() => projectGasMaterialLightingAtlasInspectionFixture({
+      candidate: '../escape', world: { width: 1, height: 1 }, descriptor: {},
+    })).toThrow(/malformed/);
   });
 
   it('fails closed for unknown fields, duplicates, unsafe geometry, and invalid roles', () => {

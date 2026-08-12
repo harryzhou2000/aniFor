@@ -1,3 +1,12 @@
+import { pathToFileURL } from 'node:url';
+
+import {
+  GAS_MATERIAL_LIGHTING_ATLAS_CATALOG,
+} from '../src/shared/gas-material-lighting-atlas-catalog.js';
+import {
+  SOLID_MATERIAL_LIGHTING_ATLAS_CATALOG,
+} from '../src/shared/solid-material-lighting-atlas-catalog.js';
+
 /**
  * Scripts-owned current-only spatial review annotations. These records are
  * deliberately outside the browser static contracts and every capture/result
@@ -145,8 +154,56 @@ export function projectSolidMaterialLightingAtlasInspectionFixture(atlas) {
   return { candidate, world: { ...world }, regions };
 }
 
+/** Projects the gas atlas geometry into a compact, current-only review board. */
+export function projectGasMaterialLightingAtlasInspectionFixture(atlas) {
+  const { candidate, world, descriptor } = atlas;
+  if (!SAFE_NAME.test(candidate ?? '') || descriptor === null || typeof descriptor !== 'object') {
+    throw new TypeError('Gas material-lighting atlas inspection authoring is malformed');
+  }
+  const regions = [
+    namedRegion('sooty-warm-flank', 'response', { x: 52, y: 112, width: 24, height: 28 }),
+    namedRegion('sooty-core', 'response', { x: 176, y: 114, width: 24, height: 24 }),
+    namedRegion('clean-core', 'response', { x: 442, y: 108, width: 24, height: 24 }),
+    namedRegion('clean-cool-flank', 'response', { x: 522, y: 104, width: 20, height: 28 }),
+    namedRegion('sooty-hole', 'control', descriptor.sootyHole),
+    namedRegion('clean-channel', 'control', descriptor.cleanChannel),
+    namedRegion('warm-emitter', 'control', descriptor.warmEmitter),
+    namedRegion('cool-emitter', 'control', descriptor.coolEmitter),
+    namedRegion('sparse-sooty-pair', 'control', boundingPoints(descriptor.sparseSooty.slice(0, 2))),
+    namedRegion('sparse-clean-pair', 'control', boundingPoints(descriptor.sparseClean.slice(0, 2))),
+    namedRegion('solid-contact-gas', 'response', descriptor.solidContact.gas),
+    namedRegion('solid-contact-owner', 'control', descriptor.solidContact.solid),
+    namedRegion('liquid-contact-gas', 'response', descriptor.liquidContact.gas),
+    namedRegion('liquid-contact-owner', 'control', descriptor.liquidContact.liquid),
+    namedRegion('foreign-gas-contact', 'response', boundingRect(
+      descriptor.foreignGasContact.gas, descriptor.foreignGasContact.foreignGas,
+    )),
+    namedRegion('native-wall-gas', 'control', descriptor.nativeWall.gas),
+    namedRegion('emissive-gas', 'response', descriptor.emissiveGas.body),
+    namedRegion('guarded-blank', 'control', descriptor.guardedBlank),
+  ];
+  return { candidate, world: { ...world }, regions };
+}
+
+function boundingPoints(points) {
+  if (!Array.isArray(points) || points.length === 0) {
+    throw new TypeError('Gas material-lighting atlas inspection points are malformed');
+  }
+  const xs = points.map(({ x }) => x);
+  const ys = points.map(({ y }) => y);
+  return {
+    x: Math.min(...xs),
+    y: Math.min(...ys),
+    width: Math.max(...xs) - Math.min(...xs) + 1,
+    height: Math.max(...ys) - Math.min(...ys) + 1,
+  };
+}
+
 const SOLID_ATLAS_INSPECTION_FIXTURES = SOLID_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases.map(
   projectSolidMaterialLightingAtlasInspectionFixture,
+);
+const GAS_ATLAS_INSPECTION_FIXTURES = GAS_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases.map(
+  projectGasMaterialLightingAtlasInspectionFixture,
 );
 
 export const VISUAL_LAB_INSPECTION_REGIONS = normalizeVisualLabInspectionRegionCatalog({
@@ -167,7 +224,7 @@ export const VISUAL_LAB_INSPECTION_REGIONS = normalizeVisualLabInspectionRegionC
       { name: 'native-wall', role: 'control', x: 246, y: 220, width: 12, height: 12 },
       { name: 'guarded-blank', role: 'control', x: 280, y: 240, width: 40, height: 35 },
     ],
-  }, ...SOLID_ATLAS_INSPECTION_FIXTURES],
+  }, ...SOLID_ATLAS_INSPECTION_FIXTURES, ...GAS_ATLAS_INSPECTION_FIXTURES],
 });
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
@@ -178,8 +235,3 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
     `visual inspection-region authoring is current (${VISUAL_LAB_INSPECTION_REGIONS.fixtures.length} fixtures)\n`,
   );
 }
-import { pathToFileURL } from 'node:url';
-
-import {
-  SOLID_MATERIAL_LIGHTING_ATLAS_CATALOG,
-} from '../src/shared/solid-material-lighting-atlas-catalog.js';

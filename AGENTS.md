@@ -1030,7 +1030,16 @@ smoke verification.
 Keep one capture implementation;
 do not replace integrity hashing, path containment, lifecycle checks, or runtime
 closure. Visual preference needs a retained board and human/agent inspection,
-not broad unit-test expansion. The modular typed Visual Lab facade,
+not broad unit-test expansion. Reusable paused atlas authoring now covers both the solid-card catalog and the
+gas cloud/contact catalog. Add geometry/material ownership once in the matching
+frozen data-only catalog, validate and project it in the app, and derive
+current-only inspection regions in scripts. Do not move preparation, renderer,
+capture, scoring, acceptance, or promotion authority into those catalogs. The
+gas atlas is the reference for irregular cloud lobes, voids, emitters, sparse
+carriers, mixed-phase contacts, native walls, and emissive controls; protected
+liquid-motion velocity/state fixtures are not candidates for mechanical catalog
+extraction.
+The modular typed Visual Lab facade,
 executable capability profiles, named capture recipes, and content-addressed
 result records are deployed, as is the deterministic batch runner and static
 contact-sheet index. Renderer and capture descriptors share exact domain,
