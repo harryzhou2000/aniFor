@@ -6319,6 +6319,30 @@ declarative multi-metal authoring increment on the production origin. Continue
 from this reusable descriptor/catalog seam rather than adding a fixture-specific
 capture branch or exact visual hashes.
 
+The following authoring-measurement increment removes another duplication
+boundary. A frozen data-only solid-atlas catalog now owns the two reusable board
+descriptors, while the app projects them into typed fixture geometry and the
+scripts layer projects the same bytes into current-only inspection regions.
+Each card contributes broad-body and unlike-contact response regions plus hole,
+open-notch, thin-structure, isolated-cell, native-wall, and guarded-blank
+controls. The existing region-response creator, static HTML board, and portable
+verifier consume the generated projection without a candidate branch. The
+catalog remains outside browser execution and frozen capture identities and has
+no preparation, renderer, scoring, threshold, acceptance, or promotion power.
+
+The first real package is retained at
+`/tmp/anifortpt-generated-region-multi-metal-live`. Fresh SwiftShader stable-
+snapshot capture completed in about 25.5s with WebGL/HDR, three captures, zero
+browser errors, and clean teardown. The generated response contains 48 regions
+(12 response and 36 control) across Metal, BMTL, GOLD, IRON, PTNM, and TTAN;
+the portable verifier reconstructed the package with recipe-set, host-plan,
+tuning-plan, experiment-response, and region-response evidence all required.
+Volumetric/B changed all six broad bodies and contacts with exact alpha while
+guarded blanks, holes, thin and isolated structures, and native-wall controls
+remained inspectable. Treat those values only as current-package navigation and
+measurement context. Continue by generalizing this data-only projection to the
+next authored fixture family rather than hand-registering regions.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

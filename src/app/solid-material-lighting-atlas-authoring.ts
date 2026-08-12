@@ -12,12 +12,12 @@ export interface SolidMaterialLightingRect extends SolidMaterialLightingPoint {
 }
 
 export interface SolidMaterialLightingDefinition {
-  readonly material: Material;
+  readonly material: number;
   readonly code: string;
 }
 
 export interface SolidMaterialLightingCard {
-  readonly material: Material;
+  readonly material: number;
   readonly code: string;
   readonly card: SolidMaterialLightingRect;
   readonly body: SolidMaterialLightingRect;
@@ -28,7 +28,7 @@ export interface SolidMaterialLightingCard {
   readonly unlikeSolidContact: {
     readonly owner: SolidMaterialLightingRect;
     readonly neighbour: SolidMaterialLightingRect;
-    readonly neighbourMaterial: Material;
+    readonly neighbourMaterial: number;
   };
   readonly nativeWall: {
     readonly body: SolidMaterialLightingRect;
@@ -101,9 +101,13 @@ export function createSolidMaterialLightingAtlas(
     || descriptor.columns < 1) {
     throw new TypeError('Solid material-lighting atlas requires definitions and columns');
   }
-  const materials = new Set<Material>();
+  const materials = new Set<number>();
   const codes = new Set<string>();
   for (const definition of descriptor.definitions) {
+    if (!Number.isSafeInteger(definition.material) || definition.material <= Material.Empty
+      || definition.material > 255) {
+      throw new TypeError('Solid material-lighting atlas materials must be byte-sized owners');
+    }
     if (materials.has(definition.material) || codes.has(definition.code)) {
       throw new TypeError('Solid material-lighting atlas definitions must be unique');
     }
@@ -203,7 +207,7 @@ function fillRect(
   cells: Uint8Array,
   width: number,
   area: SolidMaterialLightingRect,
-  material: Material,
+  material: number,
 ): void {
   for (let y = area.y; y < area.y + area.height; y++) {
     cells.fill(material, y * width + area.x, y * width + area.x + area.width);

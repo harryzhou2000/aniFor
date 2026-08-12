@@ -82,6 +82,73 @@ export function normalizeVisualLabInspectionRegionCatalog(input) {
   return deepFreeze({ schema: input.schema, fixtures });
 }
 
+const translateRect = (card, region) => ({
+  x: card.x + region.x,
+  y: card.y + region.y,
+  width: region.width,
+  height: region.height,
+});
+
+const boundingRect = (left, right) => {
+  const x = Math.min(left.x, right.x);
+  const y = Math.min(left.y, right.y);
+  return {
+    x,
+    y,
+    width: Math.max(left.x + left.width, right.x + right.width) - x,
+    height: Math.max(left.y + left.height, right.y + right.height) - y,
+  };
+};
+
+const namedRegion = (name, role, region) => ({ name, role, ...region });
+
+/**
+ * Projects one app-authored solid atlas into scripts-owned review annotations.
+ * The projection carries geometry only: it grants no preparation, renderer,
+ * capture, scoring, threshold, or promotion authority.
+ */
+export function projectSolidMaterialLightingAtlasInspectionFixture(atlas) {
+  const { candidate, world, descriptor } = atlas;
+  if (!SAFE_NAME.test(candidate ?? '') || !Array.isArray(descriptor?.definitions)
+    || descriptor.definitions.length === 0 || !positiveBoundedInteger(descriptor.columns, 64)) {
+    throw new TypeError('Solid material-lighting atlas inspection authoring is malformed');
+  }
+  const regions = descriptor.definitions.flatMap((definition, index) => {
+    if (!/^[A-Z0-9]{2,8}$/.test(definition.code ?? '')) {
+      throw new TypeError('Solid material-lighting atlas inspection code is malformed');
+    }
+    const column = index % descriptor.columns;
+    const row = Math.floor(index / descriptor.columns);
+    const card = {
+      x: descriptor.origin.x + column * descriptor.stride.x,
+      y: descriptor.origin.y + row * descriptor.stride.y,
+    };
+    const code = definition.code.toLowerCase();
+    const contactOwner = translateRect(card, descriptor.template.contactOwner);
+    const contactNeighbour = translateRect(card, descriptor.template.contactNeighbour);
+    return [
+      namedRegion(`${code}-body`, 'response', translateRect(card, descriptor.template.body)),
+      namedRegion(`${code}-contact`, 'response', boundingRect(contactOwner, contactNeighbour)),
+      namedRegion(`${code}-hole`, 'control', translateRect(card, descriptor.template.hole)),
+      namedRegion(`${code}-open-notch`, 'control', translateRect(card, descriptor.template.openNotch)),
+      namedRegion(`${code}-thin-structure`, 'control', translateRect(card, descriptor.template.thinStructure)),
+      namedRegion(`${code}-isolated`, 'control', {
+        x: card.x + descriptor.template.isolated.x,
+        y: card.y + descriptor.template.isolated.y,
+        width: 1,
+        height: 1,
+      }),
+      namedRegion(`${code}-native-wall`, 'control', translateRect(card, descriptor.template.nativeWall)),
+      namedRegion(`${code}-guarded-blank`, 'control', translateRect(card, descriptor.template.guardedBlank)),
+    ];
+  });
+  return { candidate, world: { ...world }, regions };
+}
+
+const SOLID_ATLAS_INSPECTION_FIXTURES = SOLID_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases.map(
+  projectSolidMaterialLightingAtlasInspectionFixture,
+);
+
 export const VISUAL_LAB_INSPECTION_REGIONS = normalizeVisualLabInspectionRegionCatalog({
   schema: VISUAL_LAB_INSPECTION_REGION_CATALOG_SCHEMA,
   fixtures: [{
@@ -100,5 +167,19 @@ export const VISUAL_LAB_INSPECTION_REGIONS = normalizeVisualLabInspectionRegionC
       { name: 'native-wall', role: 'control', x: 246, y: 220, width: 12, height: 12 },
       { name: 'guarded-blank', role: 'control', x: 280, y: 240, width: 40, height: 35 },
     ],
-  }],
+  }, ...SOLID_ATLAS_INSPECTION_FIXTURES],
 });
+
+if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
+  if (process.argv.length !== 3 || process.argv[2] !== '--check') {
+    throw new TypeError('usage: node scripts/visual-lab-inspection-regions.mjs --check');
+  }
+  process.stdout.write(
+    `visual inspection-region authoring is current (${VISUAL_LAB_INSPECTION_REGIONS.fixtures.length} fixtures)\n`,
+  );
+}
+import { pathToFileURL } from 'node:url';
+
+import {
+  SOLID_MATERIAL_LIGHTING_ATLAS_CATALOG,
+} from '../src/shared/solid-material-lighting-atlas-catalog.js';

@@ -40,4 +40,14 @@ describe('solid material-lighting atlas authoring', () => {
       template: { ...escaped.template, guardedBlank: { x: 19, y: 19, width: 2, height: 2 } },
     })).toThrow('template guardedBlank escapes its card');
   });
+
+  it('fails closed for material owners outside the byte-sized particle domain', () => {
+    for (const material of [Material.Empty, 256, 1.5]) {
+      const invalid = descriptor();
+      expect(() => createSolidMaterialLightingAtlas({
+        ...invalid,
+        definitions: [{ material, code: 'BAD' }],
+      })).toThrow('materials must be byte-sized owners');
+    }
+  });
 });

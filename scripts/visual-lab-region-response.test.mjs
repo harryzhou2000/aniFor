@@ -34,6 +34,21 @@ describe('Visual Lab current region response', () => {
     expect(JSON.stringify(response)).not.toMatch(/score|verdict|threshold/);
   });
 
+  it('measures the generated multi-metal atlas without a fixture-specific response branch', async () => {
+    const response = await createVisualLabCurrentRegionResponse(
+      batch('multi-metal-material-lighting-atlas'),
+      async (_candidate, variant) => captures[variant],
+    );
+    expect(response.candidates[0].candidate).toBe('multi-metal-material-lighting-atlas');
+    expect(response.candidates[0].regions).toHaveLength(48);
+    expect(response.candidates[0].regions[0]).toMatchObject({
+      name: 'metl-body', role: 'response', x: 16, y: 18, width: 112, height: 82,
+    });
+    expect(response.candidates[0].regions.at(-1)).toMatchObject({
+      name: 'ttan-guarded-blank', role: 'control', x: 480, y: 314, width: 90, height: 18,
+    });
+  });
+
   it('rejects capture tampering and inconsistent variant dimensions', async () => {
     const tampered = { ...captures, b: png(16) };
     await expect(createVisualLabCurrentRegionResponse(batch(), async (_candidate, variant) => tampered[variant])).rejects.toThrow('pinned capture SHA-256');

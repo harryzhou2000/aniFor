@@ -1,20 +1,15 @@
-import { Material } from '../shared/materials';
 import type { SimulationBackend } from '../simulation/types';
+import { SOLID_MATERIAL_LIGHTING_ATLAS_CATALOG } from '../shared/solid-material-lighting-atlas-catalog.js';
 import {
   createSolidMaterialLightingAtlas,
   prepareSolidMaterialLightingAtlas,
 } from './solid-material-lighting-atlas-authoring';
 
-export const MULTI_METAL_MATERIAL_LIGHTING_ATLAS_WORLD = Object.freeze({ width: 612, height: 384 });
-
-const METALLIC_RIGID_DEFINITIONS = [
-  { material: Material.Metal, code: 'METL' },
-  { material: Material.BMTL, code: 'BMTL' },
-  { material: Material.GOLD, code: 'GOLD' },
-  { material: Material.IRON, code: 'IRON' },
-  { material: Material.PTNM, code: 'PTNM' },
-  { material: Material.TTAN, code: 'TTAN' },
-] as const;
+const AUTHORING = SOLID_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases.find(
+  ({ candidate }) => candidate === 'multi-metal-material-lighting-atlas',
+);
+if (!AUTHORING) throw new TypeError('Multi-metal material-lighting atlas authoring is missing');
+export const MULTI_METAL_MATERIAL_LIGHTING_ATLAS_WORLD = AUTHORING.world;
 
 /**
  * Paused class-wide board for ordinary MetallicRigid materials. HEAC remains a
@@ -22,24 +17,7 @@ const METALLIC_RIGID_DEFINITIONS = [
  * silently admitted into this optical-family fixture.
  */
 export const MULTI_METAL_MATERIAL_LIGHTING_ATLAS = createSolidMaterialLightingAtlas({
-  definitions: METALLIC_RIGID_DEFINITIONS,
-  columns: 3,
-  origin: { x: 6, y: 6 },
-  stride: { x: 202, y: 190 },
-  cardSize: { width: 196, height: 184 },
-  conductiveWall: 1,
-  template: {
-    body: { x: 10, y: 12, width: 112, height: 82 },
-    hole: { x: 56, y: 38, width: 12, height: 10 },
-    openNotch: { x: 121, y: 56, width: 1, height: 14 },
-    thinStructure: { x: 150, y: 18, width: 1, height: 78 },
-    isolated: { x: 170, y: 108 },
-    contactOwner: { x: 12, y: 146, width: 22, height: 14 },
-    contactNeighbour: { x: 34, y: 146, width: 22, height: 14 },
-    nativeWall: { x: 166, y: 20, width: 20, height: 20 },
-    emitter: { x: 126, y: 22, width: 4, height: 54 },
-    guardedBlank: { x: 70, y: 118, width: 90, height: 18 },
-  },
+  ...AUTHORING.descriptor,
 });
 
 export function prepareMultiMetalMaterialLightingAtlasFixture(

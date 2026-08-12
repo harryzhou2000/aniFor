@@ -98,6 +98,28 @@ solid-atlas authoring and the six-material MetallicRigid cohort. It validates
 the ordinary current-only visual review path; it does not alter the independent
 strict completed-frame receipt contract or create a cross-revision PNG gate.
 
+The next framework increment projects declarative solid-atlas geometry into the
+existing current-only region-response plane. One frozen data-only catalog now
+owns both the historical cross-family solid board and the six-member multi-
+metal board; app fixture preparation and scripts-side inspection generation
+consume that same source. Each authored card yields broad-body and unlike-
+contact response regions plus hole, open-notch, thin-structure, isolated-cell,
+native-wall, and guarded-blank controls. Keep this catalog outside the browser
+execution/static contracts: it grants no preparer, renderer, capture, scoring,
+threshold, promotion, baseline, or CI authority. `visual-lab:authoring:check`
+must validate the projection so geometry cannot drift silently.
+
+Current-only evidence is retained at
+`/tmp/anifortpt-generated-region-multi-metal-live`. A fresh SwiftShader stable-
+snapshot capture passed WebGL/HDR, three variants, zero browser errors, clean
+teardown, generated 48 regions for the multi-metal candidate, and passed the
+portable verifier with region response required. All six broad bodies and
+contacts responded in Volumetric/B, alpha stayed exact, and holes, thin and
+isolated structures, native walls, and guarded blanks remained available as
+structured controls. Direct inspection favors the retained metallic response.
+The measurements are review context only and must never become aesthetic
+thresholds or cross-revision visual requirements.
+
 The four-phase analytic environment-transport increment is deployed at exact
 revision `f46ad843777c948135a59760781c57366c8922e7` by workflow run
 `31593915673`. One declarative `environmentTransport` composition lane and one
