@@ -155,6 +155,32 @@ portable verification passed with zero browser errors. The tracked
 material-lighting cohort now contains seven recipes and the manual CI default
 must stay derived-equivalent to that current cohort.
 
+This opposed-source authoring checkpoint is deployed at exact revision
+`b3fd9ec50efd888c0672e1e021d5a9416c2f7555` by workflow run `31554534234`
+(successful attempt 2). The build passed in 3m30s with all 1,524 app tests and
+331 tooling tests, restored ccache and project-local Emscripten, and uploaded
+the exact static artifact. The first seven-candidate review attempt completed
+six WebGL/HDR candidates and then the final opposed-source child hit a loaded
+software-GPU CDP readback timeout plus bounded disposal timeout; no Canvas
+fallback occurred. Rerunning only failed jobs on a fresh runner reused the
+successful build, passed all seven candidates and downloaded-package
+verification in 7m09s, deployed in 11s, and passed exact live revision/resource
+closure plus hosted Water WebGL verification in 1m33s. Treat this as fresh-host
+load evidence, not a visual regression or permission to weaken teardown.
+
+The next framework-leverage increment is an optional current-only spatial
+response sidecar. Keep inspection-region annotations in a scripts-owned,
+non-identity review descriptor derived from existing fixture geometry rather
+than widening either frozen browser static contract or capture recipe identity.
+One generic PNG measurer may report ordered OFF/A/B mean RGBA and signed RGB
+deltas for bounded world-coordinate regions, SHA-bound to the current batch.
+It must remain additive, optional, portable-verifiable when present, absent for
+legacy/no-region packages, and outside result, batch, recipe-set, baseline,
+comparison, promotion, scoring, and CI pass/fail identities. Its first consumer
+should cover the opposed Clay warm flank, cool flank, centre, authored hole,
+fine structure, wet suspension, native wall, and blank without adding a browser
+method, renderer path, capture, or Chrome lifecycle.
+
 The domain-derived checkpoint launcher is deployed at revision
 `21fe52c96dd0d30152d2b2cec3a3d4b589a53630` by workflow run `31500138353`.
 Its next retained visual candidate strengthens only the shared gas

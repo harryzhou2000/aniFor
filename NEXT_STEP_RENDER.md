@@ -182,6 +182,30 @@ browser errors. Direct review retained source separation, grain, voids, fine
 structure, wet suspension, wall, and blank controls. Use this board for future
 mixed-source/reversal tuning before authoring a broader cross-phase scene.
 
+This authoring checkpoint is deployed at exact revision
+`b3fd9ec50efd888c0672e1e021d5a9416c2f7555` by workflow run `31554534234`
+(successful attempt 2). Build passed in 3m30s with 1,524 app tests and 331
+tooling tests. Attempt 1 captured six of seven WebGL/HDR candidates before the
+last child hit a loaded software-GPU 20-second CDP readback timeout and bounded
+5-second renderer-disposal timeout; it never fell back to Canvas. A failed-jobs
+retry on a fresh runner reused the successful artifact, passed the complete
+seven-candidate portable review in 7m09s, deployed in 11s, and passed exact live
+revision/resource closure plus the hosted Water WebGL package in 1m33s.
+
+The next framework increment is optional current-only region-response evidence.
+Do not widen either frozen static browser contract or recipe identity merely to
+store review coordinates. Define a scripts-owned, data-only inspection-region
+descriptor from existing fixture geometry, then let one generic bounded PNG
+measurer emit ordered per-region OFF/A/B mean RGBA and signed RGB deltas in an
+additive sidecar and compact board. Bind it to the exact batch result IDs and
+pinned capture bytes; verify it when present, while allowing legacy and
+no-region packages to omit it. It must never score aesthetics or enter result,
+batch, recipe-set, baseline, comparison, promotion, or CI pass/fail identity.
+The first descriptor should sample the opposed Clay warm flank, cool flank,
+centre, authored hole, fine-structure context, wet suspension, native wall, and
+blank. This supplies reusable spatial/source-reversal evidence with no renderer,
+browser bridge, extra capture, or Chrome-lifecycle change.
+
 The next authoring increment centralizes the capture-facing projection of the
 normal-HDR and source-stage static contracts. One pure, recursively frozen
 `anifor.visual-capture.static-catalog/v1` now owns the ordered fixture/driver
