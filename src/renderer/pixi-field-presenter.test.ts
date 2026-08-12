@@ -449,6 +449,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'mix(0.55, 1.15, transmissionReserve) * externalTransport',
     );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      '(1.0 - transmissionReserve) * bodyDepth * 0.85',
+    );
     expect(normal).toContain('profileIrradianceProbeResolved < 0.5');
     expect(normal).toContain(
       'fieldUv + profileIrradianceOutward * uEmissionTexel * 2.0',

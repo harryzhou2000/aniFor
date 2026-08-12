@@ -76,8 +76,28 @@ browser errors. Direct inspection preserves the five Ceramic temperature
 stages, holes, notches, thin structures, Water contacts, and hot Brick/Metal
 controls. Keep E82 readable as a historical specialized gate, but use this
 current-only typed scene for ordinary thermal-source aesthetics and never pin
-its PNG bytes across revisions. The CI manual default should include all six
-material-lighting candidates.
+its PNG bytes across revisions. The six-scene default is deployed at revision
+`3184d29b9b02cc3e179264f7177c53b37b6d6748` by workflow run `31547585445`.
+Release review uses fresh-host candidate isolation because the expanded
+software-GPU cohort exposed intermittent shared-host CDP stalls; retain the
+portable browser-host-plan proof and keep shared mode available for local
+performance work.
+
+Temperature-derived scene-light transport is the active retained visual
+increment. Ordinary incandescent Solid/Powder sources use one bounded rational
+weight in the existing emission field, while native emissive materials keep
+their unit source weight. In the existing B-only profile irradiance, receiver
+pigment coupling now rises with depth and low transmission: clear gas/liquid/
+Glass/Ice retain emitted hue deeper, while soot/Oil/powder/opaque rigid bodies
+absorb it toward their own pigment. Do not replace these shared optical lanes
+with a temperature-, Ceramic-, or material-ID renderer branch. The current-only
+package is
+`.artifacts/visual-lab-reviews/material-lighting-893bbf14-28db-4027-949f-8830208451df`:
+all six WebGL/HDR candidates passed with zero browser errors, direct inspection
+retained authored voids, thin structures, contacts, and optical-family
+separation, and true-8x rendered all 217 projections at 4896x3072 with zero
+browser errors. Compact stays literal Off and historical PNG bytes remain
+non-gating.
 
 The domain-derived checkpoint launcher is deployed at revision
 `21fe52c96dd0d30152d2b2cec3a3d4b589a53630` by workflow run `31500138353`.

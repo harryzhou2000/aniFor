@@ -247,8 +247,20 @@ vec3 applyMaterialProfileIrradiance(
   float identityPeak = max(max(color.r, color.g), max(color.b, 0.12));
   vec3 identityTint = clamp(color / identityPeak, 0.0, 1.0);
   float pigmentCoupling = powder * 0.44 + liquid * 0.24 + gas * 0.16 + solid * 0.34;
-  vec3 irradianceTint = mix(lightTint, lightTint * mix(vec3(0.72), identityTint, 0.58),
-    pigmentCoupling);
+  // Let receiver pigment absorb the shared source spectrum progressively with
+  // optical depth.  High-transmission profiles retain the emitted hue through
+  // clean gas, water, Glass, and Ice; low-transmission profiles move soot,
+  // oils, powder, and opaque rigid bodies gently toward their own pigment.
+  // This is the chromatic counterpart of the scalar penetration envelope
+  // above and uses the same profile lane rather than a thermal/material branch.
+  float pigmentTransport = clamp(
+    pigmentCoupling * (
+      0.45 + (1.0 - transmissionReserve) * bodyDepth * 0.85
+    ),
+    0.0, 0.62
+  );
+  vec3 absorbedLightTint = lightTint * mix(vec3(0.72), identityTint, 0.58);
+  vec3 irradianceTint = mix(lightTint, absorbedLightTint, pigmentTransport);
   color += (vec3(1.12) - clamp(color, 0.0, 1.12))
     * irradianceTint * irradiance;
   return max(color, vec3(0.0));

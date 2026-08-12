@@ -78,9 +78,31 @@ portable evidence, and zero browser errors; the independent true-8x audit
 rendered all 217 material projections at 4896x3072 with zero browser errors.
 Compact remains literal Off. Keep E82 readable as a historical specialized
 gate, but use this typed scene for ordinary thermal-source aesthetic review.
-The next framework priority is to deploy this six-scene default and then use
-the retained board to tune temperature-derived scene light without adding a
-thermal-only capture path or cross-revision PNG requirement.
+The six-scene default is deployed at revision
+`3184d29b9b02cc3e179264f7177c53b37b6d6748` by workflow run `31547585445`.
+Release review now uses a fresh Chrome host per candidate after the larger
+cohort exposed intermittent software-GPU/CDP stalls under shared-host reuse;
+the portable browser-host-plan proof remains required. That run passed all six
+WebGL/HDR candidates, exact 19-resource live closure, the hosted Water receipt,
+and downloaded-package verification with 269/270 ccache hits.
+
+The retained temperature-derived scene-light experiment is
+`.artifacts/visual-lab-reviews/material-lighting-893bbf14-28db-4027-949f-8830208451df`.
+Ordinary incandescent Solid/Powder sources now enter the existing emission
+field through a bounded rational shoulder: useful orange-hot stages are more
+visible, hotter stages remain graded, and native emissive sources keep their
+established unit weight. The shared B-only profile irradiance also makes
+receiver-pigment absorption increase with depth and low transmission. Clean
+gas, Water, Glass, and Ice therefore retain source hue deeper, while soot, Oil,
+powder, metal, and opaque rigid matter absorb it gently toward their own
+pigment. This adds no temperature/material branch, sample, field, texture,
+pass, allocation, alpha, support, or topology rule. All six normal candidates
+passed WebGL/HDR capture with zero browser errors; direct review retained holes,
+notches, thin structures, contacts, blanks, and optical-family separation. The
+independent true-8x atlas rendered all 217 materials at 4896x3072 with zero
+browser errors and remains literal Off. The next priority is to use the same
+current-only board for a more legible shared light-direction/soft-shadow cue,
+not to add a new capture lifecycle or cross-revision PNG requirement.
 
 The next authoring increment centralizes the capture-facing projection of the
 normal-HDR and source-stage static contracts. One pure, recursively frozen

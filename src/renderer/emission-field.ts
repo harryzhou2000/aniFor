@@ -139,7 +139,13 @@ export class EmissionField {
           const thermallyVisible = radiance > BLACKBODY_SOURCE_THRESHOLD
             && thermalCandidate;
           if (thermallyVisible) {
-            const sourceWeight = emissive ? 1 : Math.min(1, radiance / 1.2);
+            // Ordinary incandescent matter should enter the shared light field
+            // as a visible but still graded source.  The old linear /1.2 ramp
+            // left the useful orange-hot range faint even though the body's HDR
+            // blackbody response was already clear.  This bounded shoulder
+            // lifts that range without flattening hotter stages to one weight;
+            // native emissive materials retain their established unit weight.
+            const sourceWeight = emissive ? 1 : radiance / (0.45 + radiance);
             const tint = emissive ? Math.min(1, radiance / 1.2) : 1;
             thermalWeight += sourceWeight;
             thermalRed += (
