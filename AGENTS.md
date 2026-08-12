@@ -143,8 +143,20 @@ package at `/tmp/anifortpt-source-target-declared-20260813` passed stable-v1
 WebGL/HDR capture in 33.9s with one shared host, zero restarts, clean teardown,
 and portable verification of all 64 regions. Direct inspection retained all six
 owner rows, seven target accents, topology, state, wall, and blank controls.
-The next release gate is the canonical material-lighting review and downloaded-
-package reconstruction with the new source-target region evidence.
+This source-target authoring checkpoint is deployed at exact revision
+`1169180378a06ee44f83d100eb66560a437c042c` by workflow run `31626475307`.
+The 3m55s build restored the prior ccache entry, reported 269/270 compiler hits,
+saved it only after success, and retained the exact 19-resource closure. The
+canonical eight-candidate stable-v1 shared-host review passed eight-for-eight in
+10m33s with one host, eight fresh contexts/targets, zero restarts, and successful
+downloaded-package reconstruction of all 225 applicable regions. The
+source-target result remained
+`sha256:5af8bf8d194346c9b2ecdb3dd2bbe4a89d00c8f998dccea574bda02b0bc45a25`.
+Pages deployed in 10s; the 51s live gate matched the exact revision and
+19-resource closure on its first attempt, then passed the hosted Water WebGL
+receipt-v2 package and portable verifier. Continue with another reusable
+authoring/measurement seam rather than treating these semantic hashes as visual
+requirements.
 
 The next retained material-class framework checkpoint is exact revision
 `d5ceedf940dfea3d1a194a6b8fff5ae4c3557bd2`. `RenderOptics.MetallicRigid`

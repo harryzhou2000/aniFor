@@ -6609,8 +6609,21 @@ real SwiftShader package retained at
 33.9s with one shared host, zero restarts, strict teardown, and portable
 reconstruction of all 64 regions. Direct inspection retained all owner rows,
 target-family accents, topology, zero/wrong-owner, target-owner, wall, and blank
-controls. The next release gate is the canonical material-lighting review and
-downloaded-package verification with this new region evidence.
+controls.
+
+That release gate is complete. The declarative source-target authoring
+checkpoint is live at exact revision
+`1169180378a06ee44f83d100eb66560a437c042c` through workflow run
+`31626475307`. The 3m55s build restored ccache, reported 269/270 compiler hits,
+saved it only after success, and retained the exact 19-resource closure. The
+canonical eight-candidate stable-v1 shared-host review passed eight-for-eight in
+10m33s with one host, eight fresh contexts/targets, zero restarts, and portable
+reconstruction of all 225 applicable regions. The source-target result remained
+`sha256:5af8bf8d194346c9b2ecdb3dd2bbe4a89d00c8f998dccea574bda02b0bc45a25`.
+Pages deployed in 10s. The 51s live gate matched the exact revision and closure
+on its first attempt, then passed the hosted Water WebGL receipt-v2 package and
+portable verifier. Keep the next increment on reusable framework leverage;
+these fixture hashes prove migration parity but do not pin evolving aesthetics.
 
 ## Deferred long-term visual roadmap
 
