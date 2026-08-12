@@ -6717,9 +6717,21 @@ without assigning a score, threshold, rank, verdict, acceptance, or promotion
 rule. The package verifier reconstructs the record from captured bytes and
 exact-renders its bounded static board; JSON and HTML must appear together when
 present, while legacy packages may omit both. The sidecar remains outside every
-frozen plan/result/batch/baseline/comparison/recipe-set identity. A real
-SwiftShader capture and canonical release review are the remaining gates for
-this checkpoint.
+frozen plan/result/batch/baseline/comparison/recipe-set identity. The focused
+Powder package at `/tmp/anifortpt-region-appearance-C8zCZU` passed WebGL/HDR,
+stable-v1 proof, strict teardown, portable reconstruction, and all 16 declared
+regions through one shared host with zero restarts; its appearance JSON is 48
+KiB and static board is 2.9 KiB. Commit
+`56f88852c16f68970b8ef1ad7845d175b7c04868` is deployed by workflow run
+`31635476924`. The initial review attempt exposed one transient first-host
+Chrome DevTools launch timeout and correctly blocked deploy; a failed-job retry
+at the same SHA then passed all eight candidates in 9m59s through one host with
+zero restarts. Downloaded-package verification reconstructed 257 region-response
+and 257 region-appearance records. The original 3m38s build retained 269/270
+ccache hits, 1,556 source tests, 359 existing tooling tests plus the three
+focused appearance tests, and exact 19-resource closure. Pages deployed in 10s;
+the live gate matched the exact revision and all 19 resources on its first
+attempt, then passed the hosted Water receipt-v2 package in 1m7s.
 
 ## Deferred long-term visual roadmap
 
