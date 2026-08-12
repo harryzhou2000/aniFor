@@ -14,6 +14,29 @@ visual requirement or deploy gate. Keep `accepted-v1`, baseline comparison, and
 promotion readable only for legacy packages or an explicit ad-hoc reference;
 developer review and CI must move to current-only evidence by default.
 
+The active authoring-framework increment removes scripts-side inspection
+registration and ordering duplication. One frozen, data-only inspection-source
+catalog names only a closed projection kind and its authored atlas records. The
+scripts compiler owns the fixed projection implementations, rejects unknown
+projection names, duplicate sources/candidates, and candidates absent from the
+validated capture-recipe catalog, then orders only the covered subset by
+canonical capture-recipe name. Recipes without spatial annotations remain
+valid and omitted. Never put callbacks, module paths, app preparers, browser
+methods, arguments, or execution authority into this source catalog; the closed
+typed app-owned fixture-preparer registry remains intentionally explicit.
+
+Local proof passed 1,544 source and 353 tooling tests, typecheck, production
+build, and exact 19-resource closure. The full eight-candidate material-lighting
+recipe set passed shared-host SwiftShader WebGL/HDR capture with 24 captures,
+one host, zero restarts, and clean teardown. Portable verification reconstructed
+the recipe set, host/tuning plans, geometry, experiment response, and canonical
+five-candidate/161-region response subset. The retained package is
+`/tmp/anifortpt-inspection-source-order-20260813`. Visual spot-checking found no
+material change; these bytes are current evidence, not a new visual baseline.
+After deployment, prefer migrating the paused Powder-style atlas through the
+same declared authoring/inspection seam as the next cross-driver proof; do not
+add a cohort, browser control, or capture branch for it.
+
 The next retained material-class framework checkpoint is exact revision
 `d5ceedf940dfea3d1a194a6b8fff5ae4c3557bd2`. `RenderOptics.MetallicRigid`
 is appended as stable byte class `20`; no historical class ID moved. Only the

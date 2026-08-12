@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  compileVisualLabInspectionFixtures,
   normalizeVisualLabInspectionRegionCatalog,
   projectDeclaredInspectionFixture,
   projectGasMaterialLightingAtlasInspectionFixture,
@@ -7,26 +8,44 @@ import {
   VISUAL_LAB_INSPECTION_REGIONS,
   VISUAL_LAB_INSPECTION_REGION_CATALOG_SCHEMA,
 } from './visual-lab-inspection-regions.mjs';
+import {
+  MATERIAL_LIGHTING_INSPECTION_SOURCE_CATALOG,
+} from '../src/shared/material-lighting-inspection-source-catalog.js';
 
 const valid = () => structuredClone(VISUAL_LAB_INSPECTION_REGIONS);
 
 describe('Visual Lab inspection-region catalog', () => {
+  const fixture = (candidate) => VISUAL_LAB_INSPECTION_REGIONS.fixtures.find(
+    (entry) => entry.candidate === candidate,
+  );
+
+  it('orders the covered subset by canonical capture-recipe order', () => {
+    expect(VISUAL_LAB_INSPECTION_REGIONS.fixtures.map(({ candidate }) => candidate)).toEqual([
+      'material-lighting-atlas',
+      'gas-material-lighting-atlas',
+      'solid-material-lighting-atlas',
+      'multi-metal-material-lighting-atlas',
+      'opposed-source-material-lighting-atlas',
+    ]);
+    expect(Object.isFrozen(MATERIAL_LIGHTING_INSPECTION_SOURCE_CATALOG)).toBe(true);
+    expect(Object.isFrozen(MATERIAL_LIGHTING_INSPECTION_SOURCE_CATALOG.sources[0])).toBe(true);
+  });
+
   it('derives opposed-source review annotations from shared declared authoring', () => {
-    const fixture = VISUAL_LAB_INSPECTION_REGIONS.fixtures[0];
-    expect(fixture.candidate).toBe('opposed-source-material-lighting-atlas');
-    expect(fixture.world).toEqual({ width: 612, height: 384 });
-    expect(fixture.regions.map(({ name }) => name)).toEqual([
+    const opposed = fixture('opposed-source-material-lighting-atlas');
+    expect(opposed.world).toEqual({ width: 612, height: 384 });
+    expect(opposed.regions.map(({ name }) => name)).toEqual([
       'clay-warm-flank', 'clay-cool-flank', 'clay-centre',
       'sand-lit-front-shoulder', 'sand-wall-umbra', 'sand-open-shoulder', 'authored-hole',
       'fine-structure-context', 'wet-suspension', 'native-wall', 'guarded-blank',
     ]);
     expect(Object.isFrozen(VISUAL_LAB_INSPECTION_REGIONS)).toBe(true);
-    expect(Object.isFrozen(fixture.regions[0])).toBe(true);
+    expect(Object.isFrozen(opposed.regions[0])).toBe(true);
   });
 
   it('derives solid and multi-metal review regions from shared data-only atlas authoring', () => {
-    const solid = VISUAL_LAB_INSPECTION_REGIONS.fixtures[1];
-    const metals = VISUAL_LAB_INSPECTION_REGIONS.fixtures[2];
+    const solid = fixture('solid-material-lighting-atlas');
+    const metals = fixture('multi-metal-material-lighting-atlas');
     expect(solid.candidate).toBe('solid-material-lighting-atlas');
     expect(solid.regions).toHaveLength(64);
     expect(solid.regions.slice(0, 8).map(({ name, role }) => ({ name, role }))).toEqual([
@@ -49,7 +68,7 @@ describe('Visual Lab inspection-region catalog', () => {
   });
 
   it('derives gas response and control regions from shared data-only atlas authoring', () => {
-    const gas = VISUAL_LAB_INSPECTION_REGIONS.fixtures[3];
+    const gas = fixture('gas-material-lighting-atlas');
     expect(gas.candidate).toBe('gas-material-lighting-atlas');
     expect(gas.regions).toHaveLength(18);
     expect(gas.regions.map(({ name, role }) => ({ name, role }))).toEqual([
@@ -79,7 +98,7 @@ describe('Visual Lab inspection-region catalog', () => {
   });
 
   it('projects an ordered cross-phase review board from declared data-only anchors', () => {
-    const mixed = VISUAL_LAB_INSPECTION_REGIONS.fixtures[4];
+    const mixed = fixture('material-lighting-atlas');
     expect(mixed.candidate).toBe('material-lighting-atlas');
     expect(mixed.regions).toHaveLength(20);
     expect(mixed.regions.slice(0, 8).map(({ name, role }) => ({ name, role }))).toEqual([
@@ -96,6 +115,42 @@ describe('Visual Lab inspection-region catalog', () => {
       name: 'guarded-blank', role: 'control', x: 198, y: 334, width: 210, height: 28,
     });
     expect(Object.isFrozen(mixed.regions.at(-1))).toBe(true);
+  });
+
+  it('compiles only declared sources and rejects unknown, duplicate, or unregistered input', () => {
+    const region = { name: 'whole', role: 'response', x: 0, y: 0, width: 2, height: 2 };
+    const atlas = (candidate) => ({
+      candidate, world: { width: 2, height: 2 }, descriptor: { inspectionRegions: [region] },
+    });
+    const recipes = [
+      { name: 'first', fixture: 'shared' },
+      { name: 'second', fixture: 'second' },
+      { name: 'without-regions', fixture: 'without-regions' },
+    ];
+    const sources = (entries) => ({ sources: entries });
+    const declared = (name, atlases) => ({ name, projection: 'declared', atlases });
+
+    const compiled = compileVisualLabInspectionFixtures(sources([
+      declared('later-source', [atlas('second')]),
+      declared('earlier-source', [atlas('first')]),
+    ]), recipes);
+    expect(compiled.map(({ candidate }) => candidate)).toEqual(['first', 'second']);
+
+    expect(() => compileVisualLabInspectionFixtures(sources([
+      { ...declared('unknown', [atlas('first')]), projection: 'callback' },
+    ]), recipes)).toThrow(/Unknown/);
+    expect(() => compileVisualLabInspectionFixtures(sources([
+      declared('same', [atlas('first')]), declared('same', [atlas('second')]),
+    ]), recipes)).toThrow(/source is malformed/);
+    expect(() => compileVisualLabInspectionFixtures(sources([
+      declared('one', [atlas('first')]), declared('two', [atlas('first')]),
+    ]), recipes)).toThrow(/duplicate/);
+    expect(() => compileVisualLabInspectionFixtures(sources([
+      declared('unregistered', [atlas('missing')]),
+    ]), recipes)).toThrow(/Invalid/);
+    expect(() => compileVisualLabInspectionFixtures(sources([]), [
+      ...recipes, { name: 'first', fixture: 'another' },
+    ])).toThrow(/recipe order is malformed/);
   });
 
   it('keeps declared review projection data-only and lets normalization reject unsafe records', () => {

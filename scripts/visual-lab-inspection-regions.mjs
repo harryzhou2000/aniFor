@@ -1,17 +1,9 @@
 import { pathToFileURL } from 'node:url';
 
+import { VISUAL_CAPTURE_STATIC_RECIPES } from '../src/shared/visual-capture-static-catalog.js';
 import {
-  GAS_MATERIAL_LIGHTING_ATLAS_CATALOG,
-} from '../src/shared/gas-material-lighting-atlas-catalog.js';
-import {
-  MATERIAL_LIGHTING_ATLAS_CATALOG,
-} from '../src/shared/material-lighting-atlas-catalog.js';
-import {
-  OPPOSED_SOURCE_MATERIAL_LIGHTING_ATLAS_CATALOG,
-} from '../src/shared/opposed-source-material-lighting-atlas-catalog.js';
-import {
-  SOLID_MATERIAL_LIGHTING_ATLAS_CATALOG,
-} from '../src/shared/solid-material-lighting-atlas-catalog.js';
+  MATERIAL_LIGHTING_INSPECTION_SOURCE_CATALOG,
+} from '../src/shared/material-lighting-inspection-source-catalog.js';
 
 /**
  * Scripts-owned current-only spatial review annotations. These records are
@@ -222,23 +214,59 @@ function boundingPoints(points) {
   };
 }
 
-const SOLID_ATLAS_INSPECTION_FIXTURES = SOLID_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases.map(
-  projectSolidMaterialLightingAtlasInspectionFixture,
-);
-const GAS_ATLAS_INSPECTION_FIXTURES = GAS_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases.map(
-  projectGasMaterialLightingAtlasInspectionFixture,
-);
-const OPPOSED_SOURCE_INSPECTION_FIXTURES = (
-  OPPOSED_SOURCE_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases.map(projectDeclaredInspectionFixture)
-);
-const DECLARED_INSPECTION_FIXTURES = MATERIAL_LIGHTING_ATLAS_CATALOG.atlases.map(
-  projectDeclaredInspectionFixture,
+const INSPECTION_PROJECTORS = new Map([
+  ['declared', projectDeclaredInspectionFixture],
+  ['gas-geometry', projectGasMaterialLightingAtlasInspectionFixture],
+  ['solid-template', projectSolidMaterialLightingAtlasInspectionFixture],
+]);
+
+/**
+ * Compiles data-only inspection sources, then orders the covered subset by the
+ * canonical capture recipes. A source cannot invent a candidate or execute a
+ * catalog-supplied callback.
+ */
+export function compileVisualLabInspectionFixtures(sourceCatalog, recipes) {
+  if (!Array.isArray(sourceCatalog?.sources) || !Array.isArray(recipes)) {
+    throw new TypeError('Visual Lab inspection sources are malformed');
+  }
+  const recipeOrder = new Map();
+  for (const [index, recipe] of recipes.entries()) {
+    if (!SAFE_NAME.test(recipe?.name ?? '') || recipeOrder.has(recipe.name)) {
+      throw new TypeError('Visual Lab inspection recipe order is malformed');
+    }
+    recipeOrder.set(recipe.name, index);
+  }
+  const sourceNames = new Set();
+  const projected = new Map();
+  for (const source of sourceCatalog.sources) {
+    if (!SAFE_NAME.test(source?.name ?? '') || sourceNames.has(source.name)
+      || !Array.isArray(source.atlases)) {
+      throw new TypeError('Visual Lab inspection source is malformed');
+    }
+    sourceNames.add(source.name);
+    const projector = INSPECTION_PROJECTORS.get(source.projection);
+    if (!projector) throw new TypeError(`Unknown Visual Lab inspection projection ${JSON.stringify(source.projection)}`);
+    for (const atlas of source.atlases) {
+      const fixture = projector(atlas);
+      if (!recipeOrder.has(fixture.candidate) || projected.has(fixture.candidate)) {
+        throw new TypeError(`Invalid or duplicate Visual Lab inspection candidate ${JSON.stringify(fixture.candidate)}`);
+      }
+      projected.set(fixture.candidate, fixture);
+    }
+  }
+  return [...projected.values()].sort((left, right) => (
+    recipeOrder.get(left.candidate) - recipeOrder.get(right.candidate)
+  ));
+}
+
+const INSPECTION_FIXTURES = compileVisualLabInspectionFixtures(
+  MATERIAL_LIGHTING_INSPECTION_SOURCE_CATALOG,
+  VISUAL_CAPTURE_STATIC_RECIPES,
 );
 
 export const VISUAL_LAB_INSPECTION_REGIONS = normalizeVisualLabInspectionRegionCatalog({
   schema: VISUAL_LAB_INSPECTION_REGION_CATALOG_SCHEMA,
-  fixtures: [...OPPOSED_SOURCE_INSPECTION_FIXTURES, ...SOLID_ATLAS_INSPECTION_FIXTURES,
-    ...GAS_ATLAS_INSPECTION_FIXTURES, ...DECLARED_INSPECTION_FIXTURES],
+  fixtures: INSPECTION_FIXTURES,
 });
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {

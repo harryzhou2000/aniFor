@@ -6456,6 +6456,30 @@ hosted Water WebGL package, portable verification, and bounded success evidence.
 Treat this as the production checkpoint for shared runtime/review fixture
 authoring across both cross-phase and opposed-source catalogs.
 
+The next framework checkpoint aggregates inspection authoring without merging
+execution authority into shared data. A frozen inspection-source catalog now
+lists the four authored atlas families and one of three closed projection kinds;
+the scripts-side compiler owns those projector functions. It rejects unknown
+projection names, duplicate source names or candidates, and candidates not
+registered in the validated capture-recipe catalog. The resulting covered
+subset follows canonical capture-recipe order, while recipes that do not yet
+declare spatial regions remain ordinary valid capture candidates. The app's
+typed fixture-preparer map stays explicit and exhaustive: never derive it from
+diagnostic labels, paths, callbacks, or this review-only catalog.
+
+Local verification passed 1,544 source tests, 353 tooling tests, typecheck, the
+production build, and exact 19-resource closure. The retained full-cohort
+SwiftShader package at
+`/tmp/anifortpt-inspection-source-order-20260813` passed all eight candidates,
+24 WebGL/HDR captures, one shared host with zero restarts, and clean teardown.
+The portable verifier required and rebuilt the recipe set, browser-host and
+tuning plans, exact capture geometry, experiment response, and the canonically
+ordered five-candidate/161-region package. A direct material-atlas B capture
+remained visually healthy and unchanged; this is current evidence rather than
+an exact visual pin. Once deployed, use this seam to migrate the paused
+Powder-style atlas as the first non-normal-HDR declared-region fixture without
+adding a cohort, driver, browser method, or capture branch.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
