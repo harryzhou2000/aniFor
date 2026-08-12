@@ -1284,6 +1284,19 @@ then rendered all 217 projections at 4896x3072 with every projection visible
 and zero browser errors. These images and deltas are current review evidence,
 not cross-revision visual requirements.
 
+That declarative interior-contrast seam is deployed at exact revision
+`d2e59987ef7fccc4b3c3ddf6755c72d30dc95f3d` by workflow run
+`31588444639`. The 3m48s build passed 1,533 source and 344 tooling tests,
+restored 269/270 ccache hits, and verified the exact 19-resource bundle. The
+seven-scene stable-snapshot review passed seven-for-seven in 8m35s through one
+shared host with zero restarts, and its downloaded current-only package
+verified. Pages deployed in 8 seconds. The first hosted smoke attempt reached
+no browser host, context, target, or capture because Chrome navigation returned
+`net::ERR_CERT_VERIFIER_CHANGED`; the failed-job retry then passed exact live
+revision/resource closure on attempt one and verified the fresh hosted Water
+receipt-v2 package against the same deployed revision. Treat the first attempt
+as a bounded runner certificate-verifier fault, not renderer evidence.
+
 Revision `813066c81735da2e9b2752c9ddff276cc1c8f0da` deployed the retained
 profile sheen through workflow run `31528453927`. The ccache-backed build,
 two-candidate stable-snapshot review, downloaded-package verification, Pages
