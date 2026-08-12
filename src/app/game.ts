@@ -586,6 +586,9 @@ export class Game {
       visualCaptureEvidenceAlpha: (plane, x, y) => (
         this.renderer.visualCaptureEvidenceAlphaAt(plane, x, y)
       ),
+      visualCaptureEvidenceDigest: (plane) => (
+        this.renderer.visualCaptureEvidenceDigest(plane)
+      ),
       powderSurfaceAlpha: (x, y) => this.renderer.powderSurfaceAlphaAt(x, y),
       liquidFieldAlpha: (x, y) => this.renderer.liquidFieldAlphaAt(x, y),
       atmosphereFieldAlpha: (x, y) => this.renderer.atmosphereFieldAlphaAt(x, y),

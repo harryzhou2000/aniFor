@@ -7,7 +7,11 @@ import type {
   PixiFieldPresenter, WebGLCompletedFrameReceipt, WebGLPresentationTiming,
 } from './pixi-field-presenter';
 import type { VisualLabVariant } from './visual-lab';
-import { readVisualCaptureEvidenceAlpha } from './visual-capture-evidence';
+import {
+  digestVisualCaptureEvidenceAlpha,
+  readVisualCaptureEvidenceAlpha,
+  type VisualCaptureEvidenceDigest,
+} from './visual-capture-evidence';
 import {
   backingSize, CANVAS_FALLBACK_DIMENSION_BUDGET, CANVAS_FALLBACK_PIXEL_BUDGET,
   resolveFieldOutputScale, safeDeviceWebGLOutputScale, safeWebGLOutputScale,
@@ -702,6 +706,13 @@ export class MaterialRenderer {
   /** One fixed typed bridge for capture-framework field evidence. */
   visualCaptureEvidenceAlphaAt(plane: VisualCaptureEvidencePlane, x: number, y: number): number {
     return readVisualCaptureEvidenceAlpha(this, plane, x, y);
+  }
+
+  /** One exact bulk digest for the capture framework's selected evidence plane. */
+  visualCaptureEvidenceDigest(plane: VisualCaptureEvidencePlane): VisualCaptureEvidenceDigest {
+    return digestVisualCaptureEvidenceAlpha(
+      this, plane, this.simulation.width, this.simulation.height,
+    );
   }
 
   /** Audit-only read of the existing full-resolution Powder support alpha. */

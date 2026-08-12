@@ -1410,31 +1410,14 @@ function assertVariantState(state, options, variant) {
 }
 
 async function snapshotState(cdp, executionPlan, commandTimeoutMs = CDP_COMMAND_TIMEOUT_MS) {
-  const { evidenceReaderExpression, datasetProjectionExpression: observedDriverState } = (
+  const { datasetProjectionExpression: observedDriverState } = (
     executionPlan.compiled
   );
+  const evidencePlane = executionPlan.domainAdapter.evidence.plane;
   return evaluate(cdp, `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     const canvas = document.querySelector('.semantic-field-canvas');
     if (!audit || !canvas) throw new Error('visual-lab audit API/canvas disappeared');
-    const digestBytes = (read, width, height) => {
-      let hash = 2166136261 >>> 0;
-      let supportHash = 2166136261 >>> 0;
-      let alphaSum = 0;
-      let nonzero = 0;
-      for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-          const index = y * width + x;
-          const byte = Math.round(Math.max(0, Math.min(255, Number(read(x, y)) || 0)));
-          const supported = Number(byte > 0);
-          hash = Math.imul((hash ^ byte ^ index) >>> 0, 16777619) >>> 0;
-          supportHash = Math.imul((supportHash ^ supported ^ index) >>> 0, 16777619) >>> 0;
-          alphaSum += byte;
-          nonzero += supported;
-        }
-      }
-      return { hash, supportHash, alphaSum, nonzero };
-    };
     const digestRgbaAlpha = ${digestVisualLabFramebufferAlpha.toString()};
     const material = audit.materialPlaneDigest();
     let countHash = 2166136261 >>> 0;
@@ -1443,8 +1426,10 @@ async function snapshotState(cdp, executionPlan, commandTimeoutMs = CDP_COMMAND_
         (countHash ^ material.materialCounts[index] ^ index) >>> 0, 16777619,
       ) >>> 0;
     }
-    const readField = ${evidenceReaderExpression};
-    const fieldAlpha = digestBytes(readField, audit.width, audit.height);
+    if (typeof audit.visualCaptureEvidenceDigest !== 'function') {
+      throw new Error('visual-capture evidence digest bridge is unavailable');
+    }
+    const fieldAlpha = audit.visualCaptureEvidenceDigest(${JSON.stringify(evidencePlane)});
     const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
     if (!gl) throw new Error('semantic-field canvas has no readable WebGL context');
     const readbackKey = Symbol.for('anifor.visual-lab.framebuffer-readback/v1');

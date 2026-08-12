@@ -143,6 +143,13 @@ export interface BrowserInputAuditApi {
   presentationAuxiliary(x: number, y: number): number;
   /** Closed data-plane evidence bridge used by generic presentation captures. */
   visualCaptureEvidenceAlpha(plane: VisualCaptureEvidencePlane, x: number, y: number): number;
+  /** Exact bulk counterpart used by the atomic Visual Lab evidence transaction. */
+  visualCaptureEvidenceDigest(plane: VisualCaptureEvidencePlane): {
+    readonly hash: number;
+    readonly supportHash: number;
+    readonly alphaSum: number;
+    readonly nonzero: number;
+  };
   /** Existing full-resolution Powder surface support at one world cell. */
   powderSurfaceAlpha(x: number, y: number): number;
   liquidFieldAlpha(x: number, y: number): number;
