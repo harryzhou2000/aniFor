@@ -35,13 +35,13 @@ on:
           - stable-snapshots
           - completed-frame-receipt
       visual_lab_browser_host:
-        description: Browser topology for optional Visual Lab diagnosis
+        description: Fresh is reliable for full reviews; shared is an opt-in performance diagnosis
         required: true
-        default: shared
+        default: fresh
         type: choice
         options:
-          - shared
           - fresh
+          - shared
       visual_lab_candidates:
         description: Optional ad-hoc comma-separated candidates; exclusive with recipe set
         required: false
@@ -252,10 +252,10 @@ jobs:
             --bundle=dist/index.html
             --output-dir=artifacts/visual-lab-review
             --gpu=swiftshader
-            # Route compatible normal-scale candidates sequentially through one
-            # supervised SwiftShader process. Every candidate still receives a
-            # fresh incognito context/target, and any capture, teardown, or GPU
-            # failure recycles the complete host before the next candidate.
+            # Full hosted-software-GPU cohorts default to a fresh process per
+            # candidate so accumulated load cannot exhaust the protected frame
+            # receipt/disposal clocks. Shared remains an explicit diagnostic
+            # mode with fresh incognito context/target and host recycling.
             "--browser-host=${VISUAL_LAB_BROWSER_HOST}"
             "--capture-proof=${VISUAL_LAB_CAPTURE_PROOF}"
           )

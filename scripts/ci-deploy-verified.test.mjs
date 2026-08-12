@@ -74,15 +74,17 @@ describe('deploy-verified CI workflow contract', () => {
     expect(inputReferences).toHaveLength(1);
   });
 
-  it('keeps shared hosting as the default while allowing manual fresh-host diagnosis', () => {
+  it('defaults to reliable fresh hosting while retaining shared-host diagnosis', () => {
     const browserHost = indentedEntry(workflow, 'visual_lab_browser_host', 6);
     const choices = [...browserHost.matchAll(/^          - ([a-z-]+)\s*$/gm)]
       .map(([, choice]) => choice);
-    expect(browserHost).toContain('description: Browser topology for optional Visual Lab diagnosis');
+    expect(browserHost).toContain(
+      'description: Fresh is reliable for full reviews; shared is an opt-in performance diagnosis',
+    );
     expect(browserHost).toContain('required: true');
-    expect(browserHost).toContain('default: shared');
+    expect(browserHost).toContain('default: fresh');
     expect(browserHost).toContain('type: choice');
-    expect(choices).toEqual(['shared', 'fresh']);
+    expect(choices).toEqual(['fresh', 'shared']);
 
     const inputReferences = workflow.match(
       /\$\{\{\s*inputs\.visual_lab_browser_host\s*\}\}/g,

@@ -75,6 +75,17 @@ notches, bars, isolated cells, unlike contacts, wall overlays, and pigments
 remain legible. Direct inspection favors the larger board as useful optical-
 class evidence. Treat its hashes as package integrity only.
 
+Workflow run `31599872251` proved the expanded eight-candidate cohort can
+overload one shared hosted SwiftShader process: four candidates passed, then
+four completed-frame receipts hit their protected 30-second watchdog and CDP
+renderer/context teardown also timed out. The capture correctly published only
+a bounded partial diagnostic package, portable verification failed closed, and
+deploy was skipped. This is accumulated software-GPU host load, not a fixture,
+artifact, or verifier defect. Manual CI review therefore defaults to `fresh`
+browser hosting; `shared` remains an explicit performance diagnostic. Do not
+weaken receipt, teardown, package-completeness, or verifier requirements to
+make a loaded shared cohort deploy.
+
 The four-phase analytic environment-transport increment is deployed at exact
 revision `f46ad843777c948135a59760781c57366c8922e7` by workflow run
 `31593915673`. One declarative `environmentTransport` composition lane and one

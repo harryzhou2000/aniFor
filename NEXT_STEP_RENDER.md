@@ -6294,6 +6294,19 @@ production build transformed 947 modules and retained exact 19-resource
 closure. This establishes descriptor reuse as the preferred way to broaden
 optical-class evidence before adding more material parameters or shader logic.
 
+The first expanded-cohort CI attempt, workflow `31599872251`, built in 3m13s
+with restored ccache and saved it only after success. Its shared SwiftShader
+review exposed the intended lifecycle boundary under load: four candidates
+completed, then material-lighting, source-target, force-activity, and opposed-
+source captures hit the renderer-owned 30-second completed-frame watchdog;
+several renderer/context teardown calls then exceeded the bounded 5-second CDP
+clock. The job retained a bounded partial package, portable verification failed
+closed, and deploy was skipped. This is accumulated shared-host software-GPU
+contention rather than source, package, or verifier drift. Manual CI now
+defaults full reviews to fresh-per-candidate Chrome while preserving shared as
+an explicit diagnostic/performance option. Receipt, teardown, and portable
+verification contracts remain unchanged.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
