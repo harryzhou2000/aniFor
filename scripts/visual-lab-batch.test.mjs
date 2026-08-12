@@ -1625,6 +1625,44 @@ describe('Visual Lab batch runner', () => {
     expect(await snapshotPackageTree(incompleteDirectory)).toStrictEqual(incompleteBefore);
   });
 
+  it('publishes and portably reconstructs optional current-only region evidence', async () => {
+    const root = await makeTemporaryDirectory();
+    const outputDirectory = path.join(root, 'region-batch');
+    const candidate = 'opposed-source-material-lighting-atlas';
+    await writeValidCapture(path.join(outputDirectory, 'candidates', candidate), candidate);
+
+    const generated = await runVisualLabBatch({
+      candidates: [candidate], outputDir: outputDirectory, indexOnly: true,
+    });
+    expect(generated.regionResponsePath).toBe(path.join(outputDirectory, 'region-response.json'));
+    expect(generated.regionResponseBoardPath).toBe(path.join(outputDirectory, 'region-response.html'));
+    expect(generated.regionResponse).toMatchObject({
+      schema: 'anifor.visual-lab.current-region-response/v1',
+      candidates: [{ candidate, regions: expect.arrayContaining([
+        expect.objectContaining({ name: 'clay-warm-flank', role: 'response' }),
+        expect.objectContaining({ name: 'guarded-blank', role: 'control' }),
+      ]) }],
+    });
+    const board = await readFile(generated.regionResponseBoardPath, 'utf8');
+    expect(board).toContain('Current region response');
+    expect(board).toContain('no aesthetic score, verdict');
+
+    const before = await snapshotPackageTree(outputDirectory);
+    const verified = await verifyVisualLabBatchPackage({
+      batchRoot: outputDirectory, requireComplete: true, requireRegionResponse: true,
+    });
+    expect(verified.regionResponse).toStrictEqual(generated.regionResponse);
+    expect(await snapshotPackageTree(outputDirectory)).toStrictEqual(before);
+
+    const source = await readFile(generated.regionResponsePath, 'utf8');
+    const tampered = JSON.parse(source);
+    tampered.candidates[0].regions[0].pairs.offToB.signedRgbaMeanDelta[0] += 1;
+    await writeFile(generated.regionResponsePath, `${JSON.stringify(tampered, null, 2)}\n`);
+    await expect(verifyVisualLabBatchPackage({
+      batchRoot: outputDirectory, requireComplete: true,
+    })).rejects.toThrow('does not match current captures');
+  });
+
   it('reconstructs a present tuning sidecar even when every capture failed', async () => {
     const root = await makeTemporaryDirectory();
     const bundle = path.join(root, 'index.html');

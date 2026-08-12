@@ -41,6 +41,7 @@ const batchEvidence = {
     schema: 'anifor.visual-lab.current-experiment-response/v1',
     candidates: [{ candidate: 'gas-showcase' }],
   },
+  regionResponse: null,
 };
 
 const comparisonEvidence = {
@@ -85,6 +86,7 @@ describe('Visual Lab portable package verifier', () => {
       requireCaptureGeometry: false,
       requireExecutionTuningPlan: false,
       requireExperimentResponse: false,
+      requireRegionResponse: false,
       requireOriginAttestation: false,
       requireComplete: true,
       requireRecipeSet: false,
@@ -100,6 +102,7 @@ describe('Visual Lab portable package verifier', () => {
       '--require-capture-geometry=1',
       '--require-execution-tuning-plan=1',
       '--require-experiment-response=1',
+      '--require-region-response=1',
       '--require-origin-attestation=1',
     ])).toEqual({
       help: false,
@@ -112,6 +115,7 @@ describe('Visual Lab portable package verifier', () => {
       requireCaptureGeometry: true,
       requireExecutionTuningPlan: true,
       requireExperimentResponse: true,
+      requireRegionResponse: true,
       requireOriginAttestation: true,
       requireComplete: false,
       requireRecipeSet: true,
@@ -150,6 +154,7 @@ describe('Visual Lab portable package verifier', () => {
       requireCaptureGeometry: true,
       requireExecutionTuningPlan: true,
       requireExperimentResponse: true,
+      requireRegionResponse: false,
       requireOriginAttestation: true,
       requireComplete: true,
       requireRecipeSet: true,
@@ -168,6 +173,7 @@ describe('Visual Lab portable package verifier', () => {
         requireCaptureGeometry: true,
         requireExecutionTuningPlan: true,
         requireExperimentResponse: true,
+        requireRegionResponse: false,
         requireOriginAttestation: true,
         requireComplete: true,
         requireRecipeSet: true,
@@ -204,6 +210,7 @@ describe('Visual Lab portable package verifier', () => {
         schema: 'anifor.visual-lab.current-experiment-response/v1',
         candidateCount: 1,
       },
+      regionResponse: null,
       comparison: comparisonEvidence.comparison,
     });
     expect(Object.isFrozen(result)).toBe(true);
@@ -225,6 +232,7 @@ describe('Visual Lab portable package verifier', () => {
     expect(batchOnly.experimentResponse).toEqual({
       schema: 'anifor.visual-lab.current-experiment-response/v1', candidateCount: 1,
     });
+    expect(batchOnly.regionResponse).toBeNull();
     expect(batchOnly.comparison).toBeNull();
 
     let legacyComparisonOptions;
