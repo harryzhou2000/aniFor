@@ -6424,6 +6424,26 @@ Treat this as the production checkpoint for generic declared-region authoring;
 the next fixture migration should reuse this seam rather than add another
 candidate-specific projector.
 
+That seam now also owns the opposed-source fixture rather than only its review
+annotations. One frozen catalog declares the exact Sand/Clay/Concrete cards,
+separated Fire/ELEC sources, semantic gaps and holes, fine structures, isolated
+Sand, derived 2:1 wet suspension, native wall, wall occluder, wall-free control,
+materials, and all eleven existing inspection regions. The app validates the
+catalog and preserves the historical public snapshot/preparer while performing
+the exact ordinary paint/erase/wall write sequence. Scripts project the same
+regions through the generic declared-region function; the former opposed-source
+literal is removed.
+
+Local verification passed 1,544 source tests and 351 tooling tests, typecheck,
+the production build, and the exact 19-resource closure. A fresh SwiftShader
+WebGL/HDR stable-snapshot package at
+`/tmp/anifortpt-declared-opposed-20260812` passed in 32.4s with zero browser
+errors, clean teardown, portable experiment and eleven-region verification.
+Its result remained
+`sha256:a4c27c41141eb7064fa293bf44a328a6b1dc05c076752724d98232e9f1924444`,
+byte-identical to the prior deployed candidate. Treat that equality as migration
+evidence, not a cross-revision visual pin.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

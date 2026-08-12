@@ -338,6 +338,15 @@ slightly. These measurements are review context, not thresholds or acceptance
 criteria. Keep conservative floor/ceil world-to-PNG coverage so bounded regions
 remain nonempty even in structurally valid low-resolution legacy/test captures.
 
+The opposed-source fixture and its current-only review board now share one
+frozen data-only catalog. Preserve `POWDER_LIGHT_VFX_AUDIT` and
+`preparePowderLightVfxFixture` as compatibility exports, and preserve ordinary
+`paint`/`erase`/`paintWall` calls, exact write order, radius zero, the derived
+2:1 Sand/Water weave, and both semantic and wall planes. Inspection tooling must
+consume its eleven ordered regions only through the generic declared-region
+projector. Do not restore the scripts literal, bulk-fill the material plane, or
+add opposed-source browser, driver, renderer, capture, or acceptance authority.
+
 The domain-derived checkpoint launcher is deployed at revision
 `21fe52c96dd0d30152d2b2cec3a3d4b589a53630` by workflow run `31500138353`.
 Its next retained visual candidate strengthens only the shared gas

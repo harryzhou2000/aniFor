@@ -11,7 +11,7 @@ import {
 const valid = () => structuredClone(VISUAL_LAB_INSPECTION_REGIONS);
 
 describe('Visual Lab inspection-region catalog', () => {
-  it('keeps opposed-source review annotations ordered, bounded, and deeply frozen', () => {
+  it('derives opposed-source review annotations from shared declared authoring', () => {
     const fixture = VISUAL_LAB_INSPECTION_REGIONS.fixtures[0];
     expect(fixture.candidate).toBe('opposed-source-material-lighting-atlas');
     expect(fixture.world).toEqual({ width: 612, height: 384 });
