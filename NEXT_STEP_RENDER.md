@@ -9,26 +9,32 @@ permissive, non-gating compatibility companion. Preserve correct viewport/input
 geometry and robust 1×–8× rendering, including the dedicated compact true-8×
 compositor, while avoiding renderer branches that duplicate material semantics.
 
-The active scripts-framework increment removes duplicate spatial-evidence work.
-Current region response and appearance must be projected from one authenticated
-decode, conservative world-to-pixel mapping, and pixel traversal per configured
-candidate/variant/region. Preserve the two existing portable v1 schemas and
-separate static review boards exactly; keep their combined decoded source
-ephemeral and outside every frozen identity. Existing response-only or
-appearance-only callers and legacy optional-package behavior remain compatible.
-This change is measurement infrastructure, not a visual verdict or cross-
-revision requirement. After it is proven through the portable package path,
-return to reusable renderer/material experimentation rather than adding another
-isolated evidence format.
+The active renderer increment reuses the established material composition,
+appearance-profile, body-shape, and obstacle-aware lighting seams instead of
+adding a material-specific pass. The shared appearance profile now owns a
+sixth, bounded `interiorScatter` lane. It scales only the existing positive,
+source-shaped inner transport lobe, so aqueous and clean-gas families can carry
+more light than oily, sooty, or metallic families without material-ID shader
+branches. The existing fluid volume helper is generalized to a material volume
+helper and admits settled Smooth powder only through its caller-owned broad-body
+gate. Its B-only RGB response adds shallow key, deep countershade, and restrained
+pigment retention without changing support, alpha, contacts, topology, texture
+resources, targets, or allocations.
 
-Local proof is complete: 1,556 source and 360 tooling tests, typecheck, build,
-and exact 19-resource closure passed. The real shared-host SwiftShader review
-passed all eight material-lighting WebGL/HDR candidates with one host and zero
-restarts; portable verification reconstructed both 257-region records from the
-same 24 pinned PNG reads. Retain the package at
-`.artifacts/visual-lab-reviews/material-lighting-18cd894f-211a-4d53-b6e6-fd55cb29e464`
-as current-only evidence, not a baseline or cross-revision requirement. The
-implementation is ready for a checkpoint and canonical CI review/deploy.
+OFF/A, Canvas2D, Local/Grains, and compact true-8x remain outside the new powder
+response. Current SwiftShader captures compile with WebGL/HDR and preserve the
+authored powder hole, fine column, material contacts, continuous liquid bodies,
+and cloud support. Visual inspection favors the added B depth while retaining
+internal grain variation; the historical square-cell Grains mode remains the
+reference. The canonical eight-scene stable-snapshot review passed all eight
+material-lighting fixtures and portable verification at
+`.artifacts/visual-lab-reviews/material-lighting-4101a543-2e39-47a2-899c-f5d98ee1bba3`.
+Focused renderer/profile tests, the complete source suite, all 360 tooling tests,
+typecheck, production build, exact 19-resource closure, and the independent
+217-material true-8x production audit pass locally. Treat these captures as
+current aesthetic evidence only. The next release step is the checkpoint and
+canonical CI deploy; do not introduce a new evidence schema or historical
+visual hash gate for this increment.
 
 The current framework checkpoint is deployed at
 `c51f874ca1b453f07d4975d9fe00cd1767f14c60` by workflow run `31559035589`.

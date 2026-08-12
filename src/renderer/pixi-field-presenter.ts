@@ -1929,7 +1929,7 @@ void main() {
           liquidFinishDepth, liquidFinishSlope, liquidFinishEligibility,
           uMaterialBodyFinish, 0.0
         );
-        reconstructedLiquid = applyFluidVolumeLobe(
+        reconstructedLiquid = applyMaterialVolumeLobe(
           reconstructedLiquid, 1.0, liquidFinishResponse, liquidFinishProfile.roughness, liquid.a,
           liquidNeighbourMean,
           clamp((liquid.a - liquidNeighbourMean) * 5.5, -1.0, 1.0),
@@ -1970,7 +1970,7 @@ void main() {
           gas, 2.0, gasFinishResponse, gasFinishProfile.roughness, atmosphere.a, gasFinishDepth,
           gasFinishSlope, 1.0, uMaterialBodyFinish, 0.0
         );
-        gas = applyFluidVolumeLobe(
+        gas = applyMaterialVolumeLobe(
           gas, 2.0, gasFinishResponse, gasFinishProfile.roughness, atmosphere.a, gasNeighbourMean,
           clamp((atmosphere.a - gasNeighbourMean) * 8.0, -1.0, 1.0),
           gasFinishDepth, gasFinishSlope,
@@ -2118,7 +2118,7 @@ void main() {
         color, 2.0, gasFinishResponse, gasFinishProfile.roughness, gasDensity, smoothstep(0.035, 0.62, gasDensity),
         gasFinishSlope, 1.0, uMaterialBodyFinish, 0.0
       );
-      color = applyFluidVolumeLobe(
+      color = applyMaterialVolumeLobe(
         color, 2.0, gasFinishResponse, gasFinishProfile.roughness, gasDensity, gasNeighbourMean,
         clamp((atmosphere.a - gasNeighbourMean) * 8.0, -1.0, 1.0),
         smoothstep(0.035, 0.62, gasDensity), gasFinishSlope,
@@ -3029,7 +3029,7 @@ void main() {
         color, 1.0, liquidFinishResponse, liquidFinishProfile.roughness, density, liquidFinishDepth, liquidSlope,
         liquidFinishEligibility, uMaterialBodyFinish, 0.0
       );
-      color = applyFluidVolumeLobe(
+      color = applyMaterialVolumeLobe(
         color, 1.0, liquidFinishResponse, liquidFinishProfile.roughness, density, liquidFinishNeighbourMean,
         clamp((liquid.a - liquidFinishNeighbourMean) * 5.5, -1.0, 1.0),
         liquidFinishDepth, liquidSlope, 0.0,
@@ -6695,7 +6695,7 @@ void main() {
       color, 2.0, gasFinishResponse, gasFinishProfile.roughness, gasShadeDensity, opticalDepth, volumeSlope,
       1.0, uMaterialBodyFinish, uMaterialLightingVariant
     );
-    color = applyFluidVolumeLobe(
+    color = applyMaterialVolumeLobe(
       color, 2.0, gasFinishResponse, gasFinishProfile.roughness, gasShadeDensity, cloudNeighbourMean,
       gasCurvature, opticalDepth,
       volumeSlope, 0.0, gasInterior, uMaterialBodyFinish,
@@ -8426,7 +8426,7 @@ void main() {
         semanticSlope + volumeSlope, liquidFinishEligibility,
         uMaterialBodyFinish, uMaterialLightingVariant
       );
-      color = applyFluidVolumeLobe(
+      color = applyMaterialVolumeLobe(
         color, 1.0, liquidFinishResponse, liquidFinishProfile.roughness, liquidSurfaceDensity, liquidNeighbourMean,
         clamp((liquidDensity - liquidNeighbourMean) * 5.5, -1.0, 1.0), liquidFinishDepth,
         semanticSlope + volumeSlope, 0.0, liquidFinishEligibility,
@@ -11615,6 +11615,12 @@ void main() {
       widePowderShape.yz, powderLightBodyGate,
       uMaterialBodyFinish, uMaterialLightingVariant
     );
+    color = applyMaterialVolumeLobe(
+      color, 0.0, powderFinishProfile.optics, powderFinishProfile.roughness,
+      density, widePowderShape.x, 0.0, powderLightBodyDepth,
+      widePowderShape.yz, 0.0, powderLightBodyGate,
+      uMaterialBodyFinish, uMaterialLightingVariant
+    );
     color = applyMaterialAmbientGrounding(
       color, 0.0, powderFinishProfile.optics, powderFinishProfile.roughness,
       density, powderLightBodyDepth, widePowderShape.yz,
@@ -11878,6 +11884,7 @@ void main() {
       && surfaceOnly < 0.5 && emissionOnly < 0.5) {
       color = applyMaterialProfileIrradiance(
         color, profileIrradiancePhase, profileIrradianceResponse,
+        profileIrradianceProfile.interiorScatter,
         gasVolume > 0.5 ? atmosphereState.a : density,
         profileIrradianceDepth, semanticSlope + volumeSlope,
         profileIrradianceEligibility, profileIrradianceEmission,

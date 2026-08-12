@@ -187,6 +187,7 @@ vec3 applyMaterialProfileIrradiance(
   vec3 color,
   float phase,
   vec4 finishResponse,
+  float interiorScatter,
   float density,
   float depth,
   vec2 slope,
@@ -296,7 +297,7 @@ vec3 applyMaterialProfileIrradiance(
   float midPath = 4.0 * bodyDepth * (1.0 - bodyDepth);
   float phaseScatter = composition.volumeScatter;
   float transportLobe = lightReach * body * positiveExternal * midPath
-    * phaseScatter * transmissionReserve
+    * phaseScatter * interiorScatter * transmissionReserve
     * (0.024 + finishResponse.x * 0.060);
   vec3 transportLobeTint = mix(
     absorbedLightTint, lightTint, mix(0.28, 0.82, transmissionReserve)
@@ -520,8 +521,9 @@ float gasCompactMacroRelief(vec2 position) {
 // compositor. Callers pass the centre and cardinal mean they already sampled;
 // this deliberately adds no texture read, target, field, or scale-dependent
 // allocation. The response is RGB-only and therefore cannot grow support or
-// blur a species/contact boundary.
-vec3 applyFluidVolumeLobe(
+// blur a species/contact boundary. Normal powder joins only through its
+// caller-owned settled Smooth-body gate; compact true-8x remains literal Off.
+vec3 applyMaterialVolumeLobe(
   vec3 color,
   float phase,
   vec4 finishResponse,
@@ -538,11 +540,15 @@ vec3 applyFluidVolumeLobe(
 ) {
   if (enabled < 0.5 || eligibility <= 0.0001) return color;
 
-  float gas = step(1.5, phase);
-  float liquid = 1.0 - gas;
-  vec3 keyTint = liquid * vec3(0.58, 0.82, 1.00)
+  float powder = 1.0 - step(0.5, phase);
+  float liquid = step(0.5, phase) * (1.0 - step(1.5, phase));
+  float gas = step(1.5, phase) * (1.0 - step(2.5, phase));
+  float fluid = liquid + gas;
+  vec3 keyTint = powder * vec3(0.92, 0.72, 0.48)
+    + liquid * vec3(0.58, 0.82, 1.00)
     + gas * vec3(0.70, 0.82, 1.00);
-  vec3 absorptionTint = liquid * vec3(0.34, 0.48, 0.64)
+  vec3 absorptionTint = powder * vec3(0.48, 0.39, 0.32)
+    + liquid * vec3(0.34, 0.48, 0.64)
     + gas * vec3(0.40, 0.46, 0.58);
   float identityPeak = max(max(color.r, color.g), max(color.b, 0.12));
   vec3 identityTint = clamp(color / identityPeak, 0.0, 1.0);
@@ -588,7 +594,8 @@ vec3 applyFluidVolumeLobe(
   // literal Off, keeping its established fifteen-million-fragment path exact.
   float opticalExperiment = step(0.5, materialLightingVariant);
   float opticalExperimentB = step(1.5, materialLightingVariant);
-  float interiorContrast = materialCompositionParameters(phase).interiorContrast;
+  MaterialCompositionResponse composition = materialCompositionParameters(phase);
+  float interiorContrast = composition.interiorContrast;
   // Convert the static family roughness lane into an energy-bounded lobe width.
   // The original crown/facing response remains exact outside B. Tight optical
   // families concentrate their reflection; broad families trade peak for a
@@ -647,7 +654,7 @@ vec3 applyFluidVolumeLobe(
   // A broad convex crown and directional shoulder supply a coherent reflected
   // lobe. Concave/deep regions retain pigment through restrained absorption;
   // the two phase palettes share one light direction without erasing identity.
-  float key = (reflectedCrown * mix(0.038, 0.052, gas)
+  float key = fluid * (reflectedCrown * mix(0.038, 0.052, gas)
       + reflectedFacing * shoulder * mix(0.026, 0.034, gas))
     * (1.0 - core * mix(0.24, 0.36, gas));
   key += liquidTransmissionCrest;
@@ -659,12 +666,23 @@ vec3 applyFluidVolumeLobe(
   key += gasOpticalCharacter
     * (crown * fieldBody * 0.026 + max(facing, 0.0) * shoulder * 0.016)
     * finishResponse.w;
+  // Settled Smooth powder enters the same non-rigid volume vocabulary only
+  // through its caller-owned broad-body gate. The low phase scatter and
+  // profile lanes retain mineral grain while adding a coherent shallow key and
+  // deep countershade; no procedural texture or support decision is introduced.
+  float powderVolume = powder * opticalExperimentB * fieldBody
+    * composition.volumeScatter;
+  float powderMid = 4.0 * clamp(depth, 0.0, 1.0)
+    * (1.0 - clamp(depth, 0.0, 1.0));
+  key += powderVolume * (
+    powderMid * 0.026 + max(facing, 0.0) * shoulder * 0.014
+  ) * finishResponse.x;
   key *= finishResponse.x;
   // Transmission is a separate optical lane: applying it after reflection
   // scaling keeps aqueous and oily bodies distinct instead of multiplying the
   // authored response by the reflection lane a second time.
   key += liquidBroadTransmission;
-  float shade = (pocket * mix(0.030, 0.038, gas)
+  float shade = fluid * (pocket * mix(0.030, 0.038, gas)
       + max(-facing, 0.0) * shoulder * mix(0.010, 0.014, gas)
       + core * mix(0.010, 0.007, gas)) * fieldBody;
   shade += deepColumn * 0.032 * liquidCoreScale
@@ -675,6 +693,9 @@ vec3 applyFluidVolumeLobe(
   shade += gasOpticalCharacter
     * (pocket * fieldBody * 0.022 + max(-facing, 0.0) * shoulder * 0.010
       + gasDeepAbsorption * 0.014);
+  shade += powderVolume * (
+    core * core * 0.028 + max(-facing, 0.0) * shoulder * 0.010
+  );
   shade *= finishResponse.y;
   shade *= mix(1.0, 0.82, sootyGasCharacter * core);
   color += (vec3(1.08) - clamp(color, 0.0, 1.08)) * keyTint * key;
@@ -685,10 +706,11 @@ vec3 applyFluidVolumeLobe(
   // phase coefficients, while the optical profile remains the sole family
   // distinction. This is B-only and RGB-only; shores, wisps, contacts, alpha,
   // and compact literal-Off stay owned by their callers.
-  float fluidDeepPigment = opticalExperimentB * finishResponse.z
-    * (liquid * deepColumn * 0.016 + gasDeepAbsorption * 0.024);
-  float fluidLuminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
-  color += (color - vec3(fluidLuminance)) * fluidDeepPigment;
+  float materialDeepPigment = opticalExperimentB * finishResponse.z
+    * (powder * powderVolume * core * 0.012
+      + liquid * deepColumn * 0.016 + gasDeepAbsorption * 0.024);
+  float materialLuminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
+  color += (color - vec3(materialLuminance)) * materialDeepPigment;
   return max(color, vec3(0.0));
 }
 `;

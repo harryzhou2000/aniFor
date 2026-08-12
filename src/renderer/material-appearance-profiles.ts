@@ -14,12 +14,12 @@ export const enum MaterialAppearancePhaseCode {
 export type MaterialAppearancePhase = 'powder' | 'liquid' | 'gas' | 'solid';
 
 /**
- * Key/reflection, fill/absorption, pigment retention, transmission, and the
- * bounded material lobe-width multiplier. The first four lanes retain their
- * established ordering so Canvas consumers can continue to project the lanes
- * they already own without learning about the WebGL-only roughness response.
+ * Key/reflection, fill/absorption, pigment retention, transmission, bounded
+ * material lobe width, and source-shaped interior scatter. The first four
+ * lanes retain their established ordering so Canvas consumers can continue to
+ * project the lanes they already own without learning about WebGL-only response.
  */
-export type MaterialAppearanceProfile = readonly [number, number, number, number, number];
+export type MaterialAppearanceProfile = readonly [number, number, number, number, number, number];
 
 export interface MaterialAppearancePhaseProfiles {
   readonly default: MaterialAppearanceProfile;
@@ -78,8 +78,9 @@ function profile(
   pigment: number,
   transmission: number,
   roughness = 1,
+  interiorScatter = 1,
 ): MaterialAppearanceProfile {
-  return Object.freeze([key, fill, pigment, transmission, roughness]);
+  return Object.freeze([key, fill, pigment, transmission, roughness, interiorScatter]);
 }
 
 function phaseProfiles(
@@ -95,35 +96,35 @@ function phaseProfiles(
  * impossible. The values match the pre-profile shared GLSL selector.
  */
 export const MATERIAL_APPEARANCE_PROFILES: MaterialAppearanceProfiles = Object.freeze({
-  powder: phaseProfiles(profile(0.90, 1.10, 1.08, 0.80, 1.18), {
-    [RenderOptics.CrystallineGranular]: profile(1.24, 0.82, 1.04, 1.22, 0.76),
-    [RenderOptics.SootyGranular]: profile(0.72, 1.30, 1.26, 0.64, 1.30),
-    [RenderOptics.MetallicGranular]: profile(1.32, 1.08, 0.92, 0.58, 0.72),
+  powder: phaseProfiles(profile(0.90, 1.10, 1.08, 0.80, 1.18, 0.90), {
+    [RenderOptics.CrystallineGranular]: profile(1.24, 0.82, 1.04, 1.22, 0.76, 1.05),
+    [RenderOptics.SootyGranular]: profile(0.72, 1.30, 1.26, 0.64, 1.30, 0.72),
+    [RenderOptics.MetallicGranular]: profile(1.32, 1.08, 0.92, 0.58, 0.72, 0.58),
   }),
   liquid: phaseProfiles(profile(1.0, 1.0, 1.0, 1.0), {
-    [RenderOptics.Aqueous]: profile(1.10, 0.86, 0.82, 1.18, 0.92),
-    [RenderOptics.Oily]: profile(0.94, 1.12, 1.24, 0.72, 1.14),
-    [RenderOptics.Corrosive]: profile(1.16, 1.02, 1.16, 1.02, 0.98),
-    [RenderOptics.Molten]: profile(0.78, 0.82, 1.30, 0.54, 0.88),
-    [RenderOptics.CryogenicLiquid]: profile(1.26, 0.74, 0.78, 1.28, 0.76),
-    [RenderOptics.MetallicLiquid]: profile(1.34, 1.10, 0.92, 0.58, 0.70),
-    [RenderOptics.ViscousLiquid]: profile(0.86, 1.16, 1.22, 0.66, 1.24),
+    [RenderOptics.Aqueous]: profile(1.10, 0.86, 0.82, 1.18, 0.92, 1.25),
+    [RenderOptics.Oily]: profile(0.94, 1.12, 1.24, 0.72, 1.14, 0.72),
+    [RenderOptics.Corrosive]: profile(1.16, 1.02, 1.16, 1.02, 0.98, 0.95),
+    [RenderOptics.Molten]: profile(0.78, 0.82, 1.30, 0.54, 0.88, 0.65),
+    [RenderOptics.CryogenicLiquid]: profile(1.26, 0.74, 0.78, 1.28, 0.76, 1.28),
+    [RenderOptics.MetallicLiquid]: profile(1.34, 1.10, 0.92, 0.58, 0.70, 0.62),
+    [RenderOptics.ViscousLiquid]: profile(0.86, 1.16, 1.22, 0.66, 1.24, 0.76),
   }),
   gas: phaseProfiles(profile(1.0, 1.0, 1.0, 1.0), {
-    [RenderOptics.SootyGas]: profile(0.74, 1.28, 1.12, 0.64, 1.30),
-    [RenderOptics.CleanGas]: profile(1.16, 0.76, 0.76, 1.28, 0.94),
+    [RenderOptics.SootyGas]: profile(0.74, 1.28, 1.12, 0.64, 1.30, 0.72),
+    [RenderOptics.CleanGas]: profile(1.16, 0.76, 0.76, 1.28, 0.94, 1.28),
   }),
   solid: phaseProfiles(profile(1.0, 1.0, 1.0, 1.0), {
-    [RenderOptics.SmoothRigid]: profile(1.18, 1.12, 1.06, 0.72, 0.92),
-    [RenderOptics.Organic]: profile(0.92, 1.16, 1.12, 0.78, 1.14),
-    [RenderOptics.Device]: profile(1.12, 1.50, 1.04, 0.50, 0.88),
-    [RenderOptics.Radioactive]: profile(0.98, 1.24, 1.10, 0.80, 1.04),
-    [RenderOptics.TranslucentRigid]: profile(1.34, 0.82, 0.84, 1.42, 0.76),
-    [RenderOptics.MetallicRigid]: profile(1.42, 1.08, 1.12, 0.56, 0.62),
+    [RenderOptics.SmoothRigid]: profile(1.18, 1.12, 1.06, 0.72, 0.92, 0.80),
+    [RenderOptics.Organic]: profile(0.92, 1.16, 1.12, 0.78, 1.14, 0.80),
+    [RenderOptics.Device]: profile(1.12, 1.50, 1.04, 0.50, 0.88, 0.60),
+    [RenderOptics.Radioactive]: profile(0.98, 1.24, 1.10, 0.80, 1.04, 0.82),
+    [RenderOptics.TranslucentRigid]: profile(1.34, 0.82, 0.84, 1.42, 0.76, 1.25),
+    [RenderOptics.MetallicRigid]: profile(1.42, 1.08, 1.12, 0.56, 0.62, 0.55),
   }),
 });
 
-const MATERIAL_APPEARANCE_IDENTITY_PROFILE = profile(1, 1, 1, 1, 1);
+const MATERIAL_APPEARANCE_IDENTITY_PROFILE = profile(1, 1, 1, 1, 1, 1);
 
 /**
  * Allocation-free runtime projection of the same phase/class vocabulary that
@@ -149,7 +150,7 @@ function knownRenderOptics(optics: number): boolean {
 }
 
 function validateProfile(label: string, value: MaterialAppearanceProfile): void {
-  if (value.length !== 5) throw new Error(`${label} must have five response lanes`);
+  if (value.length !== 6) throw new Error(`${label} must have six response lanes`);
   for (const lane of value) {
     if (!Number.isFinite(lane)
       || lane < MATERIAL_APPEARANCE_PROFILE_MINIMUM
@@ -183,7 +184,7 @@ function glslFloat(value: number): string {
 }
 
 function glslProfile(value: MaterialAppearanceProfile): string {
-  return `MaterialBodyFinishResponse(vec4(${value.slice(0, 4).map(glslFloat).join(', ')}), ${glslFloat(value[4])})`;
+  return `MaterialBodyFinishResponse(vec4(${value.slice(0, 4).map(glslFloat).join(', ')}), ${glslFloat(value[4])}, ${glslFloat(value[5])})`;
 }
 
 function orderedOverrides(
@@ -207,9 +208,10 @@ export function buildMaterialAppearanceProfileGLSLSelector(
     'struct MaterialBodyFinishResponse {',
     '  vec4 optics;',
     '  float roughness;',
+    '  float interiorScatter;',
     '};',
     'MaterialBodyFinishResponse materialBodyFinishParameters(float phase, float optics, float enabled) {',
-    '  if (enabled < 0.5 || optics < 0.5) return MaterialBodyFinishResponse(vec4(1.0), 1.0);',
+    '  if (enabled < 0.5 || optics < 0.5) return MaterialBodyFinishResponse(vec4(1.0), 1.0, 1.0);',
   ];
 
   for (const { name, code } of PHASES) {

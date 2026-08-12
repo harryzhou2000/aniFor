@@ -387,12 +387,13 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).toContain('uniform float uVolumeVfx;');
     expect(normal).toContain('uniform float uMaterialBodyFinish;');
     expect(eight).toContain('uniform float uMaterialBodyFinish;');
-    expect(MATERIAL_BODY_FINISH_GLSL).toContain('vec3 applyFluidVolumeLobe(');
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain('vec3 applyMaterialVolumeLobe(');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('vec3 applySolidMaterialLighting(');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'MaterialBodyFinishResponse materialBodyFinishParameters(float phase, float optics, float enabled)',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('float roughness;');
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain('float interiorScatter;');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('float lobeExponent = mix(2.30, 0.72, roughnessProgress);');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('profileSheenShape * 0.300');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('vec3 applyMaterialAmbientGrounding(');
@@ -426,10 +427,10 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight).toContain('${POWDER_SMOOTH_COVERAGE_GLSL}');
     expect(normal.match(/applyMaterialBodyFinish\(/g)).toHaveLength(3);
     expect(eight.match(/applyMaterialBodyFinish\(/g)).toHaveLength(5);
-    expect(normal.match(/applyFluidVolumeLobe\(/g)).toHaveLength(2);
-    expect(eight.match(/applyFluidVolumeLobe\(/g)).toHaveLength(4);
+    expect(normal.match(/applyMaterialVolumeLobe\(/g)).toHaveLength(3);
+    expect(eight.match(/applyMaterialVolumeLobe\(/g)).toHaveLength(4);
     expect(normal.match(/uMaterialBodyFinish,\s*uMaterialLightingVariant\s*\)/g))
-      .toHaveLength(15);
+      .toHaveLength(16);
     expect(eight.match(/uMaterialBodyFinish,\s*0\.0\s*\)/g)).toHaveLength(9);
     expect(normal.match(/applyMaterialEnvironmentTransport\(/g)).toHaveLength(4);
     expect(eight).not.toContain('applyMaterialEnvironmentTransport(');
@@ -449,10 +450,11 @@ describe('Pixi presenter startup configuration', () => {
       '* max(finishResponse.w - 1.0, 0.0);',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
-      'float fluidDeepPigment = opticalExperimentB * finishResponse.z',
+      'float materialDeepPigment = opticalExperimentB * finishResponse.z',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
-      '* (liquid * deepColumn * 0.016 + gasDeepAbsorption * 0.024);',
+      '* (powder * powderVolume * core * 0.012\n'
+        + '      + liquid * deepColumn * 0.016 + gasDeepAbsorption * 0.024);',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'float profileSheenWeight = composition.profileSheen;',
@@ -492,7 +494,11 @@ describe('Pixi presenter startup configuration', () => {
       'positiveExternal * midPath',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
-      '* phaseScatter * transmissionReserve',
+      '* phaseScatter * interiorScatter * transmissionReserve',
+    );
+    expect(normal).toContain('profileIrradianceProfile.interiorScatter');
+    expect(normal).toContain(
+      'color, 0.0, powderFinishProfile.optics, powderFinishProfile.roughness',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       '(1.0 - transmissionReserve) * bodyDepth * 0.85',

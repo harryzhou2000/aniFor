@@ -36,7 +36,7 @@ describe('material appearance profiles', () => {
       ...MATERIAL_APPEARANCE_PROFILES,
       gas: {
         ...MATERIAL_APPEARANCE_PROFILES.gas,
-        overrides: { ...MATERIAL_APPEARANCE_PROFILES.gas.overrides, [unknownRenderOptics]: [1, 1, 1, 1, 1] },
+        overrides: { ...MATERIAL_APPEARANCE_PROFILES.gas.overrides, [unknownRenderOptics]: [1, 1, 1, 1, 1, 1] },
       },
     };
     const unboundedLane: MaterialAppearanceProfiles = {
@@ -45,7 +45,7 @@ describe('material appearance profiles', () => {
         ...MATERIAL_APPEARANCE_PROFILES.liquid,
         overrides: {
           ...MATERIAL_APPEARANCE_PROFILES.liquid.overrides,
-          [RenderOptics.Aqueous]: [1, 1, 3, 1, 1],
+          [RenderOptics.Aqueous]: [1, 1, 3, 1, 1, 1],
         },
       },
     };
@@ -55,7 +55,7 @@ describe('material appearance profiles', () => {
         ...MATERIAL_APPEARANCE_PROFILES.powder,
         overrides: {
           ...MATERIAL_APPEARANCE_PROFILES.powder.overrides,
-          [RenderOptics.Aqueous]: [1, 1, 1, 1, 1],
+          [RenderOptics.Aqueous]: [1, 1, 1, 1, 1, 1],
         },
       },
     };
@@ -72,15 +72,16 @@ describe('material appearance profiles', () => {
     expect(first).toContain('struct MaterialBodyFinishResponse {');
     expect(first).toContain('vec4 optics;');
     expect(first).toContain('float roughness;');
-    expect(first).toContain('if (abs(optics - 13.0) < 0.5) return MaterialBodyFinishResponse(vec4(1.24, 0.82, 1.04, 1.22), 0.76);');
-    expect(first).toContain('if (abs(optics - 17.0) < 0.5) return MaterialBodyFinishResponse(vec4(1.34, 1.1, 0.92, 0.58), 0.7);');
-    expect(first).toContain('if (abs(optics - 5.0) < 0.5) return MaterialBodyFinishResponse(vec4(0.74, 1.28, 1.12, 0.64), 1.3);');
-    expect(first).toContain('if (abs(optics - 9.0) < 0.5) return MaterialBodyFinishResponse(vec4(0.92, 1.16, 1.12, 0.78), 1.14);');
-    expect(first).toContain('if (abs(optics - 10.0) < 0.5) return MaterialBodyFinishResponse(vec4(1.12, 1.5, 1.04, 0.5), 0.88);');
-    expect(first).toContain('if (abs(optics - 11.0) < 0.5) return MaterialBodyFinishResponse(vec4(0.98, 1.24, 1.1, 0.8), 1.04);');
-    expect(first).toContain('if (abs(optics - 12.0) < 0.5) return MaterialBodyFinishResponse(vec4(1.34, 0.82, 0.84, 1.42), 0.76);');
-    expect(first).toContain('if (abs(optics - 20.0) < 0.5) return MaterialBodyFinishResponse(vec4(1.42, 1.08, 1.12, 0.56), 0.62);');
-    expect(first).toContain('if (enabled < 0.5 || optics < 0.5) return MaterialBodyFinishResponse(vec4(1.0), 1.0);');
+    expect(first).toContain('float interiorScatter;');
+    expect(first).toContain('if (abs(optics - 13.0) < 0.5) return MaterialBodyFinishResponse(vec4(1.24, 0.82, 1.04, 1.22), 0.76, 1.05);');
+    expect(first).toContain('if (abs(optics - 17.0) < 0.5) return MaterialBodyFinishResponse(vec4(1.34, 1.1, 0.92, 0.58), 0.7, 0.62);');
+    expect(first).toContain('if (abs(optics - 5.0) < 0.5) return MaterialBodyFinishResponse(vec4(0.74, 1.28, 1.12, 0.64), 1.3, 0.72);');
+    expect(first).toContain('if (abs(optics - 9.0) < 0.5) return MaterialBodyFinishResponse(vec4(0.92, 1.16, 1.12, 0.78), 1.14, 0.8);');
+    expect(first).toContain('if (abs(optics - 10.0) < 0.5) return MaterialBodyFinishResponse(vec4(1.12, 1.5, 1.04, 0.5), 0.88, 0.6);');
+    expect(first).toContain('if (abs(optics - 11.0) < 0.5) return MaterialBodyFinishResponse(vec4(0.98, 1.24, 1.1, 0.8), 1.04, 0.82);');
+    expect(first).toContain('if (abs(optics - 12.0) < 0.5) return MaterialBodyFinishResponse(vec4(1.34, 0.82, 0.84, 1.42), 0.76, 1.25);');
+    expect(first).toContain('if (abs(optics - 20.0) < 0.5) return MaterialBodyFinishResponse(vec4(1.42, 1.08, 1.12, 0.56), 0.62, 0.55);');
+    expect(first).toContain('if (enabled < 0.5 || optics < 0.5) return MaterialBodyFinishResponse(vec4(1.0), 1.0, 1.0);');
     expect(first).not.toContain('Material.');
   });
 
@@ -99,6 +100,10 @@ describe('material appearance profiles', () => {
       .toBeLessThan(1);
     expect(MATERIAL_APPEARANCE_PROFILES.solid.overrides[RenderOptics.MetallicRigid]?.[4])
       .toBeLessThan(MATERIAL_APPEARANCE_PROFILES.solid.overrides[RenderOptics.SmoothRigid]![4]);
+    expect(MATERIAL_APPEARANCE_PROFILES.liquid.overrides[RenderOptics.Aqueous]?.[5])
+      .toBeGreaterThan(MATERIAL_APPEARANCE_PROFILES.liquid.overrides[RenderOptics.Oily]![5]);
+    expect(MATERIAL_APPEARANCE_PROFILES.gas.overrides[RenderOptics.CleanGas]?.[5])
+      .toBeGreaterThan(MATERIAL_APPEARANCE_PROFILES.gas.overrides[RenderOptics.SootyGas]![5]);
   });
 
   it('resolves the same frozen phase override or fallback without allocating', () => {
@@ -108,7 +113,7 @@ describe('material appearance profiles', () => {
     expect(resolveMaterialAppearanceProfile('liquid', RenderOptics.CleanGas))
       .toBe(MATERIAL_APPEARANCE_PROFILES.liquid.default);
     const identity = resolveMaterialAppearanceProfile('gas', RenderOptics.Default);
-    expect(identity).toEqual([1, 1, 1, 1, 1]);
+    expect(identity).toEqual([1, 1, 1, 1, 1, 1]);
     expect(Object.isFrozen(identity)).toBe(true);
     expect(resolveMaterialAppearanceProfile('gas', -1)).toBe(identity);
     expect(resolveMaterialAppearanceProfile('gas', 255)).toBe(identity);

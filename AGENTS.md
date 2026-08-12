@@ -1,27 +1,27 @@
 # AniforTPT agent guidance
 
-The active measurement-framework increment consolidates current-only region
-response and appearance extraction behind one scripts-owned compiler. It must
-authenticate and decode each configured OFF/A/B PNG once, conservatively map
-each declared region once, and accumulate the existing RGBA response and fixed-
-luma appearance values in one pixel traversal. Keep the two portable v1 JSON
-records and their separate static boards byte-shape compatible; the combined
-decoded measurement is ephemeral and must never become a package identity or
-browser/static-contract concern. Existing single-record APIs remain
-compatibility projections. Publication and portable verification should request
-both projections from the same compiler so geometry, pinning, and dimension
-rules cannot drift. This is an efficiency and authoring-seam change only: it
-adds no visual score, threshold, ranking, decision, promotion, or historical
-hash gate.
+The active visual increment is shared material-volume presentation. Keep the
+six-lane declarative appearance profile as the class-level authoring seam; its
+`interiorScatter` lane may modulate only the established source-shaped internal
+transport response. Keep powder, liquid, and gas on the single material-volume
+helper. Settled Smooth powder may enter only through the existing broad-body
+gate; Local/Grains, Canvas2D, OFF/A, and compact true-8x must not acquire that
+response. The B-only shader work is RGB-only and must not change support, alpha,
+topology, contacts, allocations, fields, textures, or targets.
 
-Local proof for the consolidated compiler passed 1,556 source and 360 tooling
-tests, typecheck, production build, and the exact 19-resource closure. A real
-shared-host SwiftShader material-lighting review passed all eight WebGL/HDR
-candidates with one host and zero restarts. The portable verifier reconstructed
-both unchanged v1 records from the same 24 pinned captures: eight candidates
-and 257 regions in each projection. The retained current-only package is
-`.artifacts/visual-lab-reviews/material-lighting-18cd894f-211a-4d53-b6e6-fd55cb29e464`;
-its hashes authenticate that package only.
+Judge this work from current WebGL/HDR material-lighting and Powder-style boards,
+semantic/field/framebuffer health, and true-8x execution. Preserve holes, fine
+columns, internal grain, square-cell Grains reference, continuous liquid bodies,
+and cloud support. Do not add pixel thresholds, exact cross-revision hashes, or
+new evidence schemas for aesthetic approval. Canvas2D remains a permissive
+compatibility backend, while WebGL is canonical.
+
+The favored local checkpoint passed the complete eight-scene material-lighting
+stable-snapshot review and portable verification at
+`.artifacts/visual-lab-reviews/material-lighting-4101a543-2e39-47a2-899c-f5d98ee1bba3`.
+It also passed the independent 217-material true-8x production audit, complete
+source tests, all 360 tooling tests, typecheck, build, and exact 19-resource
+closure. The package is current-only evidence; its hashes are not a visual gate.
 
 Current-only region appearance evidence is descriptive navigation, not a
 visual gate. `region-appearance.json` may report fixed-luma spread, range, and
