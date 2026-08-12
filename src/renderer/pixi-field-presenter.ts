@@ -1873,16 +1873,17 @@ void main() {
         float liquidFinishDepth = liquidBodyFinishDepth(
           smoothstep(0.48, 0.90, min(liquid.a, liquidNeighbourMean)), 0.0
         );
-        vec4 liquidFinishResponse = materialBodyFinishParameters(
+        MaterialBodyFinishResponse liquidFinishProfile = materialBodyFinishParameters(
           1.0, reconstructedOptics, uMaterialBodyFinish
         );
+        vec4 liquidFinishResponse = liquidFinishProfile.optics;
         reconstructedLiquid = applyMaterialBodyFinish(
-          reconstructedLiquid, 1.0, liquidFinishResponse, liquid.a,
+          reconstructedLiquid, 1.0, liquidFinishResponse, liquidFinishProfile.roughness, liquid.a,
           liquidFinishDepth, liquidFinishSlope, liquidFinishEligibility,
           uMaterialBodyFinish, 0.0
         );
         reconstructedLiquid = applyFluidVolumeLobe(
-          reconstructedLiquid, 1.0, liquidFinishResponse, liquid.a,
+          reconstructedLiquid, 1.0, liquidFinishResponse, liquidFinishProfile.roughness, liquid.a,
           liquidNeighbourMean,
           clamp((liquid.a - liquidNeighbourMean) * 5.5, -1.0, 1.0),
           liquidFinishDepth, liquidFinishSlope, 0.0,
@@ -1914,15 +1915,16 @@ void main() {
         float gasNeighbourMean = (gasLeft + gasRight + gasTop + gasBottom) * 0.25;
         vec2 gasFinishSlope = vec2(gasRight - gasLeft, gasBottom - gasTop);
         float gasFinishDepth = smoothstep(0.035, 0.62, atmosphere.a);
-        vec4 gasFinishResponse = materialBodyFinishParameters(
+        MaterialBodyFinishResponse gasFinishProfile = materialBodyFinishParameters(
           2.0, gasBodyFinishOptics(0.0, gasIdentityStyle), uMaterialBodyFinish
         );
+        vec4 gasFinishResponse = gasFinishProfile.optics;
         gas = applyMaterialBodyFinish(
-          gas, 2.0, gasFinishResponse, atmosphere.a, gasFinishDepth,
+          gas, 2.0, gasFinishResponse, gasFinishProfile.roughness, atmosphere.a, gasFinishDepth,
           gasFinishSlope, 1.0, uMaterialBodyFinish, 0.0
         );
         gas = applyFluidVolumeLobe(
-          gas, 2.0, gasFinishResponse, atmosphere.a, gasNeighbourMean,
+          gas, 2.0, gasFinishResponse, gasFinishProfile.roughness, atmosphere.a, gasNeighbourMean,
           clamp((atmosphere.a - gasNeighbourMean) * 8.0, -1.0, 1.0),
           gasFinishDepth, gasFinishSlope,
           gasCompactMacroRelief(uv * uFieldSize - 0.5),
@@ -2061,15 +2063,16 @@ void main() {
       color += gasEightXVolumeRelief(gasDensity, gasLeft, gasRight, gasTop, gasBottom);
       float gasNeighbourMean = (gasLeft + gasRight + gasTop + gasBottom) * 0.25;
       vec2 gasFinishSlope = vec2(gasRight - gasLeft, gasBottom - gasTop);
-      vec4 gasFinishResponse = materialBodyFinishParameters(
+      MaterialBodyFinishResponse gasFinishProfile = materialBodyFinishParameters(
         2.0, gasBodyFinishOptics(optics, gasIdentityStyle), uMaterialBodyFinish
       );
+      vec4 gasFinishResponse = gasFinishProfile.optics;
       color = applyMaterialBodyFinish(
-        color, 2.0, gasFinishResponse, gasDensity, smoothstep(0.035, 0.62, gasDensity),
+        color, 2.0, gasFinishResponse, gasFinishProfile.roughness, gasDensity, smoothstep(0.035, 0.62, gasDensity),
         gasFinishSlope, 1.0, uMaterialBodyFinish, 0.0
       );
       color = applyFluidVolumeLobe(
-        color, 2.0, gasFinishResponse, gasDensity, gasNeighbourMean,
+        color, 2.0, gasFinishResponse, gasFinishProfile.roughness, gasDensity, gasNeighbourMean,
         clamp((atmosphere.a - gasNeighbourMean) * 8.0, -1.0, 1.0),
         smoothstep(0.035, 0.62, gasDensity), gasFinishSlope,
         gasCompactMacroRelief(grid),
@@ -2303,8 +2306,11 @@ void main() {
     if (uPowderStyle > 1.5 && traits < 0.5 && !materialEmissive) {
       float powderFinishEligibility = step(0.001, powderFieldBlend)
         * smoothstep(0.70, 0.96, depth);
+      MaterialBodyFinishResponse powderFinishProfile = materialBodyFinishParameters(
+        0.0, optics, uMaterialBodyFinish
+      );
       color = applyMaterialBodyFinish(
-        color, 0.0, materialBodyFinishParameters(0.0, optics, uMaterialBodyFinish),
+        color, 0.0, powderFinishProfile.optics, powderFinishProfile.roughness,
         density, depth, powderFieldSlope,
         powderFinishEligibility, uMaterialBodyFinish, 0.0
       );
@@ -2968,15 +2974,16 @@ void main() {
       float liquidFinishDepth = liquidBodyFinishDepth(
         smoothstep(0.54, 0.90, min(liquid.a, liquidFinishNeighbourMean)), depth
       );
-      vec4 liquidFinishResponse = materialBodyFinishParameters(
+      MaterialBodyFinishResponse liquidFinishProfile = materialBodyFinishParameters(
         1.0, optics, uMaterialBodyFinish
       );
+      vec4 liquidFinishResponse = liquidFinishProfile.optics;
       color = applyMaterialBodyFinish(
-        color, 1.0, liquidFinishResponse, density, liquidFinishDepth, liquidSlope,
+        color, 1.0, liquidFinishResponse, liquidFinishProfile.roughness, density, liquidFinishDepth, liquidSlope,
         liquidFinishEligibility, uMaterialBodyFinish, 0.0
       );
       color = applyFluidVolumeLobe(
-        color, 1.0, liquidFinishResponse, density, liquidFinishNeighbourMean,
+        color, 1.0, liquidFinishResponse, liquidFinishProfile.roughness, density, liquidFinishNeighbourMean,
         clamp((liquid.a - liquidFinishNeighbourMean) * 5.5, -1.0, 1.0),
         liquidFinishDepth, liquidSlope, 0.0,
         liquidFinishEligibility, uMaterialBodyFinish, 0.0
@@ -6631,20 +6638,26 @@ void main() {
     ) * smoothstep(0.025, 0.50, gasShadeDensity)
       * (1.0 - opticalDepth * 0.30) * uGasVolumeChroma;
     color *= 1.0 + gasVolumeExposure;
-    vec4 gasFinishResponse = materialBodyFinishParameters(
+    MaterialBodyFinishResponse gasFinishProfile = materialBodyFinishParameters(
       2.0, gasBodyFinishOptics(
         optics, floor(gasStyleState.r * 255.0 + 0.5)
       ), uMaterialBodyFinish
     );
+    vec4 gasFinishResponse = gasFinishProfile.optics;
     color = applyMaterialBodyFinish(
-      color, 2.0, gasFinishResponse, gasShadeDensity, opticalDepth, volumeSlope,
+      color, 2.0, gasFinishResponse, gasFinishProfile.roughness, gasShadeDensity, opticalDepth, volumeSlope,
       1.0, uMaterialBodyFinish, uMaterialLightingVariant
     );
     color = applyFluidVolumeLobe(
-      color, 2.0, gasFinishResponse, gasShadeDensity, cloudNeighbourMean,
+      color, 2.0, gasFinishResponse, gasFinishProfile.roughness, gasShadeDensity, cloudNeighbourMean,
       gasCurvature, opticalDepth,
       volumeSlope, 0.0, gasInterior, uMaterialBodyFinish,
       uMaterialLightingVariant
+    );
+    color = applyMaterialAmbientGrounding(
+      color, 2.0, gasFinishResponse, gasFinishProfile.roughness,
+      gasShadeDensity, opticalDepth, volumeSlope, gasInterior,
+      uMaterialBodyFinish, uMaterialLightingVariant
     );
     // E04: turn the existing field normal and curvature into a readable
     // connected billow without inventing particle-scale noise. The shared
@@ -8333,19 +8346,25 @@ void main() {
       float liquidFinishDepth = liquidBodyFinishDepth(
         liquidDepth, liquidOpticalDepth
       );
-      vec4 liquidFinishResponse = materialBodyFinishParameters(
+      MaterialBodyFinishResponse liquidFinishProfile = materialBodyFinishParameters(
         1.0, liquidFinishOptics, uMaterialBodyFinish
       );
+      vec4 liquidFinishResponse = liquidFinishProfile.optics;
       color = applyMaterialBodyFinish(
-        color, 1.0, liquidFinishResponse, liquidSurfaceDensity, liquidFinishDepth,
+        color, 1.0, liquidFinishResponse, liquidFinishProfile.roughness, liquidSurfaceDensity, liquidFinishDepth,
         semanticSlope + volumeSlope, liquidFinishEligibility,
         uMaterialBodyFinish, uMaterialLightingVariant
       );
       color = applyFluidVolumeLobe(
-        color, 1.0, liquidFinishResponse, liquidSurfaceDensity, liquidNeighbourMean,
+        color, 1.0, liquidFinishResponse, liquidFinishProfile.roughness, liquidSurfaceDensity, liquidNeighbourMean,
         clamp((liquidDensity - liquidNeighbourMean) * 5.5, -1.0, 1.0), liquidFinishDepth,
         semanticSlope + volumeSlope, 0.0, liquidFinishEligibility,
         uMaterialBodyFinish, uMaterialLightingVariant
+      );
+      color = applyMaterialAmbientGrounding(
+        color, 1.0, liquidFinishResponse, liquidFinishProfile.roughness,
+        liquidSurfaceDensity, liquidFinishDepth, semanticSlope + volumeSlope,
+        liquidFinishEligibility, uMaterialBodyFinish, uMaterialLightingVariant
       );
     }
   } else {
@@ -8649,11 +8668,17 @@ void main() {
       && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5
       && solidInterior > 0.001 && solidOpticalDepth > 6.0 / 255.0
       && solidLightingFamily > 0.5) {
-      vec4 solidFinishResponse = materialBodyFinishParameters(
+      MaterialBodyFinishResponse solidFinishProfile = materialBodyFinishParameters(
         3.0, optics, uMaterialBodyFinish
       );
       color = applySolidMaterialLighting(
-        color, solidFinishResponse, solidOpticalDepth, normal,
+        color, solidFinishProfile.optics, solidOpticalDepth, normal,
+        solidInterior * solidLightingFamily, uMaterialBodyFinish,
+        uMaterialLightingVariant
+      );
+      color = applyMaterialAmbientGrounding(
+        color, 3.0, solidFinishProfile.optics, solidFinishProfile.roughness,
+        density, solidOpticalDepth, shape.yz,
         solidInterior * solidLightingFamily, uMaterialBodyFinish,
         uMaterialLightingVariant
       );
@@ -11497,11 +11522,19 @@ void main() {
   }
   if (family == 4.0 && traits < 0.5 && !materialEmissive
     && powderLightBodyGate > 0.001) {
+    MaterialBodyFinishResponse powderFinishProfile = materialBodyFinishParameters(
+      0.0, optics, uMaterialBodyFinish
+    );
     color = applyMaterialBodyFinish(
-      color, 0.0, materialBodyFinishParameters(0.0, optics, uMaterialBodyFinish),
+      color, 0.0, powderFinishProfile.optics, powderFinishProfile.roughness,
       density, powderLightBodyDepth,
       widePowderShape.yz, powderLightBodyGate,
       uMaterialBodyFinish, uMaterialLightingVariant
+    );
+    color = applyMaterialAmbientGrounding(
+      color, 0.0, powderFinishProfile.optics, powderFinishProfile.roughness,
+      density, powderLightBodyDepth, widePowderShape.yz,
+      powderLightBodyGate, uMaterialBodyFinish, uMaterialLightingVariant
     );
   }
   // E11: Wax and genuinely hydrated PLNT carry a shallow, coloured
@@ -11648,9 +11681,10 @@ void main() {
     float profileIrradianceDepth = gasVolume > 0.5 ? atmosphereState.a
       : (liquidVolume > 0.5 ? liquidBodyFinishDepth(liquidInterior, liquidOpticalDepth)
       : (family == 4.0 ? powderLightBodyDepth : solidOpticalDepth));
-    vec4 profileIrradianceResponse = materialBodyFinishParameters(
+    MaterialBodyFinishResponse profileIrradianceProfile = materialBodyFinishParameters(
       profileIrradiancePhase, optics, uMaterialBodyFinish
     );
+    vec4 profileIrradianceResponse = profileIrradianceProfile.optics;
     // Resolve one shared outward probe only when a phase-local gas/solid branch
     // did not already perform it. Then compare it with one opposing material-
     // side sample: a genuine external source has positive outward contrast,

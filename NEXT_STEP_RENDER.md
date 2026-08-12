@@ -231,6 +231,43 @@ the hosted Water receipt-v2 package plus portable verifier completed in the
 the completed release evidence for the lobe; do not promote its PNG bytes into
 a future visual gate.
 
+The next material-framework increment is favored locally. The static
+phase-by-`RenderOptics` appearance profile now has a fifth bounded
+roughness/lobe-width lane alongside its established reflection, absorption,
+pigment, and transmission tuple. One generated GLSL response struct selects all
+five values atomically at shader assembly time; palette/style texture bytes,
+uploads, CPU fields, runtime material selectors, and the first four response
+lanes remain unchanged. Normal Volumetric/B uses the new lane to concentrate
+crystalline, metallic, cryogenic, and translucent highlights while spreading a
+lower-energy shoulder through ordinary/sooty powder, viscous liquid, organic
+matter, and sooty gas. Off and Balanced retain their established response;
+Canvas continues to project only the lanes it owns, and compact true-8x passes
+literal Off.
+
+That vocabulary immediately feeds one shared ambient-cavity grounding helper.
+Existing phase-local density, depth, slope, and eligibility proofs admit the
+response: deep, locally quiet matter receives a restrained pigment-aware cavity
+tone, while exposed shells, holes, thin structures, high-gradient contacts, and
+unsupported fragments tend continuously to zero. Profile transmission opens
+clear media and roughness broadens diffuse mass. The helper is B-only and
+RGB-only and adds no sample, texture, field, target, pass, uniform, allocation,
+CPU work, support, alpha, topology, Canvas rule, or compact true-8x work.
+
+Current-only SwiftShader evidence is retained at
+`/tmp/anifortpt-rough-ground-material`, `/tmp/anifortpt-rough-ground-gas`, and
+`/tmp/anifortpt-rough-ground-opposed`. All three production-bundle captures
+passed WebGL/HDR semantic, authoritative-field, and framebuffer-alpha
+invariants with zero browser errors and clean teardown. Direct inspection
+favors the result: Water/Oil and gas bodies carry a quieter dark interior rather
+than a uniformly lit cut-out; powder blocks gain grounded mass without losing
+grain; holes, sparse gas, contacts, walls, and blanks remain open; and opposed
+warm/cool flanks plus the wall umbra remain legible. The protected true-8x audit
+compiled the migrated profile struct and rendered all 217 material projections
+at 4896x3072 with zero browser errors while retaining its literal-Off path.
+Treat these as current-only aesthetic and compatibility evidence, never a
+cross-revision PNG requirement. The next release step is the canonical
+seven-scene shared-host package and live Pages verification.
+
 Canvas evidence remains diagnostic only (`canonical: false`, `comparison:
 none`), carries no image-hash acceptance policy, and cannot fail the canonical
 WebGL checkpoint. The current multi-backend/scale board remains the place to

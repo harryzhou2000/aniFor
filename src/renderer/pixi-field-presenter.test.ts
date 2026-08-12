@@ -377,8 +377,14 @@ describe('Pixi presenter startup configuration', () => {
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('vec3 applyFluidVolumeLobe(');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('vec3 applySolidMaterialLighting(');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
-      'vec4 materialBodyFinishParameters(float phase, float optics, float enabled)',
+      'MaterialBodyFinishResponse materialBodyFinishParameters(float phase, float optics, float enabled)',
     );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain('float roughness;');
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain('float lobeExponent = mix(2.30, 0.72, roughnessProgress);');
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain('profileSheenShape * 0.300');
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain('vec3 applyMaterialAmbientGrounding(');
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain('float phaseGrounding = powder * 0.92');
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain('mix(1.08, 0.62, transmission)');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('float gasCompactMacroRelief(vec2 position)');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('float liquidBodyFinishDepth(');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
@@ -398,7 +404,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal.match(/applyFluidVolumeLobe\(/g)).toHaveLength(2);
     expect(eight.match(/applyFluidVolumeLobe\(/g)).toHaveLength(4);
     expect(normal.match(/uMaterialBodyFinish,\s*uMaterialLightingVariant\s*\)/g))
-      .toHaveLength(7);
+      .toHaveLength(11);
     expect(eight.match(/uMaterialBodyFinish,\s*0\.0\s*\)/g)).toHaveLength(9);
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'float lightingExperimentB = step(1.5, materialLightingVariant);',
@@ -425,7 +431,7 @@ describe('Pixi presenter startup configuration', () => {
       'float profileSheenWeight = powder * 0.18 + liquid + gas * 0.78;',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
-      '* (0.100 + profileGrazing * profileGrazing * 0.300)',
+      '* (0.100 + profileSheenShape * 0.300)',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'vec3 applyMaterialProfileIrradiance(',
@@ -529,7 +535,7 @@ describe('Pixi presenter startup configuration', () => {
       'pocket * fieldBody * 0.022 + max(-facing, 0.0) * shoulder * 0.010',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
-      '* (0.060 + max(facing, 0.0) * 0.045) * liquidSurfaceScale;',
+      '* (0.060 + reflectedFacing * 0.045) * liquidSurfaceScale;',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'float liquidShallowBand = transmittedShoulder * transmittedShoulder\n    * opticalExperimentB;',

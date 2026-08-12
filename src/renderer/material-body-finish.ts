@@ -40,6 +40,7 @@ vec3 applyMaterialBodyFinish(
   vec3 color,
   float phase,
   vec4 finishResponse,
+  float finishRoughness,
   float density,
   float depth,
   vec2 slope,
@@ -139,9 +140,21 @@ vec3 applyMaterialBodyFinish(
   // literal Off, so it cannot alter support, topology, or the bounded path.
   float profileSheenWeight = powder * 0.18 + liquid + gas * 0.78;
   float profileGrazing = 1.0 - abs(clamp(facing, -1.0, 1.0));
+  // The fifth appearance-profile lane controls lobe width without consuming a
+  // palette/style byte or adding a runtime material lookup. Low roughness keeps
+  // crystalline, metallic, and translucent families on a tighter, brighter
+  // grazing lobe; high roughness spreads a lower-energy shoulder across soot,
+  // viscous liquid, organic matter, and ordinary mineral powder. Only B uses
+  // this response, so Off/Balanced and compact true-8x retain their established
+  // presentation even though they compile the same static profile vocabulary.
+  float roughness = clamp(finishRoughness, 0.5, 1.5);
+  float roughnessProgress = (roughness - 0.5) / 1.0;
+  float profileSheenShape = pow(
+    profileGrazing, mix(3.4, 1.25, roughnessProgress)
+  ) * mix(1.18, 0.82, roughnessProgress);
   float profileSheen = lightingExperimentB * eligibility * shell
     * profileSheenWeight * finishResponse.x
-    * (0.100 + profileGrazing * profileGrazing * 0.300)
+    * (0.100 + profileSheenShape * 0.300)
     * mix(0.55, 1.0, clamp(finishResponse.w / 1.40, 0.0, 1.0));
   vec3 profileSheenTint = mix(
     vec3(0.78, 0.89, 1.00), mix(vec3(0.98), identityTint, 0.38), 0.48
@@ -305,6 +318,52 @@ vec3 applyMaterialProfileIrradiance(
   return max(color, vec3(0.0));
 }
 
+// Source-independent ambient grounding for reconstructed matter. Every caller
+// supplies its existing body/depth/slope admission proof, so this helper cannot
+// create support or turn unlike contacts into separator lines. Deep, locally
+// level matter receives a quiet pigment-aware cavity tone; exposed shells,
+// holes, thin structures, and high-gradient boundaries tend continuously to
+// zero. Profile transmission opens the ambient response for clear media while
+// the new roughness lane lets diffuse families retain a broader grounded mass.
+// This is B-only RGB arithmetic on normal WebGL. Canvas and compact true-8x do
+// not call it and gain no resource, sample, uniform, allocation, or branch.
+vec3 applyMaterialAmbientGrounding(
+  vec3 color,
+  float phase,
+  vec4 finishResponse,
+  float finishRoughness,
+  float density,
+  float depth,
+  vec2 slope,
+  float eligibility,
+  float enabled,
+  float materialLightingVariant
+) {
+  if (enabled < 0.5 || materialLightingVariant < 1.5 || eligibility <= 0.0001) {
+    return color;
+  }
+  float powder = 1.0 - step(0.5, phase);
+  float liquid = step(0.5, phase) * (1.0 - step(1.5, phase));
+  float gas = step(1.5, phase) * (1.0 - step(2.5, phase));
+  float solid = step(2.5, phase);
+  float body = smoothstep(0.08 - gas * 0.06, 0.52 - gas * 0.28, density)
+    * eligibility;
+  float interior = smoothstep(0.24, 0.84, clamp(depth, 0.0, 1.0));
+  float slopeQuiet = 1.0 - smoothstep(0.018, 0.18, length(slope));
+  float cavity = body * interior * mix(0.48, 1.0, slopeQuiet);
+  float transmission = clamp((finishResponse.w - 0.50) / 1.0, 0.0, 1.0);
+  float roughness = clamp((finishRoughness - 0.5) / 1.0, 0.0, 1.0);
+  float phaseGrounding = powder * 0.92 + liquid * 0.62 + gas * 0.42 + solid * 0.78;
+  float grounding = cavity * phaseGrounding
+    * mix(1.08, 0.62, transmission) * mix(0.88, 1.10, roughness)
+    * (0.026 + finishResponse.y * 0.032);
+  float identityPeak = max(max(color.r, color.g), max(color.b, 0.12));
+  vec3 identityTint = clamp(color / identityPeak, 0.0, 1.0);
+  vec3 cavityTint = mix(vec3(0.74, 0.80, 0.88), identityTint, 0.34);
+  color *= vec3(1.0) - cavityTint * grounding;
+  return max(color, vec3(0.0));
+}
+
 // B-only normal-HDR lighting for exact, supported solid bodies. The solid
 // compositor already owns normals, optical depth, contact rejection, and
 // family classification; this helper only turns those proofs into a shared
@@ -384,6 +443,7 @@ vec3 applyFluidVolumeLobe(
   vec3 color,
   float phase,
   vec4 finishResponse,
+  float finishRoughness,
   float density,
   float neighbourMean,
   float curvature,
@@ -446,6 +506,23 @@ vec3 applyFluidVolumeLobe(
   // literal Off, keeping its established fifteen-million-fragment path exact.
   float opticalExperiment = step(0.5, materialLightingVariant);
   float opticalExperimentB = step(1.5, materialLightingVariant);
+  // Convert the static family roughness lane into an energy-bounded lobe width.
+  // The original crown/facing response remains exact outside B. Tight optical
+  // families concentrate their reflection; broad families trade peak for a
+  // wider diffuse shoulder. This is scalar arithmetic over existing curvature
+  // and normal proofs, never a material selector or additional sample.
+  float roughness = clamp(finishRoughness, 0.5, 1.5);
+  float roughnessProgress = (roughness - 0.5) / 1.0;
+  float lobeExponent = mix(2.30, 0.72, roughnessProgress);
+  float lobeEnergy = mix(1.20, 0.86, roughnessProgress);
+  float reflectedCrown = mix(
+    crown, pow(crown, lobeExponent) * lobeEnergy, opticalExperimentB
+  );
+  float positiveFacing = max(facing, 0.0);
+  float reflectedFacing = mix(
+    positiveFacing, pow(positiveFacing, lobeExponent) * lobeEnergy,
+    opticalExperimentB
+  );
   float liquidSurfaceScale = 1.0 + liquid * opticalExperiment
     * mix(0.28, 0.74, opticalExperimentB);
   float liquidCoreScale = 1.0 + liquid * opticalExperiment
@@ -481,13 +558,13 @@ vec3 applyFluidVolumeLobe(
   float liquidBroadTransmission = liquidShallowBand
     * finishResponse.w * (0.160 + crown * 0.040);
   float liquidTransmissionCrest = transmittedShoulder * finishResponse.w
-    * (0.060 + max(facing, 0.0) * 0.045) * liquidSurfaceScale;
+    * (0.060 + reflectedFacing * 0.045) * liquidSurfaceScale;
 
   // A broad convex crown and directional shoulder supply a coherent reflected
   // lobe. Concave/deep regions retain pigment through restrained absorption;
   // the two phase palettes share one light direction without erasing identity.
-  float key = (crown * mix(0.038, 0.052, gas)
-      + max(facing, 0.0) * shoulder * mix(0.026, 0.034, gas))
+  float key = (reflectedCrown * mix(0.038, 0.052, gas)
+      + reflectedFacing * shoulder * mix(0.026, 0.034, gas))
     * (1.0 - core * mix(0.24, 0.36, gas));
   key += liquidTransmissionCrest;
   key += gasMidTransmission * 0.036 * finishResponse.w * gasMidScale;
