@@ -1209,6 +1209,19 @@ preparer registration; the domain-selected cohort compiler, tracked recipe set,
 and CI default update from those declarations rather than another hand-copied
 list.
 
+That authoring increment is deployed at exact revision
+`4a393e38fceb91cf3721cbcf6b5d4c714881e6a1` by workflow run
+`31584489190`. The 3m46s build passed 1,533 source and 344 tooling tests with
+269/270 ccache hits and verified the exact 19-resource bundle. CI resolved the
+tracked `material-lighting` recipe-set ID
+`sha256:0fc08c709e9d1962977eed504cee4593fdb694c94614c99a8aeef51968beb6bf`
+and passed all seven candidates through one shared host with zero restarts; the
+downloaded portable package verified. The review completed in 3m41s on this
+runner, useful directional evidence but not a universal performance claim.
+Pages deployed in 9 seconds, live closure passed all 19 resources on attempt
+one, and the fresh hosted Water receipt-v2 package verified against the exact
+deployed revision.
+
 Revision `813066c81735da2e9b2752c9ddff276cc1c8f0da` deployed the retained
 profile sheen through workflow run `31528453927`. The ccache-backed build,
 two-candidate stable-snapshot review, downloaded-package verification, Pages
