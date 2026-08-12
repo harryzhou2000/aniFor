@@ -524,6 +524,14 @@ async function captureVisualLabCandidateEvidence({
 
   await measure('readiness', async () => {
     const { profile, effectiveTimeouts } = options.executionTuning;
+    // A readiness snapshot performs the same complete semantic, authoritative-
+    // field, and framebuffer readback as a capture snapshot. On a loaded
+    // software GPU that atomic proof can legitimately outlive the generic CDP
+    // command bound, so let it consume the driver-owned readiness budget.
+    const snapshotCommandTimeoutMs = Math.max(
+      CDP_COMMAND_TIMEOUT_MS,
+      effectiveTimeouts.readinessMs,
+    );
     await captureSubphases.measureReadiness(
       'datasetWaitMs',
       () => waitForPage(
@@ -549,7 +557,11 @@ async function captureVisualLabCandidateEvidence({
       })()`));
     await waitFor(async () => {
       const snapshot = await captureSubphases.measureSnapshot(
-        'readiness', () => snapshotState(cdp, options.executionPlan),
+        'readiness', () => snapshotState(
+          cdp,
+          options.executionPlan,
+          snapshotCommandTimeoutMs,
+        ),
       );
       return snapshot.semantic.occupied > 0
         && snapshot.fieldAlpha.nonzero > 0

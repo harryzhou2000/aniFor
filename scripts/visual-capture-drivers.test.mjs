@@ -385,6 +385,8 @@ describe('typed visual capture drivers', () => {
     expect(source).toContain('createVisualLabCaptureSubphaseTimingRecorder');
     expect(source).toContain('captureSubphases: captureSubphases.finish()');
     expect(source).toContain("measureSnapshot(\n        'readiness'");
+    expect(source).toContain('effectiveTimeouts.readinessMs');
+    expect(source).toContain('snapshotCommandTimeoutMs');
     expect(source).toContain("pageCdp.send('Page.enable')");
     expect(source).toContain('browserErrors = collectBrowserErrors(pageCdp)');
     expect(source).toContain('initialUrl: stagedNavigation ? blankTargetUrl : url');
