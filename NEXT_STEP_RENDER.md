@@ -1031,6 +1031,43 @@ material projections visible with zero browser errors. Direct review retains
 the restrained external-source response with no halo, topology, hole, or fine-
 structure regression; current image bytes remain diagnostic only.
 
+The next retained shared-material increment adds a fifth compile-time
+appearance-profile lane for bounded lobe width and one B-only ambient grounding
+response. `RenderOptics` remains the sole family key: rough, sooty, viscous,
+crystalline, metallic, and translucent families vary the existing body sheen
+and fluid crown width without a material-ID branch, texture repack, runtime
+resource, field, target, sample, or pass. Ambient grounding consumes only the
+already-authored phase, density, depth, slope, eligibility, pigment, and
+transmission proof, so broad interiors gain restrained cavity weight without
+moving support, boundaries, holes, sparse wisps, contacts, or alpha. The first
+four appearance lanes keep their established ordering for Canvas projection;
+Canvas learns no WebGL lighting arithmetic. Off/A and compact true 8x remain
+literal controls.
+
+Fresh current-only SwiftShader captures of the mixed material atlas, gas atlas,
+and opposed-source atlas passed WebGL/HDR, exact semantic/field/framebuffer
+evidence, strict teardown, and zero browser errors. Direct review retains B:
+Water/Oil and broad solids read less like uniformly lit cutouts, gas centres
+have gentler volume weight, warm/cool source flanks and wall umbra remain
+directional, and powder grain, holes, fine structures, contacts, and sparse
+wisps remain legible. The protected 4896x3072 material atlas rendered all 217
+projections with zero browser errors. These current images and their result IDs
+are review evidence, not cross-revision visual requirements.
+
+Exact revision `65a76f372a92d23894f35238fb5ee84145df536d` deployed this
+increment through workflow run `31572909894`. The 3m28s build passed 1,529
+source and 344 tooling tests, restored 269/270 cacheable C++ compilations from
+ccache, and verified the exact 19-resource bundle. The seven-candidate
+stable-snapshot shared-host review passed seven-for-seven in 9m14s and its
+downloaded portable package verified. Pages deployed in 11 seconds; first-
+attempt live closure verified all 19 resources, then a fresh hosted Water
+capture and portable verification passed against the exact deployed revision.
+The preceding run's only failure was the native BASE corrosion integration
+case exceeding Vitest's generic five-second ceiling on CI; that deliberately
+heavy native step/save/restore case now uses the same bounded 15-second limit
+as neighboring native integration tests, while the global timeout remains
+unchanged.
+
 Stable-snapshot v1 now gives SwiftShader a 60-second two-snapshot convergence
 budget, and each complete `snapshotState` read uses that driver-owned bound
 instead of failing first at the generic 20-second CDP command timeout. Auto
