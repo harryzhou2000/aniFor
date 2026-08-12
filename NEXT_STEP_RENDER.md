@@ -1236,6 +1236,16 @@ browser-error evidence. The protected 4896x3072 true-8x atlas kept all 217
 materials visible with zero browser errors, confirming the literal-Off compact
 path remains independent.
 
+The responsive follow-up found no remaining source-level instance of the
+recorded desktop overlap/filter-compression or mobile compactness regressions,
+so no speculative CSS change accompanies this renderer increment. The short-
+desktop WebGL audit now samples the exact 921px desktop breakpoint in addition
+to 1280x520, 1024x500, and the 900x600 tablet flow. At 921x500 the desktop grid
+retained an 8px toolbox gap, reachable 112px vertical filter overflow, reachable
+44px shell scroll, correct canvas geometry, and zero browser errors. Future UI
+work should start from a reproduced current failure, not overwrite these
+established responsive contracts.
+
 Revision `813066c81735da2e9b2752c9ddff276cc1c8f0da` deployed the retained
 profile sheen through workflow run `31528453927`. The ccache-backed build,
 two-candidate stable-snapshot review, downloaded-package verification, Pages

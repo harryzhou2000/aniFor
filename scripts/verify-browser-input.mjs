@@ -16347,7 +16347,10 @@ function waitForCanvasPresentation(cdp, afterSequence, label) {
 async function auditShortDesktop(cdp, mode, dpr, previous) {
   const samples = [];
   void previous;
-  for (const [width, height] of [[1280, 520], [1024, 500]]) {
+  // Include the first exact desktop-layout pixel: 920px is still the tablet
+  // document flow, while 921px activates the desktop grid and vertical rail.
+  // This guards the breakpoint itself rather than inferring it from 1024px.
+  for (const [width, height] of [[1280, 520], [1024, 500], [921, 500]]) {
     await setDesktopMetrics(cdp, width, height, dpr);
     // Two different browser sizes may legitimately yield the same fitted
     // world rectangle. Exact target metrics plus consecutive stable samples
