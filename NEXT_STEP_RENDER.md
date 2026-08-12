@@ -6588,6 +6588,30 @@ Pages deployed in 10s. The 1m35s live gate matched the exact revision and
 closure on its first attempt and passed the hosted Water WebGL receipt-v2
 package plus portable verifier; its OFF/A/B async alpha readbacks were 36-44ms.
 
+The next authoring-framework increment is implemented locally for the existing
+42-card configured-source/target atlas. A frozen data-only catalog owns all six
+CLNE/BCLN/PCLN/PBCN/CONV/CRAY source rows, seven powder/liquid/gas/energy/rigid/
+organic/high-ID targets, exact card and control geometry, authoritative Uint16
+target words, conductive-wall ID, recovery probe, and a bounded 64-region review
+board. The typed app authoring module validates and direct-fills this descriptor;
+the historical `source-target-graphics-audit.ts` API remains a compatibility
+facade. Fixture preparation consumes geometry only and ignores review metadata.
+No static recipe, preparer registration, driver, control, browser method,
+capture, renderer, workflow, or frozen evidence identity changed.
+
+Semantic migration oracles prove the public audit JSON plus the complete raw
+material, little-endian Uint16 state, and wall planes byte-identical to the old
+implementation. These hashes are fixture migration checks, not PNG baselines or
+aesthetic gates. Local proof passes 1,554 source and 356 permission-correct
+tooling tests, typecheck, production build, and exact 19-resource closure. The
+real SwiftShader package retained at
+`/tmp/anifortpt-source-target-declared-20260813` passed stable-v1 WebGL/HDR in
+33.9s with one shared host, zero restarts, strict teardown, and portable
+reconstruction of all 64 regions. Direct inspection retained all owner rows,
+target-family accents, topology, zero/wrong-owner, target-owner, wall, and blank
+controls. The next release gate is the canonical material-lighting review and
+downloaded-package verification with this new region evidence.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

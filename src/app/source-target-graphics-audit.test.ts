@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createHash } from 'node:crypto';
 import { Material } from '../shared/materials';
 import { DeterministicBackend } from '../simulation/deterministic-backend';
 import { RenderLabBackend } from '../simulation/render-lab-backend';
@@ -16,8 +17,43 @@ import {
   type SourceTargetGraphicsOwner,
   type SourceTargetGraphicsRect,
 } from './source-target-graphics-audit';
+import {
+  SOURCE_TARGET_MATERIAL_LIGHTING_ATLAS_CATALOG,
+} from '../shared/source-target-material-lighting-atlas-catalog.js';
 
 describe('configured-source target-identity graphics audit', () => {
+  it('derives the compatibility surface from one deeply frozen catalog', () => {
+    const authoring = SOURCE_TARGET_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases[0];
+    expect(SOURCE_TARGET_GRAPHICS_ATLAS).toBe(authoring.descriptor.cards);
+    expect(SOURCE_TARGET_GRAPHICS_OWNERS).toBe(authoring.descriptor.owners);
+    expect(SOURCE_TARGET_GRAPHICS_TARGETS).toBe(authoring.descriptor.targets);
+    expect(Object.isFrozen(authoring.descriptor.cards[0].body)).toBe(true);
+    expect(Object.isFrozen(authoring.descriptor.inspectionRegions[0])).toBe(true);
+    expect(createHash('sha256').update(JSON.stringify(SOURCE_TARGET_GRAPHICS_AUDIT)).digest('hex'))
+      .toBe('e2a4427395e9f4b8497524a5632b6c4d710e449b54ce07f5dbeb0dac9729ea54');
+  });
+
+  it('preserves the exact pre-migration material, state, and wall planes', () => {
+    const simulation = new RenderLabBackend();
+    prepareSourceTargetGraphicsAuditFixture(simulation);
+    const digest = (bytes: Uint8Array): string => createHash('sha256').update(bytes).digest('hex');
+    const state = simulation.presentationState();
+    const stateLe = new Uint8Array(state.length * 2);
+    for (let index = 0; index < state.length; index++) {
+      stateLe[index * 2] = state[index] & 0xff;
+      stateLe[index * 2 + 1] = state[index] >>> 8;
+    }
+    expect(digest(simulation.cells())).toBe(
+      '53fec1483520f67cef5a8accf579414135732e5789c93e1bb3e497199be0ad07',
+    );
+    expect(digest(stateLe)).toBe(
+      '2645b75d2b6b8a18ea954cd4906934b477c1818f8a1013a12a00bd0754e499e7',
+    );
+    expect(digest(simulation.walls())).toBe(
+      '78c28b9e1ef7016a33f8df4b97804f1e66c40513f2160d5c2597d6152e7b41b5',
+    );
+  });
+
   it('transports exact public target IDs without RGB quantization', () => {
     for (const { material } of SOURCE_TARGET_GRAPHICS_TARGETS) {
       expect(encodeSourceTargetPresentationState(material)).toBe(material);

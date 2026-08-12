@@ -25,6 +25,7 @@ describe('Visual Lab inspection-region catalog', () => {
       'gas-material-lighting-atlas',
       'solid-material-lighting-atlas',
       'multi-metal-material-lighting-atlas',
+      'source-target-material-lighting-atlas',
       'opposed-source-material-lighting-atlas',
     ]);
     expect(Object.isFrozen(VISUAL_CAPTURE_INSPECTION_SOURCE_CATALOG)).toBe(true);
@@ -98,6 +99,40 @@ describe('Visual Lab inspection-region catalog', () => {
     expect(digest(fixture('multi-metal-material-lighting-atlas').regions)).toBe(
       '9eb4a5f92fa8e2d03ca573095c810efb8ad717f5940249c11b04da1dcbbc3722',
     );
+  });
+
+  it('projects configured-source targets and controls through declared authoring', () => {
+    const sourceTarget = fixture('source-target-material-lighting-atlas');
+    expect(sourceTarget.regions).toHaveLength(64);
+    expect(sourceTarget.regions.slice(0, 7).map(({ name }) => name)).toEqual([
+      'clne-sand-body', 'clne-watr-body', 'clne-oxyg-body', 'clne-phot-body',
+      'clne-metl-body', 'clne-plnt-body', 'clne-bcol-body',
+    ]);
+    expect(sourceTarget.regions.slice(42).map(({ name, role }) => ({ name, role }))).toEqual([
+      { name: 'clne-sand-target-control', role: 'control' },
+      { name: 'clne-watr-target-control', role: 'control' },
+      { name: 'clne-oxyg-target-control', role: 'control' },
+      { name: 'clne-phot-target-control', role: 'control' },
+      { name: 'clne-metl-target-control', role: 'control' },
+      { name: 'clne-plnt-target-control', role: 'control' },
+      { name: 'clne-bcol-target-control', role: 'control' },
+      { name: 'clne-sand-zero-state', role: 'control' },
+      { name: 'bcln-sand-zero-state', role: 'control' },
+      { name: 'pcln-sand-zero-state', role: 'control' },
+      { name: 'pbcn-sand-zero-state', role: 'control' },
+      { name: 'conv-sand-zero-state', role: 'control' },
+      { name: 'cray-sand-zero-state', role: 'control' },
+      { name: 'clne-sand-authored-hole', role: 'control' },
+      { name: 'bcln-watr-open-notch', role: 'control' },
+      { name: 'pcln-oxyg-thin-structure', role: 'control' },
+      { name: 'pbcn-phot-isolated', role: 'control' },
+      { name: 'conv-metl-wrong-owner', role: 'control' },
+      { name: 'cray-plnt-wall-coexistence', role: 'control' },
+      { name: 'clne-bcol-guarded-blank', role: 'control' },
+      { name: 'clne-sand-wrong-owner', role: 'control' },
+      { name: 'bcln-watr-wrong-owner', role: 'control' },
+    ]);
+    expect(Object.isFrozen(sourceTarget.regions[0])).toBe(true);
   });
 
   it('derives gas response and control regions from shared data-only atlas authoring', () => {

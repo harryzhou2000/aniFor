@@ -125,6 +125,27 @@ package reconstruction of all 161 applicable regions. Pages deployed in 10s;
 the 1m35s live gate matched the exact revision and closure on its first attempt,
 then passed the hosted Water WebGL receipt-v2 package and portable verifier.
 
+The active framework increment extends declarative authoring and inspection to
+the existing 42-card configured-source/target atlas. One frozen data-only
+catalog now owns its six source owners, seven target families, exact card and
+control geometry, authoritative Uint16 state words, wall ID, recovery probe,
+and a bounded 64-region review board. A typed app authoring module validates and
+direct-fills that data while `source-target-graphics-audit.ts` remains the
+compatibility facade; the prepared-fixture registry, browser method, driver,
+recipe, capture, renderer, and CI stay unchanged. Fixture preparation ignores
+inspection metadata. Migration oracles prove the public audit JSON and exact
+material/state/wall planes byte-identical to the prior implementation; these
+are semantic migration checks, not visual baselines.
+
+Local proof passes 1,554 source and 356 permission-correct tooling tests,
+typecheck, production build, and exact 19-resource closure. The real SwiftShader
+package at `/tmp/anifortpt-source-target-declared-20260813` passed stable-v1
+WebGL/HDR capture in 33.9s with one shared host, zero restarts, clean teardown,
+and portable verification of all 64 regions. Direct inspection retained all six
+owner rows, seven target accents, topology, state, wall, and blank controls.
+The next release gate is the canonical material-lighting review and downloaded-
+package reconstruction with the new source-target region evidence.
+
 The next retained material-class framework checkpoint is exact revision
 `d5ceedf940dfea3d1a194a6b8fff5ae4c3557bd2`. `RenderOptics.MetallicRigid`
 is appended as stable byte class `20`; no historical class ID moved. Only the
