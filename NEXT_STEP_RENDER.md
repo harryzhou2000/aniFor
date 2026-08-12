@@ -74,6 +74,15 @@ for isolated diagnosis). This does not relax the canonical release review:
 stable snapshots, the seven-scene catalog, current response sidecars, portable
 verification, and shared-host default all remain intact.
 
+That control is deployed at revision
+`9ec81ecacd6eb21589557e5a62ebf6aaa0bfd5a2` by workflow run `31562608267`.
+The build passed 1,863 tests, restored the nearest ccache lineage, saved the
+exact-revision cache, and completed in 3m59s. The canonical shared/stable review
+passed all seven candidates in 9m02s with one host, seven contexts/targets, zero
+restarts, current experiment/region response, and downloaded-package portable
+verification. Pages deployed in 11s; exact 19-resource live closure and the
+hosted Water completed-frame receipt smoke then passed in 1m41s.
+
 Canvas evidence remains diagnostic only (`canonical: false`, `comparison:
 none`), carries no image-hash acceptance policy, and cannot fail the canonical
 WebGL checkpoint. The current multi-backend/scale board remains the place to
