@@ -17,6 +17,10 @@ const deepFreeze = (value) => {
   return value;
 };
 
+const inspectionRegion = (name, role, x, y, width, height) => ({
+  name, role, x, y, width, height,
+});
+
 export const GAS_MATERIAL_LIGHTING_ATLAS_CATALOG = deepFreeze({
   schema: GAS_MATERIAL_LIGHTING_ATLAS_CATALOG_SCHEMA,
   atlases: [{
@@ -91,6 +95,26 @@ export const GAS_MATERIAL_LIGHTING_ATLAS_CATALOG = deepFreeze({
         probe: { x: 508, y: 272 },
       },
       guardedBlank: { x: 138, y: 314, width: 364, height: 22 },
+      inspectionRegions: [
+        inspectionRegion('sooty-warm-flank', 'response', 52, 112, 24, 28),
+        inspectionRegion('sooty-core', 'response', 176, 114, 24, 24),
+        inspectionRegion('clean-core', 'response', 442, 108, 24, 24),
+        inspectionRegion('clean-cool-flank', 'response', 522, 104, 20, 28),
+        inspectionRegion('sooty-hole', 'control', 136, 114, 20, 18),
+        inspectionRegion('clean-channel', 'control', 326, 44, 14, 54),
+        inspectionRegion('warm-emitter', 'control', 16, 88, 5, 76),
+        inspectionRegion('cool-emitter', 'control', 590, 84, 5, 74),
+        inspectionRegion('sparse-sooty-pair', 'control', 34, 352, 3, 1),
+        inspectionRegion('sparse-clean-pair', 'control', 376, 352, 3, 1),
+        inspectionRegion('solid-contact-gas', 'response', 24, 252, 62, 42),
+        inspectionRegion('solid-contact-owner', 'control', 86, 252, 28, 42),
+        inspectionRegion('liquid-contact-gas', 'response', 144, 252, 62, 42),
+        inspectionRegion('liquid-contact-owner', 'control', 206, 252, 28, 42),
+        inspectionRegion('foreign-gas-contact', 'response', 264, 252, 90, 42),
+        inspectionRegion('native-wall-gas', 'control', 384, 252, 72, 42),
+        inspectionRegion('emissive-gas', 'response', 484, 252, 48, 42),
+        inspectionRegion('guarded-blank', 'control', 138, 314, 364, 22),
+      ],
     },
   }],
 });

@@ -101,10 +101,21 @@ its first attempt, then passed the hosted Water WebGL completed-frame-receipt
 package and portable verifier. That live receipt-v2 sample reduced OFF/A/B
 framebuffer-alpha readback to 40-48ms each while preserving its one-snapshot
 proof. Keep stable-v1 as the release-review default; do not weaken fallback,
-lifecycle, or package validation. The next framework increment should remove
-the remaining gas/solid scripts-side inspection projectors by moving their
-ordered regions into the declarative catalogs, preserving all 177 current
-region records and their order without changing renderer or capture authority.
+lifecycle, or package validation.
+
+The declarative inspection-projection migration is implemented locally. Gas,
+cross-family Solid, and multi-metal now own their exact ordered review regions
+in the same frozen data-only catalogs as their fixture geometry. Every source
+uses the sole scripts-side `declared` projector; the obsolete `gas-geometry`
+and `solid-template` projectors and their geometry helpers are removed. The
+compiled catalog remains six fixtures and 177 regions in canonical recipe
+order. Migration-only SHA-256 oracles over ordered region JSON prove exact
+pre/post record parity for Gas (18), Solid (64), and multi-metal (48); these are
+semantic authoring checks, never PNG baselines or aesthetic gates. Local proof
+passes 1,552 source and 355 permission-correct tooling tests, typecheck,
+production build, and exact 19-resource closure. The next release gate is the
+canonical material-lighting review so its downloaded package reconstructs all
+161 applicable regions from the data-only catalogs.
 
 The next retained material-class framework checkpoint is exact revision
 `d5ceedf940dfea3d1a194a6b8fff5ae4c3557bd2`. `RenderOptics.MetallicRigid`

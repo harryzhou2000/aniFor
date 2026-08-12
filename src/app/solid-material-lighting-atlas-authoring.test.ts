@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { Material } from '../shared/materials';
 import {
+  SOLID_MATERIAL_LIGHTING_ATLAS_CATALOG,
+} from '../shared/solid-material-lighting-atlas-catalog.js';
+import {
   createSolidMaterialLightingAtlas,
   type SolidMaterialLightingAtlasDescriptor,
 } from './solid-material-lighting-atlas-authoring';
@@ -27,6 +30,12 @@ const descriptor = (): SolidMaterialLightingAtlasDescriptor => ({
 });
 
 describe('solid material-lighting atlas authoring', () => {
+  it('deeply freezes catalog-owned inspection regions', () => {
+    for (const atlas of SOLID_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases) {
+      expect(Object.isFrozen(atlas.descriptor.inspectionRegions[0])).toBe(true);
+    }
+  });
+
   it('fails closed for duplicate owners and template geometry outside a card', () => {
     const duplicate = descriptor();
     expect(() => createSolidMaterialLightingAtlas({

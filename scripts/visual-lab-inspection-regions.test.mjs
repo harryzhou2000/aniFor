@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { createHash } from 'node:crypto';
 import {
   compileVisualLabInspectionFixtures,
   normalizeVisualLabInspectionRegionCatalog,
   projectDeclaredInspectionFixture,
-  projectGasMaterialLightingAtlasInspectionFixture,
-  projectSolidMaterialLightingAtlasInspectionFixture,
   VISUAL_LAB_INSPECTION_REGIONS,
   VISUAL_LAB_INSPECTION_REGION_CATALOG_SCHEMA,
 } from './visual-lab-inspection-regions.mjs';
@@ -30,6 +29,9 @@ describe('Visual Lab inspection-region catalog', () => {
     ]);
     expect(Object.isFrozen(VISUAL_CAPTURE_INSPECTION_SOURCE_CATALOG)).toBe(true);
     expect(Object.isFrozen(VISUAL_CAPTURE_INSPECTION_SOURCE_CATALOG.sources[0])).toBe(true);
+    expect(VISUAL_CAPTURE_INSPECTION_SOURCE_CATALOG.sources.every(
+      ({ projection }) => projection === 'declared',
+    )).toBe(true);
   });
 
   it('projects Powder style response and topology controls through the declared seam', () => {
@@ -81,6 +83,21 @@ describe('Visual Lab inspection-region catalog', () => {
       name: 'ttan-guarded-blank', role: 'control', x: 480, y: 314, width: 90, height: 18,
     });
     expect(Object.isFrozen(metals.regions.at(-1))).toBe(true);
+  });
+
+  it('preserves the exact pre-migration gas and solid projection records', () => {
+    const digest = (regions) => createHash('sha256')
+      .update(JSON.stringify(regions))
+      .digest('hex');
+    expect(digest(fixture('gas-material-lighting-atlas').regions)).toBe(
+      'c192353906fb0ac3310fe5078e63c4b7bfb5e3bb88b093fb4fcd533a89c16815',
+    );
+    expect(digest(fixture('solid-material-lighting-atlas').regions)).toBe(
+      '67e8beb5d74372b06dd71a5f7d49b4d48cf21615a169b38ba3818b73425e95d8',
+    );
+    expect(digest(fixture('multi-metal-material-lighting-atlas').regions)).toBe(
+      '9eb4a5f92fa8e2d03ca573095c810efb8ad717f5940249c11b04da1dcbbc3722',
+    );
   });
 
   it('derives gas response and control regions from shared data-only atlas authoring', () => {
@@ -188,55 +205,15 @@ describe('Visual Lab inspection-region catalog', () => {
   });
 
   it('fails projection through catalog normalization when authored geometry escapes the world', () => {
-    const projected = projectSolidMaterialLightingAtlasInspectionFixture({
+    const projected = projectDeclaredInspectionFixture({
       candidate: 'escaped-atlas', world: { width: 10, height: 10 }, descriptor: {
-        definitions: [{ material: 23, code: 'METL' }], columns: 1,
-        origin: { x: 9, y: 9 }, stride: { x: 1, y: 1 }, cardSize: { width: 1, height: 1 },
-        conductiveWall: 1,
-        template: {
-          body: { x: 0, y: 0, width: 2, height: 1 }, hole: { x: 0, y: 0, width: 1, height: 1 },
-          openNotch: { x: 0, y: 0, width: 1, height: 1 },
-          thinStructure: { x: 0, y: 0, width: 1, height: 1 }, isolated: { x: 0, y: 0 },
-          contactOwner: { x: 0, y: 0, width: 1, height: 1 },
-          contactNeighbour: { x: 0, y: 0, width: 1, height: 1 },
-          nativeWall: { x: 0, y: 0, width: 1, height: 1 },
-          emitter: { x: 0, y: 0, width: 1, height: 1 },
-          guardedBlank: { x: 0, y: 0, width: 1, height: 1 },
-        },
+        inspectionRegions: [{
+          name: 'escaped', role: 'response', x: 9, y: 9, width: 2, height: 1,
+        }],
       },
     });
     expect(() => normalizeVisualLabInspectionRegionCatalog({
       schema: VISUAL_LAB_INSPECTION_REGION_CATALOG_SCHEMA, fixtures: [projected],
-    })).toThrow(/malformed/);
-  });
-
-  it('rejects malformed atlas candidate and material codes before projection', () => {
-    const base = {
-      candidate: 'sample-atlas', world: { width: 10, height: 10 }, descriptor: {
-        definitions: [{ material: 23, code: 'METL' }], columns: 1,
-        origin: { x: 0, y: 0 }, stride: { x: 10, y: 10 }, cardSize: { width: 10, height: 10 },
-        conductiveWall: 1,
-        template: {
-          body: { x: 0, y: 0, width: 1, height: 1 }, hole: { x: 0, y: 0, width: 1, height: 1 },
-          openNotch: { x: 0, y: 0, width: 1, height: 1 },
-          thinStructure: { x: 0, y: 0, width: 1, height: 1 }, isolated: { x: 0, y: 0 },
-          contactOwner: { x: 0, y: 0, width: 1, height: 1 },
-          contactNeighbour: { x: 0, y: 0, width: 1, height: 1 },
-          nativeWall: { x: 0, y: 0, width: 1, height: 1 },
-          emitter: { x: 0, y: 0, width: 1, height: 1 },
-          guardedBlank: { x: 0, y: 0, width: 1, height: 1 },
-        },
-      },
-    };
-    expect(() => projectSolidMaterialLightingAtlasInspectionFixture({
-      ...base, candidate: '../escape',
-    })).toThrow(/malformed/);
-    expect(() => projectSolidMaterialLightingAtlasInspectionFixture({
-      ...base,
-      descriptor: { ...base.descriptor, definitions: [{ material: 23, code: '<bad>' }] },
-    })).toThrow(/code is malformed/);
-    expect(() => projectGasMaterialLightingAtlasInspectionFixture({
-      candidate: '../escape', world: { width: 1, height: 1 }, descriptor: {},
     })).toThrow(/malformed/);
   });
 

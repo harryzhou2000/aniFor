@@ -8,6 +8,11 @@ export interface SolidMaterialLightingAtlasCatalogRect extends SolidMaterialLigh
   readonly height: number;
 }
 
+export interface SolidMaterialLightingInspectionRegion extends SolidMaterialLightingAtlasCatalogRect {
+  readonly name: string;
+  readonly role: 'response' | 'control';
+}
+
 export interface SolidMaterialLightingAtlasCatalogDescriptor {
   readonly definitions: readonly Readonly<{ readonly material: number; readonly code: string }>[];
   readonly columns: number;
@@ -27,6 +32,7 @@ export interface SolidMaterialLightingAtlasCatalogDescriptor {
     readonly emitter: SolidMaterialLightingAtlasCatalogRect;
     readonly guardedBlank: SolidMaterialLightingAtlasCatalogRect;
   }>;
+  readonly inspectionRegions: readonly SolidMaterialLightingInspectionRegion[];
 }
 
 export interface SolidMaterialLightingAtlasCatalogEntry {

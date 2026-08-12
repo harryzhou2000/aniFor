@@ -89,26 +89,6 @@ export function normalizeVisualLabInspectionRegionCatalog(input) {
   return deepFreeze({ schema: input.schema, fixtures });
 }
 
-const translateRect = (card, region) => ({
-  x: card.x + region.x,
-  y: card.y + region.y,
-  width: region.width,
-  height: region.height,
-});
-
-const boundingRect = (left, right) => {
-  const x = Math.min(left.x, right.x);
-  const y = Math.min(left.y, right.y);
-  return {
-    x,
-    y,
-    width: Math.max(left.x + left.width, right.x + right.width) - x,
-    height: Math.max(left.y + left.height, right.y + right.height) - y,
-  };
-};
-
-const namedRegion = (name, role, region) => ({ name, role, ...region });
-
 /**
  * Projects an ordered closed list of geometry-only review anchors. The shared
  * data can name rectangles, but cannot run code or select browser/renderer work.
@@ -126,98 +106,8 @@ export function projectDeclaredInspectionFixture(atlas) {
   };
 }
 
-/**
- * Projects one app-authored solid atlas into scripts-owned review annotations.
- * The projection carries geometry only: it grants no preparation, renderer,
- * capture, scoring, threshold, or promotion authority.
- */
-export function projectSolidMaterialLightingAtlasInspectionFixture(atlas) {
-  const { candidate, world, descriptor } = atlas;
-  if (!SAFE_NAME.test(candidate ?? '') || !Array.isArray(descriptor?.definitions)
-    || descriptor.definitions.length === 0 || !positiveBoundedInteger(descriptor.columns, 64)) {
-    throw new TypeError('Solid material-lighting atlas inspection authoring is malformed');
-  }
-  const regions = descriptor.definitions.flatMap((definition, index) => {
-    if (!/^[A-Z0-9]{2,8}$/.test(definition.code ?? '')) {
-      throw new TypeError('Solid material-lighting atlas inspection code is malformed');
-    }
-    const column = index % descriptor.columns;
-    const row = Math.floor(index / descriptor.columns);
-    const card = {
-      x: descriptor.origin.x + column * descriptor.stride.x,
-      y: descriptor.origin.y + row * descriptor.stride.y,
-    };
-    const code = definition.code.toLowerCase();
-    const contactOwner = translateRect(card, descriptor.template.contactOwner);
-    const contactNeighbour = translateRect(card, descriptor.template.contactNeighbour);
-    return [
-      namedRegion(`${code}-body`, 'response', translateRect(card, descriptor.template.body)),
-      namedRegion(`${code}-contact`, 'response', boundingRect(contactOwner, contactNeighbour)),
-      namedRegion(`${code}-hole`, 'control', translateRect(card, descriptor.template.hole)),
-      namedRegion(`${code}-open-notch`, 'control', translateRect(card, descriptor.template.openNotch)),
-      namedRegion(`${code}-thin-structure`, 'control', translateRect(card, descriptor.template.thinStructure)),
-      namedRegion(`${code}-isolated`, 'control', {
-        x: card.x + descriptor.template.isolated.x,
-        y: card.y + descriptor.template.isolated.y,
-        width: 1,
-        height: 1,
-      }),
-      namedRegion(`${code}-native-wall`, 'control', translateRect(card, descriptor.template.nativeWall)),
-      namedRegion(`${code}-guarded-blank`, 'control', translateRect(card, descriptor.template.guardedBlank)),
-    ];
-  });
-  return { candidate, world: { ...world }, regions };
-}
-
-/** Projects the gas atlas geometry into a compact, current-only review board. */
-export function projectGasMaterialLightingAtlasInspectionFixture(atlas) {
-  const { candidate, world, descriptor } = atlas;
-  if (!SAFE_NAME.test(candidate ?? '') || descriptor === null || typeof descriptor !== 'object') {
-    throw new TypeError('Gas material-lighting atlas inspection authoring is malformed');
-  }
-  const regions = [
-    namedRegion('sooty-warm-flank', 'response', { x: 52, y: 112, width: 24, height: 28 }),
-    namedRegion('sooty-core', 'response', { x: 176, y: 114, width: 24, height: 24 }),
-    namedRegion('clean-core', 'response', { x: 442, y: 108, width: 24, height: 24 }),
-    namedRegion('clean-cool-flank', 'response', { x: 522, y: 104, width: 20, height: 28 }),
-    namedRegion('sooty-hole', 'control', descriptor.sootyHole),
-    namedRegion('clean-channel', 'control', descriptor.cleanChannel),
-    namedRegion('warm-emitter', 'control', descriptor.warmEmitter),
-    namedRegion('cool-emitter', 'control', descriptor.coolEmitter),
-    namedRegion('sparse-sooty-pair', 'control', boundingPoints(descriptor.sparseSooty.slice(0, 2))),
-    namedRegion('sparse-clean-pair', 'control', boundingPoints(descriptor.sparseClean.slice(0, 2))),
-    namedRegion('solid-contact-gas', 'response', descriptor.solidContact.gas),
-    namedRegion('solid-contact-owner', 'control', descriptor.solidContact.solid),
-    namedRegion('liquid-contact-gas', 'response', descriptor.liquidContact.gas),
-    namedRegion('liquid-contact-owner', 'control', descriptor.liquidContact.liquid),
-    namedRegion('foreign-gas-contact', 'response', boundingRect(
-      descriptor.foreignGasContact.gas, descriptor.foreignGasContact.foreignGas,
-    )),
-    namedRegion('native-wall-gas', 'control', descriptor.nativeWall.gas),
-    namedRegion('emissive-gas', 'response', descriptor.emissiveGas.body),
-    namedRegion('guarded-blank', 'control', descriptor.guardedBlank),
-  ];
-  return { candidate, world: { ...world }, regions };
-}
-
-function boundingPoints(points) {
-  if (!Array.isArray(points) || points.length === 0) {
-    throw new TypeError('Gas material-lighting atlas inspection points are malformed');
-  }
-  const xs = points.map(({ x }) => x);
-  const ys = points.map(({ y }) => y);
-  return {
-    x: Math.min(...xs),
-    y: Math.min(...ys),
-    width: Math.max(...xs) - Math.min(...xs) + 1,
-    height: Math.max(...ys) - Math.min(...ys) + 1,
-  };
-}
-
 const INSPECTION_PROJECTORS = new Map([
   ['declared', projectDeclaredInspectionFixture],
-  ['gas-geometry', projectGasMaterialLightingAtlasInspectionFixture],
-  ['solid-template', projectSolidMaterialLightingAtlasInspectionFixture],
 ]);
 
 /**

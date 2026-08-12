@@ -1,4 +1,4 @@
-export type VisualCaptureInspectionProjection = 'declared' | 'gas-geometry' | 'solid-template';
+export type VisualCaptureInspectionProjection = 'declared';
 export interface VisualCaptureInspectionSource {
   readonly name: string;
   readonly projection: VisualCaptureInspectionProjection;

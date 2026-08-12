@@ -8,6 +8,11 @@ export interface GasMaterialLightingRect extends GasMaterialLightingPoint {
   readonly height: number;
 }
 
+export interface GasMaterialLightingInspectionRegion extends GasMaterialLightingRect {
+  readonly name: string;
+  readonly role: 'response' | 'control';
+}
+
 export interface GasMaterialLightingEllipse extends GasMaterialLightingPoint {
   readonly radiusX: number;
   readonly radiusY: number;
@@ -66,6 +71,7 @@ export interface GasMaterialLightingAtlasDescriptor {
     readonly probe: GasMaterialLightingPoint;
   }>;
   readonly guardedBlank: GasMaterialLightingRect;
+  readonly inspectionRegions: readonly GasMaterialLightingInspectionRegion[];
 }
 
 export interface GasMaterialLightingAtlasCatalogEntry {

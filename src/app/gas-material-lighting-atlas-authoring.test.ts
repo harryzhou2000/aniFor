@@ -11,6 +11,7 @@ describe('gas material-lighting atlas authoring', () => {
     expect(() => validateGasMaterialLightingAtlas(authoring.descriptor, authoring.world)).not.toThrow();
     expect(Object.isFrozen(GAS_MATERIAL_LIGHTING_ATLAS_CATALOG)).toBe(true);
     expect(Object.isFrozen(authoring.descriptor.sooty.lobes[0])).toBe(true);
+    expect(Object.isFrozen(authoring.descriptor.inspectionRegions[0])).toBe(true);
   });
 
   it('fails closed for escaped geometry, invalid lobes, and invalid material owners', () => {

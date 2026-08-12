@@ -6561,13 +6561,21 @@ portable verifier. Its one-snapshot OFF/A/B framebuffer-alpha readbacks took
 40-48ms each. Keep stable-v1 as the release-review default; receipt-v2 remains
 an explicit live-smoke/performance capability.
 
-The next framework increment is a data-only migration of the remaining gas and
-solid inspection regions. Move their ordered region definitions into their
-declarative catalogs and use the shared `declared` projector, preserving all
-177 current region records and their exact order. Remove the obsolete
-scripts-side projection helpers only after parity proof. This must not add a
-renderer, capture, app-preparer, browser-method, recipe-set, cohort, CI, or
-identity branch.
+The data-only inspection migration is implemented locally. Gas, cross-family
+Solid, and multi-metal now own their exact ordered inspection regions in the
+same frozen declarative catalogs as their fixture geometry. All five source
+groups use the sole shared `declared` projector; `gas-geometry`,
+`solid-template`, and their scripts-side geometry helpers are removed. The
+compiled output remains six fixtures and 177 records in canonical recipe
+order. Independent migration oracles over the exact ordered region JSON prove
+byte/order parity for Gas's 18 records, Solid's 64, and multi-metal's 48. Those
+SHA-256 values protect semantic authoring during this migration only; they are
+not visual hashes, PNG baselines, or aesthetic gates. Local proof passes 1,552
+source and 355 permission-correct tooling tests, typecheck, production build,
+and exact 19-resource closure. No renderer, capture, app preparer, browser
+method, driver, recipe-set, cohort, CI, or frozen evidence identity changed.
+The next release gate is the canonical material-lighting review and portable
+reconstruction of all 161 applicable regions from the downloaded package.
 
 ## Deferred long-term visual roadmap
 
