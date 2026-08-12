@@ -6294,18 +6294,19 @@ production build transformed 947 modules and retained exact 19-resource
 closure. This establishes descriptor reuse as the preferred way to broaden
 optical-class evidence before adding more material parameters or shader logic.
 
-The first expanded-cohort CI attempt, workflow `31599872251`, built in 3m13s
-with restored ccache and saved it only after success. Its shared SwiftShader
-review exposed the intended lifecycle boundary under load: four candidates
-completed, then material-lighting, source-target, force-activity, and opposed-
-source captures hit the renderer-owned 30-second completed-frame watchdog;
-several renderer/context teardown calls then exceeded the bounded 5-second CDP
-clock. The job retained a bounded partial package, portable verification failed
-closed, and deploy was skipped. This is accumulated shared-host software-GPU
-contention rather than source, package, or verifier drift. Manual CI now
-defaults full reviews to fresh-per-candidate Chrome while preserving shared as
-an explicit diagnostic/performance option. Receipt, teardown, and portable
-verification contracts remain unchanged.
+Expanded-cohort workflows `31599872251` (shared) and `31601400664` (fresh)
+both explicitly selected completed-frame-receipt proof. Both failed on the same
+four complex fixtures—material-lighting, source-target, force-activity, and
+opposed-source—when their renderer-owned receipts exceeded 30 seconds under
+hosted SwiftShader; renderer disposal then exceeded the bounded CDP clock. The
+fresh reproduction disproves accumulated shared-host load. Both runs retained
+bounded partial diagnostics, failed portable verification, and skipped deploy
+as designed. Keep shared as the efficient default and use the existing stable-
+snapshots default for ordinary current-only visual review; it retains semantic,
+authoritative-field, framebuffer, topology, teardown, and package evidence
+without turning software-GPU fence completion into a visual deploy gate.
+Completed-frame receipt remains available as an explicit strict diagnostic;
+its watchdog and failure semantics are unchanged.
 
 ## Deferred long-term visual roadmap
 
