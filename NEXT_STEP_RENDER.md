@@ -6226,6 +6226,35 @@ Treat this as completion of the reusable resource-free environment seam; the
 next experiment should add a similarly declarative material-class capability,
 not another fixture-specific lighting branch.
 
+The first declarative material-class extension is retained at exact revision
+`d5ceedf940dfea3d1a194a6b8fff5ae4c3557bd2`. Append-only byte class
+`RenderOptics.MetallicRigid = 20` separates Metal, BMTL, GOLD, IRON, PTNM, and
+TTAN from Brick/Stone/Ceramic `SmoothRigid` without renumbering any historical
+class. HEAC remains SmoothRigid until its heat-conductor identity is reviewed;
+TUNG remains Device so electronics/state overlays stay authoritative. The
+existing five-lane appearance profile supplies the PBR-like control surface:
+`[1.42, 1.08, 1.12, 0.56, 0.62]` gives normal-HDR Volumetric/B a stronger key,
+retained pigment, low transmission, and narrower reflected lobe. No new
+resource, sampler, field, uniform, target, pass, allocation, topology, alpha,
+clock, state, or physics path was added. Existing exact Metal and Platinum
+children follow the new class; Rock and Ceramic remain exact class-8 controls.
+
+The favored current-only package is
+`.artifacts/visual-lab-reviews/material-lighting-6a5ee85e-cde3-4707-878e-13057afc45ad`.
+All seven candidates passed shared-host WebGL/HDR capture, completed-frame
+receipts, portable verification, exact teardown, and zero browser errors. Off
+and Balanced remained byte-identical to the prior checkpoint. Volumetric
+changed only boards containing the reclassified rigid metals or their shared
+material contexts; the mixed powder/liquid and opposed-source boards remained
+byte-identical. Inspection favors the cleaner, tighter Metal shoulder while
+retaining authored pigment, holes, contacts, walls, and fine controls. Canvas
+inherits the prior SmoothRigid response and preserves historical Cellular
+chroma bytes; true 8x keeps literal Off and rendered all 217 projections at
+4896x3072 with zero browser errors. The full source suite passed 1,534 tests and
+the permission-correct tooling suite passed 344. This establishes append-only
+optical classes as the next scalable material-authoring axis; broaden coverage
+with a declarative multi-metal board before adding exact-species shader logic.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

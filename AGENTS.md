@@ -14,6 +14,36 @@ visual requirement or deploy gate. Keep `accepted-v1`, baseline comparison, and
 promotion readable only for legacy packages or an explicit ad-hoc reference;
 developer review and CI must move to current-only evidence by default.
 
+The next retained material-class framework checkpoint is exact revision
+`d5ceedf940dfea3d1a194a6b8fff5ae4c3557bd2`. `RenderOptics.MetallicRigid`
+is appended as stable byte class `20`; no historical class ID moved. Only the
+reviewed ordinary rigid-metal family—Metal, BMTL, GOLD, IRON, PTNM, and TTAN—
+selects it. HEAC remains SmoothRigid pending its own role/exposure review, and
+TUNG remains Device so electronics/state presentation retains authority. The
+existing five-lane appearance profile is the class's declarative PBR-like
+surface: stronger key/pigment, low transmission, and roughness `0.62` give
+Volumetric/B a tighter environment/sheeny lobe without a texture, field,
+uniform, sampler, target, pass, allocation, topology, alpha, or physics change.
+Metal/Platinum exact-owner children now follow class `20`; Rock, Brick,
+Ceramic, and other SmoothRigid owners stay on class `8`.
+
+The favored current-only evidence is
+`.artifacts/visual-lab-reviews/material-lighting-6a5ee85e-cde3-4707-878e-13057afc45ad`.
+All seven candidates passed WebGL/HDR, completed-frame receipts, portable
+verification, strict teardown, and zero browser errors. Off and Balanced stayed
+byte-identical to the preceding checkpoint; only Volumetric scenes containing
+the reclassified rigid metals or their shared boards changed, while the mixed
+powder/liquid and opposed-source boards stayed byte-identical. Direct inspection
+favors Metal's tighter clean reflected shoulder and retained holes, contacts,
+walls, thin controls, and pigment. Canvas deliberately inherits the prior
+SmoothRigid coefficients, including exact restoration of Cellular's historical
+zero-filled chroma slot. Compact true 8x keeps literal Off and rendered all 217
+projections at 4896x3072 with zero browser errors. The full source suite passed
+1,534 tests and the permission-correct tooling suite passed 344 tests. Do not
+add an exact-material metal branch where this class profile can express the
+response; a later multi-metal fixture may broaden visual evidence without a new
+driver or renderer route.
+
 The four-phase analytic environment-transport increment is deployed at exact
 revision `f46ad843777c948135a59760781c57366c8922e7` by workflow run
 `31593915673`. One declarative `environmentTransport` composition lane and one
