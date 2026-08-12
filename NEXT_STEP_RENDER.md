@@ -9,19 +9,59 @@ permissive, non-gating compatibility companion. Preserve correct viewport/input
 geometry and robust 1×–8× rendering, including the dedicated compact true-8×
 compositor, while avoiding renderer branches that duplicate material semantics.
 
-The immediate framework checkpoint is deployed at
-`7f65cd57e096581ff4f6c1a5da4db4257012aa68` by workflow run `31376684405`:
-one current-only command composes the normal WebGL OFF/A/B review, the
-established true-8× audit, and an optional forced-Canvas fixture companion.
-Build, Pages deployment, exact live revision/resource closure, and the hosted
-WebGL fixture package all passed; ccache restored 269/270 compilation hits.
-Canvas evidence is diagnostic only (`canonical: false`, `comparison: none`),
-carries no image-hash acceptance policy, and cannot fail the canonical WebGL
-checkpoint. The next active increment is to use this retained
-multi-backend/scale board to make and review higher-leverage material
-experiments, starting with shared optical and lighting structure that benefits
-powder, liquid, and gas without changing their semantic topology or expanding
-exact-visual unit tests.
+The current framework checkpoint is deployed at
+`c51f874ca1b453f07d4975d9fe00cd1767f14c60` by workflow run `31559035589`.
+The ccache-backed build passed in 3m44s; all seven current material-lighting
+candidates then passed their first shared-host WebGL/HDR review in 9m15s, the
+downloaded 51-file package passed portable verification with both current
+experiment-response and region-response evidence required, Pages deployed in
+10s, and exact live revision/resource closure plus the hosted Water completed-
+frame receipt package passed. The review used one supervised SwiftShader host,
+seven fresh incognito contexts and targets, zero restarts, and only the planned
+`cohort-complete` recycle. Keep this as the normal release-review topology;
+failure still recycles the complete host before another candidate.
+
+The retained timing evidence identifies proof transport—not browser launch—as
+the next framework bottleneck. Across seven candidates, readiness consumed
+261.5s and OFF 149.7s; within those phases, readiness refresh consumed 99.1s,
+readiness readback/hash 97.9s, and OFF readback/hash 139.6s. A and B each spent
+about 49.2s in readback/hash. Host launch was 7.3s total, screenshots about
+5.0s total, and PNG writes about 22ms total. The next active increment is
+therefore to reduce the number or cost of complete `snapshotState` evaluations
+while retaining the same semantic, authoritative-field, framebuffer-alpha,
+convergence, and portable-package proofs. The current implementation already
+hashes inside the page and returns compact digests; its expensive operation is
+the synchronous full-frame WebGL `readPixels`, especially under SwiftShader.
+Prefer the existing receipt-backed one-snapshot plan where its full cohort
+proves robust, or a renderer-owned bounded readback improvement, over another
+capture branch. There is no redundant full-frame read to delete safely:
+readiness proves nonempty planes, stable-v1 proves two complete matching states,
+and receipt-v2 proves one post-completion state. The later compositor screenshot
+cannot substitute for the semantic-field WebGL alpha digest. Do not call
+`readbackHashMs` GPU-only time: it is the complete Node-observed CDP
+evaluation/readback/hash interval.
+
+The exact-artifact receipt-v2 comparison run `31560037395` confirms that it is
+not a safe universal release default for this seven-scene software-GPU cohort.
+Three candidates passed with exactly one snapshot per OFF/A/B and roughly
+26–29ms post-receipt readback, but four candidates failed when their OFF receipt
+did not reach completed within its protected interval; the shared supervisor
+performed three full host restarts and deployment correctly remained blocked.
+This is a renderer-completion/SwiftShader scheduling failure, not a package-
+verifier mismatch. Retain receipt-v2 as an explicit diagnostic option and
+stable-v1 as the CI default. Do not weaken the receipt watchdog, silently fall
+back to stable snapshots inside a v2 package, or describe the successful subset
+as a cohort performance win.
+
+Canvas evidence remains diagnostic only (`canonical: false`, `comparison:
+none`), carries no image-hash acceptance policy, and cannot fail the canonical
+WebGL checkpoint. The current multi-backend/scale board remains the place to
+make higher-leverage material experiments without changing semantic topology
+or expanding exact-visual unit tests. A trial that advected gas optics from raw
+wall-clock shader time was rejected: its visible improvement was negligible,
+it weakened the retained Smoke envelope, and it coupled evidence to capture
+timing. Any future motion vocabulary needs an explicit deterministic visual-
+phase owner and must earn its complexity in the current gas fixture.
 
 The current implementation increment connects authoritative temperature to the
 shared scene-light transport. The existing three-times-downsampled emission
@@ -819,9 +859,12 @@ Success means:
 
 Priority order from this checkpoint:
 
-1. Checkpoint and deploy the retained shared profile-sheen increment through the
-   conservative stable-snapshot CI path, preserving compact true-8x literal Off
-   and the explicit receipt-proof option.
+1. Shorten the dominant `snapshotState` readback/hash path without weakening
+   semantic, authoritative-field, framebuffer-alpha, convergence, strict-
+   disposal, or portable verification. Keep stable snapshots as the release
+   default; receipt-v2 has now failed the seven-scene shared-host cohort and
+   remains an explicit diagnostic until a renderer-level completion change can
+   pass that exact workload.
 2. Use the same current-only framework for the next broad material-composition
    pass; prefer an existing proof/resource shared by multiple families over an
    exact-material branch.
