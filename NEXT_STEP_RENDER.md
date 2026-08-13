@@ -8011,6 +8011,34 @@ ms; the 38.44-second readiness interval remained dominant as expected. Pages
 deployed in 9s, then exact revision and 19-resource closure passed on the first
 attempt together with the hosted Water receipt-v2 package and portable verifier.
 
+The active schema-free readiness-lifecycle increment gives normal-scale WebGL
+framebuffer-alpha proof one presenter-owned pixel-pack buffer. Serial readiness
+and OFF/A/B tickets retain their own fences, submissions, watchdogs, states, and
+exact default-framebuffer reads, but reuse the buffer object and its storage at
+one backing size. A backing-size change reallocates storage once; context loss,
+ordinary teardown, and strict audit teardown release the presenter-owned buffer
+once after failing any pending ticket. True 8x, synchronous fallback, evidence
+schemas, tuning plans, result identities, and screenshot ordering remain
+unchanged.
+
+Focused presenter tests cover serial reuse, resize reallocation, failure
+isolation, and idempotent release. The full source and tooling command passes
+outside the process sandbox; its first sandboxed source pass exposed only the
+known load-sensitive Wax fixture timeout, which passed alone in 2.18 seconds.
+A fresh default-v9 SwiftShader RenderOptics review passed WebGL/HDR, all 49
+response and appearance regions, portable verification, and strict teardown at
+`.artifacts/visual-lab-reviews/render-optics-d6e0351d-9752-4206-b622-ab38ea5e44b0`.
+It retained exact result
+`sha256:4891db2c82bb89cb4bce5a63a2927360fbc20e634a0a91b9d17a490deb630581`
+and all established OFF/A/B PNG hashes. A separate fresh Oxygen capture passed
+all semantic, atmosphere, and framebuffer-alpha invariants with zero browser
+errors, closing the gas-path regression check. Local RenderOptics readiness was
+approximately 9.26 seconds, including about 4.56 seconds of complete snapshot
+readback; regard that as diagnostic. Buffer churn is removed, but the first
+populated presentation remains the measured dominant cost, so the next
+performance increment should profile and reduce driver-owned first-frame work
+without weakening evidence or adding another tuning schema.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

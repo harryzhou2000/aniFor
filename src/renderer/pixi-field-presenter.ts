@@ -12330,6 +12330,9 @@ export class PixiFieldPresenter {
   private framebufferAlphaReadbacks?: Map<number, MutableWebGLFramebufferAlphaReadback>;
   private framebufferAlphaReadbackPoll = 0;
   private framebufferAlphaReadbackWatchdog?: ReturnType<typeof setTimeout>;
+  /** Presenter-owned PBO shared by serial audit tickets at one canvas size. */
+  private framebufferAlphaReadbackBuffer?: WebGLBuffer;
+  private framebufferAlphaReadbackBufferByteLength = 0;
   /** Reused CPU destination for completed audit PBO transfers, never evidence state. */
   private framebufferAlphaReadbackScratch?: Uint8Array;
   private powderSurfaceDirty = true;
@@ -12396,6 +12399,7 @@ export class PixiFieldPresenter {
       this.releaseRenderFence('failed');
       this.failCompletedFrameReceipt();
       this.failFramebufferAlphaReadback();
+      this.releaseFramebufferAlphaReadbackBuffer();
       this.releaseFramebufferAlphaReadbackScratch();
       this.releaseWebGLTimingQuery();
       this.releaseWebGLTimingFence();
@@ -13645,6 +13649,7 @@ export class PixiFieldPresenter {
     this.releaseRenderFence('failed');
     this.failCompletedFrameReceipt();
     this.failFramebufferAlphaReadback();
+    this.releaseFramebufferAlphaReadbackBuffer();
     this.releaseFramebufferAlphaReadbackScratch();
     this.releaseWebGLTimingQuery();
     this.releaseWebGLTimingFence();
@@ -13690,6 +13695,7 @@ export class PixiFieldPresenter {
     attempt(() => this.releaseRenderFence('failed'));
     attempt(() => this.failCompletedFrameReceipt());
     attempt(() => this.failFramebufferAlphaReadback());
+    attempt(() => this.releaseFramebufferAlphaReadbackBuffer());
     attempt(() => this.releaseFramebufferAlphaReadbackScratch());
     attempt(() => this.releaseWebGLTimingQuery());
     attempt(() => this.releaseWebGLTimingFence());
@@ -14852,8 +14858,12 @@ export class PixiFieldPresenter {
       || typeof gl.fenceSync !== 'function' || typeof gl.clientWaitSync !== 'function') {
       return undefined;
     }
-    let buffer: WebGLBuffer | null = null;
-    try { buffer = gl.createBuffer(); } catch { /* use the established synchronous fallback */ }
+    let buffer = this.framebufferAlphaReadbackBuffer;
+    if (!buffer) {
+      try { buffer = gl.createBuffer() ?? undefined; }
+      catch { /* use the established synchronous fallback */ }
+      if (buffer) this.framebufferAlphaReadbackBuffer = buffer;
+    }
     if (!buffer) return undefined;
 
     const ticket = (this.framebufferAlphaReadbackTicketSequence ?? 0) + 1;
@@ -15511,11 +15521,11 @@ export class PixiFieldPresenter {
     let fence: WebGLSync | null = null;
     try {
       gl.bindBuffer(gl.PIXEL_PACK_BUFFER, buffer);
-      gl.bufferData(
-        gl.PIXEL_PACK_BUFFER,
-        this.app.canvas.width * this.app.canvas.height * 4,
-        gl.STREAM_READ,
-      );
+      const byteLength = this.app.canvas.width * this.app.canvas.height * 4;
+      if (this.framebufferAlphaReadbackBufferByteLength !== byteLength) {
+        gl.bufferData(gl.PIXEL_PACK_BUFFER, byteLength, gl.STREAM_READ);
+        this.framebufferAlphaReadbackBufferByteLength = byteLength;
+      }
       gl.readPixels(
         0, 0, this.app.canvas.width, this.app.canvas.height,
         gl.RGBA, gl.UNSIGNED_BYTE, 0,
@@ -15613,13 +15623,21 @@ export class PixiFieldPresenter {
     if (readback?.fence && gl) {
       try { gl.deleteSync(readback.fence); } catch { /* context may already be invalid */ }
     }
-    if (readback?.buffer && gl) {
-      try { gl.deleteBuffer(readback.buffer); } catch { /* context may already be invalid */ }
-    }
     if (readback) {
       readback.fence = undefined;
       readback.buffer = undefined;
       readback.fenceStartedAt = 0;
+    }
+  }
+
+  /** Releases the presenter-owned PBO once, after no ticket can still use it. */
+  private releaseFramebufferAlphaReadbackBuffer(): void {
+    const buffer = this.framebufferAlphaReadbackBuffer;
+    this.framebufferAlphaReadbackBuffer = undefined;
+    this.framebufferAlphaReadbackBufferByteLength = 0;
+    const gl = this.webGLContext();
+    if (buffer && gl) {
+      try { gl.deleteBuffer(buffer); } catch { /* context may already be invalid */ }
     }
   }
 

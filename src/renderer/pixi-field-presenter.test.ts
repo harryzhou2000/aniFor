@@ -111,6 +111,8 @@ interface PresenterHarness {
   framebufferAlphaReadbackTicketSequence: number;
   framebufferAlphaReadbackPoll: number;
   framebufferAlphaReadbackWatchdog: ReturnType<typeof setTimeout> | undefined;
+  framebufferAlphaReadbackBuffer: WebGLBuffer | undefined;
+  framebufferAlphaReadbackBufferByteLength: number;
   renderFenceSubmission: number;
 }
 
@@ -142,6 +144,8 @@ function presenterHarness(outputScale = 2): PresenterHarness {
     framebufferAlphaReadbackTicketSequence: 0,
     framebufferAlphaReadbackPoll: 0,
     framebufferAlphaReadbackWatchdog: undefined,
+    framebufferAlphaReadbackBuffer: undefined,
+    framebufferAlphaReadbackBufferByteLength: 0,
     renderFencePoll: 0,
     renderFenceWatchdog: undefined,
     renderFenceSubmission: 0,
@@ -5402,7 +5406,7 @@ describe('Pixi presenter startup configuration', () => {
     });
   });
 
-  it('reuses a bounded PBO destination at one size, replaces it on resize, and clears it on teardown', () => {
+  it('reuses a bounded CPU readback destination and clears it on teardown', () => {
     const presenter = Object.create(PixiFieldPresenter.prototype) as unknown as {
       framebufferAlphaReadbackScratch?: Uint8Array;
       framebufferAlphaReadbackDestination(byteLength: number): Uint8Array;
@@ -5419,10 +5423,10 @@ describe('Pixi presenter startup configuration', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     expect(source).toMatch(/const rgba = this\.framebufferAlphaReadbackDestination\(/);
     expect(source).toMatch(
-      /this\.failFramebufferAlphaReadback\(\);\s*this\.releaseFramebufferAlphaReadbackScratch\(\);/,
+      /this\.failFramebufferAlphaReadback\(\);\s*this\.releaseFramebufferAlphaReadbackBuffer\(\);\s*this\.releaseFramebufferAlphaReadbackScratch\(\);/,
     );
     expect(source).toMatch(
-      /attempt\(\(\) => this\.failFramebufferAlphaReadback\(\)\);\s*attempt\(\(\) => this\.releaseFramebufferAlphaReadbackScratch\(\)\);/,
+      /attempt\(\(\) => this\.failFramebufferAlphaReadback\(\)\);\s*attempt\(\(\) => this\.releaseFramebufferAlphaReadbackBuffer\(\)\);\s*attempt\(\(\) => this\.releaseFramebufferAlphaReadbackScratch\(\)\);/,
     );
   });
 
@@ -5478,7 +5482,7 @@ describe('Pixi presenter startup configuration', () => {
     });
     expect(gl.getBufferSubData).toHaveBeenCalledOnce();
     expect(gl.deleteSync).toHaveBeenCalledWith(fence);
-    expect(gl.deleteBuffer).toHaveBeenCalledWith(buffer);
+    expect(gl.deleteBuffer).not.toHaveBeenCalled();
   });
 
   it('prearms one v6 activation-owned framebuffer transfer on its exact final submission', () => {
@@ -5505,7 +5509,7 @@ describe('Pixi presenter startup configuration', () => {
       clientWaitSync: vi.fn(() => status), deleteSync: vi.fn(),
     } as unknown as WebGL2RenderingContext;
     const presenter = presenterHarness() as unknown as {
-      app: { renderer?: { gl: WebGL2RenderingContext } };
+      app: { canvas: { width: number; height: number }; renderer?: { gl: WebGL2RenderingContext } };
       presentationSubmission: number;
       fixtureActivationFramebufferAlphaReadbackOwner: number;
       fixtureActivationSubmissionOwner: number;
@@ -5519,6 +5523,7 @@ describe('Pixi presenter startup configuration', () => {
       armFixtureActivationFramebufferAlphaReadback(submission: number): void;
       requestWebGLFramebufferAlphaReadback(): number | undefined;
       getWebGLFramebufferAlphaReadback(ticket: number): WebGLFramebufferAlphaReadback | undefined;
+      releaseFramebufferAlphaReadbackBuffer(): void;
     };
     presenter.app.renderer = { gl };
     Object.assign(presenter, {
@@ -5551,7 +5556,21 @@ describe('Pixi presenter startup configuration', () => {
     status = gl.CONDITION_SATISFIED;
     expect(presenter.getWebGLFramebufferAlphaReadback(1)).toMatchObject({ state: 'completed' });
     expect(presenter.requestWebGLFramebufferAlphaReadback()).toBe(2);
-    expect(gl.createBuffer).toHaveBeenCalledTimes(2);
+    expect(gl.createBuffer).toHaveBeenCalledOnce();
+    expect(gl.bufferData).toHaveBeenCalledOnce();
+
+    // A later serial ticket at a new backing size retains the PBO object but
+    // replaces its storage exactly once. Presenter teardown owns deletion.
+    expect(presenter.getWebGLFramebufferAlphaReadback(2)).toMatchObject({ state: 'completed' });
+    presenter.app.canvas.width = 3;
+    expect(presenter.requestWebGLFramebufferAlphaReadback()).toBe(3);
+    expect(gl.createBuffer).toHaveBeenCalledOnce();
+    expect(gl.bufferData).toHaveBeenCalledTimes(2);
+    expect(presenter.getWebGLFramebufferAlphaReadback(3)).toMatchObject({ state: 'completed' });
+    presenter.releaseFramebufferAlphaReadbackBuffer();
+    presenter.releaseFramebufferAlphaReadbackBuffer();
+    expect(gl.deleteBuffer).toHaveBeenCalledOnce();
+    expect(gl.deleteBuffer).toHaveBeenCalledWith(buffer);
   });
 
   it('does not prearm incomplete, owner-zero, or true-8x activation work', () => {
@@ -5739,7 +5758,7 @@ describe('Pixi presenter startup configuration', () => {
     });
     expect(gl.getBufferSubData).not.toHaveBeenCalled();
     expect(gl.deleteSync).toHaveBeenCalledWith(fence);
-    expect(gl.deleteBuffer).toHaveBeenCalledWith(buffer);
+    expect(gl.deleteBuffer).not.toHaveBeenCalled();
   });
 
   it('supersedes a completed-frame receipt when a later full presentation submits', () => {
