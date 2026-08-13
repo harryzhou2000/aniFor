@@ -1,5 +1,6 @@
 import { ALL_MATERIALS, Material } from '../shared/materials';
 import type { VisualCaptureEvidencePlane } from '../shared/visual-capture-static-contract.js';
+import { visualCaptureLayoutRequested } from '../shared/visual-capture-geometry.js';
 import type { SimulationBackend } from '../simulation';
 import { clientToViewport, ViewTransform, type Point, type ViewState } from './view-transform';
 import { clientToVisualViewport, contentBoxFromBounds, viewportToClient } from './client-coordinate-map';
@@ -427,12 +428,21 @@ export class MaterialRenderer {
   private fixtureActivationPresentationGeneration = 0;
   private fixtureActivationPresentation?: MutableFixtureActivationPresentationGeneration;
   private fixtureActivationPresentations?: Map<number, MutableFixtureActivationPresentationGeneration>;
+  /** V9-only typed callback waiting to own the candidate's first WebGL presentation. */
+  private pendingPromotionFixtureActivation?: {
+    readonly ticket: number;
+    readonly activate: () => void;
+  };
   private fixtureActivationCaptureOwner = 0;
   private fixtureActivationDynamicOwner = 0;
   private fixtureActivationBoundaryOwner = 0;
   private fixtureActivationPowderOwner = 0;
   private fixtureActivationSolidOwner = 0;
   private fixtureActivationBoundaryConsumptionOwner = 0;
+  /** Hermetic capture pages hold first WebGL submission until their startup control is staged. */
+  private readonly promotionBootstrapRequired: boolean;
+  private promotionBootstrapReady = false;
+  private promotionBootstrapResolver?: () => void;
   /** Latest same-page A/B choice, retained across asynchronous WebGL startup. */
   private desiredVisualLabVariant?: VisualLabVariant;
   /** Latest shared material-lighting choice, retained across WebGL startup. */
@@ -443,6 +453,7 @@ export class MaterialRenderer {
   private disposed = false;
 
   constructor(private readonly host: HTMLElement, private readonly simulation: SimulationBackend) {
+    this.promotionBootstrapRequired = visualCaptureLayoutRequested();
     this.requestedOutputScale = resolveFieldOutputScale();
     const forcedCanvas = forceCanvas2D();
     const webGLCapabilities = forcedCanvas ? undefined : probeWebGLCapabilities();
@@ -607,7 +618,7 @@ export class MaterialRenderer {
       if (previous === cell.material) continue;
       this.rendered[cell.index] = cell.material;
       const fallbackFields = this.fallbackFields;
-      fallbackFields?.markDirty(previous, cell.material, cell.index);
+      if (!this.presenter) fallbackFields?.markDirty(previous, cell.material, cell.index);
       if (fallbackFields) this.contourChunks.markCell(cell.index);
       if (fallbackFields) {
         const previousPhase = fallbackFields.lookups.styleBytes[previous * 4];
@@ -629,7 +640,7 @@ export class MaterialRenderer {
       if (this.renderedWalls[cell.index] === cell.wall) continue;
       this.renderedWalls[cell.index] = cell.wall;
       const fallbackFields = this.fallbackFields;
-      fallbackFields?.markAtmosphereBlockerDirty(cell.index);
+      if (!this.presenter) fallbackFields?.markAtmosphereBlockerDirty(cell.index);
       this.presenter?.markWallDirty(cell.index);
       if (fallbackFields) this.contourChunks.markCell(cell.index);
       this.powderSurfaceDirty = true;
@@ -770,6 +781,13 @@ export class MaterialRenderer {
       this.simulation.temperature || this.simulation.velocity
         || this.simulation.presentationState || this.simulation.photonState,
     );
+    if (drainOwnedVolumeFields && !this.presenter
+      && this.backend.backend === 'canvas2d' && this.backend.reason === 'webgl-starting') {
+      this.fixtureActivationCaptureOwner = 0;
+      this.pendingPromotionFixtureActivation = { ticket, activate };
+      this.signalPromotionBootstrapReady();
+      return ticket;
+    }
     if (owned) this.presenter?.beginFixtureActivationPresentationWork(
       ticket, drainOwnedVolumeFields, fullSemanticRepack,
     );
@@ -840,6 +858,65 @@ export class MaterialRenderer {
   private failFixtureActivationPresentationGeneration(): void {
     const presentation = this.fixtureActivationPresentation;
     if (presentation?.state === 'pending') presentation.state = 'failed';
+    this.pendingPromotionFixtureActivation = undefined;
+  }
+
+  /** Runs a staged v9 activation under the real presenter before its first update. */
+  private activatePendingPromotionFixture(presenter: PixiFieldPresenter): void {
+    const pending = this.pendingPromotionFixtureActivation;
+    if (!pending) return;
+    const presentation = this.fixtureActivationPresentation;
+    if (!presentation || presentation.state !== 'pending' || presentation.ticket !== pending.ticket
+      || presentation.completionScope !== 'activation-owned-drained-work') {
+      this.failFixtureActivationPresentationGeneration();
+      throw new Error('Pending promotion fixture activation lost its generation owner');
+    }
+    const ticket = pending.ticket;
+    const fullSemanticRepack = Boolean(
+      this.simulation.temperature || this.simulation.velocity
+        || this.simulation.presentationState || this.simulation.photonState,
+    );
+    this.pendingPromotionFixtureActivation = undefined;
+    this.fixtureActivationCaptureOwner = ticket;
+    presenter.beginFixtureActivationPresentationWork(ticket, true, fullSemanticRepack);
+    try {
+      pending.activate();
+    } catch (error) {
+      this.fixtureActivationCaptureOwner = 0;
+      presenter.cancelFixtureActivationDrainedWork(ticket);
+      presenter.endFixtureActivationPresentationWork(ticket);
+      this.failFixtureActivationPresentationGeneration();
+      throw error;
+    }
+    this.fixtureActivationCaptureOwner = 0;
+    this.fixtureActivationDynamicOwner = ticket;
+    presenter.endFixtureActivationPresentationWork(ticket);
+    this.dynamicPresentationInvalidated = true;
+    this.changed = true;
+  }
+
+  private signalPromotionBootstrapReady(): void {
+    this.promotionBootstrapReady = true;
+    this.promotionBootstrapResolver?.();
+    this.promotionBootstrapResolver = undefined;
+  }
+
+  private async waitForPromotionBootstrap(promotionDeadline: number): Promise<boolean> {
+    if (!this.promotionBootstrapRequired || this.promotionBootstrapReady) return true;
+    const remainingMs = Math.max(0, promotionDeadline - performance.now());
+    if (remainingMs <= 0) return false;
+    return new Promise((resolve) => {
+      let timeout: ReturnType<typeof setTimeout> | undefined;
+      const finish = (ready: boolean): void => {
+        if (timeout !== undefined) clearTimeout(timeout);
+        if (this.promotionBootstrapResolver === signal) this.promotionBootstrapResolver = undefined;
+        resolve(ready);
+      };
+      const signal = (): void => finish(true);
+      this.promotionBootstrapResolver = signal;
+      timeout = setTimeout(() => finish(false), remainingMs);
+      if (this.promotionBootstrapReady) signal();
+    });
   }
 
   /**
@@ -858,7 +935,7 @@ export class MaterialRenderer {
       if (previous === material) continue;
       this.rendered[index] = material;
       const fallbackFields = this.fallbackFields;
-      fallbackFields?.markDirty(previous, material, index, owner);
+      if (!this.presenter) fallbackFields?.markDirty(previous, material, index, owner);
       if (fallbackFields) this.contourChunks.markCell(index);
       if (fallbackFields) {
         const previousPhase = fallbackFields.lookups.styleBytes[previous * 4];
@@ -886,7 +963,7 @@ export class MaterialRenderer {
       if (this.renderedWalls[index] === wall) continue;
       this.renderedWalls[index] = wall;
       const fallbackFields = this.fallbackFields;
-      fallbackFields?.markAtmosphereBlockerDirty(index, owner);
+      if (!this.presenter) fallbackFields?.markAtmosphereBlockerDirty(index, owner);
       this.presenter?.markWallDirty(index);
       if (fallbackFields) this.contourChunks.markCell(index);
       this.powderSurfaceDirty = true;
@@ -1296,7 +1373,9 @@ export class MaterialRenderer {
   /** Normal-HDR visual-lab A/B selector; Canvas and true 8x remain inert. */
   setVisualLabVariant(variant: VisualLabVariant): void {
     this.desiredVisualLabVariant = variant;
-    this.presenter?.setVisualLabVariant(variant);
+    this.signalPromotionBootstrapReady();
+    if (this.fixtureActivationCaptureOwner > 0) this.presenter?.setVisualLabVariant(variant, false);
+    else this.presenter?.setVisualLabVariant(variant);
   }
 
   /** Current same-page Visual Lab choice, including pre-promotion Canvas state. */
@@ -1310,7 +1389,9 @@ export class MaterialRenderer {
       throw new Error(`Invalid material-lighting variant ${JSON.stringify(variant)}`);
     }
     this.desiredMaterialLightingVariant = variant;
-    this.presenter?.setMaterialLightingVariant(variant);
+    this.signalPromotionBootstrapReady();
+    if (this.fixtureActivationCaptureOwner > 0) this.presenter?.setMaterialLightingVariant(variant, false);
+    else this.presenter?.setMaterialLightingVariant(variant);
   }
 
   getMaterialLightingVariant(): 0 | 1 | 2 {
@@ -1736,6 +1817,7 @@ export class MaterialRenderer {
   }
 
   setPowderRenderStyle(style: PowderRenderStyle): void {
+    this.signalPromotionBootstrapReady();
     if (style === this.powderRenderStyle) return;
     this.powderRenderStyle = style;
     if (this.presenter) {
@@ -1743,7 +1825,8 @@ export class MaterialRenderer {
       // causal frame synchronously. Queuing the Canvas/field redraw as well
       // makes capture controls render the entire backing twice; recovery marks
       // every Canvas contour dirty when it recreates the fallback.
-      this.presenter.setPowderRenderStyle(style);
+      if (this.fixtureActivationCaptureOwner > 0) this.presenter.setPowderRenderStyle(style, false);
+      else this.presenter.setPowderRenderStyle(style);
       return;
     }
     this.contourChunks.markAll();
@@ -1852,12 +1935,14 @@ export class MaterialRenderer {
         return;
       }
       if (!presenter) {
+        this.failFixtureActivationPresentationGeneration();
         this.setBackend({ backend: 'canvas2d', label: 'Canvas 2D', reason: 'webgl-timeout' });
         void pending.then((latePresenter) => latePresenter.destroy()).catch(() => undefined);
         return;
       }
       const ready = await this.commitPresenter(presenter, promotionDeadline);
       if (!ready) {
+        this.failFixtureActivationPresentationGeneration();
         const contextLost = presenter.isContextLost();
         if (this.presenter === presenter) this.presenter = undefined;
         try { presenter.destroy(); } catch { /* timed-out candidate is already unusable */ }
@@ -1871,6 +1956,7 @@ export class MaterialRenderer {
         return;
       }
     } catch (error) {
+      this.failFixtureActivationPresentationGeneration();
       const contextLost = presenter?.isContextLost() ?? false;
       try { presenter?.destroy(); } catch { /* failed presenter is already unusable */ }
       this.presenter = undefined;
@@ -1896,6 +1982,7 @@ export class MaterialRenderer {
     // Canvas remains visible. Any failure leaves the fallback fully intact.
     if (this.disposed) return false;
     const now = performance.now();
+    const visualTime = this.promotionBootstrapRequired ? 1_000 : now;
     presenter.setContextLossHandler(() => this.recoverFromWebGLFailure(presenter, 'webgl-context-lost'));
     presenter.setRenderStallHandler(() => this.recoverFromWebGLFailure(presenter, 'webgl-timeout'));
     if (this.webGLPresentationTimingEnabled) presenter.enableWebGLPresentationTiming();
@@ -1964,6 +2051,7 @@ export class MaterialRenderer {
       this.dlayStateStylingEnabled,
       this.wifiStateStylingEnabled,
     );
+    if (!await this.waitForPromotionBootstrap(promotionDeadline)) return false;
     // The browser audit bridge is installed before late WebGL promotion can
     // finish. Seed any same-page choice without submitting an unhydrated frame;
     // later calls route through this.presenter and render normally.
@@ -1977,11 +2065,15 @@ export class MaterialRenderer {
     // frame is in flight. The known-good Canvas remains mounted underneath;
     // latest semantic/field mutations coalesce behind the presenter's fence.
     this.presenter = presenter;
+    this.activatePendingPromotionFixture(presenter);
     presenter.update(
       this.rendered, this.renderedWalls, this.simulation.temperature?.(), this.simulation.velocity?.(),
       this.simulation.presentationState?.(), this.simulation.photonState?.(),
-      now, now, true,
+      now, visualTime, true,
     );
+    if (this.fixtureActivationPresentationSettled(this.fixtureActivationPresentation)) {
+      this.completeFixtureActivationPresentationGeneration();
+    }
     if (presenter.isContextLost()) throw new Error('WebGL context lost during presenter promotion');
     presenter.mount();
     // Mounting replaces the fallback surface and can settle the host's fitted
@@ -2000,7 +2092,7 @@ export class MaterialRenderer {
     if (presenter.isContextLost() || this.presenter !== presenter) return false;
     this.releaseFallbackStorage();
     this.setBackend({ backend: 'webgl', label: 'WebGL' });
-    this.changed = true;
+    this.changed = this.fixtureActivationPresentation?.state !== 'completed';
     return true;
   }
 

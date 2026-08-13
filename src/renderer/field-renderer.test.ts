@@ -44,6 +44,7 @@ describe('field renderer layout scheduling', () => {
       markAtmosphereBlockerDirty,
       lookups: { styleBytes: new Uint8Array(1024) },
     };
+    renderer.presenter = undefined;
     materials[0] = Material.Sand;
     walls[0] = 2;
     renderer.synchronizeFixtureMaterialPlane();
@@ -162,6 +163,72 @@ describe('field renderer layout scheduling', () => {
 
     expect(renderer.runWithNextFixtureActivationDrainedWorkGeneration(() => undefined)).toBe(1);
     expect(begin).toHaveBeenCalledWith(1, true, false);
+  });
+
+  it('defers a drained activation during promotion and adopts it before first update', () => {
+    const activate = vi.fn();
+    const begin = vi.fn();
+    const end = vi.fn();
+    const renderer = Object.create(MaterialRenderer.prototype) as any;
+    Object.assign(renderer, {
+      disposed: false,
+      backend: { backend: 'canvas2d', label: 'Canvas 2D', reason: 'webgl-starting' },
+      fixtureActivationTicketSequence: 0,
+      fixtureActivationPresentationGeneration: 0,
+      fixtureActivationCaptureOwner: 0,
+      fixtureActivationDynamicOwner: 0,
+      simulation: { temperature: new Uint16Array(1) },
+      changed: false,
+      dynamicPresentationInvalidated: false,
+    });
+
+    expect(renderer.runWithNextFixtureActivationDrainedWorkGeneration(activate)).toBe(1);
+    expect(activate).not.toHaveBeenCalled();
+    expect(renderer.getFixtureActivationPresentationGeneration(1)?.state).toBe('pending');
+    expect(renderer.promotionBootstrapReady).toBe(true);
+
+    const presenter = {
+      beginFixtureActivationPresentationWork: begin,
+      endFixtureActivationPresentationWork: end,
+      cancelFixtureActivationDrainedWork: vi.fn(),
+    };
+    renderer.presenter = presenter;
+    renderer.activatePendingPromotionFixture(presenter);
+    expect(activate).toHaveBeenCalledOnce();
+    expect(begin).toHaveBeenCalledWith(1, true, true);
+    expect(end).toHaveBeenCalledWith(1);
+    expect(renderer.fixtureActivationDynamicOwner).toBe(1);
+    expect(renderer.dynamicPresentationInvalidated).toBe(true);
+  });
+
+  it('fails and cancels a promotion-bound activation whose callback rejects', () => {
+    const cancel = vi.fn();
+    const end = vi.fn();
+    const renderer = Object.create(MaterialRenderer.prototype) as any;
+    Object.assign(renderer, {
+      disposed: false,
+      backend: { backend: 'canvas2d', label: 'Canvas 2D', reason: 'webgl-starting' },
+      fixtureActivationTicketSequence: 0,
+      fixtureActivationPresentationGeneration: 0,
+      fixtureActivationCaptureOwner: 0,
+      fixtureActivationDynamicOwner: 0,
+      simulation: { temperature: new Uint16Array(1) },
+    });
+    renderer.runWithNextFixtureActivationDrainedWorkGeneration(() => {
+      throw new Error('fixture rejected');
+    });
+    const presenter = {
+      beginFixtureActivationPresentationWork: vi.fn(),
+      endFixtureActivationPresentationWork: end,
+      cancelFixtureActivationDrainedWork: cancel,
+    };
+    renderer.presenter = presenter;
+
+    expect(() => renderer.activatePendingPromotionFixture(presenter)).toThrow('fixture rejected');
+    expect(cancel).toHaveBeenCalledWith(1);
+    expect(end).toHaveBeenCalledWith(1);
+    expect(renderer.getFixtureActivationPresentationGeneration(1)?.state).toBe('failed');
+    expect(renderer.fixtureActivationCaptureOwner).toBe(0);
   });
 
   it('cancels a v7 drain reservation when typed activation rejects', () => {

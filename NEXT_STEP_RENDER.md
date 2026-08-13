@@ -8139,6 +8139,43 @@ seconds in the complete snapshot/PBO wait; the preparation cleanup is deployed,
 but eliminating the separate unreviewed promotion frame remains the meaningful
 next experiment.
 
+The promotion-bound activation experiment is now locally accepted. Hermetic
+capture pages hold the candidate's first WebGL submission until the existing
+typed startup control is staged. A default-v9 drained activation is retained as
+one callback, adopted by the real presenter, and executed under its exact owner
+immediately before that first populated HDR update. Selector mutations made by
+the callback update uniforms without submitting a competing frame. Ordinary
+pages keep immediate promotion, legacy startup selectors keep their established
+pre-WebGL handshake, forced Canvas remains compatible, and promotion timeout,
+context loss, callback rejection, or teardown fail the pending generation and
+restore the normal fallback path. The shared fallback field set is no longer
+double-dirtied while the WebGL presenter owns it; recovery still marks and
+renders the complete Canvas fallback.
+
+A fresh default-v9 SwiftShader RenderOptics review at
+`.artifacts/visual-lab-reviews/render-optics-daa3be7d-c791-498b-b155-dfbe453eef69`
+passed WebGL/HDR, all semantic, authoritative-field, framebuffer-alpha,
+response, and appearance checks, portable verification, and strict teardown.
+It retained exact result
+`sha256:4891db2c82bb89cb4bce5a63a2927360fbc20e634a0a91b9d17a490deb630581`
+and all established OFF/A/B PNG hashes. The three reviewed variants moved from
+presentation submissions 6/7/8 to 5/6/7, directly proving that one unreviewed
+promotion frame was removed without rotating visual or evidence identity. A
+fresh legacy Oxygen capture also retained exact result
+`sha256:9d48b48ff349f334ff4d2843482c2bfc502abebfa9955d600a3eedb488936916`
+with `stagedBeforeWebGL=true`. All 296 directly affected renderer tests and the
+production Pages build pass. Two unrelated five-second Canvas fixtures timed
+out only in the loaded parallel source run and both passed together in 5.23
+seconds when rerun independently. Treat the observed startup/readiness values
+as diagnostics; deployment evidence is still pending.
+
+After deployment, keep the next framework step measurement-driven: use the
+existing non-identity capture-subphase telemetry to separate first populated
+HDR submission, completion wait, and full readback cost under alternating
+cohorts. Do not add a new proof schema, visual hash gate, or another startup
+branch. Only then choose between reducing reusable first-frame field work and
+returning effort to the deferred material/VFX roadmap.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

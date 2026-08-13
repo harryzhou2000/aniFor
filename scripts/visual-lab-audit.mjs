@@ -1300,10 +1300,13 @@ async function activateFixtureDuringStartup(cdp, options) {
         || root.dataset.scene !== ${JSON.stringify(options.fixtureAdapter.scene)}) return false;
       const backend = audit.backend();
       const dataset = canvas.dataset;
-      return backend.backend === ${JSON.stringify(options.domainAdapter.executionProfile.backend)}
+      const promoted = backend.backend === ${JSON.stringify(options.domainAdapter.executionProfile.backend)}
         && backend.outputScale === ${options.renderScale}
         && dataset.renderer === ${JSON.stringify(VISUAL_LAB_CAPTURE_PROTOCOL.datasetRequirements.renderer)}
         && dataset.hdrPipeline === ${JSON.stringify(VISUAL_LAB_CAPTURE_PROTOCOL.datasetRequirements.hdrPipeline)};
+      const promotionStarting = ${hasFixtureActivationRenderFieldReadinessDescriptor(profile)}
+        && backend.backend === 'canvas2d' && backend.reason === 'webgl-starting';
+      return promoted || promotionStarting;
     })()`),
     effectiveTimeouts.readinessMs,
     `${options.fixture} typed activation audit bridge`,

@@ -14638,9 +14638,9 @@ export class PixiFieldPresenter {
     this.renderApplication();
   }
 
-  setPowderRenderStyle(style: PowderRenderStyle): void {
+  setPowderRenderStyle(style: PowderRenderStyle, render = true): void {
     this.uniforms.uniforms.uPowderStyle = powderRenderStyleValue(style);
-    this.renderApplication();
+    if (render) this.renderApplication();
   }
 
   enableWebGLPresentationTiming(): void {
