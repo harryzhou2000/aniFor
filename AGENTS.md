@@ -1865,6 +1865,15 @@ readiness, and total were 12.56s, 19.67s, and 38.93s respectively. Keep v5
 manual/opt-in until hosted ABBA evidence passes; v1 stays default, Water stays v2,
 and v4 remains the proven hosted performance control.
 
+The first hosted v5 run at revision `90f4ab5` failed before its readiness
+snapshot: activation generation `1` remained pending for the original 60-second
+SwiftShader readiness bound, then loaded cleanup hit its separate CDP timeout.
+This is not visual evidence and must not promote v5. Activation-owned quiescence
+can require several serialized software-GPU presentations, so v5 alone now uses
+a 120-second SwiftShader scheduling bound while retaining one snapshot, the same
+generation reread, and all v1–v4 timeout bytes. Do not broaden this bound to the
+stable modes or interpret it as a performance threshold.
+
 The renderer-owned completed-frame receipt is now a protected audit capability.
 `anifor.renderer.completed-frame-receipt/v1` binds every ticket to the exact
 presentation submission and exposes only `pending`, `completed`, `superseded`,

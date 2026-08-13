@@ -7053,6 +7053,16 @@ readiness used one snapshot; OFF/A/B receipt submissions were contiguous at
 is the same hosted ABBA Powder control; keep v4 as the accepted hosted control
 until v5 proves portable parity and robustness there.
 
+The first hosted v5 attempt at exact revision `90f4ab5` stopped before taking
+the readiness snapshot: activation generation `1` remained pending through the
+original 60-second SwiftShader readiness bound, and loaded strict cleanup then
+hit its separate CDP timeout. The local visual result remains valid, but this run
+is scheduling-failure evidence, not acceptance. Because activation quiescence
+may drain several serialized software-GPU presentations, v5 alone now grants
+that drain 120 seconds on SwiftShader. The evidence contract is unchanged:
+exactly one readiness snapshot, same-generation reread, and v4 OFF/A/B receipts.
+All v1–v4 timeouts and behaviors remain frozen.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

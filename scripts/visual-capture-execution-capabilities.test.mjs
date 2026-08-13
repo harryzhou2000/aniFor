@@ -103,7 +103,10 @@ const v5Capability = () => {
   const profile = v4Capability();
   return {
     startup: profile.startup,
-    readiness: profile.readiness,
+    readiness: {
+      ...profile.readiness,
+      timeoutMsByGpu: { ...profile.readiness.timeoutMsByGpu, swiftshader: 120_000 },
+    },
     readinessActivation: {
       capability: 'renderer-fixture-activation-generation/v1',
       requiredState: 'completed',

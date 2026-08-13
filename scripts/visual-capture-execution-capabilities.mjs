@@ -499,7 +499,13 @@ const FIXTURE_ACTIVATION_GENERATION_PROFILE = () => {
   const profile = SELECTION_OWNED_COMPLETED_FRAME_RECEIPT_PROFILE();
   return {
     startup: profile.startup,
-    readiness: profile.readiness,
+    readiness: {
+      ...profile.readiness,
+      // A loaded software GPU may need several serialized presentations to
+      // drain the activation-owned field/boundary queues. This is a scheduling
+      // bound, not permission to weaken the one-snapshot evidence contract.
+      timeoutMsByGpu: { ...profile.readiness.timeoutMsByGpu, swiftshader: 120_000 },
+    },
     readinessActivation: {
       capability: 'renderer-fixture-activation-generation/v1',
       requiredState: 'completed',
