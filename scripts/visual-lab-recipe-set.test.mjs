@@ -236,11 +236,10 @@ describe('Visual Lab recipe-set/v1', () => {
     expect(workflow).toContain(
       'if [[ -z "${candidate_request}" && -z "${recipe_set_request}" ]]; then',
     );
-    expect(workflow).toContain('resolveVisualLabCohort(process.env.VISUAL_LAB_COHORT)');
-    expect(workflow).toContain('readVisualLabRecipeSet(resolved.snapshotPath)');
-    expect(workflow).toContain('snapshot.name !== resolved.name || snapshot.id !== resolved.recipeSet.id');
+    expect(workflow).toContain('node scripts/visual-lab-cohort-catalog.mjs');
+    expect(workflow).toContain('resolve --name="${VISUAL_LAB_COHORT}"');
     expect(workflow).toContain(
-      'Visual Lab CI cohort snapshot is stale; run npm run visual-lab:authoring:sync',
+      'VISUAL_LAB_RECIPE_SET="$(realpath --relative-to=. -- "${VISUAL_LAB_RECIPE_SET}")"',
     );
     expect(workflow).toContain('recipe_set_source=%s');
     expect(workflow).toContain('git --literal-pathspecs ls-files --error-unmatch');
