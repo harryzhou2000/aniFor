@@ -42,7 +42,8 @@ const PHASES: readonly { readonly name: MaterialAppearancePhase; readonly code: 
   { name: 'solid', code: MaterialAppearancePhaseCode.Solid },
 ];
 
-const PHASE_OPTICS = Object.freeze({
+/** Actionable phase/class pairs that require profile-authoring review coverage. */
+export const MATERIAL_APPEARANCE_PHASE_OPTICS = Object.freeze({
   powder: Object.freeze([
     RenderOptics.RoughGranular,
     RenderOptics.CrystallineGranular,
@@ -173,7 +174,7 @@ export function validateMaterialAppearanceProfiles(profiles: MaterialAppearanceP
       if (!knownRenderOptics(optics) || optics === RenderOptics.Default) {
         throw new Error(`${name} has an unknown RenderOptics override`);
       }
-      if (!(PHASE_OPTICS[name] as readonly number[]).includes(optics)) {
+      if (!(MATERIAL_APPEARANCE_PHASE_OPTICS[name] as readonly number[]).includes(optics)) {
         throw new Error(`${name} has a phase-incompatible RenderOptics override`);
       }
       validateProfile(`${name} RenderOptics.${optics}`, response);

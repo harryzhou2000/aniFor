@@ -28,7 +28,7 @@ describe('visual capture authoring manifest', () => {
     expect(VISUAL_CAPTURE_AUTHORING_MANIFEST.map(({ name }) => name)).toEqual([
       'material-showcase',
       'cross-phase', 'gas', 'solid', 'source-target', 'force-activity',
-      'thermal-source', 'opposed-source', 'wax', 'powder-style', 'liquid-motion', 'oil-motion',
+      'thermal-source', 'opposed-source', 'wax', 'render-optics', 'powder-style', 'liquid-motion', 'oil-motion',
     ]);
     const entries = VISUAL_CAPTURE_AUTHORING_MANIFEST.flatMap(({ entries }) => entries);
     expect(entries.map(({ atlas: entry }) => entry.candidate)).toEqual([
@@ -38,9 +38,10 @@ describe('visual capture authoring manifest', () => {
       'source-target-material-lighting-atlas', 'force-activity-material-lighting-atlas',
       'thermal-source-material-lighting-atlas', 'opposed-source-material-lighting-atlas',
       'wax-material-lighting-atlas',
+      'render-optics-material-lighting-atlas',
       'powder-style-atlas', 'water-motion', 'oil-motion',
     ]);
-    expect(entries.filter(({ capture }) => capture !== null)).toHaveLength(10);
+    expect(entries.filter(({ capture }) => capture !== null)).toHaveLength(11);
     expect(entries.filter(({ capture }) => capture === null)
       .map(({ atlas: entry }) => entry.candidate)).toEqual([
         'gas-showcase', 'oxygen-showcase', 'water-motion', 'oil-motion',
@@ -110,19 +111,19 @@ describe('visual capture authoring manifest', () => {
 
   it('preserves every public capture and inspection byte through the migration', () => {
     expect(digest(VISUAL_CAPTURE_STATIC_CONTRACT.fixtures)).toBe(
-      'e1a996594c6aa778abc0adccd55456c2b9666a3441a6ceeff86355662f3dcdf0',
+      '6ae9cbfdaf16ebba1887ce437c1f8c42467e5526a870381c8a79f7d2783cb105',
     );
     expect(digest(VISUAL_CAPTURE_STATIC_CONTRACT.captureRecipes)).toBe(
-      'cabc6da3d727060d6574c8cba65193a1e732cb9bc7f6327de32b300452cdff19',
+      'fa855a9d07b8b79f17e66551162824cdc565af8c4c7960b7f73abbf26dc81be5',
     );
     expect(digest(VISUAL_CAPTURE_STATIC_CONTRACT)).toBe(
-      'c7ab997c69ef9e6de4acd660761abf21882d4d9a5d16daa7985c3a45b426e2ea',
+      '08e60db3ade1064b3ac12ce62912d8c02a66046235a7c90fd99f3ee2d883237c',
     );
     expect(digest(VISUAL_CAPTURE_STATIC_CATALOG)).toBe(
-      'fd8600bdcf675580c11bd8bf5b0a0091c1285208231074352f2cca51510b52aa',
+      '4e155d636060d2710b65520addacae139e4b7844ab2d3c7ed4006e3dd6f0512a',
     );
     expect(digest(VISUAL_CAPTURE_INSPECTION_SOURCE_CATALOG)).toBe(
-      'b66cb1ed5c0eefa44fc844a21fc9aab69e97e6d43f33baa26041599705757b47',
+      '822700d9136b70028f4ce7210a44d46f3c58be51dfeeb929ff5218b3a49bee2e',
     );
   });
 });

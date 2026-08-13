@@ -10,6 +10,7 @@ import { prepareMaterialLightingAtlasFixture } from './material-lighting-atlas-f
 import { prepareMultiMetalMaterialLightingAtlasFixture } from './multi-metal-material-lighting-atlas-fixture';
 import { preparePowderLightVfxFixture } from './powder-light-vfx-audit';
 import { preparePowderStyleAtlasFixture } from './powder-style-atlas-fixture';
+import { prepareRenderOpticsMaterialLightingAtlasFixture } from './render-optics-material-lighting-atlas-fixture';
 import { prepareSolidMaterialLightingAtlasFixture } from './solid-material-lighting-atlas-fixture';
 import { prepareSourceTargetGraphicsAuditFixture } from './source-target-graphics-audit';
 import { prepareWaxMaterialLightingAtlasFixture } from './wax-material-lighting-atlas-fixture';
@@ -30,6 +31,7 @@ describe('Visual Lab fixture preparation registry', () => {
       'thermal-source-material-lighting-atlas',
       'opposed-source-material-lighting-atlas',
       'wax-material-lighting-atlas',
+      'render-optics-material-lighting-atlas',
     ]);
     expect(Object.isFrozen(VISUAL_LAB_FIXTURE_IDS)).toBe(true);
   });
@@ -44,6 +46,7 @@ describe('Visual Lab fixture preparation registry', () => {
       'thermal-source-material-lighting-atlas',
       'opposed-source-material-lighting-atlas',
       'wax-material-lighting-atlas',
+      'render-optics-material-lighting-atlas',
     ]);
     expect(Object.isFrozen(VISUAL_LAB_PREPARED_FIXTURE_IDS)).toBe(true);
   });
@@ -61,6 +64,7 @@ describe('Visual Lab fixture preparation registry', () => {
     ['thermal-source-material-lighting-atlas', prepareCeramicTemperatureVfxFixture],
     ['opposed-source-material-lighting-atlas', preparePowderLightVfxFixture],
     ['wax-material-lighting-atlas', prepareWaxMaterialLightingAtlasFixture],
+    ['render-optics-material-lighting-atlas', prepareRenderOpticsMaterialLightingAtlasFixture],
   ] as const)('prepares %s byte-identically to its direct moving builder', (id, prepareDirect) => {
     const generic = new RenderLabBackend();
     const direct = new RenderLabBackend();

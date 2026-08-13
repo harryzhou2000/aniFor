@@ -4,6 +4,7 @@ import {
   buildMaterialAppearanceProfileGLSLSelector,
   MATERIAL_APPEARANCE_PROFILE_GLSL_SELECTOR,
   MATERIAL_APPEARANCE_PROFILES,
+  MATERIAL_APPEARANCE_PHASE_OPTICS,
   MATERIAL_APPEARANCE_PROFILE_MAXIMUM,
   MATERIAL_APPEARANCE_PROFILE_MINIMUM,
   resolveMaterialAppearanceProfile,
@@ -12,6 +13,19 @@ import {
 } from './material-appearance-profiles';
 
 describe('material appearance profiles', () => {
+  it('publishes the frozen actionable phase and optics coverage vocabulary', () => {
+    expect(MATERIAL_APPEARANCE_PHASE_OPTICS).toEqual({
+      powder: [7, 13, 14, 15],
+      liquid: [1, 2, 3, 4, 16, 17, 18],
+      gas: [5, 6],
+      solid: [8, 9, 10, 11, 12, 20, 21],
+    });
+    expect(Object.isFrozen(MATERIAL_APPEARANCE_PHASE_OPTICS)).toBe(true);
+    for (const optics of Object.values(MATERIAL_APPEARANCE_PHASE_OPTICS)) {
+      expect(Object.isFrozen(optics)).toBe(true);
+    }
+  });
+
   it('keeps every phase response immutable, finite, and bounded', () => {
     expect(Object.isFrozen(MATERIAL_APPEARANCE_PROFILES)).toBe(true);
     for (const phase of Object.values(MATERIAL_APPEARANCE_PROFILES)) {

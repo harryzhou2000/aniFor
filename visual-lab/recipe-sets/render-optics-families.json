@@ -1,0 +1,15 @@
+{
+  "schema": "anifor.visual-lab.recipe-set/v1",
+  "id": "sha256:f0d9cf10a1078c74d53eb415fdca8395ee42216499673131cbc92487d4f92394",
+  "name": "render-optics-families",
+  "recipes": [
+    {
+      "name": "render-optics-material-lighting-atlas",
+      "domain": "material-lighting",
+      "target": 0,
+      "fixture": "render-optics-material-lighting-atlas",
+      "gain": 1,
+      "renderScale": 2
+    }
+  ]
+}

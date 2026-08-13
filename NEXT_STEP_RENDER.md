@@ -7452,6 +7452,28 @@ largely opaque beside darker flowing MWAX; use this retained current-only
 evidence to decide a later Wax optics-profile experiment. It is not a
 cross-revision PNG or result-identity gate.
 
+The reusable framework now also supplies one representative cross-phase
+RenderOptics board instead of requiring one fixture per material detail. A
+frozen data-only `render-optics-material-lighting-atlas` catalog covers all 20
+actionable phase/optics pairs declared by the renderer appearance profiles;
+`Default` and `Cellular` remain explicit non-actionable exclusions. The
+renderer exports that exact coverage for catalog validation, while the typed
+app preparer constructs a 5x4 board with phase-honest silhouettes: tapered
+powder piles, rounded liquid bodies, joined diffuse gas lobes, and firmer
+rounded solids. Each card retains body/core regions plus bounded cavity,
+notch, isolated, fine-structure, and Fire-source controls; WAX/MWAX and
+Glass/Metal contact pairs, a native wall, and a guarded blank complete the
+shared topology evidence. The authoring manifest, existing material-lighting
+driver, typed fixture registry, generated recipe sets, and source-backed
+`render-optics-families` cohort carry the new board without a browser method,
+capture branch, renderer resource, executable static record, or frozen-schema
+migration. A real shared-host SwiftShader OFF/A/B capture at
+`/tmp/anifor-render-optics-family-v2` passed WebGL/HDR, zero browser errors,
+all 49 regions, and strict portable verification as result
+`sha256:61328aa723024b29ab6e0fb62660a8d1597036b53f5cb0617f16e40370a468fa`.
+The board is current-only visual evidence for choosing the next profile
+experiment; its result and PNG bytes are not cross-revision gates.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

@@ -52,6 +52,16 @@
       "candidates": []
     },
     {
+      "name": "render-optics-families",
+      "includes": [],
+      "selectors": {
+        "sources": ["render-optics"],
+        "domains": [],
+        "fixtures": []
+      },
+      "candidates": []
+    },
+    {
       "name": "material-optics",
       "includes": [
         "atmosphere",

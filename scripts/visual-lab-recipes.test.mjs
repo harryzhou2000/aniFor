@@ -80,6 +80,10 @@ describe('Visual Lab capture recipes', () => {
         name: 'wax-material-lighting-atlas', domain: 'material-lighting', target: 0,
         fixture: 'wax-material-lighting-atlas', gain: 1, renderScale: 2,
       },
+      {
+        name: 'render-optics-material-lighting-atlas', domain: 'material-lighting', target: 0,
+        fixture: 'render-optics-material-lighting-atlas', gain: 1, renderScale: 2,
+      },
     ]);
     expect(visualLabCaptureRecipeNames()).toEqual([
       'gas-showcase', 'oxygen-showcase', 'oil-motion', 'water-motion',
@@ -90,6 +94,7 @@ describe('Visual Lab capture recipes', () => {
       'thermal-source-material-lighting-atlas',
       'opposed-source-material-lighting-atlas',
       'wax-material-lighting-atlas',
+      'render-optics-material-lighting-atlas',
     ]);
     expect(resolveVisualLabCaptureRecipe('water-motion'))
       .toBe(VISUAL_LAB_CAPTURE_RECIPES[3]);
@@ -116,7 +121,7 @@ describe('Visual Lab capture recipes', () => {
 
     const names = visualLabCaptureRecipeNames();
     names.pop();
-    expect(visualLabCaptureRecipeNames()).toHaveLength(14);
+    expect(visualLabCaptureRecipeNames()).toHaveLength(15);
   });
 
   it('requires an array of exact data objects', () => {
@@ -181,7 +186,8 @@ describe('Visual Lab capture recipes', () => {
         + ' solid-material-lighting-atlas, multi-metal-material-lighting-atlas,'
         + ' source-target-material-lighting-atlas,'
         + ' force-activity-material-lighting-atlas, thermal-source-material-lighting-atlas,'
-        + ' opposed-source-material-lighting-atlas, or wax-material-lighting-atlas',
+        + ' opposed-source-material-lighting-atlas, wax-material-lighting-atlas,'
+        + ' or render-optics-material-lighting-atlas',
       );
     expect(() => createOne({ fixture: 'oil-motion', domain: 'gas', target: 8 }))
       .toThrow('--fixture=oil-motion requires --domain=liquid --target=8');
@@ -211,7 +217,8 @@ describe('Visual Lab capture recipes', () => {
         + ' gas-material-lighting-atlas, solid-material-lighting-atlas,'
         + ' multi-metal-material-lighting-atlas, source-target-material-lighting-atlas,'
         + ' force-activity-material-lighting-atlas, thermal-source-material-lighting-atlas,'
-        + ' opposed-source-material-lighting-atlas, wax-material-lighting-atlas',
+        + ' opposed-source-material-lighting-atlas, wax-material-lighting-atlas,'
+        + ' render-optics-material-lighting-atlas',
       );
     expect(() => resolveVisualLabCaptureRecipe(undefined))
       .toThrow('Unknown Visual Lab capture candidate undefined');

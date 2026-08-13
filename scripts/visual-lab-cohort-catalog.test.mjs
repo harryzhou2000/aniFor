@@ -251,10 +251,11 @@ describe('Visual Lab declarative cohort catalog', () => {
       candidates: [],
     });
     await expect(checkVisualLabCohortOutputs(input, output)).resolves.toEqual({
-      checked: 7,
+      checked: 8,
       names: [
         'atmosphere.json', 'liquid-motion.json', 'material-lighting.json',
-        'material-optics.json', 'powder-style.json', 'release.json', 'solid-materials.json',
+        'material-optics.json', 'powder-style.json', 'release.json', 'render-optics-families.json',
+        'solid-materials.json',
       ],
     });
     const compiled = compileVisualLabCohortCatalog(input);
@@ -262,8 +263,9 @@ describe('Visual Lab declarative cohort catalog', () => {
       'sha256:6fa70067d092a16e1b8d2e77283b33bd10067ce5485ae8c79239775eb7cb1e3c',
       'sha256:7fd140a5fef7cb4e692d8db08e35b3bb3da7835451a92289ba2941efe7fab380',
       'sha256:f5053916b82e8907f840ae6e334a159bedecc69b0777e2700f0383917b58a4e0',
-      'sha256:4f364cad6b11c0a1f016785e4d87087f88818e7cc3eeadee0a8f4371f417edcd',
+      'sha256:17a30975a39b0a73db20293324a6ddfef85b8b2600102fd9a59c88ccd41eaed5',
       'sha256:6be1bd43bad5b455398a7848a0f9348ce186a66b7ea181b61413568e40de326e',
+      'sha256:f0d9cf10a1078c74d53eb415fdca8395ee42216499673131cbc92487d4f92394',
       'sha256:2f7824673c315358416b802283d3d3333f0b22cd908699cbe512da8b38f6c5e2',
     ]);
   });
@@ -271,7 +273,7 @@ describe('Visual Lab declarative cohort catalog', () => {
   it('exposes launcher-safe names and resolution with tracked snapshot metadata', async () => {
     expect(await visualLabCohortNames()).toEqual([
       'atmosphere', 'liquid-motion', 'powder-style', 'material-lighting',
-      'solid-materials', 'material-optics', 'release',
+      'solid-materials', 'render-optics-families', 'material-optics', 'release',
     ]);
     const resolved = await resolveVisualLabCohort('release');
     expect(resolved.name).toBe('release');

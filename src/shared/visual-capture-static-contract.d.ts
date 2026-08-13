@@ -286,6 +286,21 @@ export declare const VISUAL_CAPTURE_STATIC_CONTRACT: Readonly<{
       readonly "preparationReportLabel": "prepareWaxMaterialLightingAtlasFixture";
       readonly "requirement": "--domain=material-lighting --target=0";
     }>,
+    Readonly<{
+      readonly "name": "render-optics-material-lighting-atlas";
+      readonly "scene": "showcase";
+      readonly "driver": "material-lighting-profile";
+      readonly "constraints": readonly [
+        Readonly<{
+          readonly "domain": "material-lighting";
+          readonly "targets": readonly [
+            0,
+          ];
+        }>,
+      ];
+      readonly "preparationReportLabel": "prepareRenderOpticsMaterialLightingAtlasFixture";
+      readonly "requirement": "--domain=material-lighting --target=0";
+    }>,
   ];
   readonly "captureRecipes": readonly [
     Readonly<{
@@ -365,6 +380,14 @@ export declare const VISUAL_CAPTURE_STATIC_CONTRACT: Readonly<{
       readonly "domain": "material-lighting";
       readonly "target": 0;
       readonly "fixture": "wax-material-lighting-atlas";
+      readonly "gain": 1;
+      readonly "renderScale": 2;
+    }>,
+    Readonly<{
+      readonly "name": "render-optics-material-lighting-atlas";
+      readonly "domain": "material-lighting";
+      readonly "target": 0;
+      readonly "fixture": "render-optics-material-lighting-atlas";
       readonly "gain": 1;
       readonly "renderScale": 2;
     }>,

@@ -54,6 +54,22 @@ shader branch. Current portable evidence is
 `sha256:12d2ca659cfdc1df90cb8eac8d91ce5d56be11979ad67107cbf9c0005b905bb3`;
 it is review evidence, never a future exact-image gate.
 
+Cross-phase optics experiments use the declarative
+`render-optics-material-lighting-atlas`. Its frozen data-only catalog covers
+the 20 actionable phase/`RenderOptics` pairs admitted by the renderer's
+appearance profiles; `Default` and `Cellular` remain explicit non-actionable
+controls outside this board. Keep the exported profile coverage and atlas
+validation exact so a new actionable pair cannot silently miss review. The
+typed preparer owns phase-honest silhouettes: tapered powder piles, rounded
+liquid bodies, joined diffuse gas lobes, and firmer rounded solids, with the
+same cavity, notch, isolated, fine-structure, emitter, contact, native-wall,
+and guarded-blank controls. Route it through the existing authoring manifest,
+material-lighting driver, app registry, and source-backed
+`render-optics-families` cohort. Current portable evidence is
+`/tmp/anifor-render-optics-family-v2`, with 49 verified regions and result
+`sha256:61328aa723024b29ab6e0fb62660a8d1597036b53f5cb0617f16e40370a468fa`;
+this is current-only review evidence, not an exact future visual pin.
+
 The current review framework also covers the existing Oil- and Water-motion
 recipes through frozen declarative fixture/inspection catalogs. Preserve their
 historical public fixture APIs and exact material, velocity, and wall planes;
