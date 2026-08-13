@@ -7602,6 +7602,32 @@ intermediate-depth band around Glass/Waxy bodies and cavities rather than a
 uniform silhouette lift. These current measurements guide the retained visual
 choice and are not future thresholds or PNG pins.
 
+The reusable review loop now places authored inputs beside observed response.
+`compileRenderOpticsProfileResponseMatrix` validates and deep-freezes the exact
+20-card Powder/Liquid/Gas/Solid catalog projection, requiring one matched
+body/core pair per card and finite current OFF-to-B luma, spread, and
+neighbour-contrast measurements. The deterministic
+`region-appearance.html` matrix shows those measurements beside the six class
+lanes, ten phase-composition values, and six mesoscale values. It is current-only
+presentation, not a score, threshold, rank, or frozen identity input; JSON
+evidence and every capture/result/batch/baseline/comparison identity remain
+unchanged.
+
+The real shared-host SwiftShader package
+`/tmp/anifor-profile-response-matrix-v1` passed all 49 region response and
+appearance checks plus strict portable verification. Its result remains
+`sha256:3edba76ae6680a9e510b6cd878fd57a041173f549c5383710e781d251d763c84`,
+and OFF, A, and B PNGs are byte-identical to the deployed solid shell-to-core
+checkpoint. This is expected: the increment improves experiment selection and
+review rather than renderer output.
+
+A follow-on normal-B gas macroform trial reused the existing sample-free compact
+carrier and was captured in three bounded variants. It was not retained: the
+fine-gas control moved as well as the intended dense regions, while the cloud
+shape remained visually too close to the current output. Future gas work should
+first establish an owner-safe dense-body carrier or stronger visual separation,
+not keep a merely measurable effect.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

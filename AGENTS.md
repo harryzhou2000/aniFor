@@ -122,6 +122,28 @@ passes, targets, and allocations remain unchanged. Current evidence is
 `sha256:3edba76ae6680a9e510b6cd878fd57a041173f549c5383710e781d251d763c84`;
 all 49 regions and the portable verifier passed, and OFF/A stayed byte-identical.
 
+The current RenderOptics review board must also keep authored inputs and
+observed response in one inspection surface. Its presentation-only
+profile-to-response matrix joins all 20 catalog cards, in exact
+Powder/Liquid/Gas/Solid order, to their resolved six class lanes, ten phase
+composition values, six mesoscale values, and current OFF-to-B body/core luma,
+spread, and neighbour-contrast deltas. The compiler must reject missing,
+duplicated, unmatched, reordered, or non-finite pairs and deep-freeze its
+result. Keep this matrix in `region-appearance.html` only: it is descriptive,
+does not rank or score aesthetics, and must not enter JSON evidence or any
+capture, result, batch, baseline, comparison, promotion, or recipe identity.
+Current package evidence is `/tmp/anifor-profile-response-matrix-v1`; it passed
+all 49 region checks and strict portable verification while retaining result
+`sha256:3edba76ae6680a9e510b6cd878fd57a041173f549c5383710e781d251d763c84`
+and all three PNG bytes from the deployed solid-depth checkpoint.
+
+A normal-B gas macro-carrier trial using the existing compact relief was
+reviewed and removed. Across three bounded variants it still moved the sparse
+`gas-fine-control` region and did not create a clearly better cloud body at the
+authenticated inspection scale. Do not restore that experiment merely because
+its response is measurable; a successor needs owner-safe dense-gas evidence and
+a visible preference over the retained rendering.
+
 The current review framework also covers the existing Oil- and Water-motion
 recipes through frozen declarative fixture/inspection catalogs. Preserve their
 historical public fixture APIs and exact material, velocity, and wall planes;

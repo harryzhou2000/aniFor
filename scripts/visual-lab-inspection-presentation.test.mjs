@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import { RENDER_OPTICS_MATERIAL_LIGHTING_ATLAS_CATALOG } from '../src/shared/render-optics-material-lighting-atlas-catalog.js';
-import { resolveVisualLabInspectionPresentation } from './visual-lab-inspection-presentation.mjs';
+import {
+  compileRenderOpticsProfileResponseMatrix,
+  resolveVisualLabInspectionPresentation,
+} from './visual-lab-inspection-presentation.mjs';
 
 const atlas = RENDER_OPTICS_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases[0];
 const regions = atlas.descriptor.inspectionRegions.map((region) => ({ ...region }));
@@ -70,5 +73,58 @@ describe('Visual Lab inspection presentation', () => {
     expect(() => resolveVisualLabInspectionPresentation(
       atlas.candidate, [...regions, { name: 'unexpected-region' }],
     )).toThrow('does not cover every region');
+  });
+
+  it('compiles every body/core pair into catalog-ordered profile response rows', () => {
+    const measured = regions.map((region, index) => ({
+      ...region,
+      pairs: { offToB: {
+        signedLumaMeanDelta: index + 0.1,
+        signedLumaStandardDeviationDelta: index + 0.2,
+        signedLumaNeighbourAbsoluteMeanDelta: index + 0.3,
+      } },
+    }));
+    const presentation = resolveVisualLabInspectionPresentation(atlas.candidate, measured);
+    const matrix = compileRenderOpticsProfileResponseMatrix(atlas.candidate, presentation);
+    expect(matrix.map(({ key, rows }) => [key, rows.map(({ card }) => card)])).toEqual([
+      ['powder', ['sand', 'salt', 'gunpowder', 'thermite']],
+      ['liquid', ['water', 'oil', 'acid', 'lava', 'liquid-nitrogen', 'mercury', 'mwax']],
+      ['gas', ['smoke', 'oxygen']],
+      ['solid', ['ceramic', 'wood', 'btry', 'iszs', 'glass', 'metal', 'wax']],
+    ]);
+    expect(matrix.flatMap(({ rows }) => rows)).toHaveLength(20);
+    expect(matrix[1].rows[0]).toMatchObject({
+      card: 'water', phase: 'liquid', optics: 'Aqueous', opticsCode: 1,
+      body: { meanLuma: 10.1, spread: 10.2, neighbourContrast: 10.3 },
+      core: { meanLuma: 11.1, spread: 11.2, neighbourContrast: 11.3 },
+    });
+    expect(Object.isFrozen(matrix[1].rows[0].body)).toBe(true);
+  });
+
+  it('rejects malformed, duplicated, and unmatched body/core response pairs', () => {
+    const measured = regions.map((region) => ({
+      ...region,
+      pairs: { offToB: {
+        signedLumaMeanDelta: 1,
+        signedLumaStandardDeviationDelta: 2,
+        signedLumaNeighbourAbsoluteMeanDelta: 3,
+      } },
+    }));
+    const presentation = resolveVisualLabInspectionPresentation(atlas.candidate, measured);
+
+    const missing = structuredClone(presentation);
+    missing[0].regions.splice(1, 1);
+    expect(() => compileRenderOpticsProfileResponseMatrix(atlas.candidate, missing))
+      .toThrow('unmatched body/core');
+
+    const duplicate = structuredClone(presentation);
+    duplicate[0].regions.push(structuredClone(duplicate[0].regions[0]));
+    expect(() => compileRenderOpticsProfileResponseMatrix(atlas.candidate, duplicate))
+      .toThrow('duplicate body/core');
+
+    const malformed = structuredClone(presentation);
+    malformed[0].regions[0].pairs.offToB.signedLumaMeanDelta = Number.NaN;
+    expect(() => compileRenderOpticsProfileResponseMatrix(atlas.candidate, malformed))
+      .toThrow('malformed measurements');
   });
 });

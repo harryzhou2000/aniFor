@@ -8,6 +8,7 @@ import {
 } from '../src/shared/material-phase-profile-catalog.js';
 
 const SAFE_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const OPTICS_NAME = /^[A-Z][A-Za-z0-9]*$/;
 const PHASES = Object.freeze([
   Object.freeze({ key: 'powder', label: 'Powder' }),
   Object.freeze({ key: 'liquid', label: 'Liquid' }),
@@ -101,4 +102,88 @@ export function resolveVisualLabInspectionPresentation(candidate, regions) {
     throw new TypeError(`${candidate} inspection presentation does not cover every region`);
   }
   return deepFreeze(sections);
+}
+
+const RESPONSE_FIELDS = Object.freeze([
+  Object.freeze({ source: 'signedLumaMeanDelta', target: 'meanLuma' }),
+  Object.freeze({ source: 'signedLumaStandardDeviationDelta', target: 'spread' }),
+  Object.freeze({
+    source: 'signedLumaNeighbourAbsoluteMeanDelta', target: 'neighbourContrast',
+  }),
+]);
+
+const compileResponse = (candidate, region) => {
+  const source = region?.pairs?.offToB;
+  if (!source || RESPONSE_FIELDS.some(({ source: field }) => !Number.isFinite(source[field]))) {
+    throw new TypeError(`${candidate} profile-response matrix has malformed measurements`);
+  }
+  return Object.fromEntries(RESPONSE_FIELDS.map(({ source: field, target }) => (
+    [target, source[field]]
+  )));
+};
+
+/**
+ * Presentation-only join between resolved profile metadata and current body/core
+ * appearance measurements. It creates no JSON evidence or capture identity.
+ */
+export function compileRenderOpticsProfileResponseMatrix(candidate, presentation) {
+  if (candidate !== 'render-optics-material-lighting-atlas'
+    || !Array.isArray(presentation)
+    || presentation.length !== PHASES.length + 1
+    || presentation[presentation.length - 1]?.key !== 'controls') {
+    throw new TypeError('RenderOptics profile-response matrix input is malformed');
+  }
+  const groups = PHASES.map(({ key, label }, index) => {
+    const section = presentation[index];
+    if (section?.key !== key || section.label !== label || !Array.isArray(section.regions)) {
+      throw new TypeError('RenderOptics profile-response matrix phase order is malformed');
+    }
+    const pairs = new Map();
+    const order = [];
+    for (const region of section.regions) {
+      const match = /^(.*)-(body|core)$/.exec(region?.name ?? '');
+      const metadata = region?.presentation;
+      if (!match || !SAFE_NAME.test(match[1]) || metadata?.card !== match[1]
+        || metadata.phase !== key || !OPTICS_NAME.test(metadata.optics ?? '')
+        || !Number.isInteger(metadata.opticsCode)
+        || metadata.profile === null || typeof metadata.profile !== 'object'
+        || metadata.composition === null || typeof metadata.composition !== 'object'
+        || metadata.mesoscale === null || typeof metadata.mesoscale !== 'object') {
+        throw new TypeError(`${candidate} profile-response matrix has malformed region metadata`);
+      }
+      const [, card, kind] = match;
+      if (!pairs.has(card)) {
+        pairs.set(card, {});
+        order.push(card);
+      }
+      const pair = pairs.get(card);
+      if (pair[kind]) {
+        throw new TypeError(`${candidate} profile-response matrix has duplicate body/core regions`);
+      }
+      pair[kind] = region;
+    }
+    const rows = order.map((card) => {
+      const { body, core } = pairs.get(card);
+      if (!body || !core || body.presentation !== core.presentation) {
+        throw new TypeError(`${candidate} profile-response matrix has unmatched body/core regions`);
+      }
+      const metadata = body.presentation;
+      return {
+        card,
+        phase: key,
+        optics: metadata.optics,
+        opticsCode: metadata.opticsCode,
+        profile: metadata.profile,
+        composition: metadata.composition,
+        mesoscale: metadata.mesoscale,
+        body: compileResponse(candidate, body),
+        core: compileResponse(candidate, core),
+      };
+    });
+    if (rows.length * 2 !== section.regions.length) {
+      throw new TypeError(`${candidate} profile-response matrix has incomplete row coverage`);
+    }
+    return { key, label, rows };
+  });
+  return deepFreeze(groups);
 }

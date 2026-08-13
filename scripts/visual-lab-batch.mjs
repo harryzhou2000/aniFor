@@ -60,7 +60,10 @@ import {
 import {
   createVisualLabCurrentRegionMeasurements,
 } from './visual-lab-region-measurements.mjs';
-import { resolveVisualLabInspectionPresentation } from './visual-lab-inspection-presentation.mjs';
+import {
+  compileRenderOpticsProfileResponseMatrix,
+  resolveVisualLabInspectionPresentation,
+} from './visual-lab-inspection-presentation.mjs';
 import {
   createVisualLabBrowserHostPlan,
   normalizeVisualLabBrowserHostPlan,
@@ -967,6 +970,22 @@ export function renderVisualLabRegionAppearanceBoard(appearance) {
     || !Array.isArray(appearance.candidates) || appearance.candidates.length === 0) {
     throw new TypeError('Region-appearance board requires current spatial evidence');
   }
+  const renderProfileValues = (record) => Object.entries(record)
+    .map(([field, value]) => `${escapeHtml(field)} ${escapeHtml(Number(value).toFixed(2))}`)
+    .join('<br>');
+  const renderResponse = (record) => [
+    ['luma', record.meanLuma],
+    ['spread', record.spread],
+    ['neighbour', record.neighbourContrast],
+  ].map(([label, value]) => `${escapeHtml(label)} ${escapeHtml(value.toFixed(3))}`).join('<br>');
+  const renderMatrix = (candidate, presentation) => {
+    if (candidate !== 'render-optics-material-lighting-atlas') return '';
+    const groups = compileRenderOpticsProfileResponseMatrix(candidate, presentation);
+    const rows = groups.map(({ key, label, rows: entries }) => (
+      `<tr class="matrix-phase" data-matrix-phase="${escapeHtml(key)}"><th colspan="7">${escapeHtml(label)}</th></tr>${entries.map((row) => `<tr><th>${escapeHtml(row.card)}</th><td>${escapeHtml(`${row.optics} · class ${row.opticsCode}`)}</td><td>${renderProfileValues(row.profile)}</td><td>${renderProfileValues(row.composition)}</td><td>${renderProfileValues(row.mesoscale)}</td><td>${renderResponse(row.body)}</td><td>${renderResponse(row.core)}</td></tr>`).join('')}`
+    )).join('');
+    return `<section class="profile-response-matrix"><h3>RenderOptics profile-to-response matrix</h3><p>Current-only authored profiles beside measured OFF→B body/core response; descriptive inspection, not a score or visual requirement.</p><div class="matrix-scroll"><table><thead><tr><th>Card</th><th>Class / optics</th><th>Class lanes</th><th>Phase composition</th><th>Mesoscale</th><th>Body OFF→B</th><th>Core OFF→B</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
+  };
   const cards = appearance.candidates.map((candidate) => {
     const renderRegion = (region) => {
       const delta = region.pairs.offToB;
@@ -994,9 +1013,10 @@ export function renderVisualLabRegionAppearanceBoard(appearance) {
     const sections = presentation === null
       ? `<div class="regions">${candidate.regions.map(renderRegion).join('')}</div>`
       : presentation.map(({ key, label, regions }) => `<section class="region-group" data-section="${escapeHtml(key)}"><h3>${escapeHtml(label)}</h3><div class="regions">${regions.map(renderRegion).join('')}</div></section>`).join('');
-    return `<article><h2>${escapeHtml(candidate.candidate)}</h2>${sections}</article>`;
+    const matrix = presentation === null ? '' : renderMatrix(candidate.candidate, presentation);
+    return `<article><h2>${escapeHtml(candidate.candidate)}</h2>${matrix}${sections}</article>`;
   }).join('');
-  return `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Visual Lab region appearance</title><style>:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#11151b;color:#eaf0f7}body{margin:0 auto;max-width:1800px;padding:24px}article{background:#1b222c;border:1px solid #344252;border-radius:12px;padding:16px;margin:18px 0}.region-group{margin-top:22px}.region-group>h3{color:#9fd0ff;border-bottom:1px solid #344252;padding-bottom:7px}.regions{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,560px),1fr));gap:14px}.region{min-width:0;background:#121820;border:1px solid #2d3a48;border-radius:9px;padding:12px}.region header{display:flex;justify-content:space-between;gap:10px;align-items:baseline}.region h4,.region p{margin:0}.region p{color:#aebdcd;font-size:.82rem;text-align:right}.profile{margin-top:8px;color:#b8c5d2}.profile summary{cursor:pointer;color:#9fd0ff}.profile h5{color:#c8d6e5;margin:9px 0 0;font-size:.78rem}.profile dl{padding:7px 9px;background:#0c1117;border-radius:6px}.crops{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:10px;overflow:auto}.crops figure{margin:0;min-width:0}.crop{display:block;position:relative;overflow:hidden;max-width:none;background:#080b0f;border:1px solid #344252;image-rendering:auto}.crop img{display:block;position:absolute;max-width:none}figcaption{text-align:center;color:#b8c5d2;font-size:.78rem;margin-top:3px}dl{display:flex;flex-wrap:wrap;gap:6px 14px;margin:10px 0 0}dl div{display:flex;gap:5px}dt{color:#9eb0c2}dd{margin:0;font-variant-numeric:tabular-nums}@media(max-width:700px){body{padding:12px}.region header{display:block}.region p{text-align:left;margin-top:3px}}</style></head><body><h1>Current region appearance</h1><p>OFF/A/B crops are deterministically enlarged up to 8× for inspection; local luminance measurements still use the authenticated source pixels. They expose texture, edges, and tonal variation without scoring or deciding aesthetics. Resolved class and phase profiles explain renderer inputs without changing evidence. Select a crop to open its authenticated full capture. Full data is in <a href="./region-appearance.json">region-appearance.json</a>.</p>${cards}</body></html>\n`;
+  return `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Visual Lab region appearance</title><style>:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#11151b;color:#eaf0f7}body{margin:0 auto;max-width:1800px;padding:24px}article{background:#1b222c;border:1px solid #344252;border-radius:12px;padding:16px;margin:18px 0}.profile-response-matrix{margin:18px 0 28px}.matrix-scroll{overflow:auto}.profile-response-matrix table{border-collapse:collapse;width:100%;font-size:.78rem}.profile-response-matrix th,.profile-response-matrix td{padding:7px;border-bottom:1px solid #344252;text-align:left;vertical-align:top;white-space:nowrap}.matrix-phase th{padding-top:14px;color:#9fd0ff;background:#151d26}.region-group{margin-top:22px}.region-group>h3{color:#9fd0ff;border-bottom:1px solid #344252;padding-bottom:7px}.regions{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,560px),1fr));gap:14px}.region{min-width:0;background:#121820;border:1px solid #2d3a48;border-radius:9px;padding:12px}.region header{display:flex;justify-content:space-between;gap:10px;align-items:baseline}.region h4,.region p{margin:0}.region p{color:#aebdcd;font-size:.82rem;text-align:right}.profile{margin-top:8px;color:#b8c5d2}.profile summary{cursor:pointer;color:#9fd0ff}.profile h5{color:#c8d6e5;margin:9px 0 0;font-size:.78rem}.profile dl{padding:7px 9px;background:#0c1117;border-radius:6px}.crops{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:10px;overflow:auto}.crops figure{margin:0;min-width:0}.crop{display:block;position:relative;overflow:hidden;max-width:none;background:#080b0f;border:1px solid #344252;image-rendering:auto}.crop img{display:block;position:absolute;max-width:none}figcaption{text-align:center;color:#b8c5d2;font-size:.78rem;margin-top:3px}dl{display:flex;flex-wrap:wrap;gap:6px 14px;margin:10px 0 0}dl div{display:flex;gap:5px}dt{color:#9eb0c2}dd{margin:0;font-variant-numeric:tabular-nums}@media(max-width:700px){body{padding:12px}.region header{display:block}.region p{text-align:left;margin-top:3px}}</style></head><body><h1>Current region appearance</h1><p>OFF/A/B crops are deterministically enlarged up to 8× for inspection; local luminance measurements still use the authenticated source pixels. They expose texture, edges, and tonal variation without scoring or deciding aesthetics. Resolved class and phase profiles explain renderer inputs without changing evidence. Select a crop to open its authenticated full capture. Full data is in <a href="./region-appearance.json">region-appearance.json</a>.</p>${cards}</body></html>\n`;
 }
 
 const assertCurrentCaptureContract = (report, executionPlan, hashes) => {

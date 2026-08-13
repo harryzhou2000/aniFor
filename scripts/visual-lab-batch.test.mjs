@@ -1954,6 +1954,13 @@ describe('Visual Lab batch runner', () => {
     expect(appearanceBoard).toContain('Aqueous · class 1');
     expect(appearanceBoard).toContain('<dt>interiorScatter</dt><dd>1.25</dd>');
     expect(appearanceBoard).toContain('MetallicRigid · class 20');
+    expect(appearanceBoard).toContain('RenderOptics profile-to-response matrix');
+    expect(appearanceBoard).toContain('data-matrix-phase="powder"');
+    expect(appearanceBoard).toContain('<th>Body OFF→B</th><th>Core OFF→B</th>');
+    expect(appearanceBoard).toContain('bodyLighting 1.18');
+    expect(appearanceBoard).toContain('supportLow 0.46');
+    expect(appearanceBoard.indexOf('data-matrix-phase="powder"'))
+      .toBeLessThan(appearanceBoard.indexOf('data-matrix-phase="liquid"'));
     expect(generated.regionAppearance.candidates[0].regions).toHaveLength(49);
 
     await expect(verifyVisualLabBatchPackage({
