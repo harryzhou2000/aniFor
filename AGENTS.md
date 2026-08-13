@@ -1848,8 +1848,16 @@ one shared host, and no restart. The subsequent fixed local
 fresh/shared/shared/fresh cohort passed four-for-four with equal result identity,
 one readiness snapshot, and zero restarts. Readiness was 8.51–9.29s and total
 time 27.31–29.33s, versus the recorded v6 local 19.49s readiness and 39.05s
-total. Treat v7 as the locally accepted opt-in performance control, but keep the
-default unchanged until the approved hosted ABBA package also verifies.
+total. The hosted v7 gate passed on independent repetition at exact revision
+`2fc15c8cbfc14880bb58b65671f49647ab1188e1`, workflow `31680273239`: all four
+fresh/shared/shared/fresh packages matched, used one readiness snapshot, had
+zero host restarts, and uploaded the bounded summary. Readiness was
+36.74–38.58s and total time 74.88–87.77s. The prior attempt `31679545685`
+changed encoded result identity only in shared cohort 3 after three otherwise
+complete packages and retained no success summary; classify it as a transient
+hosted encoded-output outlier. V7 preserves v6's accepted hosted readiness
+range rather than materially beating it, so keep it opt-in and target the
+dominant complete readiness readback next; do not add v8 activation semantics.
 
 Performance comparisons use the opt-in
 `audit:visual-lab:performance-cohorts` runner. Preserve its fixed

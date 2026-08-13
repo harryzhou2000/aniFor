@@ -7264,8 +7264,20 @@ Readiness was 9.12s, 9.20s, 8.51s, and 9.29s; total capture time was 29.24s,
 28.56s, 27.31s, and 29.33s. Against the recorded local v6 sample (19.49s
 readiness, 39.05s total), v7 cuts readiness by roughly 53–56% and total time by
 roughly 25–30%. V7 is therefore locally accepted as the next opt-in performance
-control. The remaining release gate is the approved manual hosted ABBA run;
-do not change the default proof until its downloaded package also verifies.
+control. The hosted gate is now complete at exact revision
+`2fc15c8cbfc14880bb58b65671f49647ab1188e1`. The first attempt, workflow
+`31679545685`, failed only because shared cohort 3 changed encoded result
+identity after the first three packages had otherwise completed; it retained no
+bounded summary and is transient outlier evidence, not acceptance evidence.
+Independent workflow `31680273239` then passed all four portable
+fresh/shared/shared/fresh cohorts and uploaded bounded artifact
+`anifortpt-visual-lab-performance-1`. Hosted readiness was 38.28s, 36.74s,
+38.58s, and 38.17s; total time was 87.77s, 74.88s, 78.13s, and 79.97s. Every
+leg retained one readiness snapshot and zero host restarts. Compared with the
+accepted hosted v6 readiness range 35.61–41.84s, v7 does not materially reduce
+loaded-runner readiness, but preserves it with a stronger explicit render-field
+convergence contract. Keep v7 opt-in and move next to reducing the dominant
+complete readiness readback rather than adding another activation schema.
 
 ## Deferred long-term visual roadmap
 
