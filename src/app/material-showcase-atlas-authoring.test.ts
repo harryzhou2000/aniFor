@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { MATERIAL_SHOWCASE_SCENE_AUTHORING } from '../shared/material-showcase-atlas-catalog.js';
+import {
+  MATERIAL_SHOWCASE_ATLAS_CATALOG,
+  MATERIAL_SHOWCASE_SCENE_AUTHORING,
+} from '../shared/material-showcase-atlas-catalog.js';
 import { prepareMaterialShowcaseAtlas, type MaterialShowcasePlotter } from './material-showcase-atlas-authoring';
 
 const plotter = (): MaterialShowcasePlotter => ({
@@ -15,6 +18,10 @@ describe('material showcase atlas authoring', () => {
     expect(plot.ellipse).toHaveBeenCalledWith(427, 82, 82, 43, 39, 0.92, 823, 0.34);
     expect(plot.curvaturePlate).toHaveBeenCalledWith(510, 226, 54, 58, 14, 164);
     expect(Object.isFrozen(MATERIAL_SHOWCASE_SCENE_AUTHORING.commands)).toBe(true);
+    expect(Object.isFrozen(MATERIAL_SHOWCASE_ATLAS_CATALOG.audit)).toBe(true);
+    expect(MATERIAL_SHOWCASE_ATLAS_CATALOG.audit.semantic).toMatchObject({
+      hash: 3_610_338_776, occupied: 114_015,
+    });
   });
 
   it('rejects empty, unknown, and malformed command streams', () => {

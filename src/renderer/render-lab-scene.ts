@@ -2,7 +2,10 @@ import { Material } from '../shared/materials';
 import type { SimulationBackend } from '../simulation';
 import { RENDER_LAB_AMBIENT_TEMPERATURE } from '../simulation/render-lab-backend';
 import { prepareMaterialShowcaseAtlas } from '../app/material-showcase-atlas-authoring';
-import { MATERIAL_SHOWCASE_SCENE_AUTHORING } from '../shared/material-showcase-atlas-catalog.js';
+import {
+  MATERIAL_SHOWCASE_ATLAS_CATALOG,
+  MATERIAL_SHOWCASE_SCENE_AUTHORING,
+} from '../shared/material-showcase-atlas-catalog.js';
 import { prepareMaterialCandidateSurveyAtlas } from '../app/material-candidate-survey-atlas-authoring';
 import {
   MATERIAL_CANDIDATE_SURVEY_ATLAS_CATALOG,
@@ -129,184 +132,10 @@ export const MATERIAL_CANDIDATE_SURVEY_AUDIT = (
   MATERIAL_CANDIDATE_SURVEY_ATLAS_CATALOG.audit
 ) as unknown as MaterialCandidateSurveyAuditSnapshot;
 
-/**
- * App-owned contract for the production-fit visual survey. Keeping this beside
- * the scene prevents the browser audit from silently measuring stale copied
- * coordinates or accepting the same wrong topology at every output scale.
- */
-export const MATERIAL_SHOWCASE_AUDIT: MaterialShowcaseAuditSnapshot = {
-  version: 6,
-  semantic: {
-    hash: 3_610_338_776,
-    occupied: 114_015,
-    materialCounts: [
-      { material: Material.Sand, count: 5_862 },
-      { material: Material.Water, count: 20_862 },
-      { material: Material.Fire, count: 216 },
-      { material: Material.Smoke, count: 6_806 },
-      { material: Material.Oil, count: 2_538 },
-      { material: Material.Wood, count: 2_374 },
-      { material: Material.Plant, count: 10_215 },
-      { material: Material.Plasma, count: 492 },
-      { material: Material.Metal, count: 880 },
-      { material: Material.Glass, count: 6_206 },
-      { material: Material.Concrete, count: 4_148 },
-      { material: Material.Clay, count: 4_720 },
-      { material: Material.Oxygen, count: 6_003 },
-      { material: Material.CarbonDioxide, count: 2_184 },
-      { material: Material.NobleGas, count: 4_300 },
-      { material: Material.ROCK, count: 23_090 },
-      { material: Material.ELEC, count: 150 },
-      { material: Material.POLO, count: 492 },
-      { material: Material.URAN, count: 1_804 },
-      { material: Material.ISZS, count: 3_488 },
-      { material: Material.VIBR, count: 3_096 },
-      { material: Material.DTEC, count: 2_869 },
-      { material: Material.Soap, count: 1_220 },
-    ],
-  },
-  metalInsert: {
-    material: Material.Metal,
-    rect: { x: 315, y: 289, width: 54, height: 18 },
-    radius: 8,
-    expectedCells: 880,
-    rowCounts: [38, 44, 48, 50, 50, 52, 52, 52, 54, 54, 52, 52, 52, 50, 50, 48, 44, 38],
-    coreProbe: { x: 342, y: 298 },
-    waterControls: [{ x: 315, y: 289 }, { x: 342, y: 288 }, { x: 342, y: 307 }],
-  },
-  regions: [
-    {
-      name: 'powderSand', family: 'powder', profile: 'granular-body',
-      x: 140, y: 275, radiusX: 35, radiusY: 20,
-      support: { kind: 'semantic', materials: [Material.Sand], minimumRecall: 0.96 },
-      semanticMaterials: [Material.Sand],
-      topology: true, silhouette: true, expectedMatching: 800,
-    },
-    {
-      name: 'powderClay', family: 'powder', profile: 'granular-body',
-      x: 140, y: 275, radiusX: 35, radiusY: 20,
-      support: { kind: 'semantic', materials: [Material.Clay], minimumRecall: 0.96 },
-      semanticMaterials: [Material.Clay],
-      topology: true, silhouette: true, expectedMatching: 1_369,
-    },
-    {
-      name: 'powderConcrete', family: 'powder', profile: 'granular-body',
-      x: 140, y: 320, radiusX: 50, radiusY: 8,
-      support: { kind: 'semantic', materials: [Material.Concrete], minimumRecall: 0.96 },
-      semanticMaterials: [Material.Concrete],
-      topology: true, silhouette: true, expectedMatching: 1_600,
-    },
-    {
-      name: 'liquidWater', family: 'liquid', profile: 'cohesive-liquid',
-      x: 355, y: 260, radiusX: 42, radiusY: 38,
-      support: { kind: 'semantic', materials: [Material.Water], minimumRecall: 0.96 },
-      semanticMaterials: [Material.Water],
-      topology: true, silhouette: true, expectedMatching: 5_636,
-    },
-    {
-      name: 'liquidOil', family: 'liquid', profile: 'cohesive-liquid',
-      x: 420, y: 240, radiusX: 20, radiusY: 15,
-      support: { kind: 'semantic', materials: [Material.Oil], minimumRecall: 0.96 },
-      semanticMaterials: [Material.Oil],
-      topology: true, silhouette: true, expectedMatching: 1_200,
-    },
-    {
-      name: 'liquidSoap', family: 'liquid', profile: 'cohesive-liquid',
-      x: 76, y: 216, radiusX: 16, radiusY: 6,
-      support: { kind: 'semantic', materials: [Material.Soap], minimumRecall: 0.96 },
-      semanticMaterials: [Material.Soap],
-      topology: true, silhouette: true, expectedMatching: 384,
-    },
-    {
-      name: 'gasSmoke', family: 'gas', profile: 'diffuse-gas',
-      x: 360, y: 92, radiusX: 33, radiusY: 26,
-      support: { kind: 'atmosphere', style: 1, minimumAlpha: 12, minimumRecall: 0.78 },
-      semanticMaterials: [Material.Smoke], topology: true, silhouette: true,
-      expectedMatching: 2_185,
-    },
-    {
-      name: 'gasOxygen', family: 'gas', profile: 'diffuse-gas',
-      x: 427, y: 82, radiusX: 30, radiusY: 22,
-      support: { kind: 'atmosphere', style: 4, minimumAlpha: 12, minimumRecall: 0.78 },
-      semanticMaterials: [Material.Oxygen], topology: true, silhouette: true,
-      expectedMatching: 2_315,
-    },
-    {
-      name: 'gasCarbonDioxide', family: 'gas', profile: 'diffuse-gas',
-      x: 398, y: 166, radiusX: 34, radiusY: 12,
-      support: { kind: 'atmosphere', style: 6, minimumAlpha: 12, minimumRecall: 0.78 },
-      semanticMaterials: [Material.CarbonDioxide], topology: true, silhouette: true,
-      expectedMatching: 1_528,
-    },
-    {
-      name: 'gasNoble', family: 'gas', profile: 'diffuse-gas',
-      x: 497, y: 103, radiusX: 28, radiusY: 20,
-      support: { kind: 'atmosphere', style: 7, minimumAlpha: 12, minimumRecall: 0.78 },
-      semanticMaterials: [Material.NobleGas], topology: true, silhouette: true,
-      expectedMatching: 1_986,
-    },
-    {
-      name: 'solidRock', family: 'solid', profile: 'rigid-body',
-      x: 530, y: 331, radiusX: 35, radiusY: 19,
-      support: { kind: 'semantic', materials: [Material.ROCK], minimumRecall: 0.96 },
-      semanticMaterials: [Material.ROCK],
-      topology: true, silhouette: true, expectedMatching: 2_660,
-    },
-    {
-      name: 'solidISZS', family: 'solid', profile: 'rigid-body',
-      x: 232, y: 73, radiusX: 18, radiusY: 24,
-      support: { kind: 'semantic', materials: [Material.ISZS], minimumRecall: 0.96 },
-      semanticMaterials: [Material.ISZS],
-      topology: true, silhouette: true, expectedMatching: 1_728,
-    },
-    {
-      name: 'solidVIBR', family: 'solid', profile: 'rigid-body',
-      x: 253, y: 154, radiusX: 18, radiusY: 21,
-      support: { kind: 'semantic', materials: [Material.VIBR], minimumRecall: 0.96 },
-      semanticMaterials: [Material.VIBR],
-      topology: true, silhouette: true, expectedMatching: 1_512,
-    },
-    {
-      name: 'organicWood', family: 'organic', profile: 'organic-body',
-      x: 122, y: 220, radiusX: 7, radiusY: 34,
-      support: { kind: 'semantic', materials: [Material.Wood], minimumRecall: 0.96 },
-      semanticMaterials: [Material.Wood],
-      topology: true, silhouette: true, expectedMatching: 952,
-    },
-    {
-      name: 'organicPlant', family: 'organic', profile: 'organic-body',
-      x: 116, y: 120, radiusX: 38, radiusY: 22,
-      support: { kind: 'semantic', materials: [Material.Plant], minimumRecall: 0.96 },
-      semanticMaterials: [Material.Plant],
-      topology: true, silhouette: true, expectedMatching: 3_344,
-    },
-    {
-      name: 'emissionPlasma', family: 'emission', profile: 'emissive-volume',
-      x: 311, y: 139, radiusX: 15, radiusY: 10,
-      support: { kind: 'emission', minimumAlpha: 8, minimumRecall: 0.72 },
-      semanticMaterials: [Material.Plasma], topology: true, silhouette: true,
-      expectedMatching: 492,
-    },
-    {
-      name: 'contactWaterGlass', family: 'contact', profile: 'phase-contact',
-      x: 282, y: 225, radiusX: 11, radiusY: 20,
-      support: {
-        kind: 'semantic', materials: [Material.Water, Material.Glass], minimumRecall: 0.96,
-      },
-      semanticMaterials: [Material.Water, Material.Glass],
-      topology: true, silhouette: true, expectedMatching: 880,
-    },
-    {
-      name: 'contactWaterMetal', family: 'contact', profile: 'phase-contact',
-      x: 342, y: 289, radiusX: 20, radiusY: 12,
-      support: {
-        kind: 'semantic', materials: [Material.Water, Material.Metal], minimumRecall: 0.96,
-      },
-      semanticMaterials: [Material.Water, Material.Metal],
-      topology: true, silhouette: true, expectedMatching: 960,
-    },
-  ],
-};
+/** Typed renderer compatibility facade for the frozen shared showcase audit. */
+export const MATERIAL_SHOWCASE_AUDIT = (
+  MATERIAL_SHOWCASE_ATLAS_CATALOG.audit
+) as unknown as MaterialShowcaseAuditSnapshot;
 
 export const RENDER_LAB_STYLE_SAMPLES = [
   // Granular surfaces, including emissive/reactive powders.

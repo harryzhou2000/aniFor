@@ -5,6 +5,7 @@ import { ALL_MATERIALS, Material } from '../shared/materials';
 import { renderPhase, renderProfile, RenderPhase, RenderProfile } from './render-profile';
 import { renderOptics, RenderOptics } from './render-optics';
 import { hasRenderTrait, renderTraits, RenderTrait } from './render-traits';
+import { MATERIAL_SHOWCASE_ATLAS_CATALOG } from '../shared/material-showcase-atlas-catalog.js';
 import {
   applyMaterialCandidateSurveyScene, applyMaterialShowcaseScene, applyRenderLabScene,
   materialCandidateSurveyRequested, materialShowcaseRequested,
@@ -15,6 +16,11 @@ import {
 } from './render-lab-scene';
 
 describe('render lab scene', () => {
+  it('keeps the production showcase audit as the typed shared-catalog facade', () => {
+    expect(MATERIAL_SHOWCASE_AUDIT).toBe(MATERIAL_SHOWCASE_ATLAS_CATALOG.audit);
+    expect(Object.isFrozen(MATERIAL_SHOWCASE_AUDIT)).toBe(true);
+  });
+
   it('is selected only by the explicit query', () => {
     expect(renderLabRequested('?scene=render-lab')).toBe(true);
     expect(renderLabRequested('?scene=other')).toBe(false);
