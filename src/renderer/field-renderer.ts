@@ -10,6 +10,7 @@ import type {
 } from './pixi-field-presenter';
 import type { VisualLabVariant } from './visual-lab';
 import {
+  digestPackedVisualCaptureEvidenceAlpha,
   digestVisualCaptureEvidenceAlpha,
   readVisualCaptureEvidenceAlpha,
   type VisualCaptureEvidenceDigest,
@@ -914,6 +915,14 @@ export class MaterialRenderer {
 
   /** One exact bulk digest for the capture framework's selected evidence plane. */
   visualCaptureEvidenceDigest(plane: VisualCaptureEvidencePlane): VisualCaptureEvidenceDigest {
+    const presented = this.presenter?.visualCaptureEvidenceDigest(plane);
+    if (presented) return presented;
+    if (this.fallbackFields) {
+      const packed = digestPackedVisualCaptureEvidenceAlpha(
+        this.fallbackFields, plane, this.simulation.width, this.simulation.height,
+      );
+      if (packed) return packed;
+    }
     return digestVisualCaptureEvidenceAlpha(
       this, plane, this.simulation.width, this.simulation.height,
     );

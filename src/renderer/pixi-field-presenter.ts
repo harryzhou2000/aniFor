@@ -41,6 +41,10 @@ import {
 } from './canvas-gas-identity-style';
 import { canvasAtmosphereAlphaAtWorldCell } from './canvas-atmosphere-relief';
 import { sampleCanvasFieldAlpha } from './canvas-surface-light';
+import {
+  digestPackedVisualCaptureEvidenceAlpha, type VisualCaptureEvidenceDigest,
+} from './visual-capture-evidence';
+import type { VisualCaptureEvidencePlane } from '../shared/visual-capture-static-contract.js';
 import { HDRVfxPipeline, type HDRPipelineInfo } from './hdr-vfx-pipeline';
 import { MATERIAL_BODY_FINISH_GLSL } from './material-body-finish';
 import { POWDER_SMOOTH_COVERAGE_GLSL } from './powder-smooth-coverage';
@@ -13753,6 +13757,15 @@ export class PixiFieldPresenter {
     return sampleCanvasFieldAlpha(
       field.bytes, field.width, field.height, this.width, this.height, x, y,
     );
+  }
+
+  /** Exact bulk digest over the packed CPU fields uploaded by this presenter. */
+  visualCaptureEvidenceDigest(plane: VisualCaptureEvidencePlane): VisualCaptureEvidenceDigest {
+    const digest = digestPackedVisualCaptureEvidenceAlpha(
+      this.fieldSet, plane, this.width, this.height,
+    );
+    if (!digest) throw new Error(`Invalid packed visual capture evidence field ${plane}`);
+    return digest;
   }
 
   /** Narrow audit readback for an exact-owner optional presentation layer. */

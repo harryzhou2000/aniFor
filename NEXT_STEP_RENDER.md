@@ -7975,6 +7975,32 @@ kernels, but it should proceed only with byte-parity proof because hosted
 readiness remains dominated by GPU/CDP transfer variation rather than the fast
 OFF/A/B selector digests.
 
+The schema-free exact bulk evidence-digest increment is now locally complete.
+WebGL and Canvas consume the same authoritative packed CPU field records, while
+one renderer-only kernel dispatches once per plane: full-resolution Liquid and
+Powder hash their RGBA alpha bytes directly, and compact Atmosphere and Emission
+reconstruct world-cell samples without a callback per cell. The two compact
+paths deliberately preserve their different historical coordinate and
+bilinear operation order, including Atmosphere's exact `/255 * 255` sequence;
+seeded parity at real 612x384/306x192 geometry protects half-byte rounding.
+Malformed packed layouts fail back to the unchanged scalar reader, framebuffer
+alpha hashing is untouched, and no browser API, evidence schema, execution
+tuning plan, result identity, or CI requirement changes.
+
+Focused renderer parity passed 269 tests, the full tooling suite passed 417
+tests outside the process-restricted sandbox, and the one source-suite Wax
+timeout under parallel load passed alone in 2.26 seconds. A real default-v9
+SwiftShader RenderOptics review passed WebGL/HDR, all 49 response and appearance
+regions, portable reconstruction, and clean Chrome teardown at
+`.artifacts/visual-lab-reviews/render-optics-d248154a-cb41-4bc2-adeb-8f20ba256b67`.
+It retained exact result
+`sha256:4891db2c82bb89cb4bce5a63a2927360fbc20e634a0a91b9d17a490deb630581`
+and the established OFF/A/B PNG hashes. Its three capture readback/hash samples
+were approximately 21.9/9.7/12.9 ms; keep these diagnostic only because the
+dominant 11.18-second readiness interval and host load vary independently.
+The next framework increment should target measured readiness or reusable
+authoring leverage rather than add a new proof schema or visual hash gate.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

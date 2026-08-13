@@ -5368,6 +5368,40 @@ describe('Pixi presenter startup configuration', () => {
     });
   });
 
+  it('owns the packed visual-evidence digest after WebGL promotion', () => {
+    const field = (alpha: readonly number[]) => {
+      const bytes = new Uint8Array(alpha.length * 4);
+      alpha.forEach((value, index) => { bytes[index * 4 + 3] = value; });
+      return { bytes, width: 2, height: 2 };
+    };
+    const presenter = Object.create(PixiFieldPresenter.prototype) as unknown as {
+      width: number;
+      height: number;
+      fieldSet: {
+        atmosphere: ReturnType<typeof field>;
+        liquid: ReturnType<typeof field>;
+        emission: ReturnType<typeof field>;
+        powderSurface: ReturnType<typeof field>;
+      };
+      visualCaptureEvidenceDigest(plane: 'liquid-alpha'): {
+        hash: number; supportHash: number; alphaSum: number; nonzero: number;
+      };
+    };
+    Object.assign(presenter, {
+      width: 2,
+      height: 2,
+      fieldSet: {
+        atmosphere: field([0, 0, 0, 0]),
+        liquid: field([0, 1, 127, 255]),
+        emission: field([0, 0, 0, 0]),
+        powderSurface: field([0, 0, 0, 0]),
+      },
+    });
+    expect(presenter.visualCaptureEvidenceDigest('liquid-alpha')).toEqual({
+      hash: 3645862276, supportHash: 1872260184, alphaSum: 383, nonzero: 3,
+    });
+  });
+
   it('reuses a bounded PBO destination at one size, replaces it on resize, and clears it on teardown', () => {
     const presenter = Object.create(PixiFieldPresenter.prototype) as unknown as {
       framebufferAlphaReadbackScratch?: Uint8Array;
