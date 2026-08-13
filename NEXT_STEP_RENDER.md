@@ -7941,6 +7941,16 @@ remain valid by omission, and legacy comparison navigation remains distinct.
 This is routing metadata only: no renderer, capture recipe, evidence schema,
 content identity, package file, or required CI behavior changes.
 
+That review-navigation increment is deployed at exact revision
+`7d0502deeae3c34175327d3fc90aa991231ba33f` by workflow run `31738048632`.
+The successful build restored the prior exact-toolchain cache, recorded 269/270
+ccache hits, and finished in 3m28s. Default-v9 RenderOptics capture plus
+downloaded-package verification passed in 1m50s with all 49 declared response
+and appearance regions; Pages deployed in 8s; exact live 19-resource closure
+and the hosted Water receipt-v2 smoke passed in 1m41s. The next framework
+increment should remove another measured authoring/review registration burden
+or shorten proven readiness/readback work, rather than add a visual leaf.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

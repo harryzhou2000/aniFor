@@ -5144,6 +5144,12 @@ checkpoint v1 projects those same available links mechanically. Regionless
 reviews omit both optional region links. Keep legacy baseline/comparison links
 separate, keep checkpoint publication last, and do not turn this presentation
 catalog into capture authority, a package-identity input, or a new CI gate.
+This increment is deployed at exact revision
+`7d0502deeae3c34175327d3fc90aa991231ba33f` by workflow run `31738048632`.
+The cached build completed in 3m28s with 269/270 ccache hits, the default-v9
+RenderOptics capture and downloaded-package verification passed in 1m50s,
+Pages deployed in 8s, and exact 19-resource closure plus the hosted Water smoke
+passed in 1m41s. Its package verified 49 response and appearance regions.
 
 Read [`docs/render-lab.md`](docs/render-lab.md) before changing reconstruction thresholds or blur radii. A TypeScript or Vite build does not compile Pixi's runtime GLSL; a browser screenshot with a clean shader console is required.
 
