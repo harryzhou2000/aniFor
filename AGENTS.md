@@ -5104,6 +5104,18 @@ tuning v9 in 12m18s. The v9 mean total was about 71.46s versus 74.85s for v7;
 that timing is descriptive, while ten-for-ten portable compatibility is the
 promotion evidence. Never silently fall back inside v9.
 
+That default promotion is deployed at exact revision
+`35c0e4b99a09fcadd4936d534ae0f727f89e43e2` by artifact-reuse workflow run
+`31734769761`. Its build source run `31734336519` passed the full build and
+saved ccache, but review was rejected before capture because the dispatch used
+the nonexistent cohort name `render-optics`; do not classify that as a render
+failure. The corrected run reused the exact artifact in 15s without rebuilding,
+proved that the omitted manual capture-proof input resolved to execution-tuning
+v9, captured and portably verified RenderOptics in 1m23s, deployed in 11s, and
+passed exact 19-resource closure plus hosted Water receipt-v2 smoke in 1m42s.
+The default-branch scaffold exposing the same controls is revision `3f7025e` on
+`main`.
+
 Read [`docs/render-lab.md`](docs/render-lab.md) before changing reconstruction thresholds or blur radii. A TypeScript or Vite build does not compile Pixi's runtime GLSL; a browser screenshot with a clean shader console is required.
 
 The style lookup is an RGBA data texture, not display color: RGB stores phase/profile/emission and alpha stores the static `RenderTrait` mask. Keep nearest sampling and `no-premultiply-alpha`; zero-valued trait alpha must never erase the RGB metadata.

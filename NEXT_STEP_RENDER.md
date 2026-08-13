@@ -7894,6 +7894,17 @@ candidate total fell from roughly 74.85s under v7 to 71.46s under v9 on this
 loaded runner; treat that as diagnostic, while ten-for-ten compatibility and
 portable verification authorize the default change.
 
+The front-door promotion is deployed at exact revision
+`35c0e4b99a09fcadd4936d534ae0f727f89e43e2` by workflow run `31734769761`.
+Build source run `31734336519` passed the full build and ccache save but then
+failed before capture because the dispatch named a nonexistent `render-optics`
+cohort; its artifact remained valid. The successful correction reused those
+exact bytes in 15s with no duplicate build, resolved the omitted manual proof
+input to execution-tuning v9, captured and portably verified the one-candidate
+`render-optics-families` cohort in 1m23s, deployed in 11s, and passed exact live
+19-resource closure plus Water receipt-v2 smoke in 1m42s. Manual controls on the
+default-branch scaffold are synchronized at `main` revision `3f7025e`.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
