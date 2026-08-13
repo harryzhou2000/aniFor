@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import {
-  lstat, mkdir, readFile, readdir, rename, writeFile,
+  lstat, mkdir, readFile, readdir, rename, rm, writeFile,
 } from 'node:fs/promises';
 import { isDeepStrictEqual, promisify } from 'node:util';
 import path from 'node:path';
@@ -24,6 +24,8 @@ import {
 
 export const VISUAL_LAB_PERFORMANCE_COHORT_SCHEMA = 'anifor.visual-lab.performance-cohorts/v1';
 export const VISUAL_LAB_PERFORMANCE_COHORT_RECEIPT_SCHEMA = 'anifor.visual-lab.performance-cohorts/v2';
+export const VISUAL_LAB_PERFORMANCE_IDENTITY_FAILURE_SCHEMA =
+  'anifor.visual-lab.cohort-identity-mismatch/v1';
 export const VISUAL_LAB_PERFORMANCE_COHORT_ORDER = Object.freeze([
   'fresh', 'shared', 'shared', 'fresh',
 ]);
@@ -33,9 +35,13 @@ const REPOSITORY_ROOT = path.resolve(path.dirname(MODULE_PATH), '..');
 const execFileAsync = promisify(execFile);
 const MAX_SUMMARY_BYTES = 1_048_576;
 const MAX_FAILURE_DIAGNOSTIC_BYTES = 16_384;
+const MAX_IDENTITY_FAILURE_BYTES = 8_192;
+const MAX_IDENTITY_FAILURE_CHANGES = 64;
 const MAX_HOST_DURATION_MS = 3_600_000;
 const MAX_HOST_EVENTS = 1_000_000;
 const SHA256_ID = /^sha256:[0-9a-f]{64}$/;
+const SHA256_HEX = /^[0-9a-f]{64}$/;
+const CAPTURE_VARIANTS = Object.freeze(['off', 'a', 'b']);
 const NORMAL_DETAIL_SCALES = Object.freeze([1, 2, 4]);
 const STABLE_SNAPSHOTS_CAPTURE_PROOF = 'stable-snapshots';
 const COMPLETED_FRAME_RECEIPT_CAPTURE_PROOF = 'completed-frame-receipt';
@@ -336,12 +342,79 @@ const cohortResultIdentity = (ordinal, expectedCandidateOrder, index) => {
   }
   return Object.freeze(index.candidates.map((entry, sequence) => {
     if (entry?.candidate !== expectedCandidateOrder[sequence] || entry?.status !== 'passed'
-      || !SHA256_ID.test(entry?.result?.id)) {
+      || !SHA256_ID.test(entry?.result?.id)
+      || CAPTURE_VARIANTS.some((variant) => !SHA256_HEX.test(
+        entry?.result?.captureSha256?.[variant],
+      ))) {
       throw new Error(`Visual Lab performance cohort ${ordinal} has mismatched result identity`);
     }
-    return `${entry.candidate}:${entry.result.id}`;
+    return deepFreeze({
+      candidate: entry.candidate,
+      result: entry.result.id,
+      captureSha256: Object.fromEntries(CAPTURE_VARIANTS.map((variant) => [
+        variant, entry.result.captureSha256[variant],
+      ])),
+    });
   }));
 };
+
+const identityFailureRecord = (ordinal, mode, accepted, observed) => {
+  const changes = observed.flatMap((entry, index) => {
+    const reference = accepted[index];
+    const variants = CAPTURE_VARIANTS.filter((variant) => (
+      entry.captureSha256[variant] !== reference.captureSha256[variant]
+    ));
+    const resultChanged = entry.result !== reference.result;
+    if (resultChanged !== (variants.length > 0)) {
+      throw new TypeError(
+        'Visual Lab performance result identity and variant hashes have inconsistent drift',
+      );
+    }
+    return resultChanged ? [{ candidate: entry.candidate, variants }] : [];
+  });
+  if (changes.length === 0) {
+    throw new TypeError('Visual Lab performance identity failure has no changed candidate');
+  }
+  const changedCandidateCount = changes.length;
+  const retained = changes.slice(0, MAX_IDENTITY_FAILURE_CHANGES);
+  const createRecord = () => ({
+    schema: VISUAL_LAB_PERFORMANCE_IDENTITY_FAILURE_SCHEMA,
+    referenceOrdinal: 1,
+    observedOrdinal: ordinal,
+    observedMode: mode,
+    changedCandidateCount,
+    changes: retained,
+    omittedChangedCandidateCount: changedCandidateCount - retained.length,
+  });
+  while (retained.length > 1 && Buffer.byteLength(
+    `${JSON.stringify(createRecord())}\n`,
+  ) > MAX_IDENTITY_FAILURE_BYTES) retained.pop();
+  return deepFreeze(createRecord());
+};
+
+const writeIdentityFailure = async (outputDirectory, failure) => {
+  const target = path.join(outputDirectory, 'performance-identity-failure.json');
+  const temporary = `${target}.${process.pid}.tmp`;
+  const bytes = `${JSON.stringify(failure)}\n`;
+  if (Buffer.byteLength(bytes) > MAX_IDENTITY_FAILURE_BYTES) {
+    throw new RangeError('Visual Lab performance identity failure exceeds its 8 KiB bound');
+  }
+  try {
+    await writeFile(temporary, bytes, { encoding: 'utf8', flag: 'wx' });
+    await rename(temporary, target);
+  } catch (error) {
+    await rm(temporary, { force: true }).catch(() => {});
+    throw error;
+  }
+  return target;
+};
+
+export class VisualLabPerformanceIdentityMismatchError extends Error {
+  constructor() {
+    super('Visual Lab performance cohorts changed accepted capture identity');
+    this.name = 'VisualLabPerformanceIdentityMismatchError';
+  }
+}
 
 const writeSummary = async (outputDirectory, summary) => {
   const target = path.join(outputDirectory, 'performance-summary.json');
@@ -437,9 +510,10 @@ export async function runVisualLabPerformanceCohorts(options = {}, dependencies 
     );
     acceptedResultIdentity ??= resultIdentity;
     if (!isDeepStrictEqual(resultIdentity, acceptedResultIdentity)) {
-      throw new Error(
-        `Visual Lab performance cohort ${ordinal} (${mode}) changed accepted capture identity`,
-      );
+      await writeIdentityFailure(requested.outputDir, identityFailureRecord(
+        ordinal, mode, acceptedResultIdentity, resultIdentity,
+      ));
+      throw new VisualLabPerformanceIdentityMismatchError();
     }
     cohorts.push(summarizeCohort(ordinal, mode, {
       ...batch,

@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -7,9 +7,11 @@ import {
   assertVisualLabPerformanceCohortPlatform,
   parseVisualLabPerformanceCohortArguments,
   runVisualLabPerformanceCohorts,
+  VisualLabPerformanceIdentityMismatchError,
   VISUAL_LAB_PERFORMANCE_COHORT_ORDER,
   VISUAL_LAB_PERFORMANCE_COHORT_RECEIPT_SCHEMA,
   VISUAL_LAB_PERFORMANCE_COHORT_SCHEMA,
+  VISUAL_LAB_PERFORMANCE_IDENTITY_FAILURE_SCHEMA,
 } from './visual-lab-performance-cohorts.mjs';
 
 const roots = [];
@@ -32,9 +34,14 @@ const subphases = Object.freeze({
 });
 const recipeSetId = `sha256:${'a'.repeat(64)}`;
 const resultId = `sha256:${'b'.repeat(64)}`;
-const batchIndex = (id = resultId) => ({
+const captureSha256 = Object.freeze({
+  off: 'd'.repeat(64), a: 'e'.repeat(64), b: 'f'.repeat(64),
+});
+const batchIndex = (id = resultId, hashes = captureSha256) => ({
   complete: true,
-  candidates: [{ candidate: 'gas-showcase', status: 'passed', result: { id } }],
+  candidates: [{
+    candidate: 'gas-showcase', status: 'passed', result: { id, captureSha256: hashes },
+  }],
 });
 const recipeSet = (renderScale = 2) => ({
   schema: 'anifor.visual-lab.recipe-set/v1',
@@ -147,6 +154,8 @@ describe('Visual Lab performance cohort orchestration', () => {
       order: VISUAL_LAB_PERFORMANCE_COHORT_ORDER,
       cohorts: written.cohorts,
     }, null, 2)}\n`);
+    await expect(readFile(path.join(root, 'performance-identity-failure.json'), 'utf8'))
+      .rejects.toMatchObject({ code: 'ENOENT' });
   });
 
   it('forwards receipt proof, requires tuning v2, and publishes a self-describing v2 summary', async () => {
@@ -409,6 +418,145 @@ describe('Visual Lab performance cohort orchestration', () => {
   it('rejects cross-cohort capture-identity drift without serializing identities', async () => {
     const root = await temporaryRoot();
     let verifications = 0;
+    const changedResultId = `sha256:${'c'.repeat(64)}`;
+    const changedCaptureSha256 = { ...captureSha256, b: '1'.repeat(64) };
+    await expect(runVisualLabPerformanceCohorts({
+      recipeSetPath: 'set.json', outputDir: root,
+    }, {
+      assertTrackedRecipeSet: async () => {},
+      readRecipeSet: async () => recipeSet(),
+      runBatch: async (options) => completeBatch(options.browserHost),
+      verifyBatch: async (options) => {
+        verifications += 1;
+        return verifiedBatch(options, {
+          index: batchIndex(
+            verifications === 2 ? changedResultId : resultId,
+            verifications === 2 ? changedCaptureSha256 : captureSha256,
+          ),
+        });
+      },
+    })).rejects.toEqual(expect.objectContaining({
+      name: 'VisualLabPerformanceIdentityMismatchError',
+      message: 'Visual Lab performance cohorts changed accepted capture identity',
+    }));
+    expect(verifications).toBe(2);
+    await expect(readFile(path.join(root, 'performance-summary.json'), 'utf8'))
+      .rejects.toMatchObject({ code: 'ENOENT' });
+    const diagnosticBytes = await readFile(
+      path.join(root, 'performance-identity-failure.json'), 'utf8',
+    );
+    expect(Buffer.byteLength(diagnosticBytes)).toBeLessThanOrEqual(8_192);
+    expect(JSON.parse(diagnosticBytes)).toEqual({
+      schema: VISUAL_LAB_PERFORMANCE_IDENTITY_FAILURE_SCHEMA,
+      referenceOrdinal: 1,
+      observedOrdinal: 2,
+      observedMode: 'shared',
+      changedCandidateCount: 1,
+      changes: [{
+        candidate: 'gas-showcase',
+        variants: ['b'],
+      }],
+      omittedChangedCandidateCount: 0,
+    });
+    expect(JSON.stringify(JSON.parse(diagnosticBytes)))
+      .not.toMatch(/sha256|[0-9a-f]{64}|path|timestamp|browser|png|timing|metadata/i);
+    expect((await readdir(root)).some((entry) => entry.includes('.tmp'))).toBe(false);
+    expect(new VisualLabPerformanceIdentityMismatchError().message)
+      .toBe('Visual Lab performance cohorts changed accepted capture identity');
+  });
+
+  it('caps retained identity changes at 64 in fixed off/a/b order and below 8 KiB', async () => {
+    const root = await temporaryRoot();
+    const candidates = Array.from({ length: 65 }, (_, index) => (
+      `candidate-${String(index).padStart(2, '0')}`
+    ));
+    const sampled = Object.freeze([...candidates]);
+    const cohortTiming = { ...timing, sampledCandidates: sampled };
+    const cohortSubphases = { ...subphases, sampledCandidates: sampled };
+    const indexFor = (changed) => ({
+      complete: true,
+      candidates: candidates.map((candidate) => ({
+        candidate,
+        status: 'passed',
+        result: {
+          id: changed ? `sha256:${'c'.repeat(64)}` : resultId,
+          captureSha256: changed ? {
+            off: '1'.repeat(64), a: '2'.repeat(64), b: '3'.repeat(64),
+          } : captureSha256,
+        },
+      })),
+    });
+    const planFor = (mode) => ({
+      requestedMode: mode,
+      entries: candidates.map((candidate, sequence) => ({
+        sequence, candidate, requestedMode: mode, effectiveMode: mode,
+      })),
+    });
+    let runs = 0;
+    const batchFor = (mode, changed) => ({
+      ok: true,
+      index: indexFor(changed),
+      timings: cohortTiming,
+      captureSubphases: cohortSubphases,
+      browserHostPlan: planFor(mode),
+      browserHostRuntime: {
+        requestedMode: mode,
+        hostsStarted: mode === 'shared' ? 1 : 0,
+        hostRestarts: 0,
+        launchMs: 0,
+        teardownMs: 0,
+        assignments: mode === 'shared'
+          ? candidates.map((candidate) => ({ candidate, host: 1 })) : [],
+        recycleReasons: [],
+      },
+    });
+    await expect(runVisualLabPerformanceCohorts({
+      recipeSetPath: 'set.json', outputDir: root,
+    }, {
+      assertTrackedRecipeSet: async () => {},
+      readRecipeSet: async () => ({
+        schema: 'anifor.visual-lab.recipe-set/v1',
+        id: recipeSetId,
+        recipes: candidates.map((name) => ({ name, renderScale: 2 })),
+      }),
+      runBatch: async ({ browserHost }) => {
+        runs += 1;
+        return batchFor(browserHost, runs === 2);
+      },
+      verifyBatch: async ({ batchRoot }) => {
+        const mode = path.basename(batchRoot).endsWith('-shared') ? 'shared' : 'fresh';
+        return {
+          index: indexFor(runs === 2),
+          timings: cohortTiming,
+          captureSubphases: cohortSubphases,
+          browserHostPlan: planFor(mode),
+          executionTuningPlan: tuningPlan(),
+        };
+      },
+    })).rejects.toBeInstanceOf(VisualLabPerformanceIdentityMismatchError);
+    const bytes = await readFile(path.join(root, 'performance-identity-failure.json'), 'utf8');
+    const diagnostic = JSON.parse(bytes);
+    expect(Buffer.byteLength(bytes)).toBeLessThanOrEqual(8_192);
+    expect(diagnostic.changes).toHaveLength(64);
+    expect(diagnostic).toMatchObject({
+      schema: VISUAL_LAB_PERFORMANCE_IDENTITY_FAILURE_SCHEMA,
+      referenceOrdinal: 1,
+      observedOrdinal: 2,
+      observedMode: 'shared',
+      changedCandidateCount: 65,
+      omittedChangedCandidateCount: 1,
+    });
+    expect(diagnostic.changes[0].candidate).toBe('candidate-00');
+    expect(diagnostic.changes[63].candidate).toBe('candidate-63');
+    expect(diagnostic.changes[0].variants).toEqual(['off', 'a', 'b']);
+    expect(JSON.stringify(diagnostic)).not.toMatch(/sha256|[0-9a-f]{64}/i);
+    await expect(readFile(path.join(root, 'performance-summary.json'), 'utf8'))
+      .rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('rejects result-only identity drift as structural corruption without a failure record', async () => {
+    const root = await temporaryRoot();
+    let verifications = 0;
     await expect(runVisualLabPerformanceCohorts({
       recipeSetPath: 'set.json', outputDir: root,
     }, {
@@ -421,8 +569,12 @@ describe('Visual Lab performance cohort orchestration', () => {
           index: batchIndex(verifications === 2 ? `sha256:${'c'.repeat(64)}` : resultId),
         });
       },
-    })).rejects.toThrow('changed accepted capture identity');
+    })).rejects.toThrow(
+      'Visual Lab performance result identity and variant hashes have inconsistent drift',
+    );
     expect(verifications).toBe(2);
+    await expect(readFile(path.join(root, 'performance-identity-failure.json'), 'utf8'))
+      .rejects.toMatchObject({ code: 'ENOENT' });
     await expect(readFile(path.join(root, 'performance-summary.json'), 'utf8'))
       .rejects.toMatchObject({ code: 'ENOENT' });
   });

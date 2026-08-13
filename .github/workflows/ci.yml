@@ -451,6 +451,15 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Upload bounded performance identity diagnostic
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: anifortpt-visual-lab-performance-failure-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/anifortpt-visual-lab-performance/performance-identity-failure.json
+          if-no-files-found: ignore
+          retention-days: 7
+
   deploy:
     if: >-
       always() &&

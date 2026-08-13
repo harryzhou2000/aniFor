@@ -140,6 +140,11 @@ describe('deploy-verified CI workflow contract', () => {
     expect(job).toContain('--gpu=swiftshader');
     expect(job).toContain('timeout-minutes: 15');
     expect(job).toContain('path: ${{ runner.temp }}/anifortpt-visual-lab-performance/performance-summary.json');
+    expect(job).toContain('Upload bounded performance identity diagnostic');
+    expect(job).toContain('anifortpt-visual-lab-performance-failure-${{ github.run_attempt }}');
+    expect(job).toContain('performance-identity-failure.json');
+    expect(job).toContain('if-no-files-found: ignore');
+    expect(job).not.toMatch(/performance-identity-failure\.json[\s\S]{0,160}if-no-files-found:\s*error/);
 
     const deploy = indentedEntry(workflow, 'deploy', 2);
     expect(deploy).not.toContain('visual-lab-performance-cohorts');

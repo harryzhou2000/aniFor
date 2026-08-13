@@ -7316,6 +7316,22 @@ resource speculatively. The next framework increment should improve diagnostic
 leverage for transient visual outliers or return to experiment authoring, not
 add another readiness schema or unmeasured render target.
 
+Transient cohort identity failures now retain one bounded, redacted diagnostic
+without weakening publish-last success. After both cohorts independently pass
+portable verification, a cross-cohort drift atomically writes only
+`performance-identity-failure.json` under
+`anifor.visual-lab.cohort-identity-mismatch/v1`: reference/observed cohort
+ordinals, observed host mode, total/omitted changed-candidate counts, and at
+most 64 capture-ordered `{candidate, variants}` records using fixed
+`off`/`a`/`b` order. It contains no result IDs, hashes, paths, timestamps,
+timings, browser metadata, or PNGs and is capped at 8 KiB. Result-ID drift that
+does not agree exactly with changed variant hashes remains a structural error
+and emits no misleading record. CI uploads this single JSON only on failure;
+raw cohort packages remain runner-local, while successful runs still upload
+only `performance-summary.json`. This closes the diagnostic gap exposed by
+workflows `31679545685` and `31682013887`. Return next to declarative experiment
+authoring leverage rather than extending the performance-proof ladder.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

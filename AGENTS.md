@@ -1887,6 +1887,18 @@ for final default-buffer quantization/composition. Do not add it without an
 explicit opt-in parity prototype and measured hosted benefit. Prefer diagnostic
 leverage or reusable experiment authoring next.
 
+Performance-cohort identity outliers retain only the failure-only, atomic,
+8 KiB `performance-identity-failure.json` record under
+`anifor.visual-lab.cohort-identity-mismatch/v1`. It may name reference and
+observed ordinals, observed fresh/shared mode, total and omitted counts, and at
+most 64 capture-ordered candidates with changed variants in fixed off/a/b
+order. Never include result IDs, hashes, paths, timestamps, timings, browser or
+host metadata, raw evidence, or PNGs. Emit it only after both cohorts pass full
+portable verification and exact structural identity validation. Inconsistent
+result-ID/variant drift is a structural failure with no diagnostic. CI may
+upload only this JSON on failure; keep raw cohorts runner-local and keep the
+success summary publish-last and unchanged.
+
 Performance comparisons use the opt-in
 `audit:visual-lab:performance-cohorts` runner. Preserve its fixed
 fresh/shared/shared/fresh order, tracked recipe-set requirement, distinct cohort
