@@ -24,9 +24,11 @@ export const enum RenderOptics {
   Cellular = 19,
   /** Opaque rigid metals: polished transport without granular or liquid topology. */
   MetallicRigid = 20,
+  /** Solid Wax: soft subsurface transport without changing molten MWAX optics. */
+  Waxy = 21,
 }
 
-export const RENDER_OPTICS_CLASS_COUNT = 21;
+export const RENDER_OPTICS_CLASS_COUNT = 22;
 
 /** Powder-like roughness classes that share topology but not material response. */
 export function isGranularOptics(optics: number): boolean {
@@ -68,6 +70,8 @@ export function renderOptics(material: RenderOpticsMaterial): RenderOptics {
     case Material.Mercury:
     case Material.LRBD:
       return RenderOptics.MetallicLiquid;
+    case Material.Wax:
+      return RenderOptics.Waxy;
     case Material.Soap:
     case Material.GEL:
     case Material.MWAX:

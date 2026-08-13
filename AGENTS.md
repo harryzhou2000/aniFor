@@ -1554,6 +1554,19 @@ off. New CI review packages must require it fail-closed. Never rotate result,
 batch, baseline, comparison, promotion, or recipe-set v1 identities for this
 additive provenance.
 
+The reusable WAX/MWAX material-lighting board now carries the first retained
+optics-profile experiment. Keep `RenderOptics.Waxy` append-only and solid-WAX
+only; MWAX remains `ViscousLiquid`. Its raw value may reach only the two shared
+normal-WebGL Profile-B selectors. Normalize it to `SmoothRigid` for Off/A,
+historical shader branches, Canvas2D, and compact true 8x so fixed legacy class
+tables and topology remain safe. Current SwiftShader evidence is retained at
+`/tmp/anifor-waxy-optics-v2b`: Off/A stayed byte-identical to the framework
+capture, B provides the selected warm-surface/darker-core response, and the
+separate true-8x completed-frame audit passed. Treat those bytes as current
+visual evidence, never as a cross-revision requirement. Extend this pattern by
+adding data/profile authority and reusing the generic capture framework before
+adding bespoke material-ID shader branches or audit machinery.
+
 Manual Visual Lab CI selection treats a nonempty explicit candidate list or
 tracked recipe-set path as overriding the workflow's default cohort input;
 candidates and recipe sets remain mutually exclusive. This is required because

@@ -17,6 +17,8 @@ describe('shared render field set', () => {
     expect(lookup.emissiveByMaterial[Material.PHOT]).toBe(1);
     expect(lookup.styleBytes[Material.Water * 4]).toBe(RenderPhase.Liquid);
     expect(lookup.paletteBytes[Material.Water * 4 + 3]).toBe(RenderOptics.Aqueous);
+    expect(lookup.paletteBytes[Material.Wax * 4 + 3]).toBe(RenderOptics.Waxy);
+    expect(lookup.paletteBytes[Material.MWAX * 4 + 3]).toBe(RenderOptics.ViscousLiquid);
     expect(lookup.styleBytes[Material.PRTI * 4 + 3]).toBe(RenderTrait.Sink | RenderTrait.Channel);
     expect(Array.from(lookup.colorByMaterial.slice(Material.Acid * 3, Material.Acid * 3 + 3))).toEqual([0xd3, 0x5e, 0xe8]);
     expect(Array.from(lookup.styleBytes.slice(0, 4))).toEqual([0, 0, 0, 0]);

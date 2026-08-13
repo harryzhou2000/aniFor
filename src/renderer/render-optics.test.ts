@@ -32,6 +32,7 @@ describe('render optics', () => {
       RenderOptics.ViscousLiquid,
       RenderOptics.Cellular,
       RenderOptics.MetallicRigid,
+      RenderOptics.Waxy,
     ]).toEqual(Array.from({ length: RENDER_OPTICS_CLASS_COUNT }, (_, index) => index));
   });
 
@@ -46,6 +47,7 @@ describe('render optics', () => {
     expect(optics(Material.CAUS)).toBe(RenderOptics.CleanGas);
     expect(optics(Material.Lava)).toBe(RenderOptics.Molten);
     expect(optics(Material.MWAX)).toBe(RenderOptics.ViscousLiquid);
+    expect(optics(Material.Wax)).toBe(RenderOptics.Waxy);
     expect(optics(Material.LiquidNitrogen)).toBe(RenderOptics.CryogenicLiquid);
     expect(optics(Material.LO2)).toBe(RenderOptics.CryogenicLiquid);
     expect(optics(Material.Mercury)).toBe(RenderOptics.MetallicLiquid);

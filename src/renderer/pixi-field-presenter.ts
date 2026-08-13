@@ -2027,6 +2027,9 @@ void main() {
   float traits = floor(style.a * 255.0 + 0.5);
   bool materialEmissive = style.b > 0.5;
   float optics = floor(palette.a * 255.0 + 0.5);
+  // Waxy is a normal-HDR B profile only. Keep compact true 8x byte-identical
+  // to the historical SmoothRigid presentation.
+  optics = optics == 21.0 ? 8.0 : optics;
   // This existing auxiliary-byte read is deliberately after the fully-empty
   // early return: true 8x keeps its sampler-free empty path. Smooth's local
   // field blend below uses it only as settled evidence; the separate projected
@@ -6073,7 +6076,11 @@ void main() {
   float profile = floor(materialStyle.g * 255.0 + 0.5);
   bool materialEmissive = materialStyle.b > 0.5;
   float traits = floor(materialStyle.a * 255.0 + 0.5);
-  float optics = floor(paletteSample.a * 255.0 + 0.5);
+  float profileOptics = floor(paletteSample.a * 255.0 + 0.5);
+  // The appended Waxy class is profile authority only. Historical normal-HDR
+  // branches retain SmoothRigid behaviour in Off/A and outside shared B
+  // profile selection, while the two selectors below receive profileOptics.
+  float optics = profileOptics == 21.0 ? 8.0 : profileOptics;
   float energyCore = family == 3.0 ? 1.0 : 0.0;
   vec4 suspensionState = vec4(0.0);
   // The half-resolution RGB field is presentation-only and optional. Keeping
@@ -8832,7 +8839,7 @@ void main() {
       && solidInterior > 0.001 && solidOpticalDepth > 6.0 / 255.0
       && solidLightingFamily > 0.5) {
       MaterialBodyFinishResponse solidFinishProfile = materialBodyFinishParameters(
-        3.0, optics, uMaterialBodyFinish
+        3.0, profileOptics, uMaterialBodyFinish
       );
       color = applySolidMaterialLighting(
         color, solidFinishProfile.optics, solidFinishProfile.roughness,
@@ -11864,7 +11871,7 @@ void main() {
       : (liquidVolume > 0.5 ? liquidBodyFinishDepth(liquidInterior, liquidOpticalDepth)
       : (family == 4.0 ? powderLightBodyDepth : solidOpticalDepth));
     MaterialBodyFinishResponse profileIrradianceProfile = materialBodyFinishParameters(
-      profileIrradiancePhase, optics, uMaterialBodyFinish
+      profileIrradiancePhase, profileOptics, uMaterialBodyFinish
     );
     vec4 profileIrradianceResponse = profileIrradianceProfile.optics;
     // Resolve one shared outward probe only when a phase-local gas/solid branch

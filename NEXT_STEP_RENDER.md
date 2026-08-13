@@ -7399,6 +7399,23 @@ and `multi-metal-material-lighting-atlas` result
 This is current visual evidence for human review, not a cross-revision PNG
 gate or a requirement to preserve either result identity.
 
+The first optics-profile experiment on that reusable board is now retained.
+`RenderOptics.Waxy` is an append-only class for solid WAX only; molten MWAX
+remains `ViscousLiquid`. Normal WebGL keeps the raw class solely at the two
+shared Profile-B selectors, while historical branches, Off/A, Canvas2D, and
+compact true 8x normalize it to `SmoothRigid`. Its declarative appearance
+profile admits a soft, low-frequency subsurface transport lobe without adding
+a texture, pass, field, material-ID shader branch, or new capture machinery.
+A real shared-host SwiftShader OFF/A/B capture at
+`/tmp/anifor-waxy-optics-v2b` passed with WebGL, HDR, zero browser errors, exact
+918x576 crop and 1224x768 backing. Off and A preserved the pre-experiment PNG
+bytes exactly; B changed to a warmer surface/darker interior result while WAX
+topology and the paired MWAX control remained stable. The portable result is
+`sha256:2bb2ed46f62cd149e15477771aa371d8bbb8441b4d75dcd4bbdf75ffd5cd34c9`.
+A separate real SwiftShader true-8x completed-frame audit also passed with the
+second ticket completed and zero browser errors. These hashes describe this
+current evidence package only and are not visual pins.
+
 The next framework-leverage checkpoint makes the existing paired WAX/MWAX
 audit fixture a first-class normal-HDR Visual Lab candidate. One frozen,
 data-only `wax-material-lighting-atlas` catalog now owns the established body,

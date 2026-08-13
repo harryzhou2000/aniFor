@@ -100,6 +100,8 @@ describe('material appearance profiles', () => {
       .toBeLessThan(1);
     expect(MATERIAL_APPEARANCE_PROFILES.solid.overrides[RenderOptics.MetallicRigid]?.[4])
       .toBeLessThan(MATERIAL_APPEARANCE_PROFILES.solid.overrides[RenderOptics.SmoothRigid]![4]);
+    expect(MATERIAL_APPEARANCE_PROFILES.solid.overrides[RenderOptics.Waxy])
+      .toEqual([1.04, 1.12, 1.18, 0.90, 1.06, 1.18]);
     expect(MATERIAL_APPEARANCE_PROFILES.liquid.overrides[RenderOptics.Aqueous]?.[5])
       .toBeGreaterThan(MATERIAL_APPEARANCE_PROFILES.liquid.overrides[RenderOptics.Oily]![5]);
     expect(MATERIAL_APPEARANCE_PROFILES.gas.overrides[RenderOptics.CleanGas]?.[5])
@@ -123,5 +125,7 @@ describe('material appearance profiles', () => {
       .toBe(MATERIAL_APPEARANCE_PROFILES.solid.overrides[RenderOptics.Device]);
     expect(resolveMaterialAppearanceProfile('solid', RenderOptics.MetallicRigid))
       .toBe(MATERIAL_APPEARANCE_PROFILES.solid.overrides[RenderOptics.MetallicRigid]);
+    expect(resolveMaterialAppearanceProfile('solid', RenderOptics.Waxy))
+      .toBe(MATERIAL_APPEARANCE_PROFILES.solid.overrides[RenderOptics.Waxy]);
   });
 });

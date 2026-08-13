@@ -348,8 +348,11 @@ vec3 applyMaterialProfileIrradiance(
   // below the knee. Liquid, gas, and settled powder retain their established
   // phase response. This uses the existing profile lane rather than an exact
   // material/class branch and cannot create support or emission.
+  float clearScatter = smoothstep(1.05, 1.30, finishResponse.w);
+  float softScatter = smoothstep(1.10, 1.16, interiorScatter)
+    * (1.0 - smoothstep(0.98, 1.08, finishResponse.w));
   float solidScatterAdmission = mix(
-    1.0, smoothstep(1.05, 1.30, finishResponse.w), solid
+    1.0, max(clearScatter, softScatter), solid
   );
   float solidScatterGain = mix(1.0, 2.35, solid * solidScatterAdmission);
   float transportLobe = lightReach * body * positiveExternal * midPath

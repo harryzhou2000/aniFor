@@ -2247,7 +2247,10 @@ export class MaterialRenderer {
       const phase = fields.lookups.styleBytes[material * 4] as RenderPhase;
       const profile = fields.lookups.styleBytes[material * 4 + 1] as RenderProfile;
       const traits = fields.lookups.styleBytes[material * 4 + 3];
-      const optics = fields.lookups.paletteBytes[material * 4 + 3] as RenderOptics;
+      const rawOptics = fields.lookups.paletteBytes[material * 4 + 3] as RenderOptics;
+      // Waxy is authored for normal-WebGL B. Canvas deliberately preserves
+      // its established SmoothRigid rendering and fixed class-table bounds.
+      const optics = rawOptics === RenderOptics.Waxy ? RenderOptics.SmoothRigid : rawOptics;
       const liquidMaterial = fields.lookups.liquidByMaterial[material] !== 0;
       if (phase === RenderPhase.Solid) hasSolidSurface = true;
       if (liquidMaterial) hasLiquidSurface = true;

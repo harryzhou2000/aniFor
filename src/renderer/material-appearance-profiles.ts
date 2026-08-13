@@ -69,6 +69,7 @@ const PHASE_OPTICS = Object.freeze({
     RenderOptics.Radioactive,
     RenderOptics.TranslucentRigid,
     RenderOptics.MetallicRigid,
+    RenderOptics.Waxy,
   ]),
 } satisfies Readonly<Record<MaterialAppearancePhase, readonly RenderOptics[]>>);
 
@@ -121,6 +122,7 @@ export const MATERIAL_APPEARANCE_PROFILES: MaterialAppearanceProfiles = Object.f
     [RenderOptics.Radioactive]: profile(0.98, 1.24, 1.10, 0.80, 1.04, 0.82),
     [RenderOptics.TranslucentRigid]: profile(1.34, 0.82, 0.84, 1.42, 0.76, 1.25),
     [RenderOptics.MetallicRigid]: profile(1.42, 1.08, 1.12, 0.56, 0.62, 0.55),
+    [RenderOptics.Waxy]: profile(1.04, 1.12, 1.18, 0.90, 1.06, 1.18),
   }),
 });
 

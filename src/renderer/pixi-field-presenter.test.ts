@@ -654,6 +654,13 @@ describe('Pixi presenter startup configuration', () => {
     expect(normal).toContain(
       'color, solidFinishProfile.optics, solidFinishProfile.roughness,',
     );
+    expect(eight).toContain('optics = optics == 21.0 ? 8.0 : optics;');
+    expect(normal).toContain(
+      'float profileOptics = floor(paletteSample.a * 255.0 + 0.5);',
+    );
+    expect(normal).toContain('float optics = profileOptics == 21.0 ? 8.0 : profileOptics;');
+    expect(normal).toContain('3.0, profileOptics, uMaterialBodyFinish');
+    expect(normal).toContain('profileIrradiancePhase, profileOptics, uMaterialBodyFinish');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'MaterialBodyFinishResponse materialBodyFinishParameters(float phase, float optics, float enabled)',
     );
@@ -762,6 +769,12 @@ describe('Pixi presenter startup configuration', () => {
       '* phaseScatter * solidScatterAdmission * interiorScatter * transmissionReserve',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('* solidScatterGain;');
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'float softScatter = smoothstep(1.10, 1.16, interiorScatter)',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'max(clearScatter, softScatter)',
+    );
     expect(normal).toContain('profileIrradianceProfile.interiorScatter');
     expect(normal).toContain(
       'color, 0.0, powderFinishProfile.optics, powderFinishProfile.roughness',
