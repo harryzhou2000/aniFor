@@ -8176,6 +8176,26 @@ cohorts. Do not add a new proof schema, visual hash gate, or another startup
 branch. Only then choose between reducing reusable first-frame field work and
 returning effort to the deferred material/VFX roadmap.
 
+That promotion-bound activation increment is deployed at exact revision
+`f79be38363ab8ef55cf5e592bfc022f7b4dcf856` by workflow run `31750954503`.
+The cached build finished in 3m29s with 269/270 ccache hits and passed 1,631
+source plus 417 tooling tests, the four pretest files, and exact 19-resource
+closure. The shared-host material-lighting review captured and portably
+verified all ten candidates with one Chrome host and no recycle; RenderOptics
+retained the exact canonical result above. CI's ten-candidate mean startup was
+approximately 9.82 seconds and mean readiness 15.70 seconds; readiness included
+about 6.95 seconds of complete readback/hash time. Treat those values as loaded
+runner diagnostics, not a cross-revision performance claim.
+
+Pages deployed successfully, and exact revision plus all 19 live resources
+passed on the first attempt. The hosted Water receipt-v2 batch then passed
+portable verification with unchanged result
+`sha256:c83123c25c6181ecdc10d0668cb3b1c6a56d22888b7bb79d02d1739d5824be5b`.
+Its bounded live evidence artifact is `9201182444`. The deployment closes the
+promotion-fusion increment; the active next work is the measurement-driven
+first-frame cost split described above, without changing frozen evidence or
+visual identities.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
