@@ -61,12 +61,14 @@ import {
   resolveVisualLabExecutionTuningPlanV5Entry,
   resolveVisualLabExecutionTuningPlanV6Entry,
   resolveVisualLabExecutionTuningPlanV7Entry,
+  resolveVisualLabExecutionTuningPlanV8Entry,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA,
 } from './visual-lab-execution-tuning-plan.mjs';
 import {
   createVisualCaptureGeometryProof,
@@ -96,6 +98,12 @@ const READINESS_COMPLETED_FRAME_RECEIPT_DESCRIPTOR = Object.freeze({
 const SELECTION_OWNED_COMPLETED_FRAME_RECEIPT_DESCRIPTOR = Object.freeze({
   ...COMPLETED_FRAME_RECEIPT_DESCRIPTOR,
   bind: 'selection-owned-presentation',
+});
+const SELECTION_OWNED_FRAMEBUFFER_ALPHA_READBACK_DESCRIPTOR = Object.freeze({
+  capability: 'renderer-framebuffer-alpha-readback/v1',
+  readbackSchema: FRAMEBUFFER_ALPHA_READBACK_SCHEMA,
+  bind: 'selection-owned-presentation',
+  verifyAfterSnapshot: true,
 });
 const FIXTURE_ACTIVATION_READINESS_DESCRIPTOR = Object.freeze({
   capability: 'renderer-fixture-activation-generation/v1',
@@ -164,6 +172,9 @@ const resolveExecutionTuningPlanEntry = (
   }
   if (plan?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA) {
     return resolveVisualLabExecutionTuningPlanV7Entry(plan, entryId, expectedCaptureEntryId);
+  }
+  if (plan?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA) {
+    return resolveVisualLabExecutionTuningPlanV8Entry(plan, entryId, expectedCaptureEntryId);
   }
   if (plan?.schema === 'anifor.visual-lab.execution-tuning-plan/v1') {
     return resolveVisualLabExecutionTuningPlanEntry(plan, entryId, expectedCaptureEntryId);
@@ -1486,10 +1497,28 @@ async function captureVariant(cdp, options, variant, captureSubphases) {
   const expectedDriverState = compiledVariant.expectedDataset;
   const observedDriverState = options.executionPlan.compiled.datasetProjectionExpression;
   const selectionOwnedReceipt = hasSelectionOwnedCompletedFrameReceiptDescriptor(profile);
+  const selectionOwnedFramebufferReadback = hasSelectionOwnedFramebufferAlphaReadbackDescriptor(profile);
   const performSelection = () => captureSubphases.measureCapture(
     variant.name, 'selectionMs', () => evaluate(cdp, `(() => {
       const audit = window.__ANIFOR_INPUT_AUDIT__;
-      const selection = ${selectionOwnedReceipt ? `(() => {
+      const selection = ${selectionOwnedFramebufferReadback ? `(() => {
+        if (typeof audit?.setPreparedVisualCaptureVariantWithCompletedFrameReceiptAndFramebufferAlphaReadback !== 'function') {
+          return { ok: false, failure: 'missing-selection-owned-alpha-readback-selector' };
+        }
+        try {
+          const transaction = audit.setPreparedVisualCaptureVariantWithCompletedFrameReceiptAndFramebufferAlphaReadback(
+            ${JSON.stringify(options.fixture)}, ${variant.value}
+          );
+          return transaction && Number.isSafeInteger(transaction.receiptTicket) && transaction.receiptTicket > 0
+            && Number.isSafeInteger(transaction.framebufferAlphaReadbackTicket)
+            && transaction.framebufferAlphaReadbackTicket > 0
+            && Number.isSafeInteger(transaction.submission) && transaction.submission > 0
+            ? { ok: true, selection: ${JSON.stringify(variant.value)}, ...transaction }
+            : { ok: false, failure: 'invalid-selection-owned-alpha-readback-transaction' };
+        } catch {
+          return { ok: false, failure: 'selection-owned-alpha-readback-selector-threw' };
+        }
+      })()` : selectionOwnedReceipt ? `(() => {
         if (typeof audit?.setPreparedVisualCaptureVariantWithCompletedFrameReceipt !== 'function') {
           return { ok: false, failure: 'missing-selection-owned-receipt-selector' };
         }
@@ -1553,7 +1582,7 @@ async function captureVariant(cdp, options, variant, captureSubphases) {
       const remainingMs = deadline - Date.now();
       assert(remainingMs > 0, `${variant.name} completed-frame receipt proof timed out`);
       if (selectionOwnedReceipt) {
-        ticket = selection.ticket;
+        ticket = selectionOwnedFramebufferReadback ? selection.receiptTicket : selection.ticket;
         assert(Number.isSafeInteger(ticket) && ticket > 0,
           `${variant.name} selection-owned completed-frame receipt ticket is invalid`);
       } else {
@@ -1577,14 +1606,22 @@ async function captureVariant(cdp, options, variant, captureSubphases) {
     }
     assert(receipt !== undefined && ticket !== undefined,
       `${variant.name} completed-frame receipt was superseded eight times`);
-    state = await captureSubphases.measureSnapshot(
-      variant.name,
-      () => snapshotState(cdp, options.executionPlan, snapshotCommandTimeoutMs),
-    );
+      state = await captureSubphases.measureSnapshot(
+        variant.name,
+        () => snapshotState(cdp, options.executionPlan, snapshotCommandTimeoutMs,
+          selectionOwnedFramebufferReadback ? selection.framebufferAlphaReadbackTicket : undefined),
+      );
     const verified = await readCompletedFrameReceipt(cdp, variant.name, ticket);
     assert(verified.state === 'completed' && verified.submission === receipt.submission,
       `${variant.name} completed-frame receipt changed after its snapshot`);
     completedFrameReceipt = verified;
+    if (selectionOwnedFramebufferReadback) {
+      const readback = await readFramebufferAlphaReadback(
+        cdp, selection.framebufferAlphaReadbackTicket,
+      );
+      assert(readback.state === 'completed' && readback.submission === receipt.submission,
+        `${variant.name} selection-owned framebuffer-alpha readback changed after its snapshot`);
+    }
   } else {
     let previousState;
     let consecutiveSnapshots = 0;
@@ -1692,12 +1729,17 @@ function assertVariantState(state, options, variant) {
   assert(state.framebufferAlpha.nonzero > 0, `${variant.name} WebGL framebuffer alpha is empty`);
 }
 
-async function snapshotState(cdp, executionPlan, commandTimeoutMs = CDP_COMMAND_TIMEOUT_MS) {
+async function snapshotState(
+  cdp, executionPlan, commandTimeoutMs = CDP_COMMAND_TIMEOUT_MS, prearmedFramebufferAlphaReadbackTicket,
+) {
   const { datasetProjectionExpression: observedDriverState } = (
     executionPlan.compiled
   );
   const evidencePlane = executionPlan.domainAdapter.evidence.plane;
-  const readbackTicket = await requestFramebufferAlphaReadback(cdp);
+  const readbackTicket = Number.isSafeInteger(prearmedFramebufferAlphaReadbackTicket)
+    && prearmedFramebufferAlphaReadbackTicket > 0
+    ? prearmedFramebufferAlphaReadbackTicket
+    : await requestFramebufferAlphaReadback(cdp);
   const snapshotExpression = (readFramebufferFallback) => `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     const canvas = document.querySelector('.semantic-field-canvas');
@@ -1766,20 +1808,10 @@ async function requestFramebufferAlphaReadback(cdp) {
 }
 
 async function awaitFramebufferAlphaDigest(cdp, ticket, timeoutMs) {
-  const readback = await waitFor(async () => {
-    const observation = await evaluate(cdp, `(() => (
-      window.__ANIFOR_INPUT_AUDIT__?.webGLFramebufferAlphaReadback?.(${ticket})
-    ))()`);
-    assert(observation !== null && typeof observation === 'object'
-      && !Array.isArray(observation),
-    `framebuffer-alpha readback ${ticket} is unavailable`);
-    assert(observation.schema === FRAMEBUFFER_ALPHA_READBACK_SCHEMA
-      && observation.ticket === ticket
-      && Number.isSafeInteger(observation.submission) && observation.submission > 0
-      && ['pending', 'completed', 'failed'].includes(observation.state),
-    `framebuffer-alpha readback ${ticket} is malformed`);
-    return observation.state === 'pending' ? false : observation;
-  }, timeoutMs, `framebuffer-alpha readback ${ticket}`, 25);
+  const readback = await waitFor(
+    () => readFramebufferAlphaReadback(cdp, ticket, true),
+    timeoutMs, `framebuffer-alpha readback ${ticket}`, 25,
+  );
   assert(readback.state === 'completed', `framebuffer-alpha readback ${ticket} failed`);
   const digest = readback.digest;
   assert(digest !== null && typeof digest === 'object' && !Array.isArray(digest)
@@ -1787,6 +1819,20 @@ async function awaitFramebufferAlphaDigest(cdp, ticket, timeoutMs) {
       Number.isSafeInteger(digest[name]) && digest[name] >= 0
     )), `framebuffer-alpha readback ${ticket} digest is malformed`);
   return digest;
+}
+
+async function readFramebufferAlphaReadback(cdp, ticket, pendingIsFalse = false) {
+  const observation = await evaluate(cdp, `(() => (
+    window.__ANIFOR_INPUT_AUDIT__?.webGLFramebufferAlphaReadback?.(${ticket})
+  ))()`);
+  assert(observation !== null && typeof observation === 'object' && !Array.isArray(observation),
+    `framebuffer-alpha readback ${ticket} is unavailable`);
+  assert(observation.schema === FRAMEBUFFER_ALPHA_READBACK_SCHEMA
+    && observation.ticket === ticket
+    && Number.isSafeInteger(observation.submission) && observation.submission > 0
+    && ['pending', 'completed', 'failed'].includes(observation.state),
+  `framebuffer-alpha readback ${ticket} is malformed`);
+  return pendingIsFalse && observation.state === 'pending' ? false : observation;
 }
 
 /**
@@ -1863,6 +1909,15 @@ function hasSelectionOwnedCompletedFrameReceiptDescriptor(profile) {
   const keys = Object.keys(completion);
   return keys.length === Object.keys(expected).length
     && Object.keys(expected).every((name) => completion[name] === expected[name]);
+}
+
+function hasSelectionOwnedFramebufferAlphaReadbackDescriptor(profile) {
+  const readback = profile?.framebufferReadback;
+  if (readback === null || typeof readback !== 'object' || Array.isArray(readback)) return false;
+  const expected = SELECTION_OWNED_FRAMEBUFFER_ALPHA_READBACK_DESCRIPTOR;
+  const keys = Object.keys(readback);
+  return keys.length === Object.keys(expected).length
+    && Object.keys(expected).every((name) => readback[name] === expected[name]);
 }
 
 function hasFixtureActivationReadinessDescriptor(profile) {

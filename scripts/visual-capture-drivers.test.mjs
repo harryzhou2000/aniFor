@@ -397,7 +397,10 @@ describe('typed visual capture drivers', () => {
     expect(source).toContain('activatePreparedVisualCaptureFixtureWithDrainedWorkGeneration');
     expect(source).toContain('readinessFixtureActivationRenderFieldGeneration');
     expect(source).toContain('setPreparedVisualCaptureVariantWithCompletedFrameReceipt');
+    expect(source).toContain('setPreparedVisualCaptureVariantWithCompletedFrameReceiptAndFramebufferAlphaReadback');
     expect(source).toContain('hasSelectionOwnedCompletedFrameReceiptDescriptor(profile)');
+    expect(source).toContain('hasSelectionOwnedFramebufferAlphaReadbackDescriptor(profile)');
+    expect(source).toContain('prearmedFramebufferAlphaReadbackTicket');
     expect(source).toContain('ticket = await requestCompletedFrameReceipt(');
     expect(source).toContain('selection = await performSelection()');
     expect(source).toContain('})()`, snapshotCommandTimeoutMs)');

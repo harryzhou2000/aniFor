@@ -32,6 +32,9 @@ const V5_PROFILE_FIELDS = Object.freeze([
 ]);
 const V6_PROFILE_FIELDS = V5_PROFILE_FIELDS;
 const V7_PROFILE_FIELDS = V5_PROFILE_FIELDS;
+const V8_PROFILE_FIELDS = Object.freeze([
+  'startup', 'readiness', 'selection', 'stability', 'completion', 'framebufferReadback', 'screenshot',
+]);
 const READINESS_ACTIVATION_FIELDS = Object.freeze([
   'capability', 'requiredState', 'bind', 'snapshotAfterCompletion',
 ]);
@@ -41,6 +44,9 @@ const V6_READINESS_ACTIVATION_FIELDS = Object.freeze([
 const V7_READINESS_ACTIVATION_FIELDS = V6_READINESS_ACTIVATION_FIELDS;
 const COMPLETION_FIELDS = Object.freeze([
   'capability', 'receiptSchema', 'requiredState', 'bind', 'verifyAfterSnapshot',
+]);
+const FRAMEBUFFER_READBACK_FIELDS = Object.freeze([
+  'capability', 'readbackSchema', 'bind', 'verifyAfterSnapshot',
 ]);
 const EVIDENCE_PLANES = Object.freeze([
   'semantic',
@@ -123,11 +129,12 @@ const normalizeProfile = (profile, driverName, version) => {
   const hasReadinessCompletion = version === 'v3';
   const hasReadinessActivation = version === 'v5' || version === 'v6' || version === 'v7';
   const hasCompletion = version === 'v2' || version === 'v3'
-    || version === 'v4' || version === 'v5' || version === 'v6' || version === 'v7';
+    || version === 'v4' || version === 'v5' || version === 'v6' || version === 'v7' || version === 'v8';
   assertJsonValue(profile, label);
   assertExactDataKeys(
     profile,
-    version === 'v7' ? V7_PROFILE_FIELDS
+    version === 'v8' ? V8_PROFILE_FIELDS
+      : version === 'v7' ? V7_PROFILE_FIELDS
       : version === 'v6' ? V6_PROFILE_FIELDS
       : version === 'v5' ? V5_PROFILE_FIELDS
       : version === 'v4' ? V4_PROFILE_FIELDS
@@ -138,7 +145,7 @@ const normalizeProfile = (profile, driverName, version) => {
 
   const {
     startup, readiness, readinessCompletion, readinessActivation,
-    selection, stability, completion, screenshot,
+    selection, stability, completion, framebufferReadback, screenshot,
   } = profile;
   assertExactDataKeys(startup, STARTUP_FIELDS, `${label}.startup`);
   if (startup.variant !== 'b' || startup.fieldRefresh !== 'explicit') {
@@ -177,7 +184,7 @@ const normalizeProfile = (profile, driverName, version) => {
   if (hasCompletion) {
     assertExactDataKeys(completion, COMPLETION_FIELDS, `${label}.completion`);
     const completionBind = version === 'v4' || version === 'v5'
-      || version === 'v6' || version === 'v7'
+      || version === 'v6' || version === 'v7' || version === 'v8'
       ? 'selection-owned-presentation'
       : 'selected-presentation';
     if (completion.capability !== 'renderer-completed-frame-receipt/v1'
@@ -273,6 +280,23 @@ const normalizeProfile = (profile, driverName, version) => {
       ...(version === 'v6' || version === 'v7'
         ? { completionScope: readinessActivation.completionScope } : {}),
       snapshotAfterCompletion: readinessActivation.snapshotAfterCompletion,
+    };
+  }
+  if (version === 'v8') {
+    assertExactDataKeys(
+      framebufferReadback, FRAMEBUFFER_READBACK_FIELDS, `${label}.framebufferReadback`,
+    );
+    if (framebufferReadback.capability !== 'renderer-framebuffer-alpha-readback/v1'
+      || framebufferReadback.readbackSchema !== 'anifor.renderer.framebuffer-alpha-readback/v1'
+      || framebufferReadback.bind !== 'selection-owned-presentation'
+      || framebufferReadback.verifyAfterSnapshot !== true) {
+      throw new TypeError(`${label}.framebufferReadback is not supported`);
+    }
+    normalized.framebufferReadback = {
+      capability: framebufferReadback.capability,
+      readbackSchema: framebufferReadback.readbackSchema,
+      bind: framebufferReadback.bind,
+      verifyAfterSnapshot: framebufferReadback.verifyAfterSnapshot,
     };
   }
   if (hasCompletion) {
@@ -393,6 +417,11 @@ export function createVisualCaptureExecutionV7CapabilityRegistry(drivers, profil
   return createCapabilityRegistry(drivers, profiles, 'v7');
 }
 
+/** Creates the closed v8 selection-owned receipt plus alpha-readback registry. */
+export function createVisualCaptureExecutionV8CapabilityRegistry(drivers, profiles) {
+  return createCapabilityRegistry(drivers, profiles, 'v8');
+}
+
 /** Returns a frozen map only for an exact, duplicate-free capture-order subset. */
 const capabilitiesForCaptureOrder = (driverNames, registry) => {
   if (!Array.isArray(driverNames) || driverNames.length === 0) {
@@ -443,6 +472,11 @@ export function visualCaptureExecutionV6CapabilitiesForCaptureOrder(driverNames)
 /** Returns the frozen v7 activation-owned render-field generation capture-order subset. */
 export function visualCaptureExecutionV7CapabilitiesForCaptureOrder(driverNames) {
   return capabilitiesForCaptureOrder(driverNames, V7_REGISTRY);
+}
+
+/** Returns the frozen v8 selection-owned receipt plus alpha-readback subset. */
+export function visualCaptureExecutionV8CapabilitiesForCaptureOrder(driverNames) {
+  return capabilitiesForCaptureOrder(driverNames, V8_REGISTRY);
 }
 
 const CONSERVATIVE_PROFILE = () => ({
@@ -589,6 +623,24 @@ const FIXTURE_ACTIVATION_RENDER_FIELD_GENERATION_PROFILE = () => {
   };
 };
 
+const SELECTION_OWNED_RECEIPT_AND_ALPHA_READBACK_PROFILE = () => {
+  const profile = SELECTION_OWNED_COMPLETED_FRAME_RECEIPT_PROFILE();
+  return {
+    startup: profile.startup,
+    readiness: profile.readiness,
+    selection: profile.selection,
+    stability: profile.stability,
+    completion: profile.completion,
+    framebufferReadback: {
+      capability: 'renderer-framebuffer-alpha-readback/v1',
+      readbackSchema: 'anifor.renderer.framebuffer-alpha-readback/v1',
+      bind: 'selection-owned-presentation',
+      verifyAfterSnapshot: true,
+    },
+    screenshot: profile.screenshot,
+  };
+};
+
 const DECLARED_DRIVER_NAMES = VISUAL_CAPTURE_STATIC_CONTRACT.drivers.map(({ name }) => name);
 if (DECLARED_DRIVER_NAMES.length !== VISUAL_CAPTURE_DRIVER_NAMES.length
   || DECLARED_DRIVER_NAMES.some((name, index) => name !== VISUAL_CAPTURE_DRIVER_NAMES[index])) {
@@ -615,6 +667,9 @@ const V6_PROFILE_REGISTRY = Object.fromEntries(
 );
 const V7_PROFILE_REGISTRY = Object.fromEntries(
   DECLARED_DRIVER_NAMES.map((name) => [name, FIXTURE_ACTIVATION_RENDER_FIELD_GENERATION_PROFILE()]),
+);
+const V8_PROFILE_REGISTRY = Object.fromEntries(
+  DECLARED_DRIVER_NAMES.map((name) => [name, SELECTION_OWNED_RECEIPT_AND_ALPHA_READBACK_PROFILE()]),
 );
 const REGISTRY = createVisualCaptureExecutionCapabilityRegistry(
   VISUAL_CAPTURE_STATIC_CONTRACT.drivers,
@@ -644,6 +699,10 @@ const V7_REGISTRY = createVisualCaptureExecutionV7CapabilityRegistry(
   VISUAL_CAPTURE_STATIC_CONTRACT.drivers,
   V7_PROFILE_REGISTRY,
 );
+const V8_REGISTRY = createVisualCaptureExecutionV8CapabilityRegistry(
+  VISUAL_CAPTURE_STATIC_CONTRACT.drivers,
+  V8_PROFILE_REGISTRY,
+);
 
 export const VISUAL_CAPTURE_EXECUTION_CAPABILITY_NAMES = REGISTRY.names;
 export const VISUAL_CAPTURE_EXECUTION_CAPABILITIES = REGISTRY.capabilities;
@@ -659,6 +718,8 @@ export const VISUAL_CAPTURE_EXECUTION_V6_CAPABILITY_NAMES = V6_REGISTRY.names;
 export const VISUAL_CAPTURE_EXECUTION_V6_CAPABILITIES = V6_REGISTRY.capabilities;
 export const VISUAL_CAPTURE_EXECUTION_V7_CAPABILITY_NAMES = V7_REGISTRY.names;
 export const VISUAL_CAPTURE_EXECUTION_V7_CAPABILITIES = V7_REGISTRY.capabilities;
+export const VISUAL_CAPTURE_EXECUTION_V8_CAPABILITY_NAMES = V8_REGISTRY.names;
+export const VISUAL_CAPTURE_EXECUTION_V8_CAPABILITIES = V8_REGISTRY.capabilities;
 
 export function resolveVisualCaptureExecutionCapabilities(name) {
   return REGISTRY.resolve(name);
@@ -686,4 +747,8 @@ export function resolveVisualCaptureExecutionV6Capabilities(name) {
 
 export function resolveVisualCaptureExecutionV7Capabilities(name) {
   return V7_REGISTRY.resolve(name);
+}
+
+export function resolveVisualCaptureExecutionV8Capabilities(name) {
+  return V8_REGISTRY.resolve(name);
 }

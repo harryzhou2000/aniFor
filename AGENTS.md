@@ -5014,6 +5014,17 @@ real RenderOptics and focused Solid atlas inspection over expanding exact-pixel
 unit tests. Cavities, isolated points, contacts, fine controls, native walls,
 and guarded blank regions are the topology controls.
 
+Execution-tuning v8 is the opt-in selector-owned completed-frame receipt plus
+prearmed framebuffer-alpha readback path. Reserve both tickets before exactly
+one typed selector presentation, bind both to the same submission, consume the
+prearmed PBO only through the ordinary full evidence snapshot, and verify both
+terminal records again before screenshot. Never weaken the semantic,
+authoritative-field, framebuffer-alpha, dataset, or screenshot-after-proof
+contract; never turn v8 into fixture-activation authority. Stable snapshots and
+receipt-only v4 remain independent fallbacks, and v1-v7 plan schemas and all
+frozen result/batch identities stay byte-compatible. Timing is diagnostic only:
+compare portable packages and current pixels first, with no fixed speed gate.
+
 Read [`docs/render-lab.md`](docs/render-lab.md) before changing reconstruction thresholds or blur radii. A TypeScript or Vite build does not compile Pixi's runtime GLSL; a browser screenshot with a clean shader console is required.
 
 The style lookup is an RGBA data texture, not display color: RGB stores phase/profile/emission and alpha stores the static `RenderTrait` mask. Keep nearest sampling and `no-premultiply-alpha`; zero-valued trait alpha must never erase the RGB metadata.

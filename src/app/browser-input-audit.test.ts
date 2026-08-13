@@ -125,6 +125,17 @@ describe('browser input audit gate', () => {
     expect(source).toContain('prepare: () => this.renderer.disposeForNavigation()');
   });
 
+  it('keeps the composite selector transaction explicit beside the receipt fallback', () => {
+    const source = readFileSync(new URL('./game.ts', import.meta.url), 'utf8');
+    expect(source).toContain('setPreparedVisualCaptureVariantWithCompletedFrameReceipt:');
+    expect(source).toContain(
+      'setPreparedVisualCaptureVariantWithCompletedFrameReceiptAndFramebufferAlphaReadback:',
+    );
+    expect(source).toContain(
+      'runWithNextWebGLCompletedFrameReceiptAndFramebufferAlphaReadback: (present)',
+    );
+  });
+
   it('requires the explicit diagnostic query', () => {
     expect(browserInputAuditRequested('?scene=render-lab&inputAudit=1')).toBe(true);
     expect(browserInputAuditRequested('?scene=showcase&inputAudit=1')).toBe(true);

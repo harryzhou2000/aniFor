@@ -6,11 +6,13 @@ import {
   createVisualCaptureExecutionV5CapabilityRegistry,
   createVisualCaptureExecutionV6CapabilityRegistry,
   createVisualCaptureExecutionV7CapabilityRegistry,
+  createVisualCaptureExecutionV8CapabilityRegistry,
   resolveVisualCaptureExecutionV3Capabilities,
   resolveVisualCaptureExecutionV4Capabilities,
   resolveVisualCaptureExecutionV5Capabilities,
   resolveVisualCaptureExecutionV6Capabilities,
   resolveVisualCaptureExecutionV7Capabilities,
+  resolveVisualCaptureExecutionV8Capabilities,
   resolveVisualCaptureExecutionCapabilities,
   resolveVisualCaptureExecutionV2Capabilities,
   VISUAL_CAPTURE_EXECUTION_CAPABILITIES,
@@ -27,6 +29,8 @@ import {
   VISUAL_CAPTURE_EXECUTION_V6_CAPABILITY_NAMES,
   VISUAL_CAPTURE_EXECUTION_V7_CAPABILITIES,
   VISUAL_CAPTURE_EXECUTION_V7_CAPABILITY_NAMES,
+  VISUAL_CAPTURE_EXECUTION_V8_CAPABILITIES,
+  VISUAL_CAPTURE_EXECUTION_V8_CAPABILITY_NAMES,
   visualCaptureExecutionCapabilitiesForCaptureOrder,
   visualCaptureExecutionV2CapabilitiesForCaptureOrder,
   visualCaptureExecutionV3CapabilitiesForCaptureOrder,
@@ -34,6 +38,7 @@ import {
   visualCaptureExecutionV5CapabilitiesForCaptureOrder,
   visualCaptureExecutionV6CapabilitiesForCaptureOrder,
   visualCaptureExecutionV7CapabilitiesForCaptureOrder,
+  visualCaptureExecutionV8CapabilitiesForCaptureOrder,
 } from './visual-capture-execution-capabilities.mjs';
 import { VISUAL_CAPTURE_DRIVER_NAMES } from './visual-capture-drivers.mjs';
 import { VISUAL_CAPTURE_STATIC_CONTRACT } from '../src/shared/visual-capture-static-contract.js';
@@ -155,6 +160,24 @@ const v7Capability = () => ({
   },
 });
 const syntheticV7Profiles = () => ({ first: v7Capability(), second: v7Capability() });
+const v8Capability = () => {
+  const profile = v4Capability();
+  return {
+    startup: profile.startup,
+    readiness: profile.readiness,
+    selection: profile.selection,
+    stability: profile.stability,
+    completion: profile.completion,
+    framebufferReadback: {
+    capability: 'renderer-framebuffer-alpha-readback/v1',
+    readbackSchema: 'anifor.renderer.framebuffer-alpha-readback/v1',
+    bind: 'selection-owned-presentation',
+    verifyAfterSnapshot: true,
+  },
+    screenshot: profile.screenshot,
+  };
+};
+const syntheticV8Profiles = () => ({ first: v8Capability(), second: v8Capability() });
 
 describe('visual capture execution capabilities', () => {
   it('is exhaustive and ordered exactly like the typed static capture drivers', () => {
@@ -270,6 +293,23 @@ describe('visual capture execution capabilities', () => {
     invalid.first.readinessActivation.completionScope = 'activation-owned-work';
     expect(() => createVisualCaptureExecutionV7CapabilityRegistry(syntheticDrivers, invalid))
       .toThrow('readinessActivation is not supported');
+  });
+
+  it('adds selection-owned alpha-readback only through v8 without activation semantics', () => {
+    expect(VISUAL_CAPTURE_EXECUTION_V8_CAPABILITY_NAMES)
+      .toEqual(VISUAL_CAPTURE_EXECUTION_CAPABILITY_NAMES);
+    for (const name of VISUAL_CAPTURE_EXECUTION_V8_CAPABILITY_NAMES) {
+      expect(VISUAL_CAPTURE_EXECUTION_V8_CAPABILITIES[name]).toEqual(v8Capability());
+      expect(VISUAL_CAPTURE_EXECUTION_V8_CAPABILITIES[name]).not.toHaveProperty('readinessActivation');
+    }
+    expect(resolveVisualCaptureExecutionV8Capabilities('normal-hdr'))
+      .toBe(VISUAL_CAPTURE_EXECUTION_V8_CAPABILITIES['normal-hdr']);
+    expect(visualCaptureExecutionV8CapabilitiesForCaptureOrder(['normal-hdr'])['normal-hdr'])
+      .toBe(VISUAL_CAPTURE_EXECUTION_V8_CAPABILITIES['normal-hdr']);
+    const invalid = syntheticV8Profiles();
+    invalid.first.framebufferReadback.bind = 'selected-presentation';
+    expect(() => createVisualCaptureExecutionV8CapabilityRegistry(syntheticDrivers, invalid))
+      .toThrow('framebufferReadback is not supported');
   });
 
   it('is recursively frozen and JSON-safe', () => {

@@ -7725,6 +7725,28 @@ WebGL/HDR, completed-frame and semantic/field/framebuffer invariants with zero
 browser errors. Its result ID is revision evidence only, never a visual gate:
 `sha256:4ac7ea18e1b57201c33d8dd34cc4c073953385dd45ebd0f318f095ada99c9eae`.
 
+The next framework increment is the additive execution-tuning v8 proof mode,
+`selection-owned-frame-receipt-and-alpha-readback`. It reserves the existing
+completed-frame receipt and normal-scale WebGL2 framebuffer-alpha PBO before
+one typed OFF/A/B selector submission, arms both from that exact presentation,
+then lets the ordinary full evidence snapshot consume the already-running alpha
+ticket. The receipt and readback remain independently pollable and must both
+still be completed on the same submission after the semantic/field/framebuffer
+snapshot; the screenshot remains after proof. Unsupported paths fail closed to
+the unchanged stable-snapshot or receipt-only modes. This is tuning authority,
+not fixture activation, renderer state, visual identity, or a new evidence
+plane; v1-v7 plans and every frozen result/batch identity remain unchanged.
+
+A real shared-host SwiftShader Powder comparison retained byte-identical
+OFF/A/B PNGs and the same result ID under v4 and v8:
+`sha256:0472345f142bd93e9dd9bdc0fb8ff82e0c3db2b5fbfdbcd4ddcb0e9337fa0ddf`.
+Both complete packages passed portable reconstruction. In this one descriptive
+sample, capture `readbackHashMs` moved from roughly 43/43/65 ms under v4 to
+22/21/31 ms under v8; total runtime stayed close because readiness dominated
+and varied independently. Treat those timings as diagnostic evidence, never a
+performance threshold. Keep v8 opt-in until alternating multi-candidate cohorts
+show that the overlap remains useful on loaded software GPUs.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

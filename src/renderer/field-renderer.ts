@@ -4,7 +4,8 @@ import type { SimulationBackend } from '../simulation';
 import { clientToViewport, ViewTransform, type Point, type ViewState } from './view-transform';
 import { clientToVisualViewport, contentBoxFromBounds, viewportToClient } from './client-coordinate-map';
 import type {
-  PixiFieldPresenter, WebGLCompletedFrameReceipt, WebGLFramebufferAlphaReadback,
+  PixiFieldPresenter, WebGLCompletedFrameReceipt,
+  WebGLCompletedFrameReceiptAndFramebufferAlphaReadback, WebGLFramebufferAlphaReadback,
   WebGLPresentationTiming,
 } from './pixi-field-presenter';
 import type { VisualLabVariant } from './visual-lab';
@@ -1101,6 +1102,12 @@ export class MaterialRenderer {
 
   runWithNextWebGLCompletedFrameReceipt(present: () => void): number | undefined {
     return this.presenter?.runWithNextWebGLCompletedFrameReceipt(present);
+  }
+
+  runWithNextWebGLCompletedFrameReceiptAndFramebufferAlphaReadback(
+    present: () => void,
+  ): WebGLCompletedFrameReceiptAndFramebufferAlphaReadback | undefined {
+    return this.presenter?.runWithNextWebGLCompletedFrameReceiptAndFramebufferAlphaReadback(present);
   }
 
   getWebGLCompletedFrameReceipt(ticket: number): WebGLCompletedFrameReceipt | undefined {

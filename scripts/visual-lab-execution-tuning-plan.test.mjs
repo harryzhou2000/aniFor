@@ -8,6 +8,7 @@ import {
   createVisualLabExecutionTuningPlanV5,
   createVisualLabExecutionTuningPlanV6,
   createVisualLabExecutionTuningPlanV7,
+  createVisualLabExecutionTuningPlanV8,
   normalizeVisualLabExecutionTuningPlan,
   normalizeVisualLabExecutionTuningPlanV2,
   normalizeVisualLabExecutionTuningPlanV3,
@@ -15,6 +16,7 @@ import {
   normalizeVisualLabExecutionTuningPlanV5,
   normalizeVisualLabExecutionTuningPlanV6,
   normalizeVisualLabExecutionTuningPlanV7,
+  normalizeVisualLabExecutionTuningPlanV8,
   resolveVisualLabExecutionTuningPlanEntry,
   resolveVisualLabExecutionTuningPlanV2Entry,
   resolveVisualLabExecutionTuningPlanV3Entry,
@@ -22,6 +24,7 @@ import {
   resolveVisualLabExecutionTuningPlanV5Entry,
   resolveVisualLabExecutionTuningPlanV6Entry,
   resolveVisualLabExecutionTuningPlanV7Entry,
+  resolveVisualLabExecutionTuningPlanV8Entry,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
@@ -29,6 +32,7 @@ import {
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA,
 } from './visual-lab-execution-tuning-plan.mjs';
 import {
   createVisualLabExecutionPlan,
@@ -162,6 +166,19 @@ const v7Profile = () => ({
 const v7ProfilesFor = (capturePlan) => Object.fromEntries(
   [...new Set(capturePlan.inspection.entries.map(({ driver }) => driver.name))]
     .map((driver) => [driver, v7Profile()]),
+);
+const v8Profile = () => ({
+  ...v4Profile(),
+  framebufferReadback: {
+    capability: 'renderer-framebuffer-alpha-readback/v1',
+    readbackSchema: 'anifor.renderer.framebuffer-alpha-readback/v1',
+    bind: 'selection-owned-presentation',
+    verifyAfterSnapshot: true,
+  },
+});
+const v8ProfilesFor = (capturePlan) => Object.fromEntries(
+  [...new Set(capturePlan.inspection.entries.map(({ driver }) => driver.name))]
+    .map((driver) => [driver, v8Profile()]),
 );
 
 describe('Visual Lab execution tuning plan', () => {
@@ -383,6 +400,27 @@ describe('Visual Lab execution tuning plan', () => {
     invalid.entries[0].profile.readinessActivation.completionScope = 'activation-owned-work';
     expect(() => normalizeVisualLabExecutionTuningPlanV7(invalid, capturePlan))
       .toThrow('typed fixture-activation generation proof');
+  });
+
+  it('creates and resolves additive selection-owned receipt plus alpha-readback v8 plans', () => {
+    const capturePlan = createVisualLabExecutionPlan({
+      candidates: ['powder-style-atlas'], baseUrl: 'file:///bundle/index.html', outputDir: '/review',
+      gpu: 'swiftshader',
+    });
+    const created = createVisualLabExecutionTuningPlanV8(capturePlan, v8ProfilesFor(capturePlan));
+    expect(created.schema).toBe(VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA);
+    expect(created.entries[0].profile).toEqual(v8Profile());
+    expect(created.entries[0].profile).not.toHaveProperty('readinessActivation');
+    expect(normalizeVisualLabExecutionTuningPlanV8(structuredClone(created), capturePlan))
+      .toEqual(created);
+    expect(resolveVisualLabExecutionTuningPlanV8Entry(
+      created, created.entries[0].id, capturePlan.inspection.entries[0].id, capturePlan,
+    )).toEqual(created.entries[0]);
+
+    const invalid = structuredClone(created);
+    invalid.entries[0].profile.framebufferReadback.bind = 'selected-presentation';
+    expect(() => normalizeVisualLabExecutionTuningPlanV8(invalid, capturePlan))
+      .toThrow('exact selection-owned alpha-readback proof');
   });
 
   it('rejects malformed/tampered data, profile drift, unsafe names, and capture-plan mismatch', () => {

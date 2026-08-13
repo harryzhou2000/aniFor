@@ -3,7 +3,8 @@ import type {
   PresentationRefreshAudit, RendererBackendInfo, SuspensionSupportAudit,
 } from '../renderer/field-renderer';
 import type {
-  WebGLCompletedFrameReceipt, WebGLFramebufferAlphaReadback, WebGLPresentationTiming,
+  WebGLCompletedFrameReceipt, WebGLCompletedFrameReceiptAndFramebufferAlphaReadback,
+  WebGLFramebufferAlphaReadback, WebGLPresentationTiming,
 } from '../renderer/pixi-field-presenter';
 import type { PowderRenderStyle } from '../renderer/powder-render-style';
 import { Material } from '../shared/materials';
@@ -403,6 +404,10 @@ export interface BrowserInputAuditApi {
   setPreparedVisualCaptureVariantWithCompletedFrameReceipt(
     fixture: VisualLabFixtureId, variant: VisualCaptureControlVariant,
   ): number;
+  /** Atomically arms receipt plus alpha transfer for the exact typed selector frame. */
+  setPreparedVisualCaptureVariantWithCompletedFrameReceiptAndFramebufferAlphaReadback(
+    fixture: VisualLabFixtureId, variant: VisualCaptureControlVariant,
+  ): WebGLCompletedFrameReceiptAndFramebufferAlphaReadback;
   /** Reads back the exact active fixture control for fail-closed capture selection. */
   preparedVisualCaptureVariant(fixture: VisualLabFixtureId): VisualCaptureControlVariant;
   /** E66 uses the same exact material topology in still/moving forms. */

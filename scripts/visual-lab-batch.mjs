@@ -77,6 +77,7 @@ import {
   visualCaptureExecutionV5CapabilitiesForCaptureOrder,
   visualCaptureExecutionV6CapabilitiesForCaptureOrder,
   visualCaptureExecutionV7CapabilitiesForCaptureOrder,
+  visualCaptureExecutionV8CapabilitiesForCaptureOrder,
 } from './visual-capture-execution-capabilities.mjs';
 import {
   createVisualLabExecutionTuningPlan,
@@ -86,6 +87,7 @@ import {
   createVisualLabExecutionTuningPlanV5,
   createVisualLabExecutionTuningPlanV6,
   createVisualLabExecutionTuningPlanV7,
+  createVisualLabExecutionTuningPlanV8,
   normalizeVisualLabExecutionTuningPlan,
   normalizeVisualLabExecutionTuningPlanV2,
   normalizeVisualLabExecutionTuningPlanV3,
@@ -93,6 +95,7 @@ import {
   normalizeVisualLabExecutionTuningPlanV5,
   normalizeVisualLabExecutionTuningPlanV6,
   normalizeVisualLabExecutionTuningPlanV7,
+  normalizeVisualLabExecutionTuningPlanV8,
   resolveVisualLabExecutionTuningPlanEntry,
   resolveVisualLabExecutionTuningPlanV2Entry,
   resolveVisualLabExecutionTuningPlanV3Entry,
@@ -100,6 +103,7 @@ import {
   resolveVisualLabExecutionTuningPlanV5Entry,
   resolveVisualLabExecutionTuningPlanV6Entry,
   resolveVisualLabExecutionTuningPlanV7Entry,
+  resolveVisualLabExecutionTuningPlanV8Entry,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
@@ -107,6 +111,7 @@ import {
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA,
 } from './visual-lab-execution-tuning-plan.mjs';
 import { startVisualLabChromeHost } from './visual-lab-chrome-host.mjs';
 import {
@@ -130,6 +135,7 @@ export const VISUAL_LAB_CAPTURE_PROOF_MODES = Object.freeze([
   'fixture-activation-generation',
   'fixture-activation-work-generation',
   'fixture-activation-render-field-generation',
+  'selection-owned-frame-receipt-and-alpha-readback',
 ]);
 
 const MODULE_PATH = fileURLToPath(import.meta.url);
@@ -181,6 +187,9 @@ const captureProofForTuningSchema = (schema) => {
   if (schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA) {
     return 'fixture-activation-render-field-generation';
   }
+  if (schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA) {
+    return 'selection-owned-frame-receipt-and-alpha-readback';
+  }
   throw new TypeError(`Unsupported Visual Lab execution-tuning schema ${String(schema)}`);
 };
 
@@ -203,11 +212,19 @@ const normalizeExecutionTuningPlan = (input, captureExecutionPlan) => {
   if (input?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA) {
     return normalizeVisualLabExecutionTuningPlanV7(input, captureExecutionPlan);
   }
+  if (input?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA) {
+    return normalizeVisualLabExecutionTuningPlanV8(input, captureExecutionPlan);
+  }
   return normalizeVisualLabExecutionTuningPlan(input, captureExecutionPlan);
 };
 
 const createExecutionTuningPlan = (captureExecutionPlan, driverOrder, captureProof) => (
-  captureProof === 'fixture-activation-render-field-generation'
+  captureProof === 'selection-owned-frame-receipt-and-alpha-readback'
+    ? createVisualLabExecutionTuningPlanV8(
+      captureExecutionPlan,
+      visualCaptureExecutionV8CapabilitiesForCaptureOrder(driverOrder),
+    )
+    : captureProof === 'fixture-activation-render-field-generation'
     ? createVisualLabExecutionTuningPlanV7(
       captureExecutionPlan,
       visualCaptureExecutionV7CapabilitiesForCaptureOrder(driverOrder),
@@ -276,6 +293,11 @@ const resolveExecutionTuningPlanEntry = (
       plan, entryId, expectedCaptureEntryId, captureExecutionPlan,
     );
   }
+  if (plan.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA) {
+    return resolveVisualLabExecutionTuningPlanV8Entry(
+      plan, entryId, expectedCaptureEntryId, captureExecutionPlan,
+    );
+  }
   return resolveVisualLabExecutionTuningPlanEntry(
     plan, entryId, expectedCaptureEntryId, captureExecutionPlan,
   );
@@ -294,7 +316,7 @@ Options (use --name=value):
   --chrome=/path/to/chrome               Forwarded to the generic capture runner
   --gpu=auto|swiftshader                 Forwarded to the generic capture runner
   --browser-host=fresh|shared            Opt-in sequential Chrome-host reuse (Linux only)
-  --capture-proof=stable-snapshots|completed-frame-receipt|readiness-completed-frame-receipt|selection-owned-frame-receipt|fixture-activation-generation|fixture-activation-work-generation|fixture-activation-render-field-generation
+  --capture-proof=stable-snapshots|completed-frame-receipt|readiness-completed-frame-receipt|selection-owned-frame-receipt|fixture-activation-generation|fixture-activation-work-generation|fixture-activation-render-field-generation|selection-owned-frame-receipt-and-alpha-readback
                                          Default keeps the v1 two-snapshot proof
   --candidate-timeout-ms=300000          Per-candidate timeout before TERM/KILL cleanup
   --index-only=0|1                       Aggregate existing candidate reports without capture
@@ -1305,6 +1327,7 @@ const readCandidateReport = async (candidateDirectory, recipe, {
           VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA,
           VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA,
           VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA,
+          VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA,
         ].includes(proof.schema)
         || !/^sha256:[a-f0-9]{64}$/.test(proof.planId)
         || !/^sha256:[a-f0-9]{64}$/.test(proof.entryId)) {
@@ -1491,7 +1514,8 @@ const assertCompletedFrameReceiptReportProof = (report, tuningSchema) => {
     || tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA
     || tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA
     || tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA
-    || tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA;
+    || tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA
+    || tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA;
   const readinessReceiptRequired = tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA;
   const activationGenerationRequired = tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA;
   const activationWorkGenerationRequired = tuningSchema
@@ -1501,7 +1525,8 @@ const assertCompletedFrameReceiptReportProof = (report, tuningSchema) => {
   const contiguousSubmissionsRequired = tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA
     || tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA
     || tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA
-    || tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA;
+    || tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA
+    || tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA;
   const readinessReceipt = report?.readinessCompletedFrameReceipt;
   if (!readinessReceiptRequired && readinessReceipt !== undefined) {
     throw new Error('non-v3 capture must not claim readiness completed-frame receipt proof');
@@ -2371,7 +2396,7 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   }
   if (!VISUAL_LAB_CAPTURE_PROOF_MODES.includes(captureProof)) {
     throw new Error(
-      'Visual Lab batch captureProof must be stable-snapshots, completed-frame-receipt, readiness-completed-frame-receipt, selection-owned-frame-receipt, fixture-activation-generation, fixture-activation-work-generation, or fixture-activation-render-field-generation',
+      'Visual Lab batch captureProof must be stable-snapshots, completed-frame-receipt, readiness-completed-frame-receipt, selection-owned-frame-receipt, fixture-activation-generation, fixture-activation-work-generation, fixture-activation-render-field-generation, or selection-owned-frame-receipt-and-alpha-readback',
     );
   }
   if (browserHost === 'shared' && process.platform !== 'linux') {
@@ -3095,7 +3120,7 @@ export function parseVisualLabBatchArguments(argv) {
   }
   const captureProof = values.get('capture-proof') ?? 'stable-snapshots';
   if (!VISUAL_LAB_CAPTURE_PROOF_MODES.includes(captureProof)) {
-    throw new Error('--capture-proof must be stable-snapshots, completed-frame-receipt, readiness-completed-frame-receipt, selection-owned-frame-receipt, fixture-activation-generation, fixture-activation-work-generation, or fixture-activation-render-field-generation');
+    throw new Error('--capture-proof must be stable-snapshots, completed-frame-receipt, readiness-completed-frame-receipt, selection-owned-frame-receipt, fixture-activation-generation, fixture-activation-work-generation, fixture-activation-render-field-generation, or selection-owned-frame-receipt-and-alpha-readback');
   }
   const candidateTimeoutMs = Number(
     values.get('candidate-timeout-ms') ?? VISUAL_LAB_DEFAULT_CANDIDATE_TIMEOUT_MS,

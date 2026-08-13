@@ -548,6 +548,9 @@ export class Game {
       runWithNextWebGLCompletedFrameReceipt: (present) => (
         this.renderer.runWithNextWebGLCompletedFrameReceipt(present)
       ),
+      runWithNextWebGLCompletedFrameReceiptAndFramebufferAlphaReadback: (present) => (
+        this.renderer.runWithNextWebGLCompletedFrameReceiptAndFramebufferAlphaReadback(present)
+      ),
     });
     window.__ANIFOR_INPUT_AUDIT__ = {
       version: 1,
@@ -1013,6 +1016,11 @@ export class Game {
       },
       setPreparedVisualCaptureVariantWithCompletedFrameReceipt: (fixture, variant) => (
         visualCaptureControls.setVariantWithCompletedFrameReceipt(fixture, variant)
+      ),
+      setPreparedVisualCaptureVariantWithCompletedFrameReceiptAndFramebufferAlphaReadback: (
+        fixture, variant,
+      ) => visualCaptureControls.setVariantWithCompletedFrameReceiptAndFramebufferAlphaReadback(
+        fixture, variant,
       ),
       preparedVisualCaptureVariant: (fixture) => visualCaptureControls.getVariant(fixture),
       waterCurvatureVfxFixture: () => WATER_CURVATURE_VFX_AUDIT,

@@ -1,4 +1,5 @@
 import type { PowderRenderStyle } from '../renderer/powder-render-style';
+import type { WebGLCompletedFrameReceiptAndFramebufferAlphaReadback } from '../renderer/pixi-field-presenter';
 import { VISUAL_CAPTURE_STATIC_FIXTURES } from '../shared/visual-capture-static-catalog.js';
 import { VISUAL_CAPTURE_STATIC_CONTRACT } from '../shared/visual-capture-static-contract.js';
 import {
@@ -16,6 +17,9 @@ export interface VisualCaptureControlHost {
   setMaterialLightingVariant(variant: VisualCaptureControlVariant): void;
   getMaterialLightingVariant(): VisualCaptureControlVariant;
   runWithNextWebGLCompletedFrameReceipt(present: () => void): number | undefined;
+  runWithNextWebGLCompletedFrameReceiptAndFramebufferAlphaReadback(
+    present: () => void,
+  ): WebGLCompletedFrameReceiptAndFramebufferAlphaReadback | undefined;
 }
 
 const POWDER_STYLE_BY_VARIANT = Object.freeze({
@@ -142,6 +146,36 @@ export class VisualCaptureControlRegistry {
       throw new Error('Visual capture control could not arm a completed-frame receipt');
     }
     return ticket;
+  }
+
+  /**
+   * Arms the existing receipt and alpha transfer before one typed selector
+   * presentation. Receipt-only selection remains the explicit compatibility
+   * fallback for callers that do not opt into this composite transaction.
+   */
+  setVariantWithCompletedFrameReceiptAndFramebufferAlphaReadback(
+    fixture: VisualLabFixtureId,
+    variant: VisualCaptureControlVariant,
+  ): WebGLCompletedFrameReceiptAndFramebufferAlphaReadback {
+    const control = this.requireActiveFixture(fixture);
+    assertVisualCaptureControlVariant(variant);
+    const transaction = this.host.runWithNextWebGLCompletedFrameReceiptAndFramebufferAlphaReadback(() => {
+      control.set(this.host, variant);
+      const observedVariant = this.readVariant(control);
+      if (observedVariant !== variant) {
+        throw new Error(
+          `Visual capture control host did not apply ${JSON.stringify(fixture)} variant ${variant}`,
+        );
+      }
+    });
+    if (!transaction
+      || !Number.isSafeInteger(transaction.receiptTicket) || transaction.receiptTicket <= 0
+      || !Number.isSafeInteger(transaction.framebufferAlphaReadbackTicket)
+      || transaction.framebufferAlphaReadbackTicket <= 0
+      || !Number.isSafeInteger(transaction.submission) || transaction.submission <= 0) {
+      throw new Error('Visual capture control could not arm a completed-frame receipt and framebuffer-alpha readback');
+    }
+    return transaction;
   }
 
   getVariant(fixture: VisualLabFixtureId): VisualCaptureControlVariant {

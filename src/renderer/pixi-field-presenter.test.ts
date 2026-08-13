@@ -97,6 +97,8 @@ interface PresenterHarness {
   requestWebGLCompletedFrameReceipt: PixiFieldPresenter['requestWebGLCompletedFrameReceipt'];
   runWithNextWebGLCompletedFrameReceipt:
     PixiFieldPresenter['runWithNextWebGLCompletedFrameReceipt'];
+  runWithNextWebGLCompletedFrameReceiptAndFramebufferAlphaReadback:
+    PixiFieldPresenter['runWithNextWebGLCompletedFrameReceiptAndFramebufferAlphaReadback'];
   getWebGLCompletedFrameReceipt: PixiFieldPresenter['getWebGLCompletedFrameReceipt'];
   requestWebGLFramebufferAlphaReadback: PixiFieldPresenter['requestWebGLFramebufferAlphaReadback'];
   getWebGLFramebufferAlphaReadback: PixiFieldPresenter['getWebGLFramebufferAlphaReadback'];
@@ -5212,6 +5214,84 @@ describe('Pixi presenter startup configuration', () => {
     expect(presenter.getWebGLCompletedFrameReceipt(ticket!)).toMatchObject({
       ticket: 1, submission: 1, state: 'completed',
     });
+  });
+
+  it('prearms selector-owned alpha transfer for the exact receipt submission', () => {
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const receiptFence = {} as WebGLSync;
+    const readbackFence = {} as WebGLSync;
+    const buffer = {} as WebGLBuffer;
+    const gl = {
+      PIXEL_PACK_BUFFER: 0x88eb,
+      STREAM_READ: 0x88e1,
+      RGBA: 0x1908,
+      UNSIGNED_BYTE: 0x1401,
+      SYNC_GPU_COMMANDS_COMPLETE: 0x9117,
+      SYNC_FLUSH_COMMANDS_BIT: 1,
+      TIMEOUT_EXPIRED: 0x911b,
+      WAIT_FAILED: 0x911d,
+      ALREADY_SIGNALED: 0x911a,
+      CONDITION_SATISFIED: 0x911c,
+      createBuffer: vi.fn(() => buffer),
+      bindBuffer: vi.fn(),
+      bufferData: vi.fn(),
+      readPixels: vi.fn(),
+      getBufferSubData: vi.fn(),
+      fenceSync: vi.fn()
+        .mockReturnValueOnce(receiptFence)
+        .mockReturnValueOnce(readbackFence),
+      flush: vi.fn(),
+      clientWaitSync: vi.fn(() => 0x911b),
+      deleteSync: vi.fn(),
+      deleteBuffer: vi.fn(),
+    } as unknown as WebGL2RenderingContext;
+    const presenter = presenterHarness();
+    Object.assign(presenter.app, { renderer: { gl } });
+
+    const transaction = presenter.runWithNextWebGLCompletedFrameReceiptAndFramebufferAlphaReadback(() => {
+      presenter.setPowderRenderStyle('grains');
+    });
+
+    expect(transaction).toEqual({
+      receiptTicket: 1,
+      framebufferAlphaReadbackTicket: 1,
+      submission: 1,
+    });
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+    expect(gl.readPixels).toHaveBeenCalledWith(0, 0, 2, 1, gl.RGBA, gl.UNSIGNED_BYTE, 0);
+    expect(presenter.getWebGLCompletedFrameReceipt(1)).toMatchObject({ submission: 1, state: 'pending' });
+    expect(presenter.getWebGLFramebufferAlphaReadback(1)).toMatchObject({ submission: 1, state: 'pending' });
+  });
+
+  it('fails both selector-owned proof reservations when the selector submits twice', () => {
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const gl = {
+      PIXEL_PACK_BUFFER: 0x88eb,
+      STREAM_READ: 0x88e1,
+      RGBA: 0x1908,
+      UNSIGNED_BYTE: 0x1401,
+      SYNC_GPU_COMMANDS_COMPLETE: 0x9117,
+      SYNC_FLUSH_COMMANDS_BIT: 1,
+      TIMEOUT_EXPIRED: 0x911b,
+      WAIT_FAILED: 0x911d,
+      ALREADY_SIGNALED: 0x911a,
+      CONDITION_SATISFIED: 0x911c,
+      createBuffer: vi.fn(() => ({} as WebGLBuffer)),
+      bindBuffer: vi.fn(), bufferData: vi.fn(), readPixels: vi.fn(), getBufferSubData: vi.fn(),
+      fenceSync: vi.fn(() => ({} as WebGLSync)), flush: vi.fn(),
+      clientWaitSync: vi.fn(() => 0x911b), deleteSync: vi.fn(), deleteBuffer: vi.fn(),
+    } as unknown as WebGL2RenderingContext;
+    const presenter = presenterHarness();
+    Object.assign(presenter.app, { renderer: { gl } });
+
+    expect(presenter.runWithNextWebGLCompletedFrameReceiptAndFramebufferAlphaReadback(() => {
+      presenter.setPowderRenderStyle('local');
+      presenter.setPowderRenderStyle('grains');
+    })).toBeUndefined();
+    expect(presenter.getWebGLCompletedFrameReceipt(1)).toMatchObject({ state: 'superseded' });
+    expect(presenter.getWebGLFramebufferAlphaReadback(1)).toMatchObject({ state: 'failed' });
   });
 
   it('submits one selector-owned proof when an unchanged selector does not redraw', () => {

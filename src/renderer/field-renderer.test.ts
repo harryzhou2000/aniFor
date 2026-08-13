@@ -561,6 +561,32 @@ describe('field renderer layout scheduling', () => {
     expect(present).toHaveBeenCalledOnce();
   });
 
+  it('forwards selector-owned receipt and alpha transactions only through an active presenter', () => {
+    const result = { receiptTicket: 9, framebufferAlphaReadbackTicket: 12, submission: 31 };
+    const transaction = vi.fn((present: () => void) => {
+      present();
+      return result;
+    });
+    const renderer = Object.create(MaterialRenderer.prototype) as {
+      presenter?: {
+        runWithNextWebGLCompletedFrameReceiptAndFramebufferAlphaReadback(
+          action: () => void,
+        ): typeof result | undefined;
+      };
+      runWithNextWebGLCompletedFrameReceiptAndFramebufferAlphaReadback(
+        action: () => void,
+      ): typeof result | undefined;
+    };
+    const present = vi.fn();
+    renderer.presenter = { runWithNextWebGLCompletedFrameReceiptAndFramebufferAlphaReadback: transaction };
+
+    expect(renderer.runWithNextWebGLCompletedFrameReceiptAndFramebufferAlphaReadback(present)).toBe(result);
+    expect(present).toHaveBeenCalledOnce();
+    renderer.presenter = undefined;
+    expect(renderer.runWithNextWebGLCompletedFrameReceiptAndFramebufferAlphaReadback(present)).toBeUndefined();
+    expect(present).toHaveBeenCalledOnce();
+  });
+
   it('forwards framebuffer-alpha readback tickets only through an active WebGL presenter', () => {
     const readback = {
       schema: 'anifor.renderer.framebuffer-alpha-readback/v1' as const,

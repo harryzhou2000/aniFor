@@ -197,6 +197,18 @@ export interface WebGLFramebufferAlphaReadback {
   readonly digest?: WebGLFramebufferAlphaDigest;
 }
 
+/**
+ * One selector-owned normal-scale presentation may carry both authoritative
+ * GPU-completion proof and its framebuffer-alpha transfer.  The two tickets
+ * deliberately remain independently pollable: this small transaction merely
+ * guarantees they were reserved for the same next submission.
+ */
+export interface WebGLCompletedFrameReceiptAndFramebufferAlphaReadback {
+  readonly receiptTicket: number;
+  readonly framebufferAlphaReadbackTicket: number;
+  readonly submission: number;
+}
+
 /** Exact historical alpha digest grammar used by Visual Lab capture reports. */
 export function digestFramebufferAlpha(rgba: Uint8Array): WebGLFramebufferAlphaDigest {
   let hash = 2166136261 >>> 0;
@@ -14688,6 +14700,52 @@ export class PixiFieldPresenter {
     return ticket;
   }
 
+  /**
+   * Reserves the two existing audit proofs before a typed selector produces
+   * its next presentation.  This lets the PBO transfer overlap receipt
+   * completion without adding a second presentation or relaxing either proof.
+   */
+  runWithNextWebGLCompletedFrameReceiptAndFramebufferAlphaReadback(
+    present: () => void,
+  ): WebGLCompletedFrameReceiptAndFramebufferAlphaReadback | undefined {
+    if (typeof present !== 'function') throw new TypeError('Receipt presentation must be a function');
+    this.pollFramebufferAlphaReadback();
+    const receiptTicket = this.beginWebGLCompletedFrameReceipt();
+    if (receiptTicket === undefined) return undefined;
+    const submission = this.completedFrameReceipt!.submission;
+    const framebufferAlphaReadbackTicket = this.reserveWebGLFramebufferAlphaReadback(submission);
+    if (framebufferAlphaReadbackTicket === undefined) {
+      this.failCompletedFrameReceiptTicket(receiptTicket);
+      return undefined;
+    }
+    try {
+      present();
+    } catch (error) {
+      this.failCompletedFrameReceiptTicket(receiptTicket);
+      this.failFramebufferAlphaReadback(submission);
+      throw error;
+    }
+    if (this.presentationSubmission === submission - 1) {
+      try { this.renderApplication(); }
+      catch (error) {
+        this.failCompletedFrameReceiptTicket(receiptTicket);
+        this.failFramebufferAlphaReadback(submission);
+        throw error;
+      }
+    }
+    const receipt = this.completedFrameReceipts?.get(receiptTicket);
+    const readback = this.framebufferAlphaReadbacks?.get(framebufferAlphaReadbackTicket);
+    if (this.presentationSubmission !== submission
+      || !receipt || (receipt.state !== 'pending' && receipt.state !== 'completed')
+      || !readback || readback.submission !== submission
+      || (readback.state !== 'pending' && readback.state !== 'completed')) {
+      this.failCompletedFrameReceiptTicket(receiptTicket);
+      this.failFramebufferAlphaReadback(submission);
+      return undefined;
+    }
+    return { receiptTicket, framebufferAlphaReadbackTicket, submission };
+  }
+
   private beginWebGLCompletedFrameReceipt(): number | undefined {
     this.pollCompletedFrameFence();
     this.pollWebGLTimingQuery();
@@ -14765,8 +14823,16 @@ export class PixiFieldPresenter {
       }
       this.fixtureActivationFramebufferAlphaReadback = undefined;
     }
+    const ticket = this.reserveWebGLFramebufferAlphaReadback(this.presentationSubmission ?? 0);
+    if (ticket === undefined) return undefined;
+    this.armFramebufferAlphaReadback(this.presentationSubmission ?? 0);
+    return ticket;
+  }
+
+  /** Creates an exact-submission PBO ticket; renderApplication owns arming it. */
+  private reserveWebGLFramebufferAlphaReadback(submission: number): number | undefined {
     if (this.destroyed || this.contextLost || this.outputScale === 8
-      || this.framebufferAlphaReadback?.state === 'pending') return undefined;
+      || this.framebufferAlphaReadback?.state === 'pending' || submission <= 0) return undefined;
     const gl = this.webGLContext();
     if (!gl || typeof gl.createBuffer !== 'function'
       || typeof gl.getBufferSubData !== 'function'
@@ -14779,11 +14845,6 @@ export class PixiFieldPresenter {
 
     const ticket = (this.framebufferAlphaReadbackTicketSequence ?? 0) + 1;
     this.framebufferAlphaReadbackTicketSequence = ticket;
-    const submission = this.presentationSubmission ?? 0;
-    if (submission <= 0) {
-      try { gl.deleteBuffer(buffer); } catch { /* context may already be invalid */ }
-      return undefined;
-    }
     this.framebufferAlphaReadback = {
       schema: WEBGL_FRAMEBUFFER_ALPHA_READBACK_SCHEMA,
       ticket,
@@ -14801,7 +14862,6 @@ export class PixiFieldPresenter {
       if (retired?.state === 'pending') break;
       readbacks.delete(oldest);
     }
-    this.armFramebufferAlphaReadback(submission);
     return ticket;
   }
 

@@ -48,6 +48,31 @@ describe('Visual capture control registry', () => {
     expect(fake.style).toBe('grains');
   });
 
+  it('arms receipt and alpha tickets before the typed selector without changing the fallback', () => {
+    const fake = new PowderStyleHost('smooth');
+    const registry = new VisualCaptureControlRegistry(fake);
+    registry.markFixturePrepared(POWDER_FIXTURE);
+
+    expect(registry.setVariantWithCompletedFrameReceiptAndFramebufferAlphaReadback(
+      POWDER_FIXTURE, 2,
+    )).toEqual({ receiptTicket: 41, framebufferAlphaReadbackTicket: 52, submission: 71 });
+    expect(fake.compositeTransactions).toBe(1);
+    expect(fake.receiptTransactions).toBe(0);
+    expect(fake.style).toBe('grains');
+  });
+
+  it('fails closed when a selector-owned alpha transaction cannot be armed', () => {
+    const fake = new PowderStyleHost();
+    fake.compositeTransaction = undefined;
+    const registry = new VisualCaptureControlRegistry(fake);
+    registry.markFixturePrepared(POWDER_FIXTURE);
+
+    expect(() => registry.setVariantWithCompletedFrameReceiptAndFramebufferAlphaReadback(
+      POWDER_FIXTURE, 2,
+    )).toThrow('could not arm a completed-frame receipt and framebuffer-alpha readback');
+    expect(fake.style).toBe('smooth');
+  });
+
   it('fails closed when a selector-owned receipt cannot be armed', () => {
     const fake = new PowderStyleHost();
     fake.receiptTicket = undefined;
@@ -163,6 +188,9 @@ describe('Visual capture control registry', () => {
 class PowderStyleHost implements VisualCaptureControlHost {
   receiptTicket: number | undefined = 41;
   receiptTransactions = 0;
+  compositeTransaction: { receiptTicket: number; framebufferAlphaReadbackTicket: number; submission: number }
+    | undefined = { receiptTicket: 41, framebufferAlphaReadbackTicket: 52, submission: 71 };
+  compositeTransactions = 0;
   constructor(
     public style: PowderRenderStyle = 'smooth',
     private readonly ignoreWrites = false,
@@ -200,5 +228,14 @@ class PowderStyleHost implements VisualCaptureControlHost {
     if (this.receiptTicket === undefined) return undefined;
     present();
     return this.receiptTicket;
+  }
+
+  runWithNextWebGLCompletedFrameReceiptAndFramebufferAlphaReadback(
+    present: () => void,
+  ): { receiptTicket: number; framebufferAlphaReadbackTicket: number; submission: number } | undefined {
+    this.compositeTransactions++;
+    if (this.compositeTransaction === undefined) return undefined;
+    present();
+    return this.compositeTransaction;
   }
 }
