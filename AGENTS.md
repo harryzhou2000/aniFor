@@ -1919,6 +1919,16 @@ Keep codes dense and append-only, capture ranks dense and unique, strip ranks
 from public data, and preserve existing public JSON order. Do not reintroduce
 separate code or capture-order registration lists.
 
+The retained liquid mesoscale-meniscus experiment uses only the existing
+material-lighting B path. Keep its admission profile-derived and body-owned:
+coherent wide curvature plus established liquid density/depth/neighbour/slope
+and eligibility proofs. Clear profiles may carry a cool transmitted crown and
+absorbent low-transmission profiles a warm grazing band and recessed pigment
+pocket, but never branch on exact liquid IDs or change alpha/support. The
+visually accepted package is `/tmp/anifor-liquid-meniscus-v2`, result
+`sha256:057d249918ae74ae74f35d8d40c95a62105aea85fd2a0b2a785bb06fad3f97d6`;
+its PNG bytes are review evidence, not a cross-revision gate.
+
 Performance comparisons use the opt-in
 `audit:visual-lab:performance-cohorts` runner. Preserve its fixed
 fresh/shared/shared/fresh order, tracked recipe-set requirement, distinct cohort

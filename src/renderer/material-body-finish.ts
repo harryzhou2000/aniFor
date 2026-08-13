@@ -703,6 +703,35 @@ vec3 applyMaterialVolumeLobe(
     * (0.060 + reflectedFacing * 0.045) * liquidSurfaceScale
     * mix(1.0, interiorContrast, opticalExperimentB);
 
+  // Turn the existing wide, coherent curvature observation into a body-scale
+  // liquid meniscus. The optical profile chooses between a clear cool crown
+  // and an oily warm grazing band without consulting a material ID. Positive
+  // curvature catches transmitted environment light; negative curvature keeps
+  // a quieter pigment-aware recess. Existing broad-body eligibility, density,
+  // depth, and neighbour proofs keep holes, chimneys, droplets, unlike contacts,
+  // and reconstructed fringe outside this RGB-only B experiment.
+  float oilyProfile = liquid * opticalExperimentB
+    * smoothstep(1.02, 1.16, finishResponse.y)
+    * (1.0 - smoothstep(0.76, 1.02, finishResponse.w));
+  float clearProfile = liquid * opticalExperimentB
+    * smoothstep(0.84, 1.18, finishResponse.w)
+    * (1.0 - oilyProfile);
+  float coherentMeniscus = liquid * opticalExperimentB * fieldBody
+    * smoothstep(0.08, 0.42, abs(signedCurvature))
+    * (1.0 - core * 0.54);
+  float meniscusCrown = coherentMeniscus * smoothstep(0.02, 0.48, crown);
+  float meniscusPocket = coherentMeniscus * smoothstep(0.02, 0.48, pocket);
+  float roughMeniscusWidth = mix(1.12, 0.78, roughnessProgress);
+  float clearCrown = meniscusCrown * clearProfile * finishResponse.w
+    * (0.050 + reflectedFacing * 0.040) * roughMeniscusWidth;
+  float oilyGrazing = meniscusCrown * oilyProfile * finishResponse.x
+    * (0.060 + (1.0 - abs(facing)) * 0.052) * roughMeniscusWidth;
+  float oilyShallowCarry = oilyProfile * liquidShallowBand
+    * finishResponse.x * (0.026 + (1.0 - core) * 0.022);
+  vec3 meniscusTint = mix(
+    vec3(0.50, 0.82, 1.00), vec3(1.00, 0.69, 0.27), oilyProfile
+  );
+
   // A broad convex crown and directional shoulder supply a coherent reflected
   // lobe. Concave/deep regions retain pigment through restrained absorption;
   // the two phase palettes share one light direction without erasing identity.
@@ -763,6 +792,13 @@ vec3 applyMaterialVolumeLobe(
       + liquid * deepColumn * 0.016 + gasDeepAbsorption * 0.024);
   float materialLuminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
   color += (color - vec3(materialLuminance)) * materialDeepPigment;
+  color += (vec3(1.12) - clamp(color, 0.0, 1.12))
+    * meniscusTint * (clearCrown + oilyGrazing + oilyShallowCarry);
+  vec3 meniscusAbsorption = mix(
+    absorptionTint, mix(absorptionTint, identityTint, 0.48), oilyProfile
+  );
+  color *= vec3(1.0) - meniscusAbsorption * meniscusPocket
+    * mix(0.026, 0.052, oilyProfile);
   return max(color, vec3(0.0));
 }
 `;

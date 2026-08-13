@@ -7362,6 +7362,22 @@ contract digests remain unchanged. This reduces the maximal registration count
 from seven loci to five; explicit shader leaves/maps and typed preparers/maps
 remain intentional executable boundaries.
 
+The first visual experiment after that framework checkpoint is a retained
+liquid mesoscale-meniscus refinement in the existing material-lighting B path.
+It reuses the already-live coherent wide curvature, body depth, slope,
+neighbour support, and appearance-profile optics in `applyMaterialVolumeLobe`;
+it adds no material-ID branch, sampler, texture, field, target, pass, uniform,
+or alpha decision. Clear transmissive liquid receives a cool broad crown,
+while absorbent low-transmission profiles receive a restrained warm grazing
+band and pigment-aware recessed pocket. Visual comparison favored B: Water
+keeps its transparent cyan body with a cleaner meniscus, and previously flat
+dark Oil gains a readable reflective top band, shallow warm carry, and deeper
+lower body while its notch remains exact. The production SwiftShader package
+at `/tmp/anifor-liquid-meniscus-v2` passed all OFF/A/B captures, 20 declared
+regions, and portable verification as result
+`sha256:057d249918ae74ae74f35d8d40c95a62105aea85fd2a0b2a785bb06fad3f97d6`.
+Treat this as a visually accepted checkpoint, not an exact future PNG gate.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
