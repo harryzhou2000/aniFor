@@ -3,6 +3,9 @@ import {
   MATERIAL_APPEARANCE_PROFILE_LANES,
   resolveMaterialAppearanceProfileCatalogEntry,
 } from '../src/shared/material-appearance-profile-catalog.js';
+import {
+  resolveMaterialPhaseProfileCatalogEntry,
+} from '../src/shared/material-phase-profile-catalog.js';
 
 const SAFE_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const PHASES = Object.freeze([
@@ -47,6 +50,8 @@ export const VISUAL_LAB_INSPECTION_PRESENTATIONS = deepFreeze({
     regionMetadata: Object.fromEntries(renderOpticsAtlas.descriptor.cards.flatMap((card) => {
       const family = resolveMaterialAppearanceProfileCatalogEntry(card.phase, card.optics);
       if (!family) throw new Error(`RenderOptics card ${card.key} has no appearance profile`);
+      const phaseProfile = resolveMaterialPhaseProfileCatalogEntry(card.phase);
+      if (!phaseProfile) throw new Error(`RenderOptics card ${card.key} has no phase profile`);
       const metadata = {
         card: card.key,
         phase: card.phase,
@@ -55,6 +60,8 @@ export const VISUAL_LAB_INSPECTION_PRESENTATIONS = deepFreeze({
         profile: Object.fromEntries(MATERIAL_APPEARANCE_PROFILE_LANES.map(
           (lane, index) => [lane, family.profile[index]],
         )),
+        composition: phaseProfile.composition,
+        mesoscale: phaseProfile.mesoscale,
       };
       return [[`${card.key}-body`, metadata], [`${card.key}-core`, metadata]];
     })),

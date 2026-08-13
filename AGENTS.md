@@ -99,6 +99,29 @@ alpha, topology, and contacts remain unchanged. Current review evidence is
 OFF and A stayed byte-identical to the preceding profile-legend checkpoint.
 Treat the result and regional measurements as current-only evidence.
 
+Phase-wide material authoring must remain single-source as well. The pure frozen
+`material-phase-profile-catalog.js` owns exact Powder/Liquid/Gas/Solid codes,
+the ten composition fields, and the six mesoscale fields. Renderer composition
+and mesoscale GLSL selectors derive from it, and the grouped RenderOptics
+appearance board exposes those resolved records beside each class profile.
+Do not duplicate phase values in renderer modules or scripts. The review legend
+is presentation-only and must remain outside evidence JSON and frozen capture
+identities. Powder and Solid mesoscale radius remain explicit zero no-ops until
+a visually preferred, owner-safe carrier is retained.
+
+The retained solid shell-to-core response is sample-free normal-WebGL B
+arithmetic inside `applySolidMaterialLighting`. Pass the resolved
+`interiorScatter` lane and combine it with transmission and the existing exact
+solid optical-depth proof. The parabolic intermediate-depth band may visibly
+lift TranslucentRigid and Waxy interiors; Organic/Radioactive remain restrained,
+and SmoothRigid, Device, and MetallicRigid remain near-zero by profile rather
+than material ID. Do not turn the band into silhouette light or support. OFF/A,
+Canvas2D, compact true-8x, alpha, topology, contacts, samples, fields, textures,
+passes, targets, and allocations remain unchanged. Current evidence is
+`/tmp/anifor-solid-shell-core-v1`, result
+`sha256:3edba76ae6680a9e510b6cd878fd57a041173f549c5383710e781d251d763c84`;
+all 49 regions and the portable verifier passed, and OFF/A stayed byte-identical.
+
 The current review framework also covers the existing Oil- and Water-motion
 recipes through frozen declarative fixture/inspection catalogs. Preserve their
 historical public fixture APIs and exact material, velocity, and wall planes;

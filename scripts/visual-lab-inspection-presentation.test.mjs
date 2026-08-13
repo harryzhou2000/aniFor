@@ -42,6 +42,16 @@ describe('Visual Lab inspection presentation', () => {
         key: 1.10, fill: 0.86, pigment: 0.82, transmission: 1.18,
         roughness: 0.92, interiorScatter: 1.25,
       },
+      composition: {
+        bodyLighting: 1.18, profileSheen: 1.28, irradiance: 1.16,
+        penetrationPath: 0.56, pigmentCoupling: 0.34, volumeScatter: 1.30,
+        farSideShadow: 0.74, ambientGrounding: 0.78, interiorContrast: 1.14,
+        environmentTransport: 1.22,
+      },
+      mesoscale: {
+        radius: 8, supportLow: 0.46, supportHigh: 0.82,
+        slopeBlend: 0.72, curvatureBlend: 0.68, neighbourBlend: 0.64,
+      },
     });
     expect(sections[4].regions[0]).not.toHaveProperty('presentation');
   });

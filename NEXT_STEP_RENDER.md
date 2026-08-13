@@ -7567,6 +7567,41 @@ board shows a restrained class-selective depth exchange rather than a global
 wash. These values and hashes guide this checkpoint only and are not future
 visual thresholds or exact-image gates.
 
+The next framework checkpoint makes phase-wide visual authoring reviewable from
+the same source as shader assembly. A pure frozen
+`material-phase-profile-catalog.js` now owns the exact ordered phase codes and
+names, all ten composition fields/values, and all six mesoscale fields/values.
+`material-composition-profiles.ts` and `material-mesoscale-profiles.ts` project
+their existing public maps and deterministic GLSL selectors from it. The
+grouped RenderOptics appearance board displays the resolved phase composition
+and mesoscale records beside the class-level six-lane appearance profile.
+This removes duplicated phase authoring without changing shader values, capture
+bytes, evidence JSON, fixture behavior, or frozen identities. Powder and Solid
+mesoscale radii remain explicit zero no-ops; review visibility does not authorize
+an unproven wide carrier.
+
+That clearer board selected a sample-free solid depth experiment before the
+heavier eight-read Solid mesoscale proposal. Normal-WebGL Volumetric/B passes
+the class `interiorScatter` lane into `applySolidMaterialLighting`, where the
+existing exact optical depth forms a parabolic intermediate shell-to-core band.
+Transmission and scatter admit TranslucentRigid and Waxy strongly,
+Organic/Radioactive softly, and leave SmoothRigid, Device, and MetallicRigid
+effectively unchanged without a material-ID branch. The helper retains its
+authoritative supported-body and contact guards and changes RGB only. OFF/A,
+Canvas2D, compact true-8x, support, alpha, topology, contacts, samples, fields,
+textures, passes, targets, and allocations remain unchanged.
+
+The real shared-host SwiftShader package `/tmp/anifor-solid-shell-core-v1`
+passed WebGL/HDR capture, all 49 regions, and strict portable verification as
+result `sha256:3edba76ae6680a9e510b6cd878fd57a041173f549c5383710e781d251d763c84`.
+OFF and A remained byte-identical to the environment-depth checkpoint. In B,
+Glass body/core mean luma increased about `1.03/1.69` and Waxy about
+`0.64/1.03`, while Ceramic, Device, Metal, every non-solid phase, and topology
+controls were effectively unchanged. An amplified image difference follows the
+intermediate-depth band around Glass/Waxy bodies and cavities rather than a
+uniform silhouette lift. These current measurements guide the retained visual
+choice and are not future thresholds or PNG pins.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

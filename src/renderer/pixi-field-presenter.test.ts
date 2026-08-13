@@ -651,8 +651,17 @@ describe('Pixi presenter startup configuration', () => {
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'float reflectedFacing = pow(max(facing, 0.0), lobeExponent) * lobeEnergy;',
     );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'float shellToCoreBand = body * (4.0 * core * (1.0 - core));',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'float volumeAdmission = max(clearAdmission, softAdmission);',
+    );
     expect(normal).toContain(
       'color, solidFinishProfile.optics, solidFinishProfile.roughness,',
+    );
+    expect(normal).toContain(
+      'solidFinishProfile.interiorScatter,\n        solidOpticalDepth, normal,',
     );
     expect(eight).toContain('optics = optics == 21.0 ? 8.0 : optics;');
     expect(normal).toContain(

@@ -1,7 +1,8 @@
+import type { MaterialAppearancePhase } from './material-appearance-profiles';
 import {
-  MaterialAppearancePhaseCode,
-  type MaterialAppearancePhase,
-} from './material-appearance-profiles';
+  MATERIAL_MESOSCALE_PROFILE_FIELDS,
+  MATERIAL_PHASE_PROFILE_CATALOG,
+} from '../shared/material-phase-profile-catalog.js';
 
 export interface MaterialMesoscaleProfile {
   readonly radius: number;
@@ -17,35 +18,19 @@ export type MaterialMesoscaleProfiles = Readonly<Record<
   MaterialMesoscaleProfile
 >>;
 
-const profile = (
-  radius: number, supportLow: number, supportHigh: number,
-  slopeBlend: number, curvatureBlend: number, neighbourBlend: number,
-): MaterialMesoscaleProfile => Object.freeze({
-  radius, supportLow, supportHigh, slopeBlend, curvatureBlend, neighbourBlend,
-});
-
 /**
  * Simulation-cell observation radii and response weights for broad material
  * shape. A zero radius is an explicit no-op until that phase owns a stable,
  * visually proven carrier.
  */
-export const MATERIAL_MESOSCALE_PROFILES: MaterialMesoscaleProfiles = Object.freeze({
-  powder: profile(0, 0, 1, 0, 0, 0),
-  liquid: profile(8, 0.46, 0.82, 0.72, 0.68, 0.64),
-  gas: profile(8, 0.018, 0.16, 0.76, 0.72, 0.64),
-  solid: profile(0, 0, 1, 0, 0, 0),
-});
+export const MATERIAL_MESOSCALE_PROFILES = Object.freeze(Object.fromEntries(
+  MATERIAL_PHASE_PROFILE_CATALOG.phases.map(({ name, mesoscale: response }) => [name, response]),
+)) as MaterialMesoscaleProfiles;
 
-const PHASES = Object.freeze([
-  Object.freeze({ name: 'powder', code: MaterialAppearancePhaseCode.Powder }),
-  Object.freeze({ name: 'liquid', code: MaterialAppearancePhaseCode.Liquid }),
-  Object.freeze({ name: 'gas', code: MaterialAppearancePhaseCode.Gas }),
-  Object.freeze({ name: 'solid', code: MaterialAppearancePhaseCode.Solid }),
-] as const);
-const FIELDS = Object.freeze([
-  'radius', 'supportLow', 'supportHigh',
-  'slopeBlend', 'curvatureBlend', 'neighbourBlend',
-] as const satisfies readonly (keyof MaterialMesoscaleProfile)[]);
+const PHASES = MATERIAL_PHASE_PROFILE_CATALOG.phases;
+const FIELDS = MATERIAL_MESOSCALE_PROFILE_FIELDS as ReadonlyArray<
+  keyof MaterialMesoscaleProfile
+>;
 
 export function validateMaterialMesoscaleProfiles(
   profiles: MaterialMesoscaleProfiles,
@@ -90,9 +75,9 @@ export function buildMaterialMesoscaleProfileGLSLSelector(
   ];
   for (const { name, code } of PHASES) {
     const response = glslProfile(profiles[name]);
-    if (code === MaterialAppearancePhaseCode.Powder) lines.push(`  if (phase < 0.5) return ${response};`);
-    else if (code === MaterialAppearancePhaseCode.Liquid) lines.push(`  if (phase < 1.5) return ${response};`);
-    else if (code === MaterialAppearancePhaseCode.Gas) lines.push(`  if (phase < 2.5) return ${response};`);
+    if (code === 0) lines.push(`  if (phase < 0.5) return ${response};`);
+    else if (code === 1) lines.push(`  if (phase < 1.5) return ${response};`);
+    else if (code === 2) lines.push(`  if (phase < 2.5) return ${response};`);
     else lines.push(`  return ${response};`);
   }
   lines.push('}');

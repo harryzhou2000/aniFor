@@ -522,6 +522,7 @@ vec3 applySolidMaterialLighting(
   vec3 color,
   vec4 finishResponse,
   float finishRoughness,
+  float finishInteriorScatter,
   float opticalDepth,
   vec3 normal,
   float eligibility,
@@ -570,6 +571,24 @@ vec3 applySolidMaterialLighting(
   color += (vec3(1.08) - clamp(color, 0.0, 1.08))
     * keyTint * (key + transmission + interiorTransmission);
   color *= vec3(1.0) - shadowTint * fill;
+
+  // A quiet, supported solid body needs a readable shell-to-core transition,
+  // not another silhouette rim. The class profile admits translucent and waxy
+  // families while opaque rigid/device/metal families remain effectively off.
+  // This reuses the compositor-owned exact optical depth and changes RGB only.
+  float scatterProgress = clamp((finishInteriorScatter - 0.50) / 1.0, 0.0, 1.0);
+  float transmissionReserve = clamp((finishResponse.w - 0.50) / 1.0, 0.0, 1.0);
+  float clearAdmission = smoothstep(1.05, 1.30, finishResponse.w);
+  float softAdmission = smoothstep(0.76, 1.18, finishInteriorScatter)
+    * smoothstep(0.65, 1.05, finishResponse.w);
+  float volumeAdmission = max(clearAdmission, softAdmission);
+  float shellToCoreBand = body * (4.0 * core * (1.0 - core));
+  float subsurface = shellToCoreBand * volumeAdmission
+    * (0.012 + 0.032 * transmissionReserve)
+    * (0.72 + 0.56 * scatterProgress);
+  vec3 subsurfaceTint = mix(keyTint, identityTint, 0.44 + 0.30 * transmissionReserve);
+  color += (vec3(1.08) - clamp(color, 0.0, 1.08))
+    * subsurfaceTint * subsurface;
 
   float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
   color += (color - vec3(luminance)) * body * core * 0.018 * finishResponse.z;

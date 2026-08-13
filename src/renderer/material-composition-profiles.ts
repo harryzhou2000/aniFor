@@ -1,7 +1,8 @@
+import type { MaterialAppearancePhase } from './material-appearance-profiles';
 import {
-  MaterialAppearancePhaseCode,
-  type MaterialAppearancePhase,
-} from './material-appearance-profiles';
+  MATERIAL_COMPOSITION_PROFILE_FIELDS,
+  MATERIAL_PHASE_PROFILE_CATALOG,
+} from '../shared/material-phase-profile-catalog.js';
 
 /** Phase-level weights; exact materials remain owned by appearance profiles. */
 export interface MaterialCompositionProfile {
@@ -27,41 +28,20 @@ export type MaterialCompositionProfiles = Readonly<Record<
 export const MATERIAL_COMPOSITION_PROFILE_MINIMUM = 0;
 export const MATERIAL_COMPOSITION_PROFILE_MAXIMUM = 1.5;
 
-const PHASES = Object.freeze([
-  Object.freeze({ name: 'powder', code: MaterialAppearancePhaseCode.Powder }),
-  Object.freeze({ name: 'liquid', code: MaterialAppearancePhaseCode.Liquid }),
-  Object.freeze({ name: 'gas', code: MaterialAppearancePhaseCode.Gas }),
-  Object.freeze({ name: 'solid', code: MaterialAppearancePhaseCode.Solid }),
-] as const);
-
-const profile = (
-  bodyLighting: number, profileSheen: number, irradiance: number,
-  penetrationPath: number, pigmentCoupling: number, volumeScatter: number,
-  farSideShadow: number, ambientGrounding: number, interiorContrast: number,
-  environmentTransport: number,
-): MaterialCompositionProfile => Object.freeze({
-  bodyLighting, profileSheen, irradiance, penetrationPath,
-  pigmentCoupling, volumeScatter, farSideShadow, ambientGrounding, interiorContrast,
-  environmentTransport,
-});
+const PHASES = MATERIAL_PHASE_PROFILE_CATALOG.phases;
 
 /**
  * Broad phase balance for the shared Volumetric look. Family-specific optics
  * still shape the response; these values keep powder restrained, give liquids
  * a clearer transmissive body, and let gases carry light through their middle.
  */
-export const MATERIAL_COMPOSITION_PROFILES: MaterialCompositionProfiles = Object.freeze({
-  powder: profile(0.94, 0.30, 0.80, 0.84, 0.58, 0.34, 0.84, 1.08, 0.90, 0.34),
-  liquid: profile(1.18, 1.28, 1.16, 0.56, 0.34, 1.30, 0.74, 0.78, 1.14, 1.22),
-  gas: profile(1.14, 1.02, 1.08, 0.32, 0.24, 1.36, 0.56, 0.58, 1.18, 0.92),
-  solid: profile(1.10, 1.10, 0.94, 0.74, 0.44, 0.72, 0.98, 0.94, 1.00, 1.05),
-});
+export const MATERIAL_COMPOSITION_PROFILES = Object.freeze(Object.fromEntries(
+  PHASES.map(({ name, composition: response }) => [name, response]),
+)) as MaterialCompositionProfiles;
 
-const PROFILE_FIELDS = Object.freeze([
-  'bodyLighting', 'profileSheen', 'irradiance', 'penetrationPath',
-  'pigmentCoupling', 'volumeScatter', 'farSideShadow', 'ambientGrounding',
-  'interiorContrast', 'environmentTransport',
-] as const satisfies readonly (keyof MaterialCompositionProfile)[]);
+const PROFILE_FIELDS = MATERIAL_COMPOSITION_PROFILE_FIELDS as ReadonlyArray<
+  keyof MaterialCompositionProfile
+>;
 
 export function validateMaterialCompositionProfiles(
   profiles: MaterialCompositionProfiles,
@@ -106,9 +86,9 @@ export function buildMaterialCompositionProfileGLSLSelector(
   ];
   for (const { name, code } of PHASES) {
     const response = glslProfile(profiles[name]);
-    if (code === MaterialAppearancePhaseCode.Powder) lines.push(`  if (phase < 0.5) return ${response};`);
-    else if (code === MaterialAppearancePhaseCode.Liquid) lines.push(`  if (phase < 1.5) return ${response};`);
-    else if (code === MaterialAppearancePhaseCode.Gas) lines.push(`  if (phase < 2.5) return ${response};`);
+    if (code === 0) lines.push(`  if (phase < 0.5) return ${response};`);
+    else if (code === 1) lines.push(`  if (phase < 1.5) return ${response};`);
+    else if (code === 2) lines.push(`  if (phase < 2.5) return ${response};`);
     else lines.push(`  return ${response};`);
   }
   lines.push('}');
