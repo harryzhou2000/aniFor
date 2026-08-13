@@ -8196,6 +8196,30 @@ promotion-fusion increment; the active next work is the measurement-driven
 first-frame cost split described above, without changing frozen evidence or
 visual identities.
 
+The active measurement increment makes the existing
+`capture-subphase-timings/v1` readiness fields disjoint for typed activation
+profiles without rotating that protected schema. `datasetWaitMs` now ends when
+the activation-owned CPU presentation generation completes. `refreshMs`, which
+v9 has no independent refresh action for, observes settlement of the exact
+frame's already-armed framebuffer transfer. `readbackHashMs` then covers the
+single unchanged semantic/authoritative-field/framebuffer snapshot and digest
+read. The generation is reread after the snapshot exactly as before. Legacy
+readiness profiles, OFF/A/B capture timing, evidence bytes, result identities,
+and renderer APIs are unchanged; this is Node-side diagnostic orchestration.
+
+A fresh SwiftShader RenderOptics review passed WebGL/HDR, all 49 response and
+appearance regions, portable verification, strict teardown, and contiguous
+OFF/A/B submissions 5/6/7 at
+`.artifacts/visual-lab-reviews/render-optics-91975400-acb3-4ddf-9e5f-3e67b4d96232`.
+It retained exact result
+`sha256:4891db2c82bb89cb4bce5a63a2927360fbc20e634a0a91b9d17a490deb630581`.
+The one local diagnostic split was approximately 4.94 seconds to populated CPU
+submission, 2.90 seconds for the activation-owned framebuffer transfer to
+settle, and 48.6 milliseconds for the final evidence snapshot/readback/hash.
+This shows that evidence serialization is already cheap and the reusable next
+optimization target is renderer/GPU settlement after the populated submission,
+not another readback or proof reduction. Deployment evidence is pending.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

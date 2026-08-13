@@ -576,24 +576,40 @@ async function captureVisualLabCandidateEvidence({
       assert(Number.isSafeInteger(startupFixtureActivationTicket)
         && startupFixtureActivationTicket > 0,
       'fixture activation readiness is missing its startup ticket');
-      const { generation, snapshot } = await captureSubphases.measureReadiness(
-        'datasetWaitMs', () => proveFixtureActivationReadiness({
+      const generation = await captureSubphases.measureReadiness(
+        'datasetWaitMs', () => awaitFixtureActivationGeneration({
           ticket: startupFixtureActivationTicket,
           timeoutMs: effectiveTimeouts.readinessMs,
           pollIntervalMs: profile.readiness.pollIntervalMs,
           readGeneration: (ticket) => readFixtureActivationPresentationGeneration(
             cdp, 'readiness', ticket,
           ),
-          takeSnapshot: () => captureSubphases.measureSnapshot(
-            'readiness', () => snapshotState(
-              cdp, options.executionPlan, snapshotCommandTimeoutMs,
-            ),
-          ),
         }),
       );
-      // V5 folds refresh into the atomic activation transaction. Retain the
-      // additive timing field explicitly rather than inventing a second action.
-      await captureSubphases.measureReadiness('refreshMs', async () => undefined);
+      // The activation's sole populated frame prearms its framebuffer transfer.
+      // Observe that exact ticket separately so datasetWaitMs ends at CPU
+      // submission and readbackHashMs no longer hides renderer/PBO settlement.
+      const readinessReadbackTicket = await requestFramebufferAlphaReadback(cdp);
+      await captureSubphases.measureReadiness('refreshMs', async () => {
+        if (readinessReadbackTicket !== null) {
+          await awaitFramebufferAlphaDigest(
+            cdp, readinessReadbackTicket, snapshotCommandTimeoutMs,
+          );
+        }
+      });
+      const snapshot = await captureSubphases.measureSnapshot(
+        'readiness', () => snapshotState(
+          cdp, options.executionPlan, snapshotCommandTimeoutMs,
+          readinessReadbackTicket ?? undefined,
+        ),
+      );
+      const verifiedGeneration = await readFixtureActivationPresentationGeneration(
+        cdp, 'readiness', startupFixtureActivationTicket,
+      );
+      assert(verifiedGeneration.state === 'completed'
+        && verifiedGeneration.ticket === generation.ticket
+        && verifiedGeneration.generation === generation.generation,
+      'fixture activation presentation generation changed after its snapshot');
       assert(snapshot.semantic.occupied > 0
         && snapshot.fieldAlpha.nonzero > 0
         && snapshot.framebufferAlpha.nonzero > 0,
@@ -602,11 +618,11 @@ async function captureVisualLabCandidateEvidence({
       assert(startupVariant !== undefined, 'readiness profile names an unknown startup variant');
       assertVariantState(snapshot, options, startupVariant);
       if (hasFixtureActivationRenderFieldReadinessDescriptor(profile)) {
-        readinessFixtureActivationRenderFieldGeneration = generation;
+        readinessFixtureActivationRenderFieldGeneration = verifiedGeneration;
       } else if (hasFixtureActivationWorkReadinessDescriptor(profile)) {
-        readinessFixtureActivationWorkGeneration = generation;
+        readinessFixtureActivationWorkGeneration = verifiedGeneration;
       } else {
-        readinessFixtureActivationGeneration = generation;
+        readinessFixtureActivationGeneration = verifiedGeneration;
       }
       return undefined;
     }
@@ -1345,6 +1361,26 @@ export async function requestTypedFixtureActivationGeneration(activate, fixture,
   return ticket;
 }
 
+/** Waits only for one activation-owned CPU presentation generation to settle. */
+export async function awaitFixtureActivationGeneration({
+  ticket,
+  timeoutMs,
+  pollIntervalMs,
+  readGeneration,
+}) {
+  if (typeof readGeneration !== 'function') {
+    throw new TypeError('Fixture activation readiness requires a generation reader');
+  }
+  const completed = await waitFor(async () => {
+    const generation = await readGeneration(ticket);
+    if (generation.state === 'pending') return false;
+    return generation;
+  }, timeoutMs, `fixture activation presentation generation ${ticket}`, pollIntervalMs);
+  assert(completed.state === 'completed',
+    `fixture activation presentation generation ${ticket} is ${String(completed.state)}`);
+  return completed;
+}
+
 /** Waits for one activation generation, snapshots once, then verifies the same generation. */
 export async function proveFixtureActivationReadiness({
   ticket,
@@ -1356,13 +1392,9 @@ export async function proveFixtureActivationReadiness({
   if (typeof readGeneration !== 'function' || typeof takeSnapshot !== 'function') {
     throw new TypeError('Fixture activation readiness requires generation and snapshot readers');
   }
-  const completed = await waitFor(async () => {
-    const generation = await readGeneration(ticket);
-    if (generation.state === 'pending') return false;
-    return generation;
-  }, timeoutMs, `fixture activation presentation generation ${ticket}`, pollIntervalMs);
-  assert(completed.state === 'completed',
-    `fixture activation presentation generation ${ticket} is ${String(completed.state)}`);
+  const completed = await awaitFixtureActivationGeneration({
+    ticket, timeoutMs, pollIntervalMs, readGeneration,
+  });
   const snapshot = await takeSnapshot();
   const verified = await readGeneration(ticket);
   assert(verified.state === 'completed'

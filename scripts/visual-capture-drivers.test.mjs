@@ -463,6 +463,7 @@ describe('typed visual capture drivers', () => {
 
   it('activates v5 startup once and proves readiness with one snapshot and one reread', async () => {
     const {
+      awaitFixtureActivationGeneration,
       proveFixtureActivationReadiness,
       requestTypedFixtureActivationGeneration,
     } = await import('./visual-lab-audit.mjs');
@@ -473,6 +474,27 @@ describe('typed visual capture drivers', () => {
     }, 'powder-style-atlas', 2);
     expect(ticket).toBe(17);
     expect(activationCalls).toEqual([['powder-style-atlas', 2]]);
+
+    const generationReads = [
+      { ticket: 17, generation: 30, state: 'pending' },
+      { ticket: 17, generation: 30, state: 'completed' },
+    ];
+    await expect(awaitFixtureActivationGeneration({
+      ticket: 17,
+      timeoutMs: 20,
+      pollIntervalMs: 1,
+      readGeneration: () => generationReads.shift(),
+    })).resolves.toEqual({ ticket: 17, generation: 30, state: 'completed' });
+    expect(generationReads).toEqual([]);
+    await expect(awaitFixtureActivationGeneration({
+      ticket: 17, timeoutMs: 20, pollIntervalMs: 1, readGeneration: null,
+    })).rejects.toThrow('requires a generation reader');
+    await expect(awaitFixtureActivationGeneration({
+      ticket: 17,
+      timeoutMs: 20,
+      pollIntervalMs: 1,
+      readGeneration: () => ({ ticket: 17, generation: 30, state: 'failed' }),
+    })).rejects.toThrow('generation 17 is failed');
 
     const reads = [
       { ticket: 17, generation: 31, state: 'pending' },
