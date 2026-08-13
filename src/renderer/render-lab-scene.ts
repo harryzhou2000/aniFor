@@ -3,6 +3,10 @@ import type { SimulationBackend } from '../simulation';
 import { RENDER_LAB_AMBIENT_TEMPERATURE } from '../simulation/render-lab-backend';
 import { prepareMaterialShowcaseAtlas } from '../app/material-showcase-atlas-authoring';
 import { MATERIAL_SHOWCASE_SCENE_AUTHORING } from '../shared/material-showcase-atlas-catalog.js';
+import { prepareMaterialCandidateSurveyAtlas } from '../app/material-candidate-survey-atlas-authoring';
+import {
+  MATERIAL_CANDIDATE_SURVEY_ATLAS_CATALOG,
+} from '../shared/material-candidate-survey-atlas-catalog.js';
 
 export const RENDER_LAB_QUERY = 'render-lab';
 export const MATERIAL_SHOWCASE_QUERY = 'showcase';
@@ -121,73 +125,9 @@ export interface MaterialCandidateSurveyAuditSnapshot {
  * each candidate's broad body, one intentionally authored topology defect, and
  * a common ROCK/wall context inspectable without disturbing showcase v6.
  */
-export const MATERIAL_CANDIDATE_SURVEY_AUDIT: MaterialCandidateSurveyAuditSnapshot = {
-  version: 1,
-  world: { width: 612, height: 384 },
-  semantic: {
-    hash: 2_255_453_673,
-    occupied: 115_368,
-    materialCounts: [
-      { material: Material.Nitro, count: 14_692 },
-      { material: Material.Snow, count: 14_612 },
-      { material: Material.BASE, count: 14_936 },
-      { material: Material.C4, count: 14_692 },
-      { material: Material.BGLA, count: 14_612 },
-      { material: Material.Quartz, count: 14_936 },
-      { material: Material.ROCK, count: 26_888 },
-    ],
-  },
-  regions: [
-    {
-      name: 'candidateNitro', material: Material.Nitro, phase: 'liquid', profile: 'cohesive-liquid',
-      x: 110, y: 120, radiusX: 30, radiusY: 24,
-      support: { kind: 'semantic', materials: [Material.Nitro], minimumRecall: 0.96 },
-      semanticMaterials: [Material.Nitro], expectedMatching: 2_880,
-    },
-    {
-      name: 'candidateSnow', material: Material.Snow, phase: 'powder', profile: 'granular-body',
-      x: 306, y: 120, radiusX: 30, radiusY: 24,
-      support: { kind: 'semantic', materials: [Material.Snow], minimumRecall: 0.96 },
-      semanticMaterials: [Material.Snow], expectedMatching: 2_880,
-    },
-    {
-      name: 'candidateBASE', material: Material.BASE, phase: 'liquid', profile: 'cohesive-liquid',
-      x: 502, y: 120, radiusX: 30, radiusY: 24,
-      support: { kind: 'semantic', materials: [Material.BASE], minimumRecall: 0.96 },
-      semanticMaterials: [Material.BASE], expectedMatching: 2_880,
-    },
-    {
-      name: 'candidateC4', material: Material.C4, phase: 'powder', profile: 'granular-body',
-      x: 110, y: 280, radiusX: 30, radiusY: 24,
-      support: { kind: 'semantic', materials: [Material.C4], minimumRecall: 0.96 },
-      semanticMaterials: [Material.C4], expectedMatching: 2_880,
-    },
-    {
-      name: 'candidateBGLA', material: Material.BGLA, phase: 'powder', profile: 'granular-body',
-      x: 306, y: 280, radiusX: 30, radiusY: 24,
-      support: { kind: 'semantic', materials: [Material.BGLA], minimumRecall: 0.96 },
-      semanticMaterials: [Material.BGLA], expectedMatching: 2_880,
-    },
-    {
-      name: 'candidateQuartz', material: Material.Quartz, phase: 'powder', profile: 'granular-body',
-      x: 502, y: 280, radiusX: 30, radiusY: 24,
-      support: { kind: 'semantic', materials: [Material.Quartz], minimumRecall: 0.96 },
-      semanticMaterials: [Material.Quartz], expectedMatching: 2_880,
-    },
-  ],
-  sharedContext: {
-    material: Material.ROCK,
-    contactProbes: [
-      { x: 110, y: 167, material: Material.Nitro },
-      { x: 306, y: 167, material: Material.Snow },
-      { x: 502, y: 167, material: Material.BASE },
-      { x: 110, y: 216, material: Material.C4 },
-      { x: 306, y: 216, material: Material.BGLA },
-      { x: 502, y: 216, material: Material.Quartz },
-    ],
-    wallProbes: [{ x: 252, y: 180 }, { x: 360, y: 204 }],
-  },
-};
+export const MATERIAL_CANDIDATE_SURVEY_AUDIT = (
+  MATERIAL_CANDIDATE_SURVEY_ATLAS_CATALOG.audit
+) as unknown as MaterialCandidateSurveyAuditSnapshot;
 
 /**
  * App-owned contract for the production-fit visual survey. Keeping this beside
@@ -421,27 +361,10 @@ export function applyMaterialShowcaseScene(simulation: SimulationBackend): void 
 export function applyMaterialCandidateSurveyScene(simulation: SimulationBackend): void {
   simulation.clear();
   const plot = new ScenePlotter(simulation);
-
-  // A single grounded stage is shared by all six cards. Each candidate touches
-  // the ROCK face while the patterned wall stays on the independent wall plane.
-  plot.roundedRect(24, 168, 564, 48, 12, Material.ROCK);
-  plot.wallPatternRect(248, 168, 116, 48, 6);
-
-  // Upper row: two broad cards plus one authored hole/notch/needle context.
-  plot.roundedRect(50, 40, 120, 128, 22, Material.Nitro);
-  plot.eraseRect(65, 68, 10, 16);
-  plot.roundedRect(246, 40, 120, 128, 22, Material.Snow);
-  plot.eraseRect(246, 82, 12, 20);
-  plot.roundedRect(442, 40, 120, 128, 22, Material.BASE);
-  plot.rect(499, 26, 6, 14, Material.BASE, 1, 0);
-
-  // Lower row mirrors the common contact while retaining independent topology.
-  plot.roundedRect(50, 216, 120, 128, 22, Material.C4);
-  plot.eraseRect(65, 260, 10, 16);
-  plot.roundedRect(246, 216, 120, 128, 22, Material.BGLA);
-  plot.eraseRect(246, 266, 12, 20);
-  plot.roundedRect(442, 216, 120, 128, 22, Material.Quartz);
-  plot.rect(499, 344, 6, 14, Material.Quartz, 1, 0);
+  prepareMaterialCandidateSurveyAtlas(
+    plot,
+    MATERIAL_CANDIDATE_SURVEY_ATLAS_CATALOG.commands,
+  );
 }
 
 /** A paused, deterministic material atlas for visual regression screenshots. */
