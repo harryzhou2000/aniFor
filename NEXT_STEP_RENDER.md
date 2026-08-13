@@ -7848,6 +7848,26 @@ its summary carried exact execution-tuning v8. Fresh/shared/shared/fresh totals
 were approximately 101.55/98.28/101.64/100.19 seconds. These timings describe
 one loaded software-GPU run and are not a performance threshold.
 
+The next reusable authoring increment generalizes inspection presentation.
+An atlas may declare one closed `material-profile-body-core` descriptor beside
+its cards and inspection regions; the scripts-side compiler discovers it from
+the shared declared-atlas manifest and derives ordered grouped inspection plus
+the profile-to-response matrix without a candidate-name branch. Exact-field,
+unique candidate/phase/card, profile resolution, body/core coverage, and
+nonempty controls validation fail before board generation. This metadata is
+presentation-only: fixture preparation continues to project geometry alone and
+no browser API, capture recipe, evidence schema, or frozen result identity is
+widened.
+
+A real production-bundle SwiftShader review invoked as
+`npm run visual-lab:review:reuse -- --source=render-optics` passed WebGL/HDR,
+all 49 regions, generic matrix generation, portable reconstruction, and clean
+Chrome teardown at
+`.artifacts/visual-lab-reviews/render-optics-12f50ee6-bffa-4f9f-bdb5-9be70a444f58`.
+It retained result
+`sha256:4891db2c82bb89cb4bce5a63a2927360fbc20e634a0a91b9d17a490deb630581`;
+the retained pixels are current evidence rather than a cross-revision gate.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

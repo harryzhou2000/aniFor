@@ -61,7 +61,7 @@ import {
   createVisualLabCurrentRegionMeasurements,
 } from './visual-lab-region-measurements.mjs';
 import {
-  compileRenderOpticsProfileResponseMatrix,
+  compileVisualLabInspectionResponseMatrix,
   resolveVisualLabInspectionPresentation,
 } from './visual-lab-inspection-presentation.mjs';
 import {
@@ -1023,12 +1023,12 @@ export function renderVisualLabRegionAppearanceBoard(appearance) {
     ['neighbour', record.neighbourContrast],
   ].map(([label, value]) => `${escapeHtml(label)} ${escapeHtml(value.toFixed(3))}`).join('<br>');
   const renderMatrix = (candidate, presentation) => {
-    if (candidate !== 'render-optics-material-lighting-atlas') return '';
-    const groups = compileRenderOpticsProfileResponseMatrix(candidate, presentation);
-    const rows = groups.map(({ key, label, rows: entries }) => (
+    const matrix = compileVisualLabInspectionResponseMatrix(candidate, presentation);
+    if (matrix === null) return '';
+    const rows = matrix.groups.map(({ key, label, rows: entries }) => (
       `<tr class="matrix-phase" data-matrix-phase="${escapeHtml(key)}"><th colspan="7">${escapeHtml(label)}</th></tr>${entries.map((row) => `<tr><th>${escapeHtml(row.card)}</th><td>${escapeHtml(`${row.optics} · class ${row.opticsCode}`)}</td><td>${renderProfileValues(row.profile)}</td><td>${renderProfileValues(row.composition)}</td><td>${renderProfileValues(row.mesoscale)}</td><td>${renderResponse(row.body)}</td><td>${renderResponse(row.core)}</td></tr>`).join('')}`
     )).join('');
-    return `<section class="profile-response-matrix"><h3>RenderOptics profile-to-response matrix</h3><p>Current-only authored profiles beside measured OFF→B body/core response; descriptive inspection, not a score or visual requirement.</p><div class="matrix-scroll"><table><thead><tr><th>Card</th><th>Class / optics</th><th>Class lanes</th><th>Phase composition</th><th>Mesoscale</th><th>Body OFF→B</th><th>Core OFF→B</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
+    return `<section class="profile-response-matrix"><h3>${escapeHtml(matrix.title)}</h3><p>Current-only authored profiles beside measured OFF→B body/core response; descriptive inspection, not a score or visual requirement.</p><div class="matrix-scroll"><table><thead><tr><th>Card</th><th>Class / optics</th><th>Class lanes</th><th>Phase composition</th><th>Mesoscale</th><th>Body OFF→B</th><th>Core OFF→B</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
   };
   const cards = appearance.candidates.map((candidate) => {
     const renderRegion = (region) => {

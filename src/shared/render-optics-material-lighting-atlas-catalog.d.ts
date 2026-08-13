@@ -56,6 +56,20 @@ export interface RenderOpticsMaterialLightingAtlasDescriptor {
   }>;
   readonly guardedBlank: RenderOpticsMaterialLightingRect;
   readonly inspectionRegions: readonly RenderOpticsMaterialLightingInspectionRegion[];
+  readonly inspectionPresentation: Readonly<{
+    readonly kind: 'material-profile-body-core';
+    readonly title: 'RenderOptics profile-to-response matrix';
+    readonly phases: readonly [
+      Readonly<{ readonly key: 'powder'; readonly label: 'Powder' }>,
+      Readonly<{ readonly key: 'liquid'; readonly label: 'Liquid' }>,
+      Readonly<{ readonly key: 'gas'; readonly label: 'Gas' }>,
+      Readonly<{ readonly key: 'solid'; readonly label: 'Solid' }>,
+    ];
+    readonly controls: Readonly<{
+      readonly key: 'controls';
+      readonly label: 'Topology and contact controls';
+    }>;
+  }>;
 }
 
 export declare const RENDER_OPTICS_MATERIAL_LIGHTING_ATLAS_CATALOG_SCHEMA:

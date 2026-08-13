@@ -5072,6 +5072,19 @@ identities with no failure diagnostic. Keep its roughly 98–102 second cohort
 durations descriptive; the important proof is that the v8 route is executable
 and distinct from v9.
 
+Inspection presentation is now atlas-authored rather than candidate-branched.
+The closed data-only `material-profile-body-core` descriptor owns its title,
+ordered phase groups, and trailing controls group; scripts discover it through
+the declared atlas manifest, validate exact fields and complete body/core plus
+control coverage, and compile both grouped inspection and the profile-response
+matrix. Keep fixture preparation unaware of this metadata and never add module
+paths, callbacks, browser methods, or executable labels. A candidate without a
+descriptor has no matrix; a candidate with malformed authoring must fail
+closed. The compatibility-named RenderOptics compiler remains only a wrapper
+over the generic projection. Presentation metadata intentionally changes the
+inspection-source semantic oracle, but not static capture contracts, recipes,
+region evidence schemas, or frozen result/batch identities.
+
 Read [`docs/render-lab.md`](docs/render-lab.md) before changing reconstruction thresholds or blur radii. A TypeScript or Vite build does not compile Pixi's runtime GLSL; a browser screenshot with a clean shader console is required.
 
 The style lookup is an RGBA data texture, not display color: RGB stores phase/profile/emission and alpha stores the static `RenderTrait` mask. Keep nearest sampling and `no-premultiply-alpha`; zero-valued trait alpha must never erase the RGB metadata.

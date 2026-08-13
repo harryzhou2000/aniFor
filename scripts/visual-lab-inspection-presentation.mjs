@@ -1,20 +1,14 @@
-import { RENDER_OPTICS_MATERIAL_LIGHTING_ATLAS_CATALOG } from '../src/shared/render-optics-material-lighting-atlas-catalog.js';
 import {
   MATERIAL_APPEARANCE_PROFILE_LANES,
   resolveMaterialAppearanceProfileCatalogEntry,
 } from '../src/shared/material-appearance-profile-catalog.js';
-import {
-  resolveMaterialPhaseProfileCatalogEntry,
-} from '../src/shared/material-phase-profile-catalog.js';
+import { resolveMaterialPhaseProfileCatalogEntry } from '../src/shared/material-phase-profile-catalog.js';
+import { VISUAL_CAPTURE_DECLARED_ATLAS_MANIFEST } from '../src/shared/visual-capture-declared-atlas-manifest.js';
 
 const SAFE_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const SAFE_LABEL = /^[A-Za-z][A-Za-z0-9 -]{0,63}$/;
 const OPTICS_NAME = /^[A-Z][A-Za-z0-9]*$/;
-const PHASES = Object.freeze([
-  Object.freeze({ key: 'powder', label: 'Powder' }),
-  Object.freeze({ key: 'liquid', label: 'Liquid' }),
-  Object.freeze({ key: 'gas', label: 'Gas' }),
-  Object.freeze({ key: 'solid', label: 'Solid' }),
-]);
+const MATERIAL_PROFILE_BODY_CORE_KIND = 'material-profile-body-core';
 
 const deepFreeze = (value) => {
   if (value !== null && typeof value === 'object' && !Object.isFrozen(value)) {
@@ -24,50 +18,132 @@ const deepFreeze = (value) => {
   return value;
 };
 
-const renderOpticsAtlas = RENDER_OPTICS_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases.find(
-  ({ candidate }) => candidate === 'render-optics-material-lighting-atlas',
+const hasExactKeys = (value, keys) => value !== null && typeof value === 'object'
+  && !Array.isArray(value)
+  && Object.keys(value).length === keys.length
+  && keys.every((key) => Object.hasOwn(value, key));
+
+const compileMaterialProfileBodyCoreDescriptor = (candidate, atlas) => {
+  const presentation = atlas.descriptor.inspectionPresentation;
+  const cards = atlas.descriptor.cards;
+  const inspectionRegions = atlas.descriptor.inspectionRegions;
+  if (!hasExactKeys(presentation, ['kind', 'title', 'phases', 'controls'])
+    || presentation.kind !== MATERIAL_PROFILE_BODY_CORE_KIND
+    || !SAFE_LABEL.test(presentation.title ?? '')
+    || !Array.isArray(presentation.phases) || presentation.phases.length === 0
+    || !hasExactKeys(presentation.controls, ['key', 'label'])
+    || !SAFE_NAME.test(presentation.controls?.key ?? '')
+    || !SAFE_LABEL.test(presentation.controls?.label ?? '')
+    || !Array.isArray(cards) || cards.length === 0
+    || !Array.isArray(inspectionRegions) || inspectionRegions.length === 0) {
+    throw new TypeError(`${candidate} inspection presentation descriptor is malformed`);
+  }
+  const phaseKeys = new Set();
+  const phases = presentation.phases.map((phase) => {
+    if (!hasExactKeys(phase, ['key', 'label'])) {
+      throw new TypeError(`${candidate} inspection presentation phases are malformed`);
+    }
+    const { key, label } = phase;
+    if (!SAFE_NAME.test(key ?? '') || !SAFE_LABEL.test(label ?? '') || phaseKeys.has(key)) {
+      throw new TypeError(`${candidate} inspection presentation phases are malformed`);
+    }
+    phaseKeys.add(key);
+    return { key, label };
+  });
+  if (phaseKeys.has(presentation.controls.key)) {
+    throw new TypeError(`${candidate} inspection presentation controls overlap a phase`);
+  }
+  const cardKeys = new Set();
+  for (const card of cards) {
+    if (!SAFE_NAME.test(card?.key ?? '') || !phaseKeys.has(card.phase) || cardKeys.has(card.key)) {
+      throw new TypeError(`${candidate} inspection presentation cards are malformed or duplicated`);
+    }
+    cardKeys.add(card.key);
+  }
+  const sections = phases.map(({ key, label }) => ({
+    key,
+    label,
+    regionNames: cards.filter(({ phase }) => phase === key)
+      .flatMap(({ key: cardKey }) => [`${cardKey}-body`, `${cardKey}-core`]),
+  }));
+  if (sections.some(({ regionNames }) => regionNames.length === 0)
+    || cards.some(({ phase }) => !phaseKeys.has(phase))) {
+    throw new TypeError(`${candidate} inspection presentation does not cover every card phase`);
+  }
+  const groupedNames = new Set(sections.flatMap(({ regionNames }) => regionNames));
+  if (groupedNames.size !== cardKeys.size * 2) {
+    throw new TypeError(`${candidate} inspection presentation body/core names are duplicated`);
+  }
+  const inspectionRegionNames = new Set();
+  for (const region of inspectionRegions) {
+    if (!SAFE_NAME.test(region?.name ?? '') || inspectionRegionNames.has(region.name)) {
+      throw new TypeError(`${candidate} inspection presentation regions are malformed or duplicated`);
+    }
+    inspectionRegionNames.add(region.name);
+  }
+  if ([...groupedNames].some((name) => !inspectionRegionNames.has(name))) {
+    throw new TypeError(`${candidate} inspection presentation is missing body/core regions`);
+  }
+  const controlRegionNames = inspectionRegions.map(({ name }) => name)
+    .filter((name) => !groupedNames.has(name));
+  if (controlRegionNames.length === 0) {
+    throw new TypeError(`${candidate} inspection presentation controls are empty`);
+  }
+  sections.push({
+    key: presentation.controls.key,
+    label: presentation.controls.label,
+    regionNames: controlRegionNames,
+  });
+  if (groupedNames.size + controlRegionNames.length !== inspectionRegionNames.size) {
+    throw new TypeError(`${candidate} inspection presentation region coverage is malformed`);
+  }
+  const regionMetadata = Object.fromEntries(cards.flatMap((card) => {
+    const family = resolveMaterialAppearanceProfileCatalogEntry(card.phase, card.optics);
+    const phaseProfile = resolveMaterialPhaseProfileCatalogEntry(card.phase);
+    if (!family || !phaseProfile) {
+      throw new TypeError(`${candidate} card ${card.key} has no material profile`);
+    }
+    const metadata = {
+      card: card.key,
+      phase: card.phase,
+      optics: family.name,
+      opticsCode: family.optics,
+      profile: Object.fromEntries(MATERIAL_APPEARANCE_PROFILE_LANES.map(
+        (lane, index) => [lane, family.profile[index]],
+      )),
+      composition: phaseProfile.composition,
+      mesoscale: phaseProfile.mesoscale,
+    };
+    return [[`${card.key}-body`, metadata], [`${card.key}-core`, metadata]];
+  }));
+  return { kind: presentation.kind, title: presentation.title, phases, sections, regionMetadata };
+};
+
+export const compileVisualLabInspectionPresentations = (sources) => {
+  if (!Array.isArray(sources)) throw new TypeError('Visual Lab inspection presentation sources are malformed');
+  const entries = [];
+  const candidates = new Set();
+  for (const { atlases } of sources) {
+    if (!Array.isArray(atlases)) throw new TypeError('Visual Lab inspection presentation atlases are malformed');
+    for (const atlas of atlases) {
+      const presentation = atlas?.descriptor?.inspectionPresentation;
+      if (presentation === undefined) continue;
+      if (!SAFE_NAME.test(atlas?.candidate ?? '') || candidates.has(atlas.candidate)) {
+        throw new TypeError('Visual Lab inspection presentation candidates are malformed or duplicated');
+      }
+      candidates.add(atlas.candidate);
+      if (presentation?.kind !== MATERIAL_PROFILE_BODY_CORE_KIND) {
+        throw new TypeError(`${atlas?.candidate ?? 'unknown'} has an unsupported inspection presentation kind`);
+      }
+      entries.push([atlas.candidate, compileMaterialProfileBodyCoreDescriptor(atlas.candidate, atlas)]);
+    }
+  }
+  return deepFreeze(Object.fromEntries(entries));
+};
+
+export const VISUAL_LAB_INSPECTION_PRESENTATIONS = compileVisualLabInspectionPresentations(
+  VISUAL_CAPTURE_DECLARED_ATLAS_MANIFEST,
 );
-if (!renderOpticsAtlas) throw new Error('RenderOptics inspection atlas is missing');
-
-const renderOpticsSections = PHASES.map(({ key, label }) => ({
-  key,
-  label,
-  regionNames: renderOpticsAtlas.descriptor.cards
-    .filter(({ phase }) => phase === key)
-    .flatMap(({ key: cardKey }) => [`${cardKey}-body`, `${cardKey}-core`]),
-}));
-const groupedNames = new Set(renderOpticsSections.flatMap(({ regionNames }) => regionNames));
-renderOpticsSections.push({
-  key: 'controls',
-  label: 'Topology and contact controls',
-  regionNames: renderOpticsAtlas.descriptor.inspectionRegions
-    .map(({ name }) => name)
-    .filter((name) => !groupedNames.has(name)),
-});
-
-export const VISUAL_LAB_INSPECTION_PRESENTATIONS = deepFreeze({
-  'render-optics-material-lighting-atlas': {
-    sections: renderOpticsSections,
-    regionMetadata: Object.fromEntries(renderOpticsAtlas.descriptor.cards.flatMap((card) => {
-      const family = resolveMaterialAppearanceProfileCatalogEntry(card.phase, card.optics);
-      if (!family) throw new Error(`RenderOptics card ${card.key} has no appearance profile`);
-      const phaseProfile = resolveMaterialPhaseProfileCatalogEntry(card.phase);
-      if (!phaseProfile) throw new Error(`RenderOptics card ${card.key} has no phase profile`);
-      const metadata = {
-        card: card.key,
-        phase: card.phase,
-        optics: family.name,
-        opticsCode: family.optics,
-        profile: Object.fromEntries(MATERIAL_APPEARANCE_PROFILE_LANES.map(
-          (lane, index) => [lane, family.profile[index]],
-        )),
-        composition: phaseProfile.composition,
-        mesoscale: phaseProfile.mesoscale,
-      };
-      return [[`${card.key}-body`, metadata], [`${card.key}-core`, metadata]];
-    })),
-  },
-});
 
 /** Presentation-only grouping over existing authenticated region records. */
 export function resolveVisualLabInspectionPresentation(candidate, regions) {
@@ -107,9 +183,7 @@ export function resolveVisualLabInspectionPresentation(candidate, regions) {
 const RESPONSE_FIELDS = Object.freeze([
   Object.freeze({ source: 'signedLumaMeanDelta', target: 'meanLuma' }),
   Object.freeze({ source: 'signedLumaStandardDeviationDelta', target: 'spread' }),
-  Object.freeze({
-    source: 'signedLumaNeighbourAbsoluteMeanDelta', target: 'neighbourContrast',
-  }),
+  Object.freeze({ source: 'signedLumaNeighbourAbsoluteMeanDelta', target: 'neighbourContrast' }),
 ]);
 
 const compileResponse = (candidate, region) => {
@@ -117,26 +191,28 @@ const compileResponse = (candidate, region) => {
   if (!source || RESPONSE_FIELDS.some(({ source: field }) => !Number.isFinite(source[field]))) {
     throw new TypeError(`${candidate} profile-response matrix has malformed measurements`);
   }
-  return Object.fromEntries(RESPONSE_FIELDS.map(({ source: field, target }) => (
-    [target, source[field]]
-  )));
+  return Object.fromEntries(RESPONSE_FIELDS.map(({ source: field, target }) => [target, source[field]]));
 };
 
-/**
- * Presentation-only join between resolved profile metadata and current body/core
- * appearance measurements. It creates no JSON evidence or capture identity.
- */
-export function compileRenderOpticsProfileResponseMatrix(candidate, presentation) {
-  if (candidate !== 'render-optics-material-lighting-atlas'
+/** Presentation-only join; creates no JSON evidence or capture identity. */
+export function compileVisualLabInspectionResponseMatrix(candidate, presentation) {
+  const descriptor = VISUAL_LAB_INSPECTION_PRESENTATIONS[candidate];
+  if (!descriptor) return null;
+  if (descriptor.kind !== MATERIAL_PROFILE_BODY_CORE_KIND
     || !Array.isArray(presentation)
-    || presentation.length !== PHASES.length + 1
-    || presentation[presentation.length - 1]?.key !== 'controls') {
-    throw new TypeError('RenderOptics profile-response matrix input is malformed');
+    || presentation.length !== descriptor.sections.length) {
+    throw new TypeError(`${candidate} profile-response matrix input is malformed`);
   }
-  const groups = PHASES.map(({ key, label }, index) => {
+  const controls = presentation[presentation.length - 1];
+  const controlDescriptor = descriptor.sections[descriptor.sections.length - 1];
+  if (controls?.key !== controlDescriptor.key || controls.label !== controlDescriptor.label
+    || !Array.isArray(controls.regions) || controls.regions.length === 0) {
+    throw new TypeError(`${candidate} profile-response matrix controls are malformed`);
+  }
+  const groups = descriptor.phases.map(({ key, label }, index) => {
     const section = presentation[index];
     if (section?.key !== key || section.label !== label || !Array.isArray(section.regions)) {
-      throw new TypeError('RenderOptics profile-response matrix phase order is malformed');
+      throw new TypeError(`${candidate} profile-response matrix phase order is malformed`);
     }
     const pairs = new Map();
     const order = [];
@@ -152,14 +228,9 @@ export function compileRenderOpticsProfileResponseMatrix(candidate, presentation
         throw new TypeError(`${candidate} profile-response matrix has malformed region metadata`);
       }
       const [, card, kind] = match;
-      if (!pairs.has(card)) {
-        pairs.set(card, {});
-        order.push(card);
-      }
+      if (!pairs.has(card)) { pairs.set(card, {}); order.push(card); }
       const pair = pairs.get(card);
-      if (pair[kind]) {
-        throw new TypeError(`${candidate} profile-response matrix has duplicate body/core regions`);
-      }
+      if (pair[kind]) throw new TypeError(`${candidate} profile-response matrix has duplicate body/core regions`);
       pair[kind] = region;
     }
     const rows = order.map((card) => {
@@ -169,15 +240,9 @@ export function compileRenderOpticsProfileResponseMatrix(candidate, presentation
       }
       const metadata = body.presentation;
       return {
-        card,
-        phase: key,
-        optics: metadata.optics,
-        opticsCode: metadata.opticsCode,
-        profile: metadata.profile,
-        composition: metadata.composition,
-        mesoscale: metadata.mesoscale,
-        body: compileResponse(candidate, body),
-        core: compileResponse(candidate, core),
+        card, phase: key, optics: metadata.optics, opticsCode: metadata.opticsCode,
+        profile: metadata.profile, composition: metadata.composition, mesoscale: metadata.mesoscale,
+        body: compileResponse(candidate, body), core: compileResponse(candidate, core),
       };
     });
     if (rows.length * 2 !== section.regions.length) {
@@ -185,5 +250,12 @@ export function compileRenderOpticsProfileResponseMatrix(candidate, presentation
     }
     return { key, label, rows };
   });
-  return deepFreeze(groups);
+  return deepFreeze({ kind: descriptor.kind, title: descriptor.title, groups });
+}
+
+/** Historical name retained for downloaded-tooling and focused callers. */
+export function compileRenderOpticsProfileResponseMatrix(candidate, presentation) {
+  const matrix = compileVisualLabInspectionResponseMatrix(candidate, presentation);
+  if (matrix === null) throw new TypeError('RenderOptics profile-response matrix input is malformed');
+  return matrix.groups;
 }

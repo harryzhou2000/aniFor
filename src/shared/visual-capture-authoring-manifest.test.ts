@@ -123,7 +123,7 @@ describe('visual capture authoring manifest', () => {
       '4e155d636060d2710b65520addacae139e4b7844ab2d3c7ed4006e3dd6f0512a',
     );
     expect(digest(VISUAL_CAPTURE_INSPECTION_SOURCE_CATALOG)).toBe(
-      '822700d9136b70028f4ce7210a44d46f3c58be51dfeeb929ff5218b3a49bee2e',
+      'ebfadb04304d06afbd825bb063dfc75aa4439562d1e9c49f91d91e8107ad63ac',
     );
   });
 });

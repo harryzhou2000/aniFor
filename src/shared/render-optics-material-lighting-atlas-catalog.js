@@ -129,6 +129,17 @@ export const RENDER_OPTICS_MATERIAL_LIGHTING_ATLAS_CATALOG = deepFreeze({
       nativeWall,
       guardedBlank,
       inspectionRegions,
+      inspectionPresentation: {
+        kind: 'material-profile-body-core',
+        title: 'RenderOptics profile-to-response matrix',
+        phases: [
+          { key: 'powder', label: 'Powder' },
+          { key: 'liquid', label: 'Liquid' },
+          { key: 'gas', label: 'Gas' },
+          { key: 'solid', label: 'Solid' },
+        ],
+        controls: { key: 'controls', label: 'Topology and contact controls' },
+      },
     },
   }],
 });

@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { RENDER_OPTICS_MATERIAL_LIGHTING_ATLAS_CATALOG } from '../src/shared/render-optics-material-lighting-atlas-catalog.js';
 import {
   compileRenderOpticsProfileResponseMatrix,
+  compileVisualLabInspectionPresentations,
+  compileVisualLabInspectionResponseMatrix,
   resolveVisualLabInspectionPresentation,
 } from './visual-lab-inspection-presentation.mjs';
 
@@ -62,6 +64,46 @@ describe('Visual Lab inspection presentation', () => {
   it('leaves candidates without a presentation descriptor unchanged', () => {
     expect(resolveVisualLabInspectionPresentation('gas-showcase', [{ name: 'body' }]))
       .toBeNull();
+    expect(compileVisualLabInspectionResponseMatrix('gas-showcase', [])).toBeNull();
+  });
+
+  it('compiles closed declarative presentation authoring and rejects unsafe variants', () => {
+    const source = structuredClone(RENDER_OPTICS_MATERIAL_LIGHTING_ATLAS_CATALOG);
+    const compiled = compileVisualLabInspectionPresentations([source]);
+    expect(compiled[atlas.candidate]).toMatchObject({
+      kind: 'material-profile-body-core',
+      title: 'RenderOptics profile-to-response matrix',
+    });
+    expect(Object.isFrozen(compiled[atlas.candidate].sections)).toBe(true);
+
+    const unknown = structuredClone(source);
+    unknown.atlases[0].descriptor.inspectionPresentation.kind = 'module-callback';
+    expect(() => compileVisualLabInspectionPresentations([unknown]))
+      .toThrow('unsupported inspection presentation kind');
+
+    const extra = structuredClone(source);
+    extra.atlases[0].descriptor.inspectionPresentation.callback = 'run';
+    expect(() => compileVisualLabInspectionPresentations([extra]))
+      .toThrow('descriptor is malformed');
+
+    expect(() => compileVisualLabInspectionPresentations([source, structuredClone(source)]))
+      .toThrow('candidates are malformed or duplicated');
+
+    const duplicateCard = structuredClone(source);
+    duplicateCard.atlases[0].descriptor.cards[1].key = duplicateCard.atlases[0].descriptor.cards[0].key;
+    expect(() => compileVisualLabInspectionPresentations([duplicateCard]))
+      .toThrow('cards are malformed or duplicated');
+
+    const missingBody = structuredClone(source);
+    missingBody.atlases[0].descriptor.inspectionRegions.splice(0, 1);
+    expect(() => compileVisualLabInspectionPresentations([missingBody]))
+      .toThrow('missing body/core regions');
+
+    const noControls = structuredClone(source);
+    noControls.atlases[0].descriptor.inspectionRegions = noControls.atlases[0]
+      .descriptor.inspectionRegions.filter(({ name }) => /-(?:body|core)$/.test(name));
+    expect(() => compileVisualLabInspectionPresentations([noControls]))
+      .toThrow('controls are empty');
   });
 
   it('rejects missing, duplicate, and uncovered region bindings', () => {
@@ -86,6 +128,9 @@ describe('Visual Lab inspection presentation', () => {
     }));
     const presentation = resolveVisualLabInspectionPresentation(atlas.candidate, measured);
     const matrix = compileRenderOpticsProfileResponseMatrix(atlas.candidate, presentation);
+    const generic = compileVisualLabInspectionResponseMatrix(atlas.candidate, presentation);
+    expect(generic.title).toBe('RenderOptics profile-to-response matrix');
+    expect(generic.groups).toEqual(matrix);
     expect(matrix.map(({ key, rows }) => [key, rows.map(({ card }) => card)])).toEqual([
       ['powder', ['sand', 'salt', 'gunpowder', 'thermite']],
       ['liquid', ['water', 'oil', 'acid', 'lava', 'liquid-nitrogen', 'mercury', 'mwax']],
@@ -126,5 +171,12 @@ describe('Visual Lab inspection presentation', () => {
     malformed[0].regions[0].pairs.offToB.signedLumaMeanDelta = Number.NaN;
     expect(() => compileRenderOpticsProfileResponseMatrix(atlas.candidate, malformed))
       .toThrow('malformed measurements');
+
+    expect(() => compileVisualLabInspectionResponseMatrix(atlas.candidate, presentation.slice(0, -1)))
+      .toThrow('input is malformed');
+    const malformedControls = structuredClone(presentation);
+    malformedControls.at(-1).key = 'other';
+    expect(() => compileVisualLabInspectionResponseMatrix(atlas.candidate, malformedControls))
+      .toThrow('controls are malformed');
   });
 });
