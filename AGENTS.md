@@ -136,6 +136,13 @@ The local ABBA package `/tmp/anifor-v6-prearmed-pbo-abba.2eoJER` passed portable
 identity and exact PNG parity in all four legs. Keep v5, Canvas, production
 owner-zero work, and true 8x excluded; the hosted ABBA cohort is the next gate.
 
+That hosted gate passed at revision `3d538f1f2524cc0e0751d3ca424135e446334757`
+in workflow run `31674267043`: all four v6 cohorts portable-verified with one
+complete readiness snapshot and zero restart. Readiness was 19.06-26.84s and
+total time 39.31-50.98s, materially below the immediately preceding loaded-runner
+sample. This is now the accepted v6 performance checkpoint; retain complete
+evidence and move to authoring leverage or a freshly measured bottleneck.
+
 Local proof passed 1,544 source and 353 tooling tests, typecheck, production
 build, and exact 19-resource closure. The full eight-candidate material-lighting
 recipe set passed shared-host SwiftShader WebGL/HDR capture with 24 captures,

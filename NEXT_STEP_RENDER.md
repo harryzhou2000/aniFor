@@ -7161,6 +7161,21 @@ one complete readiness snapshot. Readiness was 10.81-11.93s, total was
 local timings are diagnostic. The next gate is the approved hosted v6 ABBA
 cohort, which must decide whether the overlap is robust under the loaded runner.
 
+That hosted gate passed at exact revision
+`3d538f1f2524cc0e0751d3ca424135e446334757` in workflow run `31674267043`.
+Build completed in 3m04s through the success-only ccache path; the four-leg v6
+cohort completed in 3m14s and uploaded only bounded 3,665-byte artifact
+`9171041671`. Every leg passed portable equality, used one complete readiness
+snapshot, and reported zero host restart. Fresh/shared/shared/fresh readiness
+was 21.36/26.84/19.06/19.34s and total time was
+50.98/50.02/39.31/40.14s, versus 52.30-53.77s readiness and 92.57-102.63s
+total in the immediately preceding hosted boundary-convergence run. The
+Node-observed readiness readback was 7.55-10.83s, so the overlap did not erase
+the transfer but hid a substantial part behind activation work. Accept this as
+the current v6 performance checkpoint. Keep v4 and v5 as rollback/diagnostic
+controls; continue with authoring leverage or a newly measured bottleneck, not
+another weakening of readiness evidence.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
