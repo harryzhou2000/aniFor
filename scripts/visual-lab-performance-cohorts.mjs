@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import {
-  lstat, mkdir, readdir, rename, writeFile,
+  lstat, mkdir, readFile, readdir, rename, writeFile,
 } from 'node:fs/promises';
 import { isDeepStrictEqual, promisify } from 'node:util';
 import path from 'node:path';
@@ -28,6 +28,7 @@ const MODULE_PATH = fileURLToPath(import.meta.url);
 const REPOSITORY_ROOT = path.resolve(path.dirname(MODULE_PATH), '..');
 const execFileAsync = promisify(execFile);
 const MAX_SUMMARY_BYTES = 1_048_576;
+const MAX_FAILURE_DIAGNOSTIC_BYTES = 16_384;
 const MAX_HOST_DURATION_MS = 3_600_000;
 const MAX_HOST_EVENTS = 1_000_000;
 const SHA256_ID = /^sha256:[0-9a-f]{64}$/;
@@ -156,6 +157,42 @@ const ensureEmptyOutputDirectory = async (directory) => {
   if ((await readdir(directory)).length > 0) {
     throw new Error('Visual Lab performance cohort output directory must be empty');
   }
+};
+
+const assertCompleteBatch = async (ordinal, mode, cohortDirectory, batch) => {
+  if (batch?.ok === true && batch?.index?.complete === true) return;
+  const failed = Array.isArray(batch?.index?.candidates)
+    ? batch.index.candidates.filter(({ status }) => status === 'failed') : [];
+  const details = [];
+  for (const entry of failed) {
+    const diagnostic = entry?.artifacts?.diagnostic;
+    if (typeof diagnostic !== 'string') {
+      details.push(`${entry?.candidate ?? 'unknown'}: ${entry?.failure ?? 'failed'}`);
+      continue;
+    }
+    const target = path.resolve(cohortDirectory, diagnostic);
+    const relative = path.relative(cohortDirectory, target);
+    if (relative.startsWith(`..${path.sep}`) || relative === '..' || path.isAbsolute(relative)) {
+      details.push(`${entry.candidate}: ${entry.failure ?? 'failed'} (unsafe diagnostic omitted)`);
+      continue;
+    }
+    try {
+      const metadata = await lstat(target);
+      if (!metadata.isFile() || metadata.isSymbolicLink()
+        || metadata.size > MAX_FAILURE_DIAGNOSTIC_BYTES) {
+        details.push(`${entry.candidate}: ${entry.failure ?? 'failed'} (diagnostic omitted)`);
+        continue;
+      }
+      const diagnosticText = (await readFile(target, 'utf8')).trim();
+      details.push(`${entry.candidate}: ${diagnosticText || entry.failure || 'failed'}`);
+    } catch {
+      details.push(`${entry.candidate}: ${entry.failure ?? 'failed'} (diagnostic unavailable)`);
+    }
+  }
+  const suffix = details.length === 0 ? '' : `\n${details.join('\n')}`;
+  throw new Error(
+    `Visual Lab performance cohort ${ordinal} (${mode}) capture failed${suffix}`,
+  );
 };
 
 const reasonCountsFor = (reasons) => Object.freeze(Object.fromEntries(
@@ -357,6 +394,7 @@ export async function runVisualLabPerformanceCohorts(options = {}, dependencies 
       ...(requested.bundle === undefined ? {} : { bundle: requested.bundle }),
       ...(requested.chrome === undefined ? {} : { chrome: requested.chrome }),
     });
+    await assertCompleteBatch(ordinal, mode, cohortDirectory, batch);
     const verified = await verifyBatch({
       batchRoot: cohortDirectory,
       recipeSetSourcePath: requested.recipeSetPath,

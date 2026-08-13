@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -219,6 +219,37 @@ describe('Visual Lab performance cohort orchestration', () => {
     })).rejects.toThrow('second cohort failed');
     expect(runs).toBe(2);
     await expect(readFile(path.join(root, 'performance-summary.json'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('surfaces the bounded candidate tombstone before portable verification', async () => {
+    const root = await temporaryRoot();
+    let verified = false;
+    await expect(runVisualLabPerformanceCohorts({
+      recipeSetPath: 'set.json', outputDir: root,
+    }, {
+      assertTrackedRecipeSet: async () => {},
+      readRecipeSet: async () => recipeSet(),
+      runBatch: async ({ outputDir, browserHost }) => {
+        const diagnostic = 'candidates/gas-showcase/failure.log';
+        await mkdir(path.dirname(path.join(outputDir, diagnostic)), { recursive: true });
+        await writeFile(path.join(outputDir, diagnostic), 'capture-failed\nGPU receipt watchdog expired\n');
+        return {
+          ...completeBatch(browserHost),
+          ok: false,
+          index: {
+            complete: false,
+            candidates: [{
+              candidate: 'gas-showcase', status: 'failed', failure: 'capture-failed',
+              artifacts: { diagnostic },
+            }],
+          },
+        };
+      },
+      verifyBatch: async () => { verified = true; },
+    })).rejects.toThrow('GPU receipt watchdog expired');
+    expect(verified).toBe(false);
+    await expect(readFile(path.join(root, 'performance-summary.json'), 'utf8'))
+      .rejects.toMatchObject({ code: 'ENOENT' });
   });
 
   it('rejects true 8x and incomplete diagnostics before publishing a summary', async () => {
