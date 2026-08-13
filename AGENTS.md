@@ -5003,6 +5003,17 @@ Liquid native-wall refraction may move only the analytic wall-pattern coordinate
 
 Normal WebGL may add a final dense-body ambient fill after ordinary liquid/solid composition to keep proven deep interiors from collapsing against the dark backdrop. It is default-on, independently auditable, hue-preserving RGB-only, and capped at five framebuffer bytes. Liquid requires exact ordinary family-2 ownership, no reconstructed support or exposed side, no seam/wall/trait/emission/molten/foreign contact, `liquidDepth > .48`, cardinal mean `> .56`, and squared species slope below `.00024`; solid requires exact non-granular, non-translucent family-0 ownership, no surface/halo/wall/trait/emission case, positive `solidInterior`, and optical depth above `6/255`. Alpha, support, topology, fields, state, and protected controls are exact no-ops. Keep direct 8× unchanged and render-free: its no-op setter, inactive selector, stable presentation-refresh sequence, and true-8× control prove this normal-compositor refinement never expands the compact shader's resource/register budget. The DPR-1 WebGL gate must prove exact off→on→off at 1×/2×/4× plus bounded deep Water/Metal lift, with Sand, O₂, PHOT, thin, native-wall, unlike-liquid-seam, and isolated-liquid controls unchanged.
 
+Shared Solid material lighting may use the existing profile response and solid
+optical-depth/relief carrier to distinguish shell, core, and transmitted core.
+Keep the current exact broad-body admission gate and RGB-only ownership: no
+granular matter, walls, emission, foreign/unlike contacts, fine/surface-only
+topology, Canvas, or compact true 8x. Relief is only a sub-three-depth-level
+phase perturbation of the shell/core transition, never an additive lighting
+term; remove that perturbation first if repeated diagonal bands appear. Prefer
+real RenderOptics and focused Solid atlas inspection over expanding exact-pixel
+unit tests. Cavities, isolated points, contacts, fine controls, native walls,
+and guarded blank regions are the topology controls.
+
 Read [`docs/render-lab.md`](docs/render-lab.md) before changing reconstruction thresholds or blur radii. A TypeScript or Vite build does not compile Pixi's runtime GLSL; a browser screenshot with a clean shader console is required.
 
 The style lookup is an RGBA data texture, not display color: RGB stores phase/profile/emission and alpha stores the static `RenderTrait` mask. Keep nearest sampling and `no-premultiply-alpha`; zero-valued trait alpha must never erase the RGB metadata.

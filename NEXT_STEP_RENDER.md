@@ -7701,6 +7701,30 @@ Gunpowder, and Thermite keep their granular identity while reading as a more
 coherent illuminated mass. Treat these IDs as evidence for this revision, not
 cross-revision visual pins.
 
+The next retained Solid increment similarly reuses the established carrier
+instead of adding a pass or field. Volumetric B now exchanges a bounded amount
+of each appearance profile's existing optical energy between a cooler outer
+shell, a denser identity-coloured core, and an open transmitted core for
+high-scatter/high-transmission families. The existing connected-solid relief
+may perturb the shell/core depth phase by at most 2.5 source depth levels; it
+never contributes light directly. This is the rollback boundary: if a future
+profile or scene exposes repeated diagonal bands, remove the relief phase warp
+while retaining the profile-coloured shell/core exchange.
+
+The exact Solid admission gate remains unchanged: supported broad Solid bodies
+only, excluding powder/granular matter, walls, emission, foreign or unlike
+contacts, surfaces/halos, shallow depth, and unsupported optical families. The
+change is RGB-only and adds no texture, sample, target, pass, allocation,
+support, alpha, or topology decision. OFF/A, Canvas, and compact true 8x remain
+unchanged. Real SwiftShader review of both the RenderOptics atlas and the
+focused Solid atlas retained the treatment: rigid, organic, device,
+translucent, metal, ceramic, and wax-like cards gain a clearer material-specific
+shell/core hierarchy, while cavities, isolated particles, fine controls,
+contacts, walls, and blank space stay intact. The focused capture passed
+WebGL/HDR, completed-frame and semantic/field/framebuffer invariants with zero
+browser errors. Its result ID is revision evidence only, never a visual gate:
+`sha256:4ac7ea18e1b57201c33d8dd34cc4c073953385dd45ebd0f318f095ada99c9eae`.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

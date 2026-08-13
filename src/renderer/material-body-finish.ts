@@ -524,6 +524,7 @@ vec3 applySolidMaterialLighting(
   float finishRoughness,
   float finishInteriorScatter,
   float opticalDepth,
+  float reliefPhase,
   vec3 normal,
   float eligibility,
   float enabled,
@@ -534,7 +535,14 @@ vec3 applySolidMaterialLighting(
   }
 
   float body = smoothstep(6.0 / 255.0, 42.0 / 255.0, opticalDepth) * eligibility;
-  float core = smoothstep(24.0 / 255.0, 116.0 / 255.0, opticalDepth);
+  // Relief may move the broad shell/core transition by less than three source
+  // depth levels, but never contributes brightness directly. This keeps the
+  // existing connected-body relief useful without reviving its rejected
+  // diagonal bands as a visible lighting pattern.
+  float warpedOpticalDepth = clamp(
+    opticalDepth + clamp(reliefPhase, -1.0, 1.0) * (2.5 / 255.0), 0.0, 1.0
+  );
+  float core = smoothstep(24.0 / 255.0, 116.0 / 255.0, warpedOpticalDepth);
   float facing = dot(normal, normalize(vec3(-0.42, -0.62, 0.78)));
   float grazingBase = 1.0 - clamp(normal.z, 0.0, 1.0);
   float roughness = clamp((finishRoughness - 0.5) / 1.0, 0.0, 1.0);
@@ -589,6 +597,24 @@ vec3 applySolidMaterialLighting(
   vec3 subsurfaceTint = mix(keyTint, identityTint, 0.44 + 0.30 * transmissionReserve);
   color += (vec3(1.08) - clamp(color, 0.0, 1.08))
     * subsurfaceTint * subsurface;
+
+  // Exchange a small amount of the profile's existing optical energy between
+  // shell and core. Smooth rigid bodies gain a cooler, tighter skin and a
+  // pigment-bearing centre; high-transmission/scatter profiles retain an open
+  // luminous interior instead of being darkened into an opaque slab.
+  float opaqueReserve = 1.0 - transmissionReserve;
+  float shellExchange = shell * (0.005 + (1.0 - roughness) * 0.011)
+    * clamp(finishResponse.x, 0.55, 1.45);
+  float coreExchange = body * core * (0.005 + finishResponse.z * 0.008)
+    * mix(1.0, 0.34, transmissionReserve);
+  float openCore = body * core * volumeAdmission
+    * (0.004 + finishInteriorScatter * 0.006) * transmissionReserve;
+  vec3 shellTint = mix(vec3(0.70, 0.83, 1.0), identityTint, 0.30 + roughness * 0.22);
+  vec3 coreTint = mix(vec3(0.42, 0.48, 0.58), identityTint, 0.58 + opaqueReserve * 0.24);
+  color += (vec3(1.08) - clamp(color, 0.0, 1.08)) * shellTint * shellExchange;
+  color *= vec3(1.0) - coreTint * coreExchange;
+  color += (vec3(1.08) - clamp(color, 0.0, 1.08))
+    * mix(keyTint, identityTint, 0.68) * openCore;
 
   float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
   color += (color - vec3(luminance)) * body * core * 0.018 * finishResponse.z;

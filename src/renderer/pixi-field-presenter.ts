@@ -8852,7 +8852,7 @@ void main() {
       color = applySolidMaterialLighting(
         color, solidFinishProfile.optics, solidFinishProfile.roughness,
         solidFinishProfile.interiorScatter,
-        solidOpticalDepth, normal,
+        solidOpticalDepth, clamp(solidReliefTone * 255.0 / 7.0, -1.0, 1.0), normal,
         solidInterior * solidLightingFamily, uMaterialBodyFinish,
         uMaterialLightingVariant
       );
