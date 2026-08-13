@@ -8123,6 +8123,22 @@ should fuse typed fixture activation with WebGL promotion so the first HDR frame
 is already the owner-bound populated frame, behind an implementation experiment
 that preserves the existing v9 plan/report and exact result identities.
 
+That readiness-preparation increment is deployed at exact revision
+`55b9a2154eb517057698a7c7e049c98ef7c5a779` by workflow run `31748882794`.
+The cached build passed in 3m50s with 269/270 ccache hits, 233 source test files,
+35 tooling test files, the four pretest files, and exact 19-resource closure.
+The shared-host RenderOptics review and its downloaded portable package passed
+in 1m42s with the exact canonical result above and all 49 inspection regions.
+Pages deployed in 16s; exact revision and 19-resource closure passed, followed
+by the hosted Water receipt-v2 batch and portable verification in 1m9s with the
+unchanged result
+`sha256:c83123c25c6181ecdc10d0668cb3b1c6a56d22888b7bb79d02d1739d5824be5b`.
+The bounded live evidence artifact is `9200291296`. CI RenderOptics readiness
+remained load-sensitive at approximately 41.05 seconds, including about 22.46
+seconds in the complete snapshot/PBO wait; the preparation cleanup is deployed,
+but eliminating the separate unreviewed promotion frame remains the meaningful
+next experiment.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
