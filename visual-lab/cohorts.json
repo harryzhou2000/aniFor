@@ -1,10 +1,11 @@
 {
-  "schema": "anifor.visual-lab.cohort-catalog/v2",
+  "schema": "anifor.visual-lab.cohort-catalog/v3",
   "cohorts": [
     {
       "name": "atmosphere",
       "includes": [],
       "selectors": {
+        "sources": [],
         "domains": ["gas"],
         "fixtures": []
       },
@@ -14,6 +15,7 @@
       "name": "liquid-motion",
       "includes": [],
       "selectors": {
+        "sources": [],
         "domains": ["liquid"],
         "fixtures": ["oil-motion", "water-motion"]
       },
@@ -23,6 +25,7 @@
       "name": "powder-style",
       "includes": [],
       "selectors": {
+        "sources": [],
         "domains": ["powder"],
         "fixtures": []
       },
@@ -32,7 +35,18 @@
       "name": "material-lighting",
       "includes": [],
       "selectors": {
+        "sources": [],
         "domains": ["material-lighting"],
+        "fixtures": []
+      },
+      "candidates": []
+    },
+    {
+      "name": "solid-materials",
+      "includes": [],
+      "selectors": {
+        "sources": ["solid"],
+        "domains": [],
         "fixtures": []
       },
       "candidates": []
@@ -45,6 +59,7 @@
         "powder-style"
       ],
       "selectors": {
+        "sources": [],
         "domains": [],
         "fixtures": []
       },
@@ -56,6 +71,7 @@
         "material-optics"
       ],
       "selectors": {
+        "sources": [],
         "domains": [],
         "fixtures": []
       },

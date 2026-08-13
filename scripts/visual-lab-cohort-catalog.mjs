@@ -7,9 +7,11 @@ import { fileURLToPath } from 'node:url';
 
 import { createVisualLabRecipeSet } from './visual-lab-recipe-set.mjs';
 import { VISUAL_LAB_CAPTURE_RECIPES } from './visual-lab-recipes.mjs';
+import { VISUAL_CAPTURE_AUTHORING_MANIFEST } from '../src/shared/visual-capture-authoring-manifest.js';
 
 export const VISUAL_LAB_COHORT_CATALOG_SCHEMA = 'anifor.visual-lab.cohort-catalog/v1';
 export const VISUAL_LAB_COHORT_CATALOG_SCHEMA_V2 = 'anifor.visual-lab.cohort-catalog/v2';
+export const VISUAL_LAB_COHORT_CATALOG_SCHEMA_V3 = 'anifor.visual-lab.cohort-catalog/v3';
 export const VISUAL_LAB_COHORT_CATALOG_MAX_BYTES = 65_536;
 
 const MODULE_PATH = fileURLToPath(import.meta.url);
@@ -18,7 +20,8 @@ const DEFAULT_OUTPUT = fileURLToPath(new URL('../visual-lab/recipe-sets', import
 const CATALOG_FIELDS = Object.freeze(['schema', 'cohorts']);
 const COHORT_FIELDS_V1 = Object.freeze(['name', 'includes', 'candidates']);
 const COHORT_FIELDS = Object.freeze(['name', 'includes', 'selectors', 'candidates']);
-const SELECTOR_FIELDS = Object.freeze(['domains', 'fixtures']);
+const SELECTOR_FIELDS_V2 = Object.freeze(['domains', 'fixtures']);
+const SELECTOR_FIELDS = Object.freeze(['sources', 'domains', 'fixtures']);
 const SAFE_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const MAX_NAME_LENGTH = 64;
 const MAX_JSON_DEPTH = 32;
@@ -28,8 +31,9 @@ const HELP = `Usage:
   node scripts/visual-lab-cohort-catalog.mjs sync [--catalog=<cohorts.json>] [--output=<directory>]
 
 check fails unless the output directory contains exactly the canonical recipe
-sets compiled from the v1/v2 cohort catalog. v2 may select recipes by their
-closed domain and fixture metadata. sync writes those same bytes
+sets compiled from the v1/v2/v3 cohort catalog. v2 may select recipes by their
+closed domain and fixture metadata; v3 may also select the data-only authoring
+source that owns an atlas. sync writes those same bytes
 with atomic per-file replacement; it does not delete unexpected files, so it
 also fails while extra recipe-set JSON files remain.`;
 
@@ -72,6 +76,10 @@ const normalizeNameList = (value, label) => {
 
 const RECIPE_DOMAINS = new Set(VISUAL_LAB_CAPTURE_RECIPES.map(({ domain }) => domain));
 const RECIPE_FIXTURES = new Set(VISUAL_LAB_CAPTURE_RECIPES.map(({ fixture }) => fixture));
+const AUTHORING_SOURCE_CANDIDATES = new Map(VISUAL_CAPTURE_AUTHORING_MANIFEST.map((source) => [
+  source.name, new Set(source.entries.map(({ atlas }) => atlas.candidate)),
+]));
+const AUTHORING_SOURCES = new Set(AUTHORING_SOURCE_CANDIDATES.keys());
 
 const normalizeSelectorList = (value, label, known, kind) => {
   const names = normalizeNameList(value, label);
@@ -81,9 +89,13 @@ const normalizeSelectorList = (value, label, known, kind) => {
   return names;
 };
 
-const normalizeSelectors = (value, label) => {
-  assertExactFields(value, SELECTOR_FIELDS, label);
+const normalizeSelectors = (value, label, schema) => {
+  const legacyV2 = schema === VISUAL_LAB_COHORT_CATALOG_SCHEMA_V2;
+  assertExactFields(value, legacyV2 ? SELECTOR_FIELDS_V2 : SELECTOR_FIELDS, label);
   return Object.freeze({
+    sources: legacyV2 ? Object.freeze([]) : normalizeSelectorList(
+      value.sources, `${label} sources`, AUTHORING_SOURCES, 'authoring source',
+    ),
     domains: normalizeSelectorList(value.domains, `${label} domains`, RECIPE_DOMAINS, 'domain'),
     fixtures: normalizeSelectorList(value.fixtures, `${label} fixtures`, RECIPE_FIXTURES, 'fixture'),
   });
@@ -91,11 +103,12 @@ const normalizeSelectors = (value, label) => {
 
 export function normalizeVisualLabCohortCatalog(input) {
   assertExactFields(input, CATALOG_FIELDS, 'Visual Lab cohort catalog');
-  if (input.schema !== VISUAL_LAB_COHORT_CATALOG_SCHEMA_V2
+  if (input.schema !== VISUAL_LAB_COHORT_CATALOG_SCHEMA_V3
+    && input.schema !== VISUAL_LAB_COHORT_CATALOG_SCHEMA_V2
     && input.schema !== VISUAL_LAB_COHORT_CATALOG_SCHEMA) {
     throw new TypeError(
-      `Visual Lab cohort catalog schema must be ${VISUAL_LAB_COHORT_CATALOG_SCHEMA_V2}`
-      + ` or ${VISUAL_LAB_COHORT_CATALOG_SCHEMA}`,
+      `Visual Lab cohort catalog schema must be ${VISUAL_LAB_COHORT_CATALOG_SCHEMA_V3}, `
+      + `${VISUAL_LAB_COHORT_CATALOG_SCHEMA_V2}, or ${VISUAL_LAB_COHORT_CATALOG_SCHEMA}`,
     );
   }
   if (!Array.isArray(input.cohorts) || input.cohorts.length === 0) {
@@ -113,8 +126,8 @@ export function normalizeVisualLabCohortCatalog(input) {
       name,
       includes: normalizeNameList(cohort.includes, `${label} includes`),
       selectors: legacy
-        ? Object.freeze({ domains: Object.freeze([]), fixtures: Object.freeze([]) })
-        : normalizeSelectors(cohort.selectors, `${label} selectors`),
+        ? Object.freeze({ sources: Object.freeze([]), domains: Object.freeze([]), fixtures: Object.freeze([]) })
+        : normalizeSelectors(cohort.selectors, `${label} selectors`, input.schema),
       candidates: normalizeNameList(cohort.candidates, `${label} candidates`),
     });
   });
@@ -306,10 +319,14 @@ export function compileVisualLabCohortCatalog(input) {
       throw new TypeError(`Visual Lab cohort include cycle: ${[...active.slice(cycleAt), name].join(' -> ')}`);
     }
     active.push(name);
+    const hasSourceSelector = cohort.selectors.sources.length > 0;
     const hasDomainSelector = cohort.selectors.domains.length > 0;
     const hasFixtureSelector = cohort.selectors.fixtures.length > 0;
     const selected = VISUAL_LAB_CAPTURE_RECIPES.filter((recipe) => (
-      (hasDomainSelector || hasFixtureSelector)
+      (hasSourceSelector || hasDomainSelector || hasFixtureSelector)
+      && (!hasSourceSelector || cohort.selectors.sources.some((source) => (
+        AUTHORING_SOURCE_CANDIDATES.get(source).has(recipe.name)
+      )))
       && (!hasDomainSelector || cohort.selectors.domains.includes(recipe.domain))
       && (!hasFixtureSelector || cohort.selectors.fixtures.includes(recipe.fixture))
     )).map((recipe) => recipe.name);
@@ -462,9 +479,9 @@ const main = async () => {
     const result = options.command === 'sync'
       ? await syncVisualLabCohortOutputs(catalog, options.output)
       : await checkVisualLabCohortOutputs(catalog, options.output);
-    process.stdout.write(`${JSON.stringify({ tool: 'visual-lab-cohort-catalog-v2', ok: true, ...result })}\n`);
+    process.stdout.write(`${JSON.stringify({ tool: 'visual-lab-cohort-catalog-v3', ok: true, ...result })}\n`);
   } catch (error) {
-    process.stderr.write(`${JSON.stringify({ tool: 'visual-lab-cohort-catalog-v2', ok: false, error: error?.stack ?? String(error) })}\n`);
+    process.stderr.write(`${JSON.stringify({ tool: 'visual-lab-cohort-catalog-v3', ok: false, error: error?.stack ?? String(error) })}\n`);
     process.exitCode = 1;
   }
 };

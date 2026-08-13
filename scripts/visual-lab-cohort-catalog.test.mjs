@@ -18,6 +18,7 @@ import {
   VISUAL_LAB_COHORT_CATALOG_MAX_BYTES,
   VISUAL_LAB_COHORT_CATALOG_SCHEMA,
   VISUAL_LAB_COHORT_CATALOG_SCHEMA_V2,
+  VISUAL_LAB_COHORT_CATALOG_SCHEMA_V3,
   visualLabCohortNames,
   visualLabCohortNamesFromCatalog,
 } from './visual-lab-cohort-catalog.mjs';
@@ -34,8 +35,8 @@ const temporaryDirectory = async () => {
   return directory;
 };
 
-const catalog = (cohorts) => ({ schema: VISUAL_LAB_COHORT_CATALOG_SCHEMA_V2, cohorts });
-const selectors = (domains = [], fixtures = []) => ({ domains, fixtures });
+const catalog = (cohorts) => ({ schema: VISUAL_LAB_COHORT_CATALOG_SCHEMA_V3, cohorts });
+const selectors = (domains = [], fixtures = [], sources = []) => ({ sources, domains, fixtures });
 const leaf = (name, candidates, selected = selectors()) => ({
   name, includes: [], selectors: selected, candidates,
 });
@@ -84,13 +85,44 @@ describe('Visual Lab declarative cohort catalog', () => {
     ]);
   });
 
+  it('derives canonical membership from data-only authoring sources and intersects selector axes', () => {
+    const input = catalog([
+      leaf('solid-source', [], selectors([], [], ['solid'])),
+      leaf('showcase-source', [], selectors([], [], ['material-showcase'])),
+      leaf('solid-material-lighting', [], selectors(['material-lighting'], [], ['solid'])),
+    ]);
+    const compiled = compileVisualLabCohortCatalog(input);
+    expect(compiled[0].recipes.map(({ name }) => name)).toEqual([
+      'solid-material-lighting-atlas', 'multi-metal-material-lighting-atlas',
+    ]);
+    expect(compiled[1].recipes.map(({ name }) => name)).toEqual([
+      'gas-showcase', 'oxygen-showcase',
+    ]);
+    expect(compiled[2].recipes.map(({ name }) => name)).toEqual([
+      'solid-material-lighting-atlas', 'multi-metal-material-lighting-atlas',
+    ]);
+  });
+
+  it('keeps v2 catalogs readable without granting authoring-source selectors', () => {
+    const input = {
+      schema: VISUAL_LAB_COHORT_CATALOG_SCHEMA_V2,
+      cohorts: [{
+        name: 'air', includes: [], selectors: { domains: ['gas'], fixtures: [] }, candidates: [],
+      }],
+    };
+    const normalized = normalizeVisualLabCohortCatalog(input);
+    expect(normalized.cohorts[0].selectors).toEqual({ sources: [], domains: ['gas'], fixtures: [] });
+    expect(compileVisualLabCohortCatalog(input)[0].recipes.map(({ name }) => name))
+      .toEqual(['gas-showcase', 'oxygen-showcase']);
+  });
+
   it('keeps v1 catalogs readable without granting selectors', () => {
     const input = legacyCatalog([
       { name: 'air', includes: [], candidates: ['gas-showcase'] },
     ]);
     const normalized = normalizeVisualLabCohortCatalog(input);
     expect(normalized.schema).toBe(VISUAL_LAB_COHORT_CATALOG_SCHEMA);
-    expect(normalized.cohorts[0].selectors).toEqual({ domains: [], fixtures: [] });
+    expect(normalized.cohorts[0].selectors).toEqual({ sources: [], domains: [], fixtures: [] });
     expect(compileVisualLabCohortCatalog(input)[0].recipes.map(({ name }) => name))
       .toEqual(['gas-showcase']);
   });
@@ -129,8 +161,11 @@ describe('Visual Lab declarative cohort catalog', () => {
     ]))).toThrow('Unknown Visual Lab recipe fixture');
     expect(() => normalizeVisualLabCohortCatalog(catalog([{
       name: 'extra-selector-field', includes: [],
-      selectors: { domains: ['gas'], fixtures: [], extra: [] }, candidates: [],
-    }]))).toThrow('exactly domains, fixtures');
+      selectors: { sources: [], domains: ['gas'], fixtures: [], extra: [] }, candidates: [],
+    }]))).toThrow('exactly sources, domains, fixtures');
+    expect(() => normalizeVisualLabCohortCatalog(catalog([
+      leaf('unknown-source', [], selectors([], [], ['missing-source'])),
+    ]))).toThrow('Unknown Visual Lab recipe authoring source');
     expect(() => compileVisualLabCohortCatalog(catalog([
       leaf('nonmatching-intersection', [], selectors(['gas'], ['water-motion'])),
     ]))).toThrow('expands to no candidates');
@@ -212,14 +247,14 @@ describe('Visual Lab declarative cohort catalog', () => {
     const release = input.cohorts.find(({ name }) => name === 'release');
     expect(release).toMatchObject({
       includes: ['material-optics'],
-      selectors: { domains: [], fixtures: [] },
+      selectors: { sources: [], domains: [], fixtures: [] },
       candidates: [],
     });
     await expect(checkVisualLabCohortOutputs(input, output)).resolves.toEqual({
-      checked: 6,
+      checked: 7,
       names: [
         'atmosphere.json', 'liquid-motion.json', 'material-lighting.json',
-        'material-optics.json', 'powder-style.json', 'release.json',
+        'material-optics.json', 'powder-style.json', 'release.json', 'solid-materials.json',
       ],
     });
     const compiled = compileVisualLabCohortCatalog(input);
@@ -228,6 +263,7 @@ describe('Visual Lab declarative cohort catalog', () => {
       'sha256:7fd140a5fef7cb4e692d8db08e35b3bb3da7835451a92289ba2941efe7fab380',
       'sha256:f5053916b82e8907f840ae6e334a159bedecc69b0777e2700f0383917b58a4e0',
       'sha256:4f364cad6b11c0a1f016785e4d87087f88818e7cc3eeadee0a8f4371f417edcd',
+      'sha256:6be1bd43bad5b455398a7848a0f9348ce186a66b7ea181b61413568e40de326e',
       'sha256:2f7824673c315358416b802283d3d3333f0b22cd908699cbe512da8b38f6c5e2',
     ]);
   });
@@ -235,7 +271,7 @@ describe('Visual Lab declarative cohort catalog', () => {
   it('exposes launcher-safe names and resolution with tracked snapshot metadata', async () => {
     expect(await visualLabCohortNames()).toEqual([
       'atmosphere', 'liquid-motion', 'powder-style', 'material-lighting',
-      'material-optics', 'release',
+      'solid-materials', 'material-optics', 'release',
     ]);
     const resolved = await resolveVisualLabCohort('release');
     expect(resolved.name).toBe('release');

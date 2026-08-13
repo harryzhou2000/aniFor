@@ -1504,6 +1504,23 @@ recipe-set/v1 snapshots retain their exact bytes and identities. This removes
 repeated membership edits for domain-wide visual experiments without placing
 executable driver or fixture authority in catalog data.
 
+The cohort authoring seam now has a backward-readable v3 extension. V1 and v2
+retain their exact accepted shapes; v3 adds a closed `sources` selector derived
+from the frozen data-only visual-capture authoring manifest. Populated source,
+domain, and fixture axes intersect, while includes and explicit candidates keep
+their established composition semantics. Unknown sources, duplicate expansion,
+and empty intersections fail before a recipe set is emitted. Source selection
+uses only atlas candidate names—even legacy `capture: null` entries remain
+selectable when the canonical recipe catalog owns them—and grants no fixture
+preparation, driver, browser, or renderer authority. The first tracked
+`solid-materials` cohort selects authoring source `solid` and canonically emits
+the solid and multi-metal recipes as recipe-set
+`sha256:6be1bd43bad5b455398a7848a0f9348ce186a66b7ea181b61413568e40de326e`.
+A real shared-host SwiftShader run at `/tmp/anifor-source-cohort-solid-v1`
+passed both candidates, one host/two fresh contexts, zero restarts, 112 declared
+regions, and portable verification. This is authoring/review leverage; it adds
+no result, evidence, renderer, or visual-identity schema.
+
 The first experiment through that authoring seam makes the normal-HDR liquid
 choice legible at whole-scene scale. Variant A gives the existing transmitted
 donor a broader shallow mix and narrow direction/ripple crest; B favours the

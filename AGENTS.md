@@ -729,6 +729,19 @@ should cover the opposed Clay warm flank, cool flank, centre, authored hole,
 fine structure, wet suspension, native wall, and blank without adding a browser
 method, renderer path, capture, or Chrome lifecycle.
 
+Declarative cohort catalog v3 may select capture recipes through the data-only
+authoring source that owns their atlas. Keep v1/v2 readable, derive the closed
+source-to-candidate projection from `VISUAL_CAPTURE_AUTHORING_MANIFEST`, and
+apply intersection semantics across nonempty `sources`, `domains`, and
+`fixtures`. Resolve selected candidate names through the canonical recipe
+catalog so `capture: null` legacy atlas rows remain data-selectable without
+gaining execution authority. Do not infer or register app preparers, drivers,
+browser methods, callbacks, module paths, or ordering from the source name.
+Includes and explicit candidates remain supported, but every expanded duplicate
+or empty intersection must fail closed. `solid-materials` is the first source-
+backed cohort and must continue to compile to the solid plus multi-metal recipes
+in canonical recipe order.
+
 The scripts-only region-response framework is checkpointed at `7046134`. Its
 first real package is
 `.artifacts/visual-lab-reviews/region-response-7046134`: the opposed-source
