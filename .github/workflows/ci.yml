@@ -301,17 +301,15 @@ jobs:
             "--capture-proof=${VISUAL_LAB_CAPTURE_PROOF}"
           )
           candidate_request="${VISUAL_LAB_CANDIDATES//[[:space:]]/}"
-          cohort_request="${VISUAL_LAB_COHORT//[[:space:]]/}"
           recipe_set_request="${VISUAL_LAB_RECIPE_SET//[[:space:]]/}"
-          selection_count=0
-          [[ -z "${candidate_request}" ]] || ((selection_count += 1))
-          [[ -z "${cohort_request}" ]] || ((selection_count += 1))
-          [[ -z "${recipe_set_request}" ]] || ((selection_count += 1))
-          if ((selection_count > 1)); then
-            echo "visual_lab_candidates, visual_lab_cohort, and visual_lab_recipe_set are mutually exclusive" >&2
+          if [[ -n "${candidate_request}" && -n "${recipe_set_request}" ]]; then
+            echo "visual_lab_candidates and visual_lab_recipe_set are mutually exclusive" >&2
             exit 2
           fi
-          if [[ -n "${cohort_request}" ]]; then
+          # GitHub supplies the cohort input's default even when workflow_dispatch
+          # explicitly selects ad-hoc candidates or a recipe set. Those explicit
+          # selectors therefore take precedence; use the cohort only as fallback.
+          if [[ -z "${candidate_request}" && -z "${recipe_set_request}" ]]; then
             if [[ ! "${VISUAL_LAB_COHORT}" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
               echo "visual_lab_cohort must be a safe kebab-case catalog name" >&2
               exit 2

@@ -231,7 +231,10 @@ describe('Visual Lab recipe-set/v1', () => {
     expect(workflow).toContain("github.event_name == 'workflow_dispatch' &&");
     expect(workflow).toContain('inputs.visual_lab_review == true &&');
     expect(workflow).toContain(
-      'visual_lab_candidates, visual_lab_cohort, and visual_lab_recipe_set are mutually exclusive',
+      'visual_lab_candidates and visual_lab_recipe_set are mutually exclusive',
+    );
+    expect(workflow).toContain(
+      'if [[ -z "${candidate_request}" && -z "${recipe_set_request}" ]]; then',
     );
     expect(workflow).toContain('resolveVisualLabCohort(process.env.VISUAL_LAB_COHORT)');
     expect(workflow).toContain('readVisualLabRecipeSet(resolved.snapshotPath)');
