@@ -20,6 +20,7 @@ import {
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V9_SCHEMA,
 } from './visual-lab-execution-tuning-plan.mjs';
 
 export const VISUAL_LAB_PERFORMANCE_COHORT_SCHEMA = 'anifor.visual-lab.performance-cohorts/v1';
@@ -52,6 +53,8 @@ const SELECTION_OWNED_FRAME_RECEIPT_CAPTURE_PROOF = 'selection-owned-frame-recei
 const FIXTURE_ACTIVATION_GENERATION_CAPTURE_PROOF = 'fixture-activation-generation';
 const FIXTURE_ACTIVATION_WORK_GENERATION_CAPTURE_PROOF = 'fixture-activation-work-generation';
 const FIXTURE_ACTIVATION_RENDER_FIELD_GENERATION_CAPTURE_PROOF = 'fixture-activation-render-field-generation';
+const FIXTURE_ACTIVATION_RENDER_FIELD_GENERATION_AND_SELECTION_OWNED_ALPHA_READBACK_CAPTURE_PROOF =
+  'fixture-activation-render-field-generation-and-selection-owned-alpha-readback';
 const EXECUTION_TUNING_SCHEMAS_BY_CAPTURE_PROOF = Object.freeze({
   [STABLE_SNAPSHOTS_CAPTURE_PROOF]: VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
   [COMPLETED_FRAME_RECEIPT_CAPTURE_PROOF]: VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
@@ -60,6 +63,8 @@ const EXECUTION_TUNING_SCHEMAS_BY_CAPTURE_PROOF = Object.freeze({
   [FIXTURE_ACTIVATION_GENERATION_CAPTURE_PROOF]: VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA,
   [FIXTURE_ACTIVATION_WORK_GENERATION_CAPTURE_PROOF]: VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA,
   [FIXTURE_ACTIVATION_RENDER_FIELD_GENERATION_CAPTURE_PROOF]: VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA,
+  [FIXTURE_ACTIVATION_RENDER_FIELD_GENERATION_AND_SELECTION_OWNED_ALPHA_READBACK_CAPTURE_PROOF]:
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_V9_SCHEMA,
 });
 const RECYCLE_REASONS = Object.freeze([
   'launch-fault',
@@ -74,7 +79,7 @@ const HELP = `Usage:
   node scripts/visual-lab-performance-cohorts.mjs \\
     --recipe-set=<tracked-recipe-set.json> \\
     [--bundle=dist/index.html] [--output-dir=/tmp/anifor-visual-lab-performance-cohorts] \\
-    [--gpu=auto|swiftshader] [--capture-proof=stable-snapshots|completed-frame-receipt|readiness-completed-frame-receipt|selection-owned-frame-receipt|fixture-activation-generation|fixture-activation-work-generation|fixture-activation-render-field-generation] \\
+    [--gpu=auto|swiftshader] [--capture-proof=stable-snapshots|completed-frame-receipt|readiness-completed-frame-receipt|selection-owned-frame-receipt|fixture-activation-generation|fixture-activation-work-generation|fixture-activation-render-field-generation|fixture-activation-render-field-generation-and-selection-owned-alpha-readback] \\
     [--chrome=/path/to/chrome]
 
 Runs the fixed fresh/shared/shared/fresh Visual Lab cohort order. Each cohort is
@@ -148,6 +153,8 @@ const summaryCaptureProof = (captureProof) => {
     ...(captureProof === FIXTURE_ACTIVATION_WORK_GENERATION_CAPTURE_PROOF
       ? { readinessCapability: 'renderer-fixture-activation-generation/v2' } : {}),
     ...(captureProof === FIXTURE_ACTIVATION_RENDER_FIELD_GENERATION_CAPTURE_PROOF
+      || captureProof
+        === FIXTURE_ACTIVATION_RENDER_FIELD_GENERATION_AND_SELECTION_OWNED_ALPHA_READBACK_CAPTURE_PROOF
       ? { readinessCapability: 'renderer-fixture-activation-generation/v3' } : {}),
   });
 };

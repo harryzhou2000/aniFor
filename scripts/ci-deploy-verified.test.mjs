@@ -73,6 +73,7 @@ describe('deploy-verified CI workflow contract', () => {
       'fixture-activation-work-generation',
       'fixture-activation-render-field-generation',
       'selection-owned-frame-receipt-and-alpha-readback',
+      'fixture-activation-render-field-generation-and-selection-owned-alpha-readback',
     ]);
 
     const inputReferences = workflow.match(
@@ -132,6 +133,7 @@ describe('deploy-verified CI workflow contract', () => {
       'fixture-activation-work-generation',
       'fixture-activation-render-field-generation',
       'selection-owned-frame-receipt-and-alpha-readback',
+      'fixture-activation-render-field-generation-and-selection-owned-alpha-readback',
     ]);
     expect(workflow.match(
       /\$\{\{\s*inputs\.visual_lab_performance_cohorts\s*\}\}/g,

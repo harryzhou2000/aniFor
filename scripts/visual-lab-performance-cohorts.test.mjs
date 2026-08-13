@@ -294,6 +294,34 @@ describe('Visual Lab performance cohort orchestration', () => {
     });
   });
 
+  it('forwards render-field generation with selection-owned alpha readback and requires tuning v9', async () => {
+    const root = await temporaryRoot();
+    const batchCalls = [];
+    const captureProof =
+      'fixture-activation-render-field-generation-and-selection-owned-alpha-readback';
+    const result = await runVisualLabPerformanceCohorts({
+      recipeSetPath: 'set.json', outputDir: root, captureProof,
+    }, {
+      assertTrackedRecipeSet: async () => {},
+      readRecipeSet: async () => recipeSet(),
+      runBatch: async (options) => {
+        batchCalls.push(options);
+        return completeBatch(options.browserHost);
+      },
+      verifyBatch: async (options) => verifiedBatch(options, {
+        executionTuningPlan: tuningPlan('anifor.visual-lab.execution-tuning-plan/v9'),
+      }),
+    });
+    expect(batchCalls.map(({ captureProof: forwardedProof }) => forwardedProof))
+      .toEqual(Array(4).fill(captureProof));
+    expect(result.summary.captureProof).toEqual({
+      mode: captureProof,
+      tuningSchema: 'anifor.visual-lab.execution-tuning-plan/v9',
+      receiptSchema: 'anifor.renderer.completed-frame-receipt/v1',
+      readinessCapability: 'renderer-fixture-activation-generation/v3',
+    });
+  });
+
   it('rejects mismatched portable tuning schemas before publishing', async () => {
     const stableRoot = await temporaryRoot();
     await expect(runVisualLabPerformanceCohorts({ recipeSetPath: 'set.json', outputDir: stableRoot }, {

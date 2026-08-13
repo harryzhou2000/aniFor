@@ -49,6 +49,7 @@ import {
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V9_SCHEMA,
 } from './visual-lab-execution-tuning-plan.mjs';
 import {
   VISUAL_LAB_CAPTURE_SUBPHASE_TIMING_SCHEMA,
@@ -363,7 +364,8 @@ const writeValidCapture = async (directory, candidate, options = {}) => {
       || tuningPlan.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA
       || tuningPlan.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA
       || tuningPlan.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA
-      || tuningPlan.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA;
+      || tuningPlan.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA
+      || tuningPlan.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V9_SCHEMA;
     if (tuningEntry) {
       executionTuning = {
         schema: tuningPlan.schema,
@@ -422,7 +424,8 @@ const writeValidCapture = async (directory, candidate, options = {}) => {
         state: 'completed',
       },
     } : {}),
-    ...(executionTuning?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA ? {
+    ...(executionTuning?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA
+      || executionTuning?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V9_SCHEMA ? {
       readinessFixtureActivationRenderFieldGeneration: {
         ticket: 1,
         generation: 1,
@@ -437,7 +440,8 @@ const writeValidCapture = async (directory, candidate, options = {}) => {
       fixturePrepared: true,
       ...(executionTuning?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA
         || executionTuning?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA
-        || executionTuning?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA ? {
+        || executionTuning?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA
+        || executionTuning?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V9_SCHEMA ? {
         typedActivation: true,
         ticket: 1,
       } : {
@@ -470,6 +474,7 @@ const writeValidCapture = async (directory, candidate, options = {}) => {
             || executionTuning?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA
             || executionTuning?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA
             || executionTuning?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA
+            || executionTuning?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V9_SCHEMA
             ? index + 10
             : index + (executionTuning?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA ? 2 : 10),
           state: 'completed',
@@ -1550,6 +1555,38 @@ describe('Visual Lab batch runner', () => {
     await expect(verifyVisualLabBatchPackage({
       batchRoot: outputDirectory, requireExecutionTuningPlan: true,
     })).rejects.toThrow('completed-frame receipt proof');
+  });
+
+  it('portably verifies v9 fixture-activation render-field generation with selection-owned alpha-readback', async () => {
+    const root = await makeTemporaryDirectory();
+    const bundle = path.join(root, 'index.html');
+    const outputDirectory = path.join(root, 'fixture-activation-selection-owned-alpha-readback-proof');
+    await writeFile(bundle, '<!doctype html>');
+    const captured = await runVisualLabBatch({
+      candidates: ['powder-style-atlas'], bundle, outputDir: outputDirectory,
+      captureProof: 'fixture-activation-render-field-generation-and-selection-owned-alpha-readback',
+    }, {
+      runCandidate: async (call) => {
+        await writeValidCapture(call.candidateDirectory, call.recipe.name, {
+          timings: timingRecord(), captureSubphases: fixtureActivationCaptureSubphaseRecord(),
+        });
+        return { code: 0, signal: null, timedOut: false };
+      },
+    });
+    expect(captured.executionTuningPlan.schema).toBe(VISUAL_LAB_EXECUTION_TUNING_PLAN_V9_SCHEMA);
+    await expect(verifyVisualLabBatchPackage({
+      batchRoot: outputDirectory, requireExecutionTuningPlan: true, requireComplete: true,
+    })).resolves.toMatchObject({ executionTuningPlan: captured.executionTuningPlan });
+
+    const reportPath = path.join(
+      outputDirectory, 'candidates', 'powder-style-atlas', 'report.json',
+    );
+    const report = JSON.parse(await readFile(reportPath, 'utf8'));
+    report.readinessFixtureActivationRenderFieldGeneration.state = 'pending';
+    await writeFile(reportPath, `${JSON.stringify(report)}\n`);
+    await expect(verifyVisualLabBatchPackage({
+      batchRoot: outputDirectory, requireExecutionTuningPlan: true,
+    })).rejects.toThrow('fixture-activation render-field generation proof is malformed');
   });
 
   it('portably verifies fixture-activation generation v5 and rejects malformed readiness proof', async () => {
@@ -2955,7 +2992,7 @@ describe('Visual Lab batch CLI', () => {
     expect(() => parseVisualLabBatchArguments(['--browser-host=reuse']))
       .toThrow('--browser-host must be fresh or shared');
     expect(() => parseVisualLabBatchArguments(['--capture-proof=timer-query']))
-      .toThrow('--capture-proof must be stable-snapshots, completed-frame-receipt, readiness-completed-frame-receipt, selection-owned-frame-receipt, fixture-activation-generation, fixture-activation-work-generation, fixture-activation-render-field-generation, or selection-owned-frame-receipt-and-alpha-readback');
+      .toThrow('--capture-proof must be stable-snapshots, completed-frame-receipt, readiness-completed-frame-receipt, selection-owned-frame-receipt, fixture-activation-generation, fixture-activation-work-generation, fixture-activation-render-field-generation, selection-owned-frame-receipt-and-alpha-readback, or fixture-activation-render-field-generation-and-selection-owned-alpha-readback');
     expect(() => parseVisualLabBatchArguments(['--bundle=dist/index.html',
       '--base-url=https://example.test/']))
       .toThrow('--bundle and --base-url are mutually exclusive');
@@ -2993,6 +3030,6 @@ describe('Visual Lab batch CLI', () => {
     })).rejects.toThrow('candidate timeout must be a positive integer');
     await expect(runVisualLabBatch({
       candidates: ['gas-showcase'], captureProof: 'timer-query', indexOnly: true,
-    })).rejects.toThrow('Visual Lab batch captureProof must be stable-snapshots, completed-frame-receipt, readiness-completed-frame-receipt, selection-owned-frame-receipt, fixture-activation-generation, fixture-activation-work-generation, fixture-activation-render-field-generation, or selection-owned-frame-receipt-and-alpha-readback');
+    })).rejects.toThrow('Visual Lab batch captureProof must be stable-snapshots, completed-frame-receipt, readiness-completed-frame-receipt, selection-owned-frame-receipt, fixture-activation-generation, fixture-activation-work-generation, fixture-activation-render-field-generation, selection-owned-frame-receipt-and-alpha-readback, or fixture-activation-render-field-generation-and-selection-owned-alpha-readback');
   });
 });

@@ -7771,6 +7771,32 @@ revision evidence only:
 If a later profile exposes horizontal bands or washed-out pigment, remove the
 mid-column lens/retention pair rather than adding per-material exceptions.
 
+The next framework checkpoint is additive execution-tuning v9,
+`fixture-activation-render-field-generation-and-selection-owned-alpha-readback`.
+It composes two already-proven orthogonal capabilities that v7 and v8 had made
+mutually exclusive: typed fixture activation must drain its activation-owned
+render-field generation before exactly one complete readiness snapshot, then
+each OFF/A/B selector reserves and completes both the renderer-owned frame
+receipt and authoritative framebuffer-alpha PBO on the same presentation.
+The existing post-snapshot rereads, canonical contiguous submissions, complete
+semantic/field/framebuffer evidence, and screenshot-after-proof ordering remain
+mandatory. No production renderer resource, browser method, fixture authority,
+evidence plane, capture identity, or v1-v8 byte contract changed. Stable review
+and the live Water gate retain their existing defaults; v9 is an explicit
+manual review/performance choice.
+
+A real same-bundle shared-host SwiftShader RenderOptics comparison passed both
+strict portable packages with identical result
+`sha256:4891db2c82bb89cb4bce5a63a2927360fbc20e634a0a91b9d17a490deb630581`
+and byte-identical OFF/A/B PNGs. V8 used five complete readiness snapshots,
+24.57 seconds of readiness, and 32.33 seconds total. V9 completed render-field
+generation ticket/generation `1/1`, used exactly one complete readiness
+snapshot, retained contiguous captured submissions `6/7/8`, and took 9.15
+seconds of readiness and 28.40 seconds total with zero host restarts or browser
+errors. Treat these timings as descriptive single-run evidence, not a gate.
+The next hosted control should run the fixed fresh/shared/shared/fresh
+RenderOptics cohort before making v9 a broader default.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

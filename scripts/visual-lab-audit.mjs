@@ -62,6 +62,7 @@ import {
   resolveVisualLabExecutionTuningPlanV6Entry,
   resolveVisualLabExecutionTuningPlanV7Entry,
   resolveVisualLabExecutionTuningPlanV8Entry,
+  resolveVisualLabExecutionTuningPlanV9Entry,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA,
@@ -69,6 +70,7 @@ import {
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V9_SCHEMA,
 } from './visual-lab-execution-tuning-plan.mjs';
 import {
   createVisualCaptureGeometryProof,
@@ -175,6 +177,9 @@ const resolveExecutionTuningPlanEntry = (
   }
   if (plan?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA) {
     return resolveVisualLabExecutionTuningPlanV8Entry(plan, entryId, expectedCaptureEntryId);
+  }
+  if (plan?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V9_SCHEMA) {
+    return resolveVisualLabExecutionTuningPlanV9Entry(plan, entryId, expectedCaptureEntryId);
   }
   if (plan?.schema === 'anifor.visual-lab.execution-tuning-plan/v1') {
     return resolveVisualLabExecutionTuningPlanEntry(plan, entryId, expectedCaptureEntryId);

@@ -5035,6 +5035,16 @@ receipt-only v4 remain independent fallbacks, and v1-v7 plan schemas and all
 frozen result/batch identities stay byte-compatible. Timing is diagnostic only:
 compare portable packages and current pixels first, with no fixed speed gate.
 
+Execution-tuning v9 is the opt-in composition of v7 activation-owned
+render-field readiness and v8 selector-owned receipt plus framebuffer-alpha
+readback. It must complete and reread the typed activation generation around
+one full readiness snapshot, then retain three same-submission receipt/PBO
+pairs in contiguous OFF/A/B submission order and screenshot only after proof.
+Do not implement it with another browser API or renderer resource, weaken the
+full evidence snapshot, overwrite a pending readiness transfer, or change v1-v8
+bytes. Keep ordinary review and live Water defaults unchanged until a hosted
+fresh/shared/shared/fresh RenderOptics cohort establishes operational value.
+
 Read [`docs/render-lab.md`](docs/render-lab.md) before changing reconstruction thresholds or blur radii. A TypeScript or Vite build does not compile Pixi's runtime GLSL; a browser screenshot with a clean shader console is required.
 
 The style lookup is an RGBA data texture, not display color: RGB stores phase/profile/emission and alpha stores the static `RenderTrait` mask. Keep nearest sampling and `no-premultiply-alpha`; zero-valued trait alpha must never erase the RGB metadata.
