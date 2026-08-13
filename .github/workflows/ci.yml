@@ -27,7 +27,7 @@ on:
       visual_lab_capture_proof:
         description: Evidence proof used by an optional Visual Lab review
         required: true
-        default: stable-snapshots
+        default: fixture-activation-render-field-generation-and-selection-owned-alpha-readback
         type: choice
         options:
           - stable-snapshots
@@ -37,6 +37,8 @@ on:
           - fixture-activation-generation
           - fixture-activation-work-generation
           - fixture-activation-render-field-generation
+          - selection-owned-frame-receipt-and-alpha-readback
+          - fixture-activation-render-field-generation-and-selection-owned-alpha-readback
       visual_lab_browser_host:
         description: Browser topology for optional Visual Lab diagnosis
         required: true
@@ -65,8 +67,13 @@ on:
         required: true
         default: false
         type: boolean
+      visual_lab_performance_cohort:
+        description: Declarative checked-in cohort for the non-gating performance matrix
+        required: true
+        default: powder-style
+        type: string
       visual_lab_performance_capture_proof:
-        description: Capture proof for the non-gating Powder performance matrix
+        description: Capture proof for the non-gating performance matrix
         required: true
         default: selection-owned-frame-receipt
         type: choice
@@ -75,6 +82,8 @@ on:
           - fixture-activation-generation
           - fixture-activation-work-generation
           - fixture-activation-render-field-generation
+          - selection-owned-frame-receipt-and-alpha-readback
+          - fixture-activation-render-field-generation-and-selection-owned-alpha-readback
 
 permissions:
   contents: read
