@@ -140,6 +140,12 @@ export interface PreparedVisualCaptureWorkActivationHost extends Omit<
   runWithNextFixtureActivationWorkGeneration(activate: () => void): number | undefined;
 }
 
+export interface PreparedVisualCaptureDrainedWorkActivationHost extends Omit<
+  PreparedVisualCaptureActivationHost, 'runWithNextFixtureActivationPresentationGeneration'
+> {
+  runWithNextFixtureActivationDrainedWorkGeneration(activate: () => void): number | undefined;
+}
+
 /**
  * Performs the complete typed fixture activation under one renderer-owned
  * next-presentation reservation. Runtime validation happens before authored
@@ -176,6 +182,20 @@ export function activatePreparedVisualCaptureFixtureWithWorkGeneration(
     ...host,
     runWithNextFixtureActivationPresentationGeneration: (activate) => (
       host.runWithNextFixtureActivationWorkGeneration(activate)
+    ),
+  }, fixture, variant);
+}
+
+/** V7 counterpart whose completion waits for exact activation-owned work to drain. */
+export function activatePreparedVisualCaptureFixtureWithDrainedWorkGeneration(
+  host: PreparedVisualCaptureDrainedWorkActivationHost,
+  fixture: VisualLabFixtureId,
+  variant: VisualCaptureControlVariant,
+): number {
+  return activatePreparedVisualCaptureFixture({
+    ...host,
+    runWithNextFixtureActivationPresentationGeneration: (activate) => (
+      host.runWithNextFixtureActivationDrainedWorkGeneration(activate)
     ),
   }, fixture, variant);
 }
@@ -365,6 +385,10 @@ export interface BrowserInputAuditApi {
   ): number;
   /** V2 typed activation bound only to causally owned renderer work. */
   activatePreparedVisualCaptureFixtureWithWorkGeneration(
+    fixture: VisualLabFixtureId, variant: VisualCaptureControlVariant,
+  ): number;
+  /** V7 typed activation waits for the exact activation-owned renderer work to drain. */
+  activatePreparedVisualCaptureFixtureWithDrainedWorkGeneration(
     fixture: VisualLabFixtureId, variant: VisualCaptureControlVariant,
   ): number;
   /** Reads the renderer-owned state of a fixture activation generation. */

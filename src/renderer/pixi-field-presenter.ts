@@ -21,7 +21,9 @@ import {
   BOUNDARY_STABILITY_STEP, updateBoundaryStabilityRect,
 } from './boundary-stability-field';
 import { clientToCanvasWorld, clientToVisualViewport } from './client-coordinate-map';
-import { RenderFieldSet, type RenderMaterialStyle } from './render-field-set';
+import {
+  RenderFieldDirtyLane, RenderFieldSet, type RenderMaterialStyle,
+} from './render-field-set';
 import { packSemanticRect } from './semantic-field';
 import { packPhotonStateRect } from './photon-state-field';
 import { photonStateIsActive } from './photon-spectrum-state';
@@ -12308,6 +12310,8 @@ export class PixiFieldPresenter {
   private fixtureActivationBoundaryConsumptionOwner = 0;
   private fixtureActivationSubmissionOwner = 0;
   private fixtureActivationSubmissionBaseline = 0;
+  /** V7-only opt-in: consumes activation-owned volume work before its final frame. */
+  private fixtureActivationDrainVolumeFieldsOwner = 0;
   private fixtureActivationFramebufferAlphaReadbackOwner = 0;
   private fixtureActivationFramebufferAlphaReadback?: FixtureActivationFramebufferAlphaReadback;
   private solidOpticalDepthDirty = true;
@@ -13847,10 +13851,11 @@ export class PixiFieldPresenter {
     }
   }
 
-  beginFixtureActivationPresentationWork(owner: number): void {
+  beginFixtureActivationPresentationWork(owner: number, drainOwnedVolumeFields = false): void {
     this.fixtureActivationCaptureOwner = owner;
     this.fixtureActivationSubmissionOwner = owner;
     this.fixtureActivationSubmissionBaseline = this.presentationSubmission;
+    this.fixtureActivationDrainVolumeFieldsOwner = drainOwnedVolumeFields ? owner : 0;
     this.fixtureActivationFramebufferAlphaReadbackOwner = owner;
     this.fixtureActivationFramebufferAlphaReadback = undefined;
   }
@@ -13858,6 +13863,13 @@ export class PixiFieldPresenter {
   endFixtureActivationPresentationWork(owner: number): void {
     if (this.fixtureActivationCaptureOwner === owner) this.fixtureActivationCaptureOwner = 0;
     this.fixtureActivationDynamicOwner = owner;
+  }
+
+  /** Cancels only the additive v7 drain reservation after activation rejects. */
+  cancelFixtureActivationDrainedWork(owner: number): void {
+    if (this.fixtureActivationDrainVolumeFieldsOwner === owner) {
+      this.fixtureActivationDrainVolumeFieldsOwner = 0;
+    }
   }
 
   markWallDirty(index: number): void {
@@ -14966,34 +14978,49 @@ export class PixiFieldPresenter {
       this.fieldSet.markAtmosphereMotionDirty(dynamicOwner);
     }
     if (refreshDynamicFields && temperatures) this.fieldSet.markThermalEmissionDirty(dynamicOwner);
-    const volumeField = this.fieldSet.updateNext(
-      materials, scheduleTime, walls, velocities, temperatures,
-    );
-    if (volumeField === 'liquid' || !this.liquidOpticalDepthHydrated) {
-      this.fieldSet.liquid.writeVerticalOpticalDepth(
-        materials, this.boundaryStabilityBytes, walls,
+    const drainOwnedVolumeFields = this.outputScale !== 8
+      && activationOwner > 0
+      && this.fixtureActivationDrainVolumeFieldsOwner === activationOwner;
+    // The v7 opt-in is consumed at its first eligible update. True 8x retains
+    // the established bounded cadence and fence ownership even when a v7
+    // transaction requests a drain.
+    if (activationOwner > 0 && this.fixtureActivationDrainVolumeFieldsOwner === activationOwner) {
+      this.fixtureActivationDrainVolumeFieldsOwner = 0;
+    }
+    if (drainOwnedVolumeFields) {
+      boundaryTextureDirty = this.drainFixtureActivationVolumeFields(
+        activationOwner, materials, scheduleTime, walls, velocities, temperatures, gasMotionActive,
+      ) || boundaryTextureDirty;
+    } else {
+      const volumeField = this.fieldSet.updateNext(
+        materials, scheduleTime, walls, velocities, temperatures,
       );
-      this.liquidOpticalDepthHydrated = true;
-      boundaryTextureDirty = true;
-    }
-    {
-      const suspensionChanged = this.fieldSet.refreshSuspension(materials, scheduleTime, walls);
-      if (suspensionChanged) this.suspensionSource.update();
-      // A promoted presenter may share a field that Canvas already refreshed.
-      // Hydrate state even when no rebuild is due, or a paused scene can leave
-      // the pre-populated suspension texture permanently disabled.
-      this.uniforms.uniforms.uSuspensionActive = this.fieldSet.suspension.hasSuspension ? 1 : 0;
-    }
-    if (volumeField === 'atmosphere') {
-      this.atmosphereSource.update();
-      this.atmosphereStyleSource.update();
-      if (gasMotionActive) this.atmosphereMotionHydrated = true;
-    } else if (volumeField === 'liquid') {
-      this.liquidSource.update();
-      this.liquidOpticsSource.update();
-    } else if (volumeField === 'emission') {
-      this.emissionSource.update();
-      this.longRangeEmissionSource?.update();
+      if (volumeField === 'liquid' || !this.liquidOpticalDepthHydrated) {
+        this.fieldSet.liquid.writeVerticalOpticalDepth(
+          materials, this.boundaryStabilityBytes, walls,
+        );
+        this.liquidOpticalDepthHydrated = true;
+        boundaryTextureDirty = true;
+      }
+      {
+        const suspensionChanged = this.fieldSet.refreshSuspension(materials, scheduleTime, walls);
+        if (suspensionChanged) this.suspensionSource.update();
+        // A promoted presenter may share a field that Canvas already refreshed.
+        // Hydrate state even when no rebuild is due, or a paused scene can leave
+        // the pre-populated suspension texture permanently disabled.
+        this.uniforms.uniforms.uSuspensionActive = this.fieldSet.suspension.hasSuspension ? 1 : 0;
+      }
+      if (volumeField === 'atmosphere') {
+        this.atmosphereSource.update();
+        this.atmosphereStyleSource.update();
+        if (gasMotionActive) this.atmosphereMotionHydrated = true;
+      } else if (volumeField === 'liquid') {
+        this.liquidSource.update();
+        this.liquidOpticsSource.update();
+      } else if (volumeField === 'emission') {
+        this.emissionSource.update();
+        this.longRangeEmissionSource?.update();
+      }
     }
     if (boundaryTextureDirty) this.boundaryStabilitySource.update();
     this.uniforms.uniforms.uTime = visualTime * 0.001;
@@ -15008,6 +15035,51 @@ export class PixiFieldPresenter {
     if (this.outputScale === 8 && this.boundaryEvolutionPending
       && !hasExternalPresentationMutation) return;
     this.renderApplication();
+  }
+
+  /** V7-only field convergence and exact texture uploads before the sole final submission. */
+  private drainFixtureActivationVolumeFields(
+    owner: number,
+    materials: Uint8Array,
+    scheduleTime: number,
+    walls: Uint8Array | undefined,
+    velocities: Int8Array | undefined,
+    temperatures: Uint16Array | undefined,
+    gasMotionActive: boolean,
+  ): boolean {
+    const lanes = this.fieldSet.drainActivationOwned(
+      owner, materials, scheduleTime, walls, velocities, temperatures,
+    );
+    let liquidDepthChanged = false;
+    if (lanes & RenderFieldDirtyLane.Atmosphere) {
+      this.atmosphereSource.update();
+      this.atmosphereStyleSource.update();
+      if (gasMotionActive) this.atmosphereMotionHydrated = true;
+    }
+    if (lanes & RenderFieldDirtyLane.Liquid) {
+      this.fieldSet.liquid.writeVerticalOpticalDepth(
+        materials, this.boundaryStabilityBytes, walls,
+      );
+      this.liquidOpticalDepthHydrated = true;
+      liquidDepthChanged = true;
+      this.liquidSource.update();
+      this.liquidOpticsSource.update();
+    } else if (!this.liquidOpticalDepthHydrated) {
+      // Preserve presenter-promotion hydration even when this activation did
+      // not own a liquid rebuild.
+      this.fieldSet.liquid.writeVerticalOpticalDepth(
+        materials, this.boundaryStabilityBytes, walls,
+      );
+      this.liquidOpticalDepthHydrated = true;
+      liquidDepthChanged = true;
+    }
+    if (lanes & RenderFieldDirtyLane.Emission) {
+      this.emissionSource.update();
+      this.longRangeEmissionSource?.update();
+    }
+    if (lanes & RenderFieldDirtyLane.Suspension) this.suspensionSource.update();
+    this.uniforms.uniforms.uSuspensionActive = this.fieldSet.suspension.hasSuspension ? 1 : 0;
+    return liquidDepthChanged;
   }
 
   setTransform(scale: number, x: number, y: number): void {

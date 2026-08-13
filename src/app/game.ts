@@ -19,6 +19,7 @@ import { WorldInputController } from '../ui/world-input';
 import { drawToolPoint, drawToolSegment, finishToolStroke } from './tool-dispatch';
 import {
   activatePreparedVisualCaptureFixture,
+  activatePreparedVisualCaptureFixtureWithDrainedWorkGeneration,
   activatePreparedVisualCaptureFixtureWithWorkGeneration,
   blankBrowserInputAuditRequested, browserInputAuditRequested,
   prepareContourStressAuditFixture, prepareDenseSolidAuditFixture,
@@ -968,6 +969,26 @@ export class Game {
         activatePreparedVisualCaptureFixtureWithWorkGeneration({
           runWithNextFixtureActivationWorkGeneration: (activate) => (
             this.renderer.runWithNextFixtureActivationWorkGeneration(activate)
+          ),
+          prepareFixture: (selectedFixture) => (
+            prepareVisualLabFixture(this.simulation, selectedFixture)
+          ),
+          synchronizeFixtureMaterialPlane: () => (
+            this.renderer.synchronizeFixtureMaterialPlane()
+          ),
+          markFixturePrepared: (selectedFixture) => (
+            visualCaptureControls.markFixturePrepared(selectedFixture)
+          ),
+          setVariant: (selectedFixture, selectedVariant) => (
+            visualCaptureControls.setVariant(selectedFixture, selectedVariant)
+          ),
+          invalidateDynamicPresentation: () => this.renderer.invalidateDynamicPresentation(),
+        }, fixture, variant)
+      ),
+      activatePreparedVisualCaptureFixtureWithDrainedWorkGeneration: (fixture, variant) => (
+        activatePreparedVisualCaptureFixtureWithDrainedWorkGeneration({
+          runWithNextFixtureActivationDrainedWorkGeneration: (activate) => (
+            this.renderer.runWithNextFixtureActivationDrainedWorkGeneration(activate)
           ),
           prepareFixture: (selectedFixture) => (
             prepareVisualLabFixture(this.simulation, selectedFixture)

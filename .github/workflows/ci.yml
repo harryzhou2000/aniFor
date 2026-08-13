@@ -38,6 +38,7 @@ on:
           - selection-owned-frame-receipt
           - fixture-activation-generation
           - fixture-activation-work-generation
+          - fixture-activation-render-field-generation
       visual_lab_browser_host:
         description: Browser topology for optional Visual Lab diagnosis
         required: true
@@ -75,6 +76,7 @@ on:
           - selection-owned-frame-receipt
           - fixture-activation-generation
           - fixture-activation-work-generation
+          - fixture-activation-render-field-generation
 
 permissions:
   contents: read

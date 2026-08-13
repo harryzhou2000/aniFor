@@ -21,6 +21,8 @@ export const VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA =
   'anifor.visual-lab.execution-tuning-plan/v5';
 export const VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA =
   'anifor.visual-lab.execution-tuning-plan/v6';
+export const VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA =
+  'anifor.visual-lab.execution-tuning-plan/v7';
 
 const SHA256_ID = /^sha256:[0-9a-f]{64}$/;
 const SAFE_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -62,6 +64,7 @@ const V5_PROFILE_FIELDS = Object.freeze([
   'startup', 'readiness', 'readinessActivation', 'selection', 'stability', 'completion', 'screenshot',
 ]);
 const V6_PROFILE_FIELDS = V5_PROFILE_FIELDS;
+const V7_PROFILE_FIELDS = V5_PROFILE_FIELDS;
 const STARTUP_FIELDS = Object.freeze(['variant', 'fieldRefresh', 'rafs']);
 const READINESS_FIELDS = Object.freeze(['planes', 'pollIntervalMs', 'timeoutMsByGpu']);
 const SELECTION_FIELDS = Object.freeze(['rafs', 'exactDataset']);
@@ -78,6 +81,7 @@ const READINESS_ACTIVATION_FIELDS = Object.freeze([
 const V6_READINESS_ACTIVATION_FIELDS = Object.freeze([
   'capability', 'requiredState', 'bind', 'completionScope', 'snapshotAfterCompletion',
 ]);
+const V7_READINESS_ACTIVATION_FIELDS = V6_READINESS_ACTIVATION_FIELDS;
 const GPU_TIMEOUT_FIELDS = Object.freeze([...GPU_MODES]);
 const EFFECTIVE_TIMEOUT_FIELDS = Object.freeze(['readinessMs', 'stabilityMs']);
 
@@ -301,12 +305,14 @@ const normalizeProfile = (input, label, schema) => {
   const isV4 = schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA;
   const isV5 = schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA;
   const isV6 = schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA;
+  const isV7 = schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA;
   const hasReadinessCompletion = isV3;
-  const hasReadinessActivation = isV5 || isV6;
-  const hasCompletion = isV2 || isV3 || isV4 || isV5 || isV6;
+  const hasReadinessActivation = isV5 || isV6 || isV7;
+  const hasCompletion = isV2 || isV3 || isV4 || isV5 || isV6 || isV7;
   assertExactFields(
     input,
-    isV6 ? V6_PROFILE_FIELDS
+    isV7 ? V7_PROFILE_FIELDS
+      : isV6 ? V6_PROFILE_FIELDS
       : isV5 ? V5_PROFILE_FIELDS
       : isV4 ? V4_PROFILE_FIELDS : isV3 ? V3_PROFILE_FIELDS : isV2 ? V2_PROFILE_FIELDS : PROFILE_FIELDS,
     label,
@@ -332,7 +338,7 @@ const normalizeProfile = (input, label, schema) => {
   assertExactArray(input.stability.planes, EVIDENCE_PLANES, `${label}.stability.planes`);
   if (hasCompletion) {
     assertExactFields(input.completion, COMPLETION_FIELDS, `${label}.completion`);
-    const completionBind = isV4 || isV5 || isV6
+    const completionBind = isV4 || isV5 || isV6 || isV7
       ? 'selection-owned-presentation' : 'selected-presentation';
     if (input.completion.capability !== 'renderer-completed-frame-receipt/v1'
       || input.completion.receiptSchema !== 'anifor.renderer.completed-frame-receipt/v1'
@@ -396,16 +402,21 @@ const normalizeProfile = (input, label, schema) => {
   if (hasReadinessActivation) {
     assertExactFields(
       input.readinessActivation,
-      isV6 ? V6_READINESS_ACTIVATION_FIELDS : READINESS_ACTIVATION_FIELDS,
+      isV7 ? V7_READINESS_ACTIVATION_FIELDS
+        : isV6 ? V6_READINESS_ACTIVATION_FIELDS : READINESS_ACTIVATION_FIELDS,
       `${label}.readinessActivation`,
     );
-    const expectedCapability = isV6
-      ? 'renderer-fixture-activation-generation/v2'
+    const expectedCapability = isV7
+      ? 'renderer-fixture-activation-generation/v3'
+      : isV6 ? 'renderer-fixture-activation-generation/v2'
       : 'renderer-fixture-activation-generation/v1';
+    const expectedCompletionScope = isV7
+      ? 'activation-owned-render-fields' : 'activation-owned-work';
     if (input.readinessActivation.capability !== expectedCapability
       || input.readinessActivation.requiredState !== 'completed'
       || input.readinessActivation.bind !== 'typed-fixture-activation'
-      || (isV6 && input.readinessActivation.completionScope !== 'activation-owned-work')
+      || ((isV6 || isV7)
+        && input.readinessActivation.completionScope !== expectedCompletionScope)
       || input.readinessActivation.snapshotAfterCompletion !== true) {
       throw new TypeError(`${label}.readinessActivation must be the exact typed fixture-activation generation proof`);
     }
@@ -413,7 +424,7 @@ const normalizeProfile = (input, label, schema) => {
       capability: input.readinessActivation.capability,
       requiredState: input.readinessActivation.requiredState,
       bind: input.readinessActivation.bind,
-      ...(isV6 ? { completionScope: input.readinessActivation.completionScope } : {}),
+      ...(isV6 || isV7 ? { completionScope: input.readinessActivation.completionScope } : {}),
       snapshotAfterCompletion: input.readinessActivation.snapshotAfterCompletion,
     };
   }
@@ -549,6 +560,15 @@ export function createVisualLabExecutionTuningPlanV5(captureExecutionPlan, drive
 export function createVisualLabExecutionTuningPlanV6(captureExecutionPlan, driverProfiles) {
   return createFromBindings(
     VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA,
+    captureBindings(captureExecutionPlan),
+    driverProfiles,
+  );
+}
+
+/** Creates the opt-in activation-owned render-field generation v7 plan. */
+export function createVisualLabExecutionTuningPlanV7(captureExecutionPlan, driverProfiles) {
+  return createFromBindings(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA,
     captureBindings(captureExecutionPlan),
     driverProfiles,
   );
@@ -691,6 +711,11 @@ export function normalizeVisualLabExecutionTuningPlanV6(input, captureExecutionP
   return normalizePlan(input, captureExecutionPlan, VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA);
 }
 
+/** Validates untrusted v7 activation-owned render-field generation JSON. */
+export function normalizeVisualLabExecutionTuningPlanV7(input, captureExecutionPlan) {
+  return normalizePlan(input, captureExecutionPlan, VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA);
+}
+
 /** Resolves one fully validated tuning entry, optionally bound to capture entry ID. */
 export function resolveVisualLabExecutionTuningPlanEntry(
   input,
@@ -803,6 +828,26 @@ export function resolveVisualLabExecutionTuningPlanV6Entry(
     assertSha256Id(expectedCaptureEntryId, 'Expected Visual Lab capture entry id');
   }
   const plan = normalizeVisualLabExecutionTuningPlanV6(input, captureExecutionPlan);
+  const entry = plan.entries.find(({ id }) => id === entryId);
+  if (entry === undefined) throw new Error(`Unknown Visual Lab execution tuning entry id ${entryId}`);
+  if (expectedCaptureEntryId !== undefined && entry.captureEntryId !== expectedCaptureEntryId) {
+    throw new Error(`Visual Lab execution tuning entry ${entryId} does not bind capture entry ${expectedCaptureEntryId}`);
+  }
+  return entry;
+}
+
+/** Resolves one fully validated v7 tuning entry, optionally bound to capture entry ID. */
+export function resolveVisualLabExecutionTuningPlanV7Entry(
+  input,
+  entryId,
+  expectedCaptureEntryId,
+  captureExecutionPlan,
+) {
+  assertSha256Id(entryId, 'Visual Lab execution tuning entry id');
+  if (expectedCaptureEntryId !== undefined) {
+    assertSha256Id(expectedCaptureEntryId, 'Expected Visual Lab capture entry id');
+  }
+  const plan = normalizeVisualLabExecutionTuningPlanV7(input, captureExecutionPlan);
   const entry = plan.entries.find(({ id }) => id === entryId);
   if (entry === undefined) throw new Error(`Unknown Visual Lab execution tuning entry id ${entryId}`);
   if (expectedCaptureEntryId !== undefined && entry.captureEntryId !== expectedCaptureEntryId) {

@@ -1834,6 +1834,19 @@ fell to 35.61–41.84s from v5's 78.45–79.89s. The build restored 269/270 ccac
 hits. Treat v6 as the current typed readiness framework, v4 as the independent
 selection-performance control, and v5 as explicit global-quiescence evidence.
 
+The opt-in v7 render-field convergence path is additive and Powder-proven.
+`RenderFieldSet.drainActivationOwned` drains exact activation-owned atmosphere,
+liquid, emission, and successor suspension lanes in canonical order; Pixi
+uploads only returned lanes and retains its one existing final render. Keep
+this behind `fixture-activation-render-field-generation`, tuning-plan/v7, the
+v3 activation capability, and its distinct typed browser bridge. V1-v6,
+owner-zero, Canvas, and true 8x retain their prior paths and identities. The
+first real local SwiftShader Powder package preserved result
+`sha256:b3edbc669cc2c2408ef712ea6089b42e85e1ba60944d3d78b4bd0942de23f67f`,
+passed portable verification and all 16 regions with one readiness snapshot,
+one shared host, and no restart. Use the fixed ABBA cohort before claiming a
+performance improvement; visual identity preservation proves safety, not speed.
+
 Performance comparisons use the opt-in
 `audit:visual-lab:performance-cohorts` runner. Preserve its fixed
 fresh/shared/shared/fresh order, tracked recipe-set requirement, distinct cohort

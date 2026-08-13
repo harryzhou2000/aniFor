@@ -7242,13 +7242,24 @@ Two additional foundations are now checkpointed. The complete showcase v6 audit
 literal lives beside its frozen command stream in the shared showcase catalog;
 the renderer retains only a typed compatibility facade, and the 13-fixture
 capture/inspection projections remain unchanged. Separately,
-`RenderFieldSet.drainActivationOwned` provides the pure CPU first slice for a
-future v7 experiment: it drains only exact-owner atmosphere, liquid, emission,
-and successor suspension lanes in canonical order, returns the existing dirty
-bitmask, and is byte-equivalent to staged cadence. It has no WebGL, presentation,
-browser, tuning-plan, or CI authority yet. The next implementation boundary is
-the explicit opt-in presenter integration that uploads those returned lanes once
-and submits one final activation frame while v1-v6 stay unchanged.
+`RenderFieldSet.drainActivationOwned` and its opt-in v7 capture path now close
+that convergence boundary. V7 drains only exact-owner atmosphere, liquid,
+emission, and successor suspension lanes in canonical order, uploads only the
+returned dirty lanes, then uses the presenter's one existing final submission.
+The separate typed browser method, tuning-plan/v7 schema, v3 activation proof,
+portable verifier, performance cohort, and manual CI selector are additive;
+v1-v6, owner-zero, Canvas, and true 8x keep their prior cadence and identities.
+
+A real local production-bundle SwiftShader Powder capture passed through one
+shared host with no restart at `/tmp/anifor-v7-powder.iWISdd`. Portable
+verification reconstructed its exact v7 plan
+`sha256:341fdc327710f547d7e973050b706edbc2acdfb9333998aefb20ee38d53d3e1a`,
+all three evidence planes, one readiness snapshot, and all 16 declared regions.
+Most importantly, it retained the established Powder result ID
+`sha256:b3edbc669cc2c2408ef712ea6089b42e85e1ba60944d3d78b4bd0942de23f67f`.
+The next gate is the fixed fresh/shared/shared/fresh Powder cohort locally and
+in the approved manual workflow; compare readiness and total timing while
+requiring equal result identities, then keep v7 only if the cohort favors it.
 
 ## Deferred long-term visual roadmap
 

@@ -60,11 +60,13 @@ import {
   resolveVisualLabExecutionTuningPlanV4Entry,
   resolveVisualLabExecutionTuningPlanV5Entry,
   resolveVisualLabExecutionTuningPlanV6Entry,
+  resolveVisualLabExecutionTuningPlanV7Entry,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA,
 } from './visual-lab-execution-tuning-plan.mjs';
 import {
   createVisualCaptureGeometryProof,
@@ -106,6 +108,13 @@ const FIXTURE_ACTIVATION_WORK_READINESS_DESCRIPTOR = Object.freeze({
   requiredState: 'completed',
   bind: 'typed-fixture-activation',
   completionScope: 'activation-owned-work',
+  snapshotAfterCompletion: true,
+});
+const FIXTURE_ACTIVATION_RENDER_FIELD_READINESS_DESCRIPTOR = Object.freeze({
+  capability: 'renderer-fixture-activation-generation/v3',
+  requiredState: 'completed',
+  bind: 'typed-fixture-activation',
+  completionScope: 'activation-owned-render-fields',
   snapshotAfterCompletion: true,
 });
 
@@ -152,6 +161,9 @@ const resolveExecutionTuningPlanEntry = (
   }
   if (plan?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA) {
     return resolveVisualLabExecutionTuningPlanV6Entry(plan, entryId, expectedCaptureEntryId);
+  }
+  if (plan?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA) {
+    return resolveVisualLabExecutionTuningPlanV7Entry(plan, entryId, expectedCaptureEntryId);
   }
   if (plan?.schema === 'anifor.visual-lab.execution-tuning-plan/v1') {
     return resolveVisualLabExecutionTuningPlanEntry(plan, entryId, expectedCaptureEntryId);
@@ -576,6 +588,7 @@ async function captureVisualLabCandidateEvidence({
 
   let readinessFixtureActivationGeneration;
   let readinessFixtureActivationWorkGeneration;
+  let readinessFixtureActivationRenderFieldGeneration;
   const readinessCompletedFrameReceipt = await measure('readiness', async () => {
     const { profile, effectiveTimeouts } = options.executionTuning;
     // A readiness snapshot performs the same complete semantic, authoritative-
@@ -615,7 +628,9 @@ async function captureVisualLabCandidateEvidence({
       const startupVariant = VARIANTS.find(({ name }) => name === profile.startup.variant);
       assert(startupVariant !== undefined, 'readiness profile names an unknown startup variant');
       assertVariantState(snapshot, options, startupVariant);
-      if (hasFixtureActivationWorkReadinessDescriptor(profile)) {
+      if (hasFixtureActivationRenderFieldReadinessDescriptor(profile)) {
+        readinessFixtureActivationRenderFieldGeneration = generation;
+      } else if (hasFixtureActivationWorkReadinessDescriptor(profile)) {
         readinessFixtureActivationWorkGeneration = generation;
       } else {
         readinessFixtureActivationGeneration = generation;
@@ -808,6 +823,8 @@ async function captureVisualLabCandidateEvidence({
         ? {} : { readinessFixtureActivationGeneration }),
       ...(readinessFixtureActivationWorkGeneration === undefined
         ? {} : { readinessFixtureActivationWorkGeneration }),
+      ...(readinessFixtureActivationRenderFieldGeneration === undefined
+        ? {} : { readinessFixtureActivationRenderFieldGeneration }),
       captureSubphases: captureSubphases.finish(),
       startupSelection,
       backend: reference.backend.backend,
@@ -1292,9 +1309,11 @@ async function stageVariantDuringStartup(cdp, options) {
 
 async function activateFixtureDuringStartup(cdp, options) {
   const { profile, effectiveTimeouts } = options.executionTuning;
-  const activationMethod = hasFixtureActivationWorkReadinessDescriptor(profile)
-    ? 'activatePreparedVisualCaptureFixtureWithWorkGeneration'
-    : 'activatePreparedVisualCaptureFixture';
+  const activationMethod = hasFixtureActivationRenderFieldReadinessDescriptor(profile)
+    ? 'activatePreparedVisualCaptureFixtureWithDrainedWorkGeneration'
+    : hasFixtureActivationWorkReadinessDescriptor(profile)
+      ? 'activatePreparedVisualCaptureFixtureWithWorkGeneration'
+      : 'activatePreparedVisualCaptureFixture';
   const startupVariant = VARIANTS.find(({ name }) => name === profile.startup.variant);
   assert(startupVariant !== undefined, 'fixture activation profile names an unknown startup variant');
   await waitFor(
@@ -1840,9 +1859,21 @@ function hasFixtureActivationWorkReadinessDescriptor(profile) {
     && Object.keys(expected).every((name) => activation[name] === expected[name]);
 }
 
+function hasFixtureActivationRenderFieldReadinessDescriptor(profile) {
+  const activation = profile?.readinessActivation;
+  if (activation === null || typeof activation !== 'object' || Array.isArray(activation)) {
+    return false;
+  }
+  const expected = FIXTURE_ACTIVATION_RENDER_FIELD_READINESS_DESCRIPTOR;
+  const keys = Object.keys(activation);
+  return keys.length === Object.keys(expected).length
+    && Object.keys(expected).every((name) => activation[name] === expected[name]);
+}
+
 function hasTypedFixtureActivationReadinessDescriptor(profile) {
   return hasFixtureActivationReadinessDescriptor(profile)
-    || hasFixtureActivationWorkReadinessDescriptor(profile);
+    || hasFixtureActivationWorkReadinessDescriptor(profile)
+    || hasFixtureActivationRenderFieldReadinessDescriptor(profile);
 }
 
 async function readFixtureActivationPresentationGeneration(cdp, label, ticket) {

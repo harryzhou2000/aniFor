@@ -17,6 +17,7 @@ import { RenderPhase } from './render-profile';
 import { DirtyChunkGrid } from './dirty-chunk-grid';
 import { updateBoundaryStabilityRect } from './boundary-stability-field';
 import { PowderSurfaceField } from './powder-surface-field';
+import { RenderFieldDirtyLane } from './render-field-set';
 
 interface PresenterHarness {
   readonly uniforms: { readonly uniforms: Record<string, number> };
@@ -149,6 +150,107 @@ function presenterHarness(outputScale = 2): PresenterHarness {
 }
 
 describe('Pixi presenter startup configuration', () => {
+  it('maps each v7-owned field lane to its exact upload without an intermediate render', () => {
+    const drainActivationOwned = vi.fn(() => (
+      RenderFieldDirtyLane.Atmosphere
+        | RenderFieldDirtyLane.Liquid
+        | RenderFieldDirtyLane.Emission
+        | RenderFieldDirtyLane.Suspension
+    ));
+    const atmosphereSource = { update: vi.fn() };
+    const atmosphereStyleSource = { update: vi.fn() };
+    const liquidSource = { update: vi.fn() };
+    const liquidOpticsSource = { update: vi.fn() };
+    const emissionSource = { update: vi.fn() };
+    const longRangeEmissionSource = { update: vi.fn() };
+    const suspensionSource = { update: vi.fn() };
+    const writeVerticalOpticalDepth = vi.fn();
+    const renderApplication = vi.fn();
+    const presenter = Object.create(PixiFieldPresenter.prototype) as unknown as {
+      fieldSet: {
+        drainActivationOwned: typeof drainActivationOwned;
+        liquid: { writeVerticalOpticalDepth: typeof writeVerticalOpticalDepth };
+        suspension: { hasSuspension: boolean };
+      };
+      atmosphereSource: typeof atmosphereSource;
+      atmosphereStyleSource: typeof atmosphereStyleSource;
+      liquidSource: typeof liquidSource;
+      liquidOpticsSource: typeof liquidOpticsSource;
+      emissionSource: typeof emissionSource;
+      longRangeEmissionSource?: typeof longRangeEmissionSource;
+      suspensionSource: typeof suspensionSource;
+      boundaryStabilityBytes: Uint8Array;
+      liquidOpticalDepthHydrated: boolean;
+      atmosphereMotionHydrated: boolean;
+      uniforms: { uniforms: Record<string, number> };
+      renderApplication: typeof renderApplication;
+      drainFixtureActivationVolumeFields(
+        owner: number, materials: Uint8Array, scheduleTime: number, walls: Uint8Array | undefined,
+        velocities: Int8Array | undefined, temperatures: Uint16Array | undefined, gasMotionActive: boolean,
+      ): boolean;
+    };
+    Object.assign(presenter, {
+      fieldSet: {
+        drainActivationOwned,
+        liquid: { writeVerticalOpticalDepth },
+        suspension: { hasSuspension: true },
+      },
+      atmosphereSource,
+      atmosphereStyleSource,
+      liquidSource,
+      liquidOpticsSource,
+      emissionSource,
+      longRangeEmissionSource,
+      suspensionSource,
+      boundaryStabilityBytes: new Uint8Array(16),
+      liquidOpticalDepthHydrated: false,
+      atmosphereMotionHydrated: false,
+      uniforms: { uniforms: {} },
+      renderApplication,
+    });
+
+    expect(presenter.drainFixtureActivationVolumeFields(
+      7, new Uint8Array(16), 100, undefined, undefined, undefined, true,
+    )).toBe(true);
+    expect(drainActivationOwned).toHaveBeenCalledOnce();
+    expect(drainActivationOwned).toHaveBeenLastCalledWith(
+      7, expect.any(Uint8Array), 100, undefined, undefined, undefined,
+    );
+    for (const source of [
+      atmosphereSource, atmosphereStyleSource, liquidSource, liquidOpticsSource,
+      emissionSource, longRangeEmissionSource, suspensionSource,
+    ]) expect(source.update).toHaveBeenCalledOnce();
+    expect(writeVerticalOpticalDepth).toHaveBeenCalledOnce();
+    expect(presenter.atmosphereMotionHydrated).toBe(true);
+    expect(presenter.uniforms.uniforms.uSuspensionActive).toBe(1);
+    expect(renderApplication).not.toHaveBeenCalled();
+  });
+
+  it('keeps v6, owner-zero, and true-8x work on the ordinary volume cadence', () => {
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    expect(source).toMatch(
+      /const drainOwnedVolumeFields = this\.outputScale !== 8\s*&& activationOwner > 0\s*&& this\.fixtureActivationDrainVolumeFieldsOwner === activationOwner;/,
+    );
+    expect(source).toMatch(
+      /if \(drainOwnedVolumeFields\) \{[\s\S]*drainFixtureActivationVolumeFields[\s\S]*\} else \{\s*const volumeField = this\.fieldSet\.updateNext\(/,
+    );
+    const presenter = Object.create(PixiFieldPresenter.prototype) as unknown as {
+      fixtureActivationCaptureOwner: number;
+      fixtureActivationSubmissionOwner: number;
+      fixtureActivationSubmissionBaseline: number;
+      fixtureActivationDrainVolumeFieldsOwner: number;
+      fixtureActivationFramebufferAlphaReadbackOwner: number;
+      fixtureActivationFramebufferAlphaReadback?: unknown;
+      presentationSubmission: number;
+      beginFixtureActivationPresentationWork(owner: number, drain?: boolean): void;
+    };
+    Object.assign(presenter, { presentationSubmission: 4 });
+    presenter.beginFixtureActivationPresentationWork(7);
+    expect(presenter.fixtureActivationDrainVolumeFieldsOwner).toBe(0);
+    presenter.beginFixtureActivationPresentationWork(8, true);
+    expect(presenter.fixtureActivationDrainVolumeFieldsOwner).toBe(8);
+  });
+
   it('ignores preexisting dirt but waits for every activation-owned successor lane', () => {
     const presenter = Object.create(PixiFieldPresenter.prototype) as unknown as {
       semanticTextureMutationPending: boolean;

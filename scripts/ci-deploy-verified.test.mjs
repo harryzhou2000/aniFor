@@ -71,6 +71,7 @@ describe('deploy-verified CI workflow contract', () => {
       'selection-owned-frame-receipt',
       'fixture-activation-generation',
       'fixture-activation-work-generation',
+      'fixture-activation-render-field-generation',
     ]);
 
     const inputReferences = workflow.match(
@@ -124,6 +125,7 @@ describe('deploy-verified CI workflow contract', () => {
     expect(proofChoices).toEqual([
       'selection-owned-frame-receipt', 'fixture-activation-generation',
       'fixture-activation-work-generation',
+      'fixture-activation-render-field-generation',
     ]);
     expect(workflow.match(
       /\$\{\{\s*inputs\.visual_lab_performance_cohorts\s*\}\}/g,

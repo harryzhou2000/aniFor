@@ -4,6 +4,7 @@ import { DeterministicBackend } from '../simulation/deterministic-backend';
 import { Material } from '../shared/materials';
 import {
   activatePreparedVisualCaptureFixture,
+  activatePreparedVisualCaptureFixtureWithDrainedWorkGeneration,
   activatePreparedVisualCaptureFixtureWithWorkGeneration,
   blankBrowserInputAuditRequested, browserInputAuditRequested,
   prepareContourStressAuditFixture, prepareDenseSolidAuditFixture,
@@ -11,6 +12,26 @@ import {
 } from './browser-input-audit';
 
 describe('browser input audit gate', () => {
+  it('routes the v7 bridge through drained activation-owned renderer work', () => {
+    const calls: string[] = [];
+    const ticket = activatePreparedVisualCaptureFixtureWithDrainedWorkGeneration({
+      runWithNextFixtureActivationDrainedWorkGeneration: (activate) => {
+        calls.push('reserve-drained-work');
+        activate();
+        return 13;
+      },
+      prepareFixture: () => true,
+      synchronizeFixtureMaterialPlane: () => calls.push('synchronize'),
+      markFixturePrepared: () => calls.push('mark'),
+      setVariant: () => calls.push('select'),
+      invalidateDynamicPresentation: () => calls.push('invalidate'),
+    }, 'showcase', 0);
+    expect(ticket).toBe(13);
+    expect(calls).toEqual([
+      'reserve-drained-work', 'synchronize', 'mark', 'select', 'invalidate',
+    ]);
+  });
+
   it('routes the v2 bridge through activation-owned renderer work', () => {
     const calls: string[] = [];
     const ticket = activatePreparedVisualCaptureFixtureWithWorkGeneration({

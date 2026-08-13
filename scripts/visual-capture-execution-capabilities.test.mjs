@@ -5,10 +5,12 @@ import {
   createVisualCaptureExecutionV4CapabilityRegistry,
   createVisualCaptureExecutionV5CapabilityRegistry,
   createVisualCaptureExecutionV6CapabilityRegistry,
+  createVisualCaptureExecutionV7CapabilityRegistry,
   resolveVisualCaptureExecutionV3Capabilities,
   resolveVisualCaptureExecutionV4Capabilities,
   resolveVisualCaptureExecutionV5Capabilities,
   resolveVisualCaptureExecutionV6Capabilities,
+  resolveVisualCaptureExecutionV7Capabilities,
   resolveVisualCaptureExecutionCapabilities,
   resolveVisualCaptureExecutionV2Capabilities,
   VISUAL_CAPTURE_EXECUTION_CAPABILITIES,
@@ -23,12 +25,15 @@ import {
   VISUAL_CAPTURE_EXECUTION_V5_CAPABILITY_NAMES,
   VISUAL_CAPTURE_EXECUTION_V6_CAPABILITIES,
   VISUAL_CAPTURE_EXECUTION_V6_CAPABILITY_NAMES,
+  VISUAL_CAPTURE_EXECUTION_V7_CAPABILITIES,
+  VISUAL_CAPTURE_EXECUTION_V7_CAPABILITY_NAMES,
   visualCaptureExecutionCapabilitiesForCaptureOrder,
   visualCaptureExecutionV2CapabilitiesForCaptureOrder,
   visualCaptureExecutionV3CapabilitiesForCaptureOrder,
   visualCaptureExecutionV4CapabilitiesForCaptureOrder,
   visualCaptureExecutionV5CapabilitiesForCaptureOrder,
   visualCaptureExecutionV6CapabilitiesForCaptureOrder,
+  visualCaptureExecutionV7CapabilitiesForCaptureOrder,
 } from './visual-capture-execution-capabilities.mjs';
 import { VISUAL_CAPTURE_DRIVER_NAMES } from './visual-capture-drivers.mjs';
 import { VISUAL_CAPTURE_STATIC_CONTRACT } from '../src/shared/visual-capture-static-contract.js';
@@ -141,6 +146,15 @@ const v6Capability = () => ({
   },
 });
 const syntheticV6Profiles = () => ({ first: v6Capability(), second: v6Capability() });
+const v7Capability = () => ({
+  ...v6Capability(),
+  readinessActivation: {
+    ...v6Capability().readinessActivation,
+    capability: 'renderer-fixture-activation-generation/v3',
+    completionScope: 'activation-owned-render-fields',
+  },
+});
+const syntheticV7Profiles = () => ({ first: v7Capability(), second: v7Capability() });
 
 describe('visual capture execution capabilities', () => {
   it('is exhaustive and ordered exactly like the typed static capture drivers', () => {
@@ -238,6 +252,23 @@ describe('visual capture execution capabilities', () => {
     const v5InV6 = syntheticV6Profiles();
     v5InV6.first.readinessActivation.capability = 'renderer-fixture-activation-generation/v1';
     expect(() => createVisualCaptureExecutionV6CapabilityRegistry(syntheticDrivers, v5InV6))
+      .toThrow('readinessActivation is not supported');
+  });
+
+  it('adds activation-owned render-field closure only through v7', () => {
+    expect(VISUAL_CAPTURE_EXECUTION_V7_CAPABILITY_NAMES)
+      .toEqual(VISUAL_CAPTURE_EXECUTION_CAPABILITY_NAMES);
+    for (const name of VISUAL_CAPTURE_EXECUTION_V7_CAPABILITY_NAMES) {
+      expect(VISUAL_CAPTURE_EXECUTION_V7_CAPABILITIES[name]).toEqual(v7Capability());
+      expect(VISUAL_CAPTURE_EXECUTION_V6_CAPABILITIES[name]).toEqual(v6Capability());
+    }
+    expect(resolveVisualCaptureExecutionV7Capabilities('normal-hdr'))
+      .toBe(VISUAL_CAPTURE_EXECUTION_V7_CAPABILITIES['normal-hdr']);
+    expect(visualCaptureExecutionV7CapabilitiesForCaptureOrder(['normal-hdr'])['normal-hdr'])
+      .toBe(VISUAL_CAPTURE_EXECUTION_V7_CAPABILITIES['normal-hdr']);
+    const invalid = syntheticV7Profiles();
+    invalid.first.readinessActivation.completionScope = 'activation-owned-work';
+    expect(() => createVisualCaptureExecutionV7CapabilityRegistry(syntheticDrivers, invalid))
       .toThrow('readinessActivation is not supported');
   });
 

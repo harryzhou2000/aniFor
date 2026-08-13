@@ -186,7 +186,7 @@ interface MutableFixtureActivationPresentationGeneration {
   ticket: number;
   generation: number;
   state: FixtureActivationPresentationGenerationState;
-  completionScope: 'global-quiescence' | 'activation-owned-work';
+  completionScope: 'global-quiescence' | 'activation-owned-work' | 'activation-owned-drained-work';
 }
 
 const FIXTURE_ACTIVATION_PRESENTATION_HISTORY = 4;
@@ -722,6 +722,13 @@ export class MaterialRenderer {
     return this.runWithFixtureActivationPresentationGeneration(activate, 'activation-owned-work');
   }
 
+  /** V7 audit primitive: converges only owned volume fields before one final submission. */
+  runWithNextFixtureActivationDrainedWorkGeneration(
+    activate: () => void,
+  ): number | undefined {
+    return this.runWithFixtureActivationPresentationGeneration(activate, 'activation-owned-drained-work');
+  }
+
   private runWithFixtureActivationPresentationGeneration(
     activate: () => void,
     completionScope: MutableFixtureActivationPresentationGeneration['completionScope'],
@@ -753,13 +760,15 @@ export class MaterialRenderer {
       if (oldest === undefined) break;
       history.delete(oldest);
     }
-    const owned = completionScope === 'activation-owned-work';
+    const owned = completionScope !== 'global-quiescence';
+    const drainOwnedVolumeFields = completionScope === 'activation-owned-drained-work';
     this.fixtureActivationCaptureOwner = owned ? ticket : 0;
-    if (owned) this.presenter?.beginFixtureActivationPresentationWork(ticket);
+    if (owned) this.presenter?.beginFixtureActivationPresentationWork(ticket, drainOwnedVolumeFields);
     try {
       activate();
     } catch (error) {
       this.fixtureActivationCaptureOwner = 0;
+      if (drainOwnedVolumeFields) this.presenter?.cancelFixtureActivationDrainedWork(ticket);
       if (owned) this.presenter?.endFixtureActivationPresentationWork(ticket);
       this.failFixtureActivationPresentationGeneration();
       throw error;

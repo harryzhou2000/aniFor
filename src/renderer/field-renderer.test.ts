@@ -40,6 +40,75 @@ describe('field renderer layout scheduling', () => {
     expect(Object.isFrozen(pending)).toBe(true);
   });
 
+  it('keeps v7 volume draining behind an explicit activation scope', () => {
+    const calls: string[] = [];
+    const renderer = Object.create(MaterialRenderer.prototype) as {
+      disposed: boolean;
+      presenter?: {
+        isContextLost(): boolean;
+        beginFixtureActivationPresentationWork(owner: number, drain?: boolean): void;
+        endFixtureActivationPresentationWork(owner: number): void;
+        cancelFixtureActivationDrainedWork(owner: number): void;
+      };
+      fixtureActivationTicketSequence: number;
+      fixtureActivationPresentationGeneration: number;
+      fixtureActivationPresentation?: { ticket: number; generation: number; state: string; completionScope: string };
+      fixtureActivationPresentations?: Map<number, { ticket: number; generation: number; state: string; completionScope: string }>;
+      fixtureActivationCaptureOwner: number;
+      fixtureActivationDynamicOwner: number;
+      dynamicPresentationInvalidated: boolean;
+      changed: boolean;
+      runWithNextFixtureActivationDrainedWorkGeneration(action: () => void): number | undefined;
+      runWithNextFixtureActivationWorkGeneration(action: () => void): number | undefined;
+    };
+    Object.assign(renderer, {
+      disposed: false,
+      fixtureActivationTicketSequence: 0,
+      fixtureActivationPresentationGeneration: 0,
+      fixtureActivationCaptureOwner: 0,
+      fixtureActivationDynamicOwner: 0,
+      dynamicPresentationInvalidated: false,
+      changed: false,
+      presenter: {
+        isContextLost: () => false,
+        beginFixtureActivationPresentationWork: (owner: number, drain = false) => calls.push(`begin:${owner}:${drain}`),
+        endFixtureActivationPresentationWork: (owner: number) => calls.push(`end:${owner}`),
+        cancelFixtureActivationDrainedWork: (owner: number) => calls.push(`cancel:${owner}`),
+      },
+    });
+
+    expect(renderer.runWithNextFixtureActivationWorkGeneration(() => calls.push('v6'))).toBe(1);
+    expect(renderer.fixtureActivationPresentation?.completionScope).toBe('activation-owned-work');
+    expect(renderer.runWithNextFixtureActivationDrainedWorkGeneration(() => calls.push('v7'))).toBeUndefined();
+    renderer.fixtureActivationPresentation = undefined;
+    expect(renderer.runWithNextFixtureActivationDrainedWorkGeneration(() => calls.push('v7'))).toBe(2);
+    expect(renderer.fixtureActivationPresentations?.get(2)?.completionScope)
+      .toBe('activation-owned-drained-work');
+    expect(calls).toEqual(['begin:1:false', 'v6', 'end:1', 'begin:2:true', 'v7', 'end:2']);
+  });
+
+  it('cancels a v7 drain reservation when typed activation rejects', () => {
+    const calls: string[] = [];
+    const renderer = Object.create(MaterialRenderer.prototype) as any;
+    Object.assign(renderer, {
+      disposed: false,
+      fixtureActivationTicketSequence: 0,
+      fixtureActivationPresentationGeneration: 0,
+      fixtureActivationCaptureOwner: 0,
+      fixtureActivationDynamicOwner: 0,
+      presenter: {
+        isContextLost: () => false,
+        beginFixtureActivationPresentationWork: () => undefined,
+        cancelFixtureActivationDrainedWork: (owner: number) => calls.push(`cancel:${owner}`),
+        endFixtureActivationPresentationWork: (owner: number) => calls.push(`end:${owner}`),
+      },
+    });
+    expect(() => renderer.runWithNextFixtureActivationDrainedWorkGeneration(() => {
+      throw new Error('activation rejected');
+    })).toThrow('activation rejected');
+    expect(calls).toEqual(['cancel:1', 'end:1']);
+  });
+
   it('completes only after the draw hook and retains bounded generations', () => {
     const renderer = Object.create(MaterialRenderer.prototype) as {
       disposed: boolean;
