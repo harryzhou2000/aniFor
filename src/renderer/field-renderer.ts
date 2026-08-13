@@ -765,7 +765,13 @@ export class MaterialRenderer {
     const owned = completionScope !== 'global-quiescence';
     const drainOwnedVolumeFields = completionScope === 'activation-owned-drained-work';
     this.fixtureActivationCaptureOwner = owned ? ticket : 0;
-    if (owned) this.presenter?.beginFixtureActivationPresentationWork(ticket, drainOwnedVolumeFields);
+    const fullSemanticRepack = drainOwnedVolumeFields && Boolean(
+      this.simulation.temperature || this.simulation.velocity
+        || this.simulation.presentationState || this.simulation.photonState,
+    );
+    if (owned) this.presenter?.beginFixtureActivationPresentationWork(
+      ticket, drainOwnedVolumeFields, fullSemanticRepack,
+    );
     try {
       activate();
     } catch (error) {

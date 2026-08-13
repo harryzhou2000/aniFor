@@ -46,7 +46,7 @@ describe('field renderer layout scheduling', () => {
       disposed: boolean;
       presenter?: {
         isContextLost(): boolean;
-        beginFixtureActivationPresentationWork(owner: number, drain?: boolean): void;
+        beginFixtureActivationPresentationWork(owner: number, drain?: boolean, fullRepack?: boolean): void;
         endFixtureActivationPresentationWork(owner: number): void;
         cancelFixtureActivationDrainedWork(owner: number): void;
       };
@@ -58,6 +58,7 @@ describe('field renderer layout scheduling', () => {
       fixtureActivationDynamicOwner: number;
       dynamicPresentationInvalidated: boolean;
       changed: boolean;
+      simulation: { temperature?: Uint16Array };
       runWithNextFixtureActivationDrainedWorkGeneration(action: () => void): number | undefined;
       runWithNextFixtureActivationWorkGeneration(action: () => void): number | undefined;
     };
@@ -69,9 +70,12 @@ describe('field renderer layout scheduling', () => {
       fixtureActivationDynamicOwner: 0,
       dynamicPresentationInvalidated: false,
       changed: false,
+      simulation: { temperature: new Uint16Array(1) },
       presenter: {
         isContextLost: () => false,
-        beginFixtureActivationPresentationWork: (owner: number, drain = false) => calls.push(`begin:${owner}:${drain}`),
+        beginFixtureActivationPresentationWork: (owner: number, drain = false, fullRepack = false) => {
+          calls.push(`begin:${owner}:${drain}:${fullRepack}`);
+        },
         endFixtureActivationPresentationWork: (owner: number) => calls.push(`end:${owner}`),
         cancelFixtureActivationDrainedWork: (owner: number) => calls.push(`cancel:${owner}`),
       },
@@ -84,7 +88,31 @@ describe('field renderer layout scheduling', () => {
     expect(renderer.runWithNextFixtureActivationDrainedWorkGeneration(() => calls.push('v7'))).toBe(2);
     expect(renderer.fixtureActivationPresentations?.get(2)?.completionScope)
       .toBe('activation-owned-drained-work');
-    expect(calls).toEqual(['begin:1:false', 'v6', 'end:1', 'begin:2:true', 'v7', 'end:2']);
+    expect(calls).toEqual([
+      'begin:1:false:false', 'v6', 'end:1',
+      'begin:2:true:true', 'v7', 'end:2',
+    ]);
+  });
+
+  it('does not reserve a full semantic repack without native presentation fields', () => {
+    const begin = vi.fn();
+    const renderer = Object.create(MaterialRenderer.prototype) as any;
+    Object.assign(renderer, {
+      disposed: false,
+      fixtureActivationTicketSequence: 0,
+      fixtureActivationPresentationGeneration: 0,
+      fixtureActivationCaptureOwner: 0,
+      fixtureActivationDynamicOwner: 0,
+      simulation: {},
+      presenter: {
+        isContextLost: () => false,
+        beginFixtureActivationPresentationWork: begin,
+        endFixtureActivationPresentationWork: () => undefined,
+      },
+    });
+
+    expect(renderer.runWithNextFixtureActivationDrainedWorkGeneration(() => undefined)).toBe(1);
+    expect(begin).toHaveBeenCalledWith(1, true, false);
   });
 
   it('cancels a v7 drain reservation when typed activation rejects', () => {
@@ -96,6 +124,7 @@ describe('field renderer layout scheduling', () => {
       fixtureActivationPresentationGeneration: 0,
       fixtureActivationCaptureOwner: 0,
       fixtureActivationDynamicOwner: 0,
+      simulation: { temperature: new Uint16Array(1) },
       presenter: {
         isContextLost: () => false,
         beginFixtureActivationPresentationWork: () => undefined,

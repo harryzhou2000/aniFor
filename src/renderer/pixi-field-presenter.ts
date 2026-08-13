@@ -12351,6 +12351,8 @@ export class PixiFieldPresenter {
   private fixtureActivationSubmissionBaseline = 0;
   /** V7-only opt-in: consumes activation-owned volume work before its final frame. */
   private fixtureActivationDrainVolumeFieldsOwner = 0;
+  /** Activation whose required dynamic refresh will replace cell dirt with one full repack. */
+  private fixtureActivationFullSemanticRepackOwner = 0;
   private fixtureActivationFramebufferAlphaReadbackOwner = 0;
   private fixtureActivationFramebufferAlphaReadback?: FixtureActivationFramebufferAlphaReadback;
   private solidOpticalDepthDirty = true;
@@ -13888,7 +13890,9 @@ export class PixiFieldPresenter {
     const previousMaterial = this.fieldBytes[index * 4];
     const owner = this.fixtureActivationCaptureOwner;
     this.semanticTextureMutationPending = true;
-    this.chunks.markCell(index);
+    if (owner <= 0 || this.fixtureActivationFullSemanticRepackOwner !== owner) {
+      this.chunks.markCell(index);
+    }
     if (owner > 0) this.fixtureActivationSemanticOwner = owner;
     this.fieldSet.markDirty(previousMaterial, nextMaterial, index, owner);
     if (this.powderRelevant(previousMaterial) || this.powderRelevant(nextMaterial)
@@ -13905,11 +13909,16 @@ export class PixiFieldPresenter {
     }
   }
 
-  beginFixtureActivationPresentationWork(owner: number, drainOwnedVolumeFields = false): void {
+  beginFixtureActivationPresentationWork(
+    owner: number,
+    drainOwnedVolumeFields = false,
+    fullSemanticRepack = false,
+  ): void {
     this.fixtureActivationCaptureOwner = owner;
     this.fixtureActivationSubmissionOwner = owner;
     this.fixtureActivationSubmissionBaseline = this.presentationSubmission;
     this.fixtureActivationDrainVolumeFieldsOwner = drainOwnedVolumeFields ? owner : 0;
+    this.fixtureActivationFullSemanticRepackOwner = fullSemanticRepack ? owner : 0;
     this.fixtureActivationFramebufferAlphaReadbackOwner = owner;
     this.fixtureActivationFramebufferAlphaReadback = undefined;
   }
@@ -13923,6 +13932,12 @@ export class PixiFieldPresenter {
   cancelFixtureActivationDrainedWork(owner: number): void {
     if (this.fixtureActivationDrainVolumeFieldsOwner === owner) {
       this.fixtureActivationDrainVolumeFieldsOwner = 0;
+    }
+    if (this.fixtureActivationFullSemanticRepackOwner === owner) {
+      // The callback may already have changed semantic bytes. A rejected
+      // transaction has no guaranteed dynamic refresh, so restore exact dirt.
+      this.fixtureActivationFullSemanticRepackOwner = 0;
+      this.chunks.markAll();
     }
   }
 
@@ -14966,7 +14981,12 @@ export class PixiFieldPresenter {
     const activationOwner = this.fixtureActivationSubmissionOwner;
     const dynamicOwner = refreshDynamicFields
       && this.fixtureActivationDynamicOwner === activationOwner ? activationOwner : 0;
-    if (refreshDynamicFields) this.chunks.markAll();
+    if (refreshDynamicFields) {
+      this.chunks.markAll();
+      if (this.fixtureActivationFullSemanticRepackOwner === activationOwner) {
+        this.fixtureActivationFullSemanticRepackOwner = 0;
+      }
+    }
     const hasExternalPresentationMutation = this.semanticTextureMutationPending
       || refreshDynamicFields;
     this.semanticTextureMutationPending = false;
@@ -15031,7 +15051,6 @@ export class PixiFieldPresenter {
       this.nativeWallsHydrated = true;
     }
     this.uniforms.uniforms.uNativeWallsActive = this.nativeWallsActive ? 1 : 0;
-    if (wallTextureDirty) this.wallSource.update();
     if (photonTextureDirty) this.photonStateSource.update();
     // Native PHOT can move without a pmap material mutation, so a dynamic
     // refresh is authoritative for removal as well as arrival. Avoid a second
@@ -15058,9 +15077,10 @@ export class PixiFieldPresenter {
       if (changed) {
         this.powderSurfaceSource.update();
         packExteriorAir(this.wallBytes, this.fieldSet.powderSurface.exteriorAirBytes);
-        this.wallSource.update();
+        wallTextureDirty = true;
       }
     }
+    if (wallTextureDirty) this.wallSource.update();
     if (this.solidOpticalDepthDirty
       && scheduleTime - this.lastSolidOpticalDepthRefresh >= POWDER_SURFACE_REFRESH_INTERVAL) {
       writeSolidOpticalDepth(

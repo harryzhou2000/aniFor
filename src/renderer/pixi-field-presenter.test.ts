@@ -246,15 +246,46 @@ describe('Pixi presenter startup configuration', () => {
       fixtureActivationSubmissionBaseline: number;
       fixtureActivationDrainVolumeFieldsOwner: number;
       fixtureActivationFramebufferAlphaReadbackOwner: number;
+      fixtureActivationFullSemanticRepackOwner: number;
       fixtureActivationFramebufferAlphaReadback?: unknown;
       presentationSubmission: number;
-      beginFixtureActivationPresentationWork(owner: number, drain?: boolean): void;
+      beginFixtureActivationPresentationWork(owner: number, drain?: boolean, fullRepack?: boolean): void;
     };
     Object.assign(presenter, { presentationSubmission: 4 });
     presenter.beginFixtureActivationPresentationWork(7);
     expect(presenter.fixtureActivationDrainVolumeFieldsOwner).toBe(0);
     presenter.beginFixtureActivationPresentationWork(8, true);
     expect(presenter.fixtureActivationDrainVolumeFieldsOwner).toBe(8);
+    presenter.beginFixtureActivationPresentationWork(9, true, true);
+    expect(presenter.fixtureActivationFullSemanticRepackOwner).toBe(9);
+  });
+
+  it('skips only activation-owned chunk dirt when a full semantic repack is reserved', () => {
+    const markCell = vi.fn();
+    const markDirty = vi.fn();
+    const presenter = Object.create(PixiFieldPresenter.prototype) as any;
+    Object.assign(presenter, {
+      fieldBytes: new Uint8Array(8),
+      chunks: { markCell },
+      fieldSet: {
+        markDirty,
+        lookups: { styleBytes: new Uint8Array(1024) },
+      },
+      fixtureActivationCaptureOwner: 7,
+      fixtureActivationFullSemanticRepackOwner: 7,
+      semanticTextureMutationPending: false,
+      powderSurfaceDirty: false,
+      solidOpticalDepthDirty: false,
+    });
+
+    presenter.markDirty(1, Material.Water);
+    expect(markCell).not.toHaveBeenCalled();
+    expect(markDirty).toHaveBeenCalledWith(Material.Empty, Material.Water, 1, 7);
+    expect(presenter.semanticTextureMutationPending).toBe(true);
+
+    presenter.fixtureActivationCaptureOwner = 0;
+    presenter.markDirty(1, Material.Water);
+    expect(markCell).toHaveBeenCalledWith(1);
   });
 
   it('ignores preexisting dirt but waits for every activation-owned successor lane', () => {
@@ -8657,7 +8688,9 @@ describe('Pixi presenter startup configuration', () => {
   it('coalesces only auxiliary powder settling between true-8x semantic frames', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     expect(source).toContain('private semanticTextureMutationPending = true;');
-    expect(source).toContain('this.semanticTextureMutationPending = true;\n    this.chunks.markCell(index);');
+    expect(source).toContain('this.semanticTextureMutationPending = true;');
+    expect(source).toContain('this.chunks.markCell(index);');
+    expect(source).toContain('this.fixtureActivationFullSemanticRepackOwner !== owner');
     expect(source).toContain('const hasExternalPresentationMutation = this.semanticTextureMutationPending');
     expect(source).toContain('this.semanticTextureMutationPending = false;');
     expect(source).toContain('if (this.outputScale === 8 && this.boundaryEvolutionPending');

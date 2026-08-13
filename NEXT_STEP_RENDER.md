@@ -8050,6 +8050,34 @@ verification in 1m44s. CI readiness remained load-sensitive at approximately
 27.25 seconds for RenderOptics and 35.45 seconds for hosted Water; the now-cheap
 OFF/A/B digest samples do not justify weakening the retained first-frame proof.
 
+The active first-populated-frame increment removes preparation work without
+removing evidence. A drained activation with native presentation fields already
+requires one full semantic repack immediately before its sole populated frame;
+while that exact activation owner is live, per-cell material mutation therefore
+keeps field-lane dirt and powder/solid ownership but does not redundantly mark
+semantic upload chunks that the full repack will replace. Ordinary play, legacy
+activation scopes, Canvas/no-native-field compatibility, true 8x, rejection
+recovery, and every evidence plane retain their existing paths. The same update
+also coalesces wall-state and powder-exterior-air changes into at most one wall
+texture upload per presentation.
+
+Focused ownership tests and the production Pages build pass. The full source
+and tooling run had one load-sensitive Powder Light fixture exceed its five-
+second timeout while neighboring tests passed; that exact file then passed in
+isolation with all three tests in 4.73 seconds. A fresh default-v9 SwiftShader
+RenderOptics review at
+`.artifacts/visual-lab-reviews/render-optics-9fa3cba4-b281-4389-890e-e32361312b3d`
+passed WebGL/HDR, portable verification, strict teardown, and all region views.
+It retained exact result
+`sha256:4891db2c82bb89cb4bce5a63a2927360fbc20e634a0a91b9d17a490deb630581`
+and all established OFF/A/B PNG hashes. Fresh Oxygen and moving-Water captures
+also passed semantic, field-alpha, and framebuffer-alpha invariants with zero
+browser errors. Those two legacy-startup recipes stage their fixture before
+WebGL and are compatibility checks; RenderOptics is the direct v9 activation
+proof. Treat all timing from these individual software-GPU runs as diagnostic,
+not as a claimed speedup; use alternating performance cohorts for a comparative
+claim.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
