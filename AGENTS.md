@@ -1913,6 +1913,11 @@ verification with result
 `sha256:560920b905644c475da7b406a1d1c8faa7bbf338e0853c2c3cd6a26255209d31`.
 Use this seam to shorten the next normal-HDR experiment registration, not to
 merge release selection, executable preparation, or shader loading into data.
+The static contract also derives `domainCodes`, public `domains`, and the
+independent `captureDomainOrder` from one private ordered domain-authoring list.
+Keep codes dense and append-only, capture ranks dense and unique, strip ranks
+from public data, and preserve existing public JSON order. Do not reintroduce
+separate code or capture-order registration lists.
 
 Performance comparisons use the opt-in
 `audit:visual-lab:performance-cohorts` runner. Preserve its fixed

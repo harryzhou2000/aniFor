@@ -7351,6 +7351,17 @@ Continue by measuring the remaining normal-HDR candidate registration steps;
 keep explicit leaf imports and typed preparers rather than moving module paths,
 GLSL, callbacks, or browser execution into the data-only manifest.
 
+That follow-up measurement found seven mandatory registration loci for a new
+implemented normal-HDR domain. The bounded domain-authoring projection now
+owns each stable shader code and independent capture rank in one private row,
+then derives `domainCodes`, the public `domains`, and `captureDomainOrder`.
+Dense append-only codes and dense unique capture ranks fail before export, and
+the private rank is stripped from the frozen JSON-safe contract. Existing
+public bytes, generated declarations, recipe sets, renderer order, and focused
+contract digests remain unchanged. This reduces the maximal registration count
+from seven loci to five; explicit shader leaves/maps and typed preparers/maps
+remain intentional executable boundaries.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

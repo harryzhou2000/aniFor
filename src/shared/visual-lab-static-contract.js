@@ -23,63 +23,86 @@ const normalHdrExecutionProfile = {
   },
 };
 
+/**
+ * Private authoring rows own stable shader codes and independent capture order
+ * once. `captureOrder` is stripped from the public static contract.
+ */
+const DOMAIN_AUTHORING_ROWS = [
+  {
+    name: 'off',
+    code: 0,
+    implemented: false,
+    targetKind: 'none',
+    executionProfile: null,
+    evidence: null,
+    fixedUrlParameters: {},
+    captureOrder: null,
+  },
+  {
+    name: 'powder',
+    code: 1,
+    implemented: false,
+    targetKind: 'semantic-material-id',
+    executionProfile: null,
+    evidence: null,
+    fixedUrlParameters: {},
+    captureOrder: null,
+  },
+  {
+    name: 'liquid',
+    code: 2,
+    implemented: true,
+    targetKind: 'semantic-material-id',
+    executionProfile: normalHdrExecutionProfile,
+    evidence: { readerMethod: 'liquidFieldAlpha', plane: 'liquid-alpha' },
+    fixedUrlParameters: { liquidBodyVfx: '1', liquidSurfaceVfx: '1' },
+    captureOrder: 1,
+  },
+  {
+    name: 'gas',
+    code: 3,
+    implemented: true,
+    targetKind: 'propagated-atmosphere-style-byte',
+    executionProfile: normalHdrExecutionProfile,
+    evidence: { readerMethod: 'atmosphereFieldAlpha', plane: 'atmosphere-alpha' },
+    fixedUrlParameters: {},
+    captureOrder: 0,
+  },
+  {
+    name: 'emission',
+    code: 4,
+    implemented: true,
+    targetKind: 'semantic-material-id',
+    executionProfile: normalHdrExecutionProfile,
+    evidence: { readerMethod: 'emissionFieldAlpha', plane: 'emission-alpha' },
+    fixedUrlParameters: {},
+    captureOrder: 2,
+  },
+];
+
+const captureRanks = DOMAIN_AUTHORING_ROWS
+  .filter(({ captureOrder }) => captureOrder !== null)
+  .map(({ captureOrder }) => captureOrder)
+  .sort((left, right) => left - right);
+if (DOMAIN_AUTHORING_ROWS.some(({ code }, index) => code !== index)
+  || captureRanks.some((rank, index) => rank !== index)) {
+  throw new TypeError('Visual Lab domain codes and capture ranks must be unique dense append-only values');
+}
+
+const domainCodes = Object.fromEntries(
+  DOMAIN_AUTHORING_ROWS.map(({ name, code }) => [name, code]),
+);
+const domains = DOMAIN_AUTHORING_ROWS.map(({ captureOrder: _captureOrder, ...domain }) => domain);
+const captureDomainOrder = DOMAIN_AUTHORING_ROWS
+  .filter(({ captureOrder }) => captureOrder !== null)
+  .sort((left, right) => left.captureOrder - right.captureOrder)
+  .map(({ name }) => name);
+
 const contract = {
   schema: 'anifor.visual-lab.static-contract/v1',
-  domainCodes: {
-    off: 0,
-    powder: 1,
-    liquid: 2,
-    gas: 3,
-    emission: 4,
-  },
-  domains: [
-    {
-      name: 'off',
-      code: 0,
-      implemented: false,
-      targetKind: 'none',
-      executionProfile: null,
-      evidence: null,
-      fixedUrlParameters: {},
-    },
-    {
-      name: 'powder',
-      code: 1,
-      implemented: false,
-      targetKind: 'semantic-material-id',
-      executionProfile: null,
-      evidence: null,
-      fixedUrlParameters: {},
-    },
-    {
-      name: 'liquid',
-      code: 2,
-      implemented: true,
-      targetKind: 'semantic-material-id',
-      executionProfile: normalHdrExecutionProfile,
-      evidence: { readerMethod: 'liquidFieldAlpha', plane: 'liquid-alpha' },
-      fixedUrlParameters: { liquidBodyVfx: '1', liquidSurfaceVfx: '1' },
-    },
-    {
-      name: 'gas',
-      code: 3,
-      implemented: true,
-      targetKind: 'propagated-atmosphere-style-byte',
-      executionProfile: normalHdrExecutionProfile,
-      evidence: { readerMethod: 'atmosphereFieldAlpha', plane: 'atmosphere-alpha' },
-      fixedUrlParameters: {},
-    },
-    {
-      name: 'emission',
-      code: 4,
-      implemented: true,
-      targetKind: 'semantic-material-id',
-      executionProfile: normalHdrExecutionProfile,
-      evidence: { readerMethod: 'emissionFieldAlpha', plane: 'emission-alpha' },
-      fixedUrlParameters: {},
-    },
-  ],
-  captureDomainOrder: ['gas', 'liquid', 'emission'],
+  domainCodes,
+  domains,
+  captureDomainOrder,
   normalHdrExecutionProfile,
   fixtures: [
     {
