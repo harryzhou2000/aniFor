@@ -8039,6 +8039,17 @@ populated presentation remains the measured dominant cost, so the next
 performance increment should profile and reduce driver-owned first-frame work
 without weakening evidence or adding another tuning schema.
 
+That readiness-lifecycle increment is deployed at exact revision
+`ae84a26d16720a7955471c6d41e5e0b7179675f9` by workflow run `31745784014`.
+The cached build finished in 3m35s with 269/270 ccache hits and passed 1,623
+source plus 417 tooling tests. The default-v9 RenderOptics review and downloaded
+portable package passed in 1m21s with the unchanged result above and all 49
+regions. Pages deployed in 9s; exact revision and 19-resource closure passed on
+the first attempt, followed by the hosted Water receipt-v2 smoke and portable
+verification in 1m44s. CI readiness remained load-sensitive at approximately
+27.25 seconds for RenderOptics and 35.45 seconds for hosted Water; the now-cheap
+OFF/A/B digest samples do not justify weakening the retained first-frame proof.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
