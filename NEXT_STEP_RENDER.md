@@ -7226,6 +7226,30 @@ The next gate is one clean hosted ad-hoc Gas+Oxygen package on the corrected
 workflow; after that, prefer another measured authoring or review-framework gap
 before attempting the larger opt-in v7 render-field convergence experiment.
 
+That hosted gate passed at exact revision
+`1847c625abac4f4e69dfe6578d04a8c802674278` in workflow run
+`31677381731`. Build completed in 2m17s; the shared-host Gas+Oxygen receipt-v2
+review captured both candidates through one browser with zero restart, uploaded
+artifact `9172242869`, downloaded it again, and passed portable reconstruction
+with the established result IDs, ten declared regions, and exact recipe-set,
+host-plan, and tuning-plan proofs. The preceding v6 attempt in run
+`31676938019` is useful negative evidence: `fixture-activation-work-generation`
+is the Powder activation-performance control, not the general Gas/Oxygen review
+proof, and both candidates failed its loaded framebuffer readback. Keep
+completed-frame receipt v2 as the cross-fixture review control.
+
+Two additional foundations are now checkpointed. The complete showcase v6 audit
+literal lives beside its frozen command stream in the shared showcase catalog;
+the renderer retains only a typed compatibility facade, and the 13-fixture
+capture/inspection projections remain unchanged. Separately,
+`RenderFieldSet.drainActivationOwned` provides the pure CPU first slice for a
+future v7 experiment: it drains only exact-owner atmosphere, liquid, emission,
+and successor suspension lanes in canonical order, returns the existing dirty
+bitmask, and is byte-equivalent to staged cadence. It has no WebGL, presentation,
+browser, tuning-plan, or CI authority yet. The next implementation boundary is
+the explicit opt-in presenter integration that uploads those returned lanes once
+and submits one final activation frame while v1-v6 stay unchanged.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

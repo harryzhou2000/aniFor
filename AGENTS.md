@@ -1530,6 +1530,13 @@ GitHub materializes input defaults even when a dispatcher is selecting an
 ad-hoc candidate list. Do not restore a three-way exclusivity count that makes
 the advertised ad-hoc control unusable.
 
+Use `completed-frame-receipt` (execution-tuning-plan/v2) for cross-fixture
+current-only Gas/Oxygen review. `fixture-activation-work-generation` is the
+Powder-specific v6 activation-performance control; do not select it merely
+because it is the newest proof mode. Run `31677381731` is the successful
+Gas+Oxygen CI reference, while `31676938019` records the invalid v6 pairing and
+its loaded framebuffer-readback failures.
+
 The typed fixture-preparation boundary is also complete and deployed at revision
 `83894aa6fe98fc5a537cd4c23c9b2400dc37081f` by release-set workflow run
 `31293472696`. A prepared
