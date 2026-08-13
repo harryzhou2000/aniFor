@@ -209,6 +209,12 @@ describe('Visual Lab declarative cohort catalog', () => {
     const catalogPath = fileURLToPath(new URL('../visual-lab/cohorts.json', import.meta.url));
     const output = fileURLToPath(new URL('../visual-lab/recipe-sets', import.meta.url));
     const input = await readVisualLabCohortCatalog(catalogPath);
+    const release = input.cohorts.find(({ name }) => name === 'release');
+    expect(release).toMatchObject({
+      includes: ['material-optics'],
+      selectors: { domains: [], fixtures: [] },
+      candidates: [],
+    });
     await expect(checkVisualLabCohortOutputs(input, output)).resolves.toEqual({
       checked: 6,
       names: [

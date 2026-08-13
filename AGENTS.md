@@ -1523,6 +1523,13 @@ off. New CI review packages must require it fail-closed. Never rotate result,
 batch, baseline, comparison, promotion, or recipe-set v1 identities for this
 additive provenance.
 
+Manual Visual Lab CI selection treats a nonempty explicit candidate list or
+tracked recipe-set path as overriding the workflow's default cohort input;
+candidates and recipe sets remain mutually exclusive. This is required because
+GitHub materializes input defaults even when a dispatcher is selecting an
+ad-hoc candidate list. Do not restore a three-way exclusivity count that makes
+the advertised ad-hoc control unusable.
+
 The typed fixture-preparation boundary is also complete and deployed at revision
 `83894aa6fe98fc5a537cd4c23c9b2400dc37081f` by release-set workflow run
 `31293472696`. A prepared

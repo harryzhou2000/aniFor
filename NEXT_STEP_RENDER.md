@@ -7199,6 +7199,33 @@ capture, strict teardown, portable verification, and all ten new declared
 regions through one host with zero restart. This is a structural migration, not
 an aesthetic hash pin; the next gate is the approved CI review/package check.
 
+That first CI gate exposed two stale assumptions rather than a renderer fault.
+The source build initially found compatibility tests that still used
+`gas-showcase` as their synthetic regionless candidate; those tests now use an
+explicit unregistered name and retain their null-result coverage. The rebuilt
+source suite then passed, but GitHub supplied the workflow input's default
+`material-lighting` cohort alongside an explicit ad-hoc candidate list. Manual
+review selection now gives an explicit tracked recipe set or candidate list
+precedence over that default cohort, while candidates and recipe sets remain
+mutually exclusive. Preserve this precedence whenever workflow defaults change.
+
+The following authoring cleanup makes the separate `candidate-survey` scene use
+the same frozen-data plus typed-dispatch pattern without promoting it into the
+canonical capture catalog. Its shared catalog owns the six cards, common ROCK
+and wall context, semantic oracle, and review probes; the renderer exports remain
+compatibility facades. Exact material and wall planes, semantic hash
+`2255453673`, occupied count `115368`, material counts, six regions, six contact
+probes, and two wall probes remain unchanged. This diagnostic still has no
+Visual Lab recipe, fixture, inspection source, preparer, or browser authority.
+
+Finally, the `release` cohort now includes the already-identical
+`material-optics` composition instead of repeating its three leaf includes.
+The compiler preserves all six checked-in recipe-set bytes and IDs, including
+release ID `sha256:2f7824673c315358416b802283d3d3333f0b22cd908699cbe512da8b38f6c5e2`.
+The next gate is one clean hosted ad-hoc Gas+Oxygen package on the corrected
+workflow; after that, prefer another measured authoring or review-framework gap
+before attempting the larger opt-in v7 render-field convergence experiment.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
