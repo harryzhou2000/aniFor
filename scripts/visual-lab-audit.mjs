@@ -586,16 +586,22 @@ async function captureVisualLabCandidateEvidence({
           ),
         }),
       );
-      // The activation's sole populated frame prearms its framebuffer transfer.
-      // Observe that exact ticket separately so datasetWaitMs ends at CPU
-      // submission and readbackHashMs no longer hides renderer/PBO settlement.
+      // The activation's sole populated frame prearms both existing proofs.
+      // The receipt fence precedes the PBO transfer fence, so the protected
+      // timing fields now distinguish CPU submission, GPU completion, and the
+      // remaining transfer plus unchanged evidence snapshot without another frame.
+      const readinessReceiptTicket = await requestCompletedFrameReceipt(
+        cdp, 'readiness', effectiveTimeouts.readinessMs,
+        profile.readiness.pollIntervalMs,
+      );
       const readinessReadbackTicket = await requestFramebufferAlphaReadback(cdp);
       await captureSubphases.measureReadiness('refreshMs', async () => {
-        if (readinessReadbackTicket !== null) {
-          await awaitFramebufferAlphaDigest(
-            cdp, readinessReadbackTicket, snapshotCommandTimeoutMs,
-          );
-        }
+        const receipt = await awaitCompletedFrameReceipt(
+          cdp, 'readiness', readinessReceiptTicket,
+          effectiveTimeouts.readinessMs, profile.readiness.pollIntervalMs,
+        );
+        assert(receipt.state === 'completed',
+          `readiness completed-frame receipt ${readinessReceiptTicket} is ${String(receipt.state)}`);
       });
       const snapshot = await captureSubphases.measureSnapshot(
         'readiness', () => snapshotState(
@@ -606,10 +612,15 @@ async function captureVisualLabCandidateEvidence({
       const verifiedGeneration = await readFixtureActivationPresentationGeneration(
         cdp, 'readiness', startupFixtureActivationTicket,
       );
+      const verifiedReceipt = await readCompletedFrameReceipt(
+        cdp, 'readiness', readinessReceiptTicket,
+      );
       assert(verifiedGeneration.state === 'completed'
         && verifiedGeneration.ticket === generation.ticket
         && verifiedGeneration.generation === generation.generation,
       'fixture activation presentation generation changed after its snapshot');
+      assert(verifiedReceipt.state === 'completed',
+        'fixture activation completed-frame receipt changed after its snapshot');
       assert(snapshot.semantic.occupied > 0
         && snapshot.fieldAlpha.nonzero > 0
         && snapshot.framebufferAlpha.nonzero > 0,

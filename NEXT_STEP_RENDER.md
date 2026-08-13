@@ -8220,6 +8220,29 @@ This shows that evidence serialization is already cheap and the reusable next
 optimization target is renderer/GPU settlement after the populated submission,
 not another readback or proof reduction. Deployment evidence is pending.
 
+The follow-up measurement refinement reuses the established
+`completed-frame-receipt/v1` rather than introducing another proof schema. The
+activation's exact final normal-scale submission now prearms both a presentation
+completion receipt and the existing framebuffer-alpha PBO transfer. Their two
+fences are independently consumed through the existing browser audit methods;
+no second presentation, new browser method, tuning-plan field, result field, or
+portable identity is added. For typed activation readiness, `datasetWaitMs`
+therefore ends at the populated CPU submission, `refreshMs` ends at exact GPU
+presentation completion, and the unchanged `readbackHashMs` includes the
+already-completed PBO plus semantic/field/framebuffer evidence snapshot.
+
+A fresh local SwiftShader RenderOptics review at
+`.artifacts/visual-lab-reviews/render-optics-17e34e01-16d5-4ce9-87d8-d65502133e0a`
+passed all 49 response/appearance regions and strict teardown. It retained
+exact result `sha256:4891db2c82bb89cb4bce5a63a2927360fbc20e634a0a91b9d17a490deb630581`,
+all three established PNG hashes, and OFF/A/B submissions 5/6/7. Its refined
+split was approximately 4.70 seconds to populated submission, 2.76 seconds to
+GPU completion, and 20.1 milliseconds for the remaining transfer/evidence
+snapshot. This rules out framebuffer transfer and evidence hashing as the
+dominant readiness cost. The next optimization should reduce reusable first
+populated HDR render work while retaining the exact semantic, field, framebuffer,
+receipt, screenshot, and identity contracts. Deployment evidence is pending.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

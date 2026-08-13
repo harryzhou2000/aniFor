@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import {
   digestFramebufferAlpha,
   PixiFieldPresenter,
+  type WebGLCompletedFrameReceipt,
   type WebGLFramebufferAlphaReadback,
 } from './pixi-field-presenter';
 import { MATERIAL_BODY_FINISH_GLSL } from './material-body-finish';
@@ -5607,6 +5608,8 @@ describe('Pixi presenter startup configuration', () => {
       fixtureActivationDynamicOwner: number;
       fieldSet: { hasPendingRefreshFor(owner: number): boolean };
       armFixtureActivationFramebufferAlphaReadback(submission: number): void;
+      requestWebGLCompletedFrameReceipt(): number | undefined;
+      getWebGLCompletedFrameReceipt(ticket: number): WebGLCompletedFrameReceipt | undefined;
       requestWebGLFramebufferAlphaReadback(): number | undefined;
       getWebGLFramebufferAlphaReadback(ticket: number): WebGLFramebufferAlphaReadback | undefined;
       releaseFramebufferAlphaReadbackBuffer(): void;
@@ -5627,15 +5630,19 @@ describe('Pixi presenter startup configuration', () => {
 
     presenter.armFixtureActivationFramebufferAlphaReadback(8);
 
-    // The ordinary public request consumes the prearmed ticket rather than
-    // allocating/reading the same final framebuffer a second time.
+    // Both ordinary public requests consume proofs prearmed on the exact same
+    // activation submission rather than rendering or reading it again.
+    expect(presenter.requestWebGLCompletedFrameReceipt()).toBe(1);
+    expect(presenter.getWebGLCompletedFrameReceipt(1)).toMatchObject({
+      ticket: 1, submission: 8, state: 'pending',
+    });
     expect(presenter.requestWebGLFramebufferAlphaReadback()).toBe(1);
     expect(presenter.getWebGLFramebufferAlphaReadback(1)).toMatchObject({
       ticket: 1, submission: 8, state: 'pending',
     });
     expect(gl.createBuffer).toHaveBeenCalledOnce();
     expect(gl.readPixels).toHaveBeenCalledOnce();
-    expect(gl.fenceSync).toHaveBeenCalledOnce();
+    expect(gl.fenceSync).toHaveBeenCalledTimes(2);
 
     // The activation ticket is one-shot. Once it has served the readiness
     // snapshot, an ordinary later caller gets a new current-frame transfer.
@@ -5795,6 +5802,8 @@ describe('Pixi presenter startup configuration', () => {
 
     expect(gl.createBuffer).toHaveBeenCalledOnce();
     expect(gl.readPixels).toHaveBeenCalledOnce();
+    // This harness stubs the ordinary receipt arm; the observed fence is the
+    // PBO owner. The direct activation test above exercises both real fences.
     expect(gl.fenceSync).toHaveBeenCalledOnce();
   });
 

@@ -246,8 +246,10 @@ interface MutableWebGLFramebufferAlphaReadback extends WebGLFramebufferAlphaRead
  */
 interface FixtureActivationFramebufferAlphaReadback {
   readonly owner: number;
+  readonly receiptTicket: number;
   readonly ticket: number;
   readonly submission: number;
+  receiptConsumed: boolean;
   consumed: boolean;
 }
 
@@ -14689,6 +14691,20 @@ export class PixiFieldPresenter {
    * it. At true 8x the ticket attaches to the existing sole render fence.
    */
   requestWebGLCompletedFrameReceipt(): number | undefined {
+    const activationReadback = this.fixtureActivationFramebufferAlphaReadback;
+    if (activationReadback) {
+      if (!activationReadback.receiptConsumed
+        && activationReadback.submission === this.presentationSubmission) {
+        const receipt = this.completedFrameReceipts?.get(activationReadback.receiptTicket);
+        if (receipt?.ticket === activationReadback.receiptTicket
+          && receipt.submission === activationReadback.submission
+          && (receipt.state === 'pending' || receipt.state === 'completed')) {
+          activationReadback.receiptConsumed = true;
+          return activationReadback.receiptTicket;
+        }
+      }
+      this.fixtureActivationFramebufferAlphaReadback = undefined;
+    }
     const ticket = this.beginWebGLCompletedFrameReceipt();
     if (ticket === undefined) return undefined;
     const submission = this.completedFrameReceipt!.submission;
@@ -14812,9 +14828,15 @@ export class PixiFieldPresenter {
       }
     }
 
+    return this.reserveWebGLCompletedFrameReceipt((this.presentationSubmission ?? 0) + 1);
+  }
+
+  /** Private exact-submission reservation used only by the activation final-frame arm point. */
+  private reserveWebGLCompletedFrameReceipt(submission: number): number | undefined {
+    if (!Number.isSafeInteger(submission) || submission <= 0
+      || this.completedFrameReceipt?.state === 'pending') return undefined;
     const ticket = (this.completedFrameTicketSequence ?? 0) + 1;
     this.completedFrameTicketSequence = ticket;
-    const submission = (this.presentationSubmission ?? 0) + 1;
     this.completedFrameReceipt = {
       schema: WEBGL_COMPLETED_FRAME_RECEIPT_SCHEMA,
       ticket,
@@ -15319,14 +15341,25 @@ export class PixiFieldPresenter {
     // must not be retried on an unrelated successor; the established snapshot
     // request will retain its synchronous fallback when no ticket was created.
     this.fixtureActivationFramebufferAlphaReadbackOwner = 0;
+    const receiptTicket = this.reserveWebGLCompletedFrameReceipt(submission);
+    if (receiptTicket === undefined) return;
+    this.armCompletedFrameFence(submission);
     const ticket = this.requestWebGLFramebufferAlphaReadback();
-    if (ticket === undefined) return;
+    if (ticket === undefined) {
+      this.failCompletedFrameReceiptTicket(receiptTicket);
+      return;
+    }
     const readback = this.framebufferAlphaReadbacks?.get(ticket);
-    if (!readback || readback.ticket !== ticket || readback.submission !== submission) return;
+    if (!readback || readback.ticket !== ticket || readback.submission !== submission) {
+      this.failCompletedFrameReceiptTicket(receiptTicket);
+      return;
+    }
     this.fixtureActivationFramebufferAlphaReadback = {
       owner,
+      receiptTicket,
       ticket,
       submission,
+      receiptConsumed: false,
       consumed: false,
     };
   }
