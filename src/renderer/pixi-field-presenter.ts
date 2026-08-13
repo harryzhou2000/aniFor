@@ -6200,7 +6200,8 @@ void main() {
     cloudNeighbourMean = (cloudLeft + cloudRight + cloudTop + cloudBottom) * 0.25;
     volumeSlope = vec2(cloudRight - cloudLeft, cloudBottom - cloudTop) * 0.85;
     if (uMaterialBodyFinish > 0.5 && uMaterialLightingVariant > 1.5) {
-      vec2 wide = uAtmosphereTexel * 3.0;
+      MaterialMesoscaleResponse mesoProfile = materialMesoscaleParameters(2.0);
+      vec2 wide = uAtmosphereTexel * mesoProfile.radius;
       vec4 cloudWide = vec4(
         texture(uAtmosphereTexture, fieldUv - vec2(wide.x, 0.0)).a,
         texture(uAtmosphereTexture, fieldUv + vec2(wide.x, 0.0)).a,
@@ -6210,7 +6211,7 @@ void main() {
       MaterialMesoscaleShape meso = materialMesoscaleShape(
         atmosphereState.a,
         vec4(cloudLeft, cloudRight, cloudTop, cloudBottom),
-        cloudWide, 0.018, 0.16
+        cloudWide, mesoProfile
       );
       materialMesoscaleSlope = meso.slope * 0.85;
       materialMesoscaleCurvature = meso.curvature;
@@ -6242,7 +6243,8 @@ void main() {
       liquidRight.a - liquidLeft.a, liquidBottom.a - liquidTop.a
     ) * 0.65;
     if (uMaterialBodyFinish > 0.5 && uMaterialLightingVariant > 1.5) {
-      vec2 wide = uTexel * 3.0;
+      MaterialMesoscaleResponse mesoProfile = materialMesoscaleParameters(1.0);
+      vec2 wide = uTexel * mesoProfile.radius;
       vec4 liquidWide = vec4(
         texture(uLiquidTexture, fieldUv - vec2(wide.x, 0.0)).a,
         texture(uLiquidTexture, fieldUv + vec2(wide.x, 0.0)).a,
@@ -6252,7 +6254,7 @@ void main() {
       MaterialMesoscaleShape meso = materialMesoscaleShape(
         liquidDensity,
         vec4(liquidLeft.a, liquidRight.a, liquidTop.a, liquidBottom.a),
-        liquidWide, 0.46, 0.82
+        liquidWide, mesoProfile
       );
       materialMesoscaleSlope = meso.slope * 0.65;
       materialMesoscaleCurvature = meso.curvature;

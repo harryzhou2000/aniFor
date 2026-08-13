@@ -1,5 +1,6 @@
 import { MATERIAL_APPEARANCE_PROFILE_GLSL_SELECTOR } from './material-appearance-profiles';
 import { MATERIAL_COMPOSITION_PROFILE_GLSL_SELECTOR } from './material-composition-profiles';
+import { MATERIAL_MESOSCALE_PROFILE_GLSL_SELECTOR } from './material-mesoscale-profiles';
 import { RECONSTRUCTED_VOLUME_OPTICS_GLSL } from './reconstructed-volume-optics';
 
 /**
@@ -36,6 +37,7 @@ float liquidBodyFinishDepth(
 // are RenderOptics classes, never exact material IDs.
 ${MATERIAL_APPEARANCE_PROFILE_GLSL_SELECTOR}
 ${MATERIAL_COMPOSITION_PROFILE_GLSL_SELECTOR}
+${MATERIAL_MESOSCALE_PROFILE_GLSL_SELECTOR}
 ${RECONSTRUCTED_VOLUME_OPTICS_GLSL}
 
 // Reusable fixed-cell probe for mesoscopic material form. Callers retain
@@ -54,13 +56,12 @@ MaterialMesoscaleShape materialMesoscaleShape(
   float centre,
   vec4 nearCardinal,
   vec4 wideCardinal,
-  float supportLow,
-  float supportHigh
+  MaterialMesoscaleResponse response
 ) {
   float nearMean = dot(nearCardinal, vec4(0.25));
   float wideMean = dot(wideCardinal, vec4(0.25));
   float coherence = smoothstep(
-    supportLow, supportHigh, min(centre, min(nearMean, wideMean))
+    response.supportLow, response.supportHigh, min(centre, min(nearMean, wideMean))
   );
   vec2 nearSlope = vec2(
     nearCardinal.y - nearCardinal.x,
@@ -71,13 +72,14 @@ MaterialMesoscaleShape materialMesoscaleShape(
   vec2 wideSlope = vec2(
     wideCardinal.y - wideCardinal.x,
     wideCardinal.w - wideCardinal.z
-  ) / 3.0;
+  ) / max(response.radius, 1.0);
   float nearCurvature = centre - nearMean;
   float wideCurvature = centre - wideMean;
   return MaterialMesoscaleShape(
-    mix(nearSlope, wideSlope, coherence * 0.72),
-    clamp(mix(nearCurvature, wideCurvature, coherence * 0.68) * 7.0, -1.0, 1.0),
-    mix(nearMean, wideMean, coherence * 0.64),
+    mix(nearSlope, wideSlope, coherence * response.slopeBlend),
+    clamp(mix(nearCurvature, wideCurvature,
+      coherence * response.curvatureBlend) * 7.0, -1.0, 1.0),
+    mix(nearMean, wideMean, coherence * response.neighbourBlend),
     coherence
   );
 }

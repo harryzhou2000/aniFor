@@ -6824,7 +6824,7 @@ on the region crop board, while preserving Local/Grains, Canvas, and compact
 true-8x controls.
 
 The current retained framework increment is a reusable mesoscale material-shape
-probe. `MaterialMesoscaleShape` accepts near and fixed three-cell-wide cardinal
+probe. `MaterialMesoscaleShape` accepts near and authored-radius cardinal
 samples from an already-owned phase field and produces one coherent
 slope/curvature/neighbour-mean tuple without owning a sampler, field, target,
 pass, or silhouette. Normal-WebGL Volumetric B currently uses it for liquid
@@ -6834,9 +6834,16 @@ near+wide support proof so holes, wisps, contacts, fine structures, and authored
 ownership remain authoritative. The real material and gas atlas capture passed
 with invariant alpha and completed-frame receipts. Next extend this primitive
 only where an existing powder/solid field can supply the same bounded stencil
-without a new resource, then compare declared region crops by eye. Do not turn
-its four extra B-only cardinal reads per fluid field into an unconditional or
-output-scale cost.
+without a new resource, then compare declared region crops by eye. The first
+three-cell observation proved too local: the retained fluid profile now uses an
+eight-cell radius, which visibly strengthens broad pool/cloud form while keeping
+alpha and controls exact. A tested 3/12-cell powder extension remained
+byte-inert under its correct broad-body gate and was removed. The closed
+`material-mesoscale-profiles.ts` selector records radius, support thresholds,
+and blend weights for all four phases; Powder and Solid remain explicit zero-
+radius no-ops until a live carrier is proven. Do not turn the four extra B-only
+cardinal reads per active fluid field into an unconditional or output-scale
+cost.
 
 ## Deferred long-term visual roadmap
 

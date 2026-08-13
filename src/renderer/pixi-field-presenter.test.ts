@@ -390,7 +390,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('vec3 applyMaterialVolumeLobe(');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('struct MaterialMesoscaleShape {');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('MaterialMesoscaleShape materialMesoscaleShape(');
-    expect(MATERIAL_BODY_FINISH_GLSL).toContain('mix(nearSlope, wideSlope, coherence * 0.72)');
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain('coherence * response.slopeBlend');
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain('/ max(response.radius, 1.0);');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('vec3 applySolidMaterialLighting(');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'float lobeExponent = mix(3.0, 0.86, roughness);',
@@ -8758,7 +8759,9 @@ describe('Pixi presenter startup configuration', () => {
   it('keeps role glyphs RGB-only and off reconstructed support', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const start = source.indexOf('// Static role accents cross phase boundaries');
-    const end = source.indexOf('  float emission = energyCore > 0.5', start);
+    const end = source.indexOf(
+      '  if (family == 4.0 && traits < 0.5 && !materialEmissive', start,
+    );
     const roleBlock = source.slice(start, end);
 
     expect(start).toBeGreaterThan(0);
