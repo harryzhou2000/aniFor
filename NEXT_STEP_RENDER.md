@@ -8243,6 +8243,20 @@ dominant readiness cost. The next optimization should reduce reusable first
 populated HDR render work while retaining the exact semantic, field, framebuffer,
 receipt, screenshot, and identity contracts. Deployment evidence is pending.
 
+The first measurement-led render-cost experiment removes the redundant clears
+before the two private bloom passes. Both pass meshes disable blending, exactly
+cover their matching half-resolution targets, and always write RGBA, so the
+clears could not affect a sampled pixel. Source and final-composite clears stay
+unchanged. A fresh local SwiftShader review at
+`.artifacts/visual-lab-reviews/render-optics-b83b5453-25f2-4324-82a5-58d8f545f39e`
+retained the exact RenderOptics result and all three PNG hashes, passed all 49
+regions with WebGL/HDR and zero browser errors, and kept OFF/A/B at submissions
+5/6/7. Its 2.66-second GPU-completion sample is too close to the prior 2.76
+seconds to claim a performance win, but it proves the two full RGBA16F clears
+are unnecessary without weakening or rotating evidence. Keep the optimization;
+profile first-use shader/allocation and CPU field convergence before attempting
+a larger render-path change.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

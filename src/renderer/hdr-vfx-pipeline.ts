@@ -697,8 +697,11 @@ export class HDRVfxPipeline {
 
   render(): void {
     this.renderer.render({ container: this.sourceScene, target: this.hdrTarget, clear: true });
-    this.renderer.render({ container: this.extractScene, target: this.bloomA, clear: true });
-    this.renderer.render({ container: this.blurScene, target: this.bloomB, clear: true });
+    // Both bloom meshes disable blending, exactly cover their matching target,
+    // and unconditionally write RGBA. Clearing those private targets first is
+    // therefore redundant and only adds two full RGBA16F writes per frame.
+    this.renderer.render({ container: this.extractScene, target: this.bloomA, clear: false });
+    this.renderer.render({ container: this.blurScene, target: this.bloomB, clear: false });
     this.renderer.render({ container: this.compositeScene, clear: true });
   }
 
