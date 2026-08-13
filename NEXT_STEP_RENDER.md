@@ -7118,6 +7118,29 @@ control and v5 as explicit global-quiescence evidence. The next framework work
 should profile the remaining owned pre-snapshot interval without weakening its
 single complete semantic/field/framebuffer proof.
 
+That profile found that Powder activation-owned boundary stability had been
+serialized through seven full HDR presentations (`0→48→96→144→192→240→255`).
+V6 now drains the same bounded eight-pass CPU evolution before one presentation;
+the final boundary, PowderSurface, exterior-air, owner, portable result, and
+OFF/A/B PNG bytes exactly match the ordinary cadence. Owner-zero production
+rendering and v1-v5 remain unchanged. The real local package at
+`/tmp/anifor-v6-fast-boundary-20260813-1348` passed portable verification with
+one readiness snapshot, reduced readiness from 19.49s to 12.28s, and reduced
+total time from 39.05s to 30.78s.
+
+The approved hosted ABBA gate passed at exact revision
+`1665a8f` in workflow run `31671670620`. Build completed in 2m55s and all four
+fresh/shared/shared/fresh cohorts passed portable identity equality with no host
+restart or fault recycle; the bounded 3,712-byte summary is artifact
+`9170116165`. Do not claim a hosted timing win from this run: its one complete
+readiness readback rose to 21.91-22.58s from the preceding run's 8.61-9.34s,
+making readiness 52.30-53.77s and totals 92.57-102.63s despite removing the
+intermediate presentations. The optimization is accepted as a byte-preserving
+ownership/cadence simplification, while durations remain loaded-runner
+observations. The next measured framework target is the complete readiness
+snapshot/CDP readback path; retain all semantic, authoritative-field, and
+framebuffer-alpha evidence and every frozen identity.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

@@ -116,6 +116,18 @@ valid and omitted. Never put callbacks, module paths, app preparers, browser
 methods, arguments, or execution authority into this source catalog; the closed
 typed app-owned fixture-preparer registry remains intentionally explicit.
 
+The current capture-performance framework uses opt-in execution-tuning-plan/v6
+for activation-owned work. Powder activation boundary stability may converge
+through its bounded CPU passes before one presentation only while the activation
+owner is nonzero; owner-zero production cadence and v1-v5 are controls. The
+local result and PNG bytes matched the ordinary cadence, and hosted workflow
+`31671670620` passed all four portable ABBA cohorts with no recycle. That hosted
+sample did not establish a speedup because complete readiness readback varied
+upward to roughly 22 seconds. Treat timing as diagnostic and pursue the complete
+snapshot/CDP readback boundary next without removing semantic,
+authoritative-field, or framebuffer-alpha evidence or rotating frozen visual
+identities.
+
 Local proof passed 1,544 source and 353 tooling tests, typecheck, production
 build, and exact 19-resource closure. The full eight-candidate material-lighting
 recipe set passed shared-host SwiftShader WebGL/HDR capture with 24 captures,
