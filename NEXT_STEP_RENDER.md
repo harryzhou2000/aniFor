@@ -6913,6 +6913,25 @@ future extension candidate under an existing driver now touches its atlas row
 and this one data record plus, when preparation mutates state, one explicit
 typed app preparer—not both capture and inspection registration lists.
 
+The next performance-framework checkpoint exposes the existing portable
+fresh/shared/shared/fresh runner as an explicit manual CI diagnostic. It is
+off by default, independent of review and deployment gating, and reuses the
+verified static-site artifact rather than rebuilding. The first bounded hosted
+probe is the tracked one-candidate `powder-style` recipe set under SwiftShader
+and completed-frame-receipt v2; only its path-free, publish-last performance
+summary is retained for seven days. Every leg must still pass portable package
+verification and preserve the same result identity before the summary exists.
+
+A real local reproduction completed all four legs in roughly 36.7–37.5s each.
+It confirms that host launch is negligible beside readiness: readiness consumed
+about 23.1–24.5s, including roughly 10.3–10.6s of initial dataset wait and
+7.7–8.2s of complete readiness readback. OFF/A/B each retained one v2 snapshot
+and exact portable identity. Treat this as diagnostic evidence, not a timing
+threshold. The next optimization experiment should therefore target a new
+opt-in driver-owned settling capability only where retained evidence proves
+redundancy; do not change stable-v1, receipt-v2, deploy gating, or frozen visual
+identities merely to improve these timings.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

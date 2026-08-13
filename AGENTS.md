@@ -1772,6 +1772,13 @@ summary; retain only bounded aggregate timing and host lifecycle counts. Prove
 that the portable result identities are equal across all four legs before
 publishing, but do not serialize those identities into the summary.
 
+Manual CI may run that same diagnostic through the
+`visual_lab_performance_cohorts` control. Keep it false by default, non-gating,
+and independent of deploy/review success. It must consume the exact verified
+site artifact, use the tracked one-candidate `powder-style` set with
+completed-frame-receipt v2, and upload only the bounded publish-last summary.
+Do not upload cohort packages or turn observed durations into CI thresholds.
+
 The renderer-owned completed-frame receipt is now a protected audit capability.
 `anifor.renderer.completed-frame-receipt/v1` binds every ticket to the exact
 presentation submission and exposes only `pending`, `completed`, `superseded`,

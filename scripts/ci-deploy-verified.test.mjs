@@ -106,6 +106,30 @@ describe('deploy-verified CI workflow contract', () => {
     expect(candidates).toContain('type: string');
   });
 
+  it('exposes a non-gating one-candidate performance matrix', () => {
+    const control = indentedEntry(workflow, 'visual_lab_performance_cohorts', 6);
+    expect(control).toContain('description: Run the non-gating fresh/shared performance matrix');
+    expect(control).toContain('required: true');
+    expect(control).toContain('default: false');
+    expect(control).toContain('type: boolean');
+    expect(workflow.match(
+      /\$\{\{\s*inputs\.visual_lab_performance_cohorts\s*\}\}/g,
+    ) ?? []).toHaveLength(0);
+    expect(workflow.match(/inputs\.visual_lab_performance_cohorts/g) ?? []).toHaveLength(1);
+
+    const job = indentedEntry(workflow, 'visual-lab-performance-cohorts', 2);
+    expect(job).toContain("github.event_name == 'workflow_dispatch'");
+    expect(job).toContain('inputs.visual_lab_performance_cohorts == true');
+    expect(job).toContain('--recipe-set=visual-lab/recipe-sets/powder-style.json');
+    expect(job).toContain('--capture-proof=completed-frame-receipt');
+    expect(job).toContain('--gpu=swiftshader');
+    expect(job).toContain('timeout-minutes: 15');
+    expect(job).toContain('path: ${{ runner.temp }}/anifortpt-visual-lab-performance/performance-summary.json');
+
+    const deploy = indentedEntry(workflow, 'deploy', 2);
+    expect(deploy).not.toContain('visual-lab-performance-cohorts');
+  });
+
   it('restores the nearest ccache lineage and saves each successful commit', () => {
     const build = indentedEntry(workflow, 'build', 2);
     const restore = namedStep(build, 'Restore C++ compiler cache');

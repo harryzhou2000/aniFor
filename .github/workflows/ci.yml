@@ -57,6 +57,11 @@ on:
         required: false
         default: ''
         type: string
+      visual_lab_performance_cohorts:
+        description: Run the non-gating fresh/shared performance matrix
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -389,6 +394,49 @@ jobs:
             verify_args+=("--recipe-set-source=${VISUAL_LAB_RECIPE_SET}")
           fi
           node scripts/visual-lab-verify.mjs "${verify_args[@]}"
+
+  visual-lab-performance-cohorts:
+    if: >-
+      always() &&
+      github.event_name == 'workflow_dispatch' &&
+      inputs.visual_lab_performance_cohorts == true &&
+      ((needs.build.result == 'success' && needs.verified_build.result == 'skipped') ||
+       (needs.build.result == 'skipped' && needs.verified_build.result == 'success'))
+    needs:
+      - build
+      - verified_build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Download the verified static site
+        uses: actions/download-artifact@v8
+        with:
+          name: anifortpt-static-site
+          path: dist
+
+      - name: Measure fresh and shared Visual Lab capture performance
+        run: |
+          node scripts/visual-lab-performance-cohorts.mjs \
+            --recipe-set=visual-lab/recipe-sets/powder-style.json \
+            --bundle=dist/index.html \
+            --output-dir="${RUNNER_TEMP}/anifortpt-visual-lab-performance" \
+            --gpu=swiftshader \
+            --capture-proof=completed-frame-receipt
+
+      - name: Upload bounded performance summary
+        if: success()
+        uses: actions/upload-artifact@v7
+        with:
+          name: anifortpt-visual-lab-performance-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/anifortpt-visual-lab-performance/performance-summary.json
+          if-no-files-found: error
+          retention-days: 7
 
   deploy:
     if: >-
