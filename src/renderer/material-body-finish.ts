@@ -593,6 +593,7 @@ vec3 applyMaterialVolumeLobe(
   float phase,
   vec4 finishResponse,
   float finishRoughness,
+  float finishInteriorScatter,
   float density,
   float neighbourMean,
   float curvature,
@@ -661,6 +662,18 @@ vec3 applyMaterialVolumeLobe(
   float opticalExperimentB = step(1.5, materialLightingVariant);
   MaterialCompositionResponse composition = materialCompositionParameters(phase);
   float interiorContrast = composition.interiorContrast;
+  // The sixth family lane already governs emitter-driven in-scattering. Reuse
+  // it for the source-independent broad B lobe so clear liquid/gas and bright
+  // crystalline powder retain a more open middle, while oily/sooty/metallic
+  // families keep a denser core. This changes only existing RGB terms after
+  // caller-owned support; Off/A and literal-Off compact true-8x select 1.0.
+  float scatterProgress = clamp((finishInteriorScatter - 0.50) / 1.0, 0.0, 1.0);
+  float profileMiddleScatter = mix(
+    1.0, mix(0.78, 1.26, scatterProgress), opticalExperimentB
+  );
+  float profileCoreExtinction = mix(
+    1.0, mix(1.15, 0.86, scatterProgress), opticalExperimentB
+  );
   // Convert the static family roughness lane into an energy-bounded lobe width.
   // The original crown/facing response remains exact outside B. Tight optical
   // families concentrate their reflection; broad families trade peak for a
@@ -722,7 +735,8 @@ vec3 applyMaterialVolumeLobe(
   float liquidShallowBand = transmittedShoulder * transmittedShoulder
     * opticalExperimentB;
   float liquidBroadTransmission = liquidShallowBand
-    * finishResponse.w * (0.160 + crown * 0.040) * interiorContrast;
+    * finishResponse.w * (0.160 + crown * 0.040) * interiorContrast
+    * profileMiddleScatter;
   float liquidTransmissionCrest = transmittedShoulder * finishResponse.w
     * (0.060 + reflectedFacing * 0.045) * liquidSurfaceScale
     * mix(1.0, interiorContrast, opticalExperimentB);
@@ -764,7 +778,7 @@ vec3 applyMaterialVolumeLobe(
     * (1.0 - core * mix(0.24, 0.36, gas));
   key += liquidTransmissionCrest;
   key += gasMidTransmission * 0.036 * finishResponse.w * gasMidScale
-    * mix(1.0, interiorContrast, opticalExperimentB);
+    * mix(1.0, interiorContrast, opticalExperimentB) * profileMiddleScatter;
   key += sootyGasCharacter * gasMidTransmission
     * (0.026 + max(macroRelief, 0.0) * 0.018) * finishResponse.x;
   key += max(macroRelief, 0.0) * gasMacroBody * 0.052;
@@ -781,7 +795,7 @@ vec3 applyMaterialVolumeLobe(
     * (1.0 - clamp(depth, 0.0, 1.0));
   key += powderVolume * (
     powderMid * 0.026 + max(facing, 0.0) * shoulder * 0.014
-  ) * finishResponse.x;
+  ) * finishResponse.x * profileMiddleScatter;
   key *= finishResponse.x;
   // Transmission is a separate optical lane: applying it after reflection
   // scaling keeps aqueous and oily bodies distinct instead of multiplying the
@@ -791,16 +805,16 @@ vec3 applyMaterialVolumeLobe(
       + max(-facing, 0.0) * shoulder * mix(0.010, 0.014, gas)
       + core * mix(0.010, 0.007, gas)) * fieldBody;
   shade += deepColumn * 0.032 * liquidCoreScale
-    * mix(1.0, interiorContrast, opticalExperimentB);
+    * mix(1.0, interiorContrast, opticalExperimentB) * profileCoreExtinction;
   shade += gasDeepAbsorption * 0.024 * gasExtinctionScale
-    * mix(1.0, interiorContrast, opticalExperimentB);
+    * mix(1.0, interiorContrast, opticalExperimentB) * profileCoreExtinction;
   shade += max(-macroRelief, 0.0) * gasMacroBody * 0.036;
   shade += gasOpticalCharacter
     * (pocket * fieldBody * 0.022 + max(-facing, 0.0) * shoulder * 0.010
       + gasDeepAbsorption * 0.014);
   shade += powderVolume * (
     core * core * 0.028 + max(-facing, 0.0) * shoulder * 0.010
-  );
+  ) * profileCoreExtinction;
   shade *= finishResponse.y;
   shade *= mix(1.0, 0.82, sootyGasCharacter * core);
   color += (vec3(1.08) - clamp(color, 0.0, 1.08)) * keyTint * key;

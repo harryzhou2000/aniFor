@@ -7492,6 +7492,32 @@ is `sha256:75757da0977d15e58b1a39e98be69be70c8e323adad2428bce3c8dc49246f1fd`.
 These measurements navigate this current visual decision and are not future
 thresholds, PNG pins, or frozen result requirements.
 
+The next retained board-driven experiment makes the already-authored sixth
+appearance lane useful away from a nearby emitter. Normal WebGL now passes each
+powder, liquid, and gas family's `interiorScatter` value into the shared
+`applyMaterialVolumeLobe`; only Volumetric/B scales the helper's existing
+middle transport and core extinction terms. High-scatter Aqueous, clean-gas,
+and crystalline families therefore keep a slightly more open middle, while
+oily, sooty, metallic, and waxy families retain a denser core. No material ID,
+sample, field, texture, pass, target, allocation, support, alpha, topology,
+Canvas, or compact true-8x path was added. OFF and A remain exact.
+
+The real shared-host SwiftShader package
+`/tmp/anifor-interior-scatter-lobe-v2` passed WebGL/HDR capture, all 49 declared
+regions, and strict portable verification as result
+`sha256:f6fa6dbc4fa5c5a066bb5685ebb354c078962d22785fd9c5a3f58efdac7e6a91`.
+Against the preceding gas-extinction checkpoint, Water and liquid-nitrogen
+body/core mean luma rose by about `0.44/0.51` and `0.41/0.49`; Oil and Mercury
+fell by about `0.36/0.42` and `0.45/0.51`; clean Oxygen rose by `0.13/0.18`
+while Smoke fell by `0.14/0.19`. Powder-family movement remained below `0.11`
+mean luma. OFF and A PNGs stayed byte-identical. These small measurements prove
+that the declarative lane is live and class-selective; they are navigation
+evidence, not future visual thresholds or hash gates. A prior attempt that only
+raised Organic and Radioactive profile values around source-shaped irradiance
+changed their broad atlas bodies by less than `0.04` mean luma and left their
+cores exact, so it was reverted instead of being mistaken for a useful visual
+improvement.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

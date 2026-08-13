@@ -1596,6 +1596,17 @@ off. New CI review packages must require it fail-closed. Never rotate result,
 batch, baseline, comparison, promotion, or recipe-set v1 identities for this
 additive provenance.
 
+The representative RenderOptics atlas is also the preferred fast loop for
+class-level appearance-profile experiments. It now proves that the sixth
+`interiorScatter` lane can drive the existing powder/liquid/gas middle and core
+volume terms in Volumetric/B without a new renderer or capture seam. Preserve
+literal OFF/A behavior, Canvas2D, and compact true 8x. Evaluate such changes by
+current board inspection plus region appearance/response and portable package
+verification; do not add exact visual hashes. A source-only Organic/Radioactive
+profile increase was visually inert away from emitters (less than 0.04 mean
+luma and exact cores) and was reverted. Do not repeat that value-only approach
+unless the fixture deliberately supplies relevant source transport.
+
 The reusable WAX/MWAX material-lighting board now carries the first retained
 optics-profile experiment. Keep `RenderOptics.Waxy` append-only and solid-WAX
 only; MWAX remains `ViscousLiquid`. Its raw value may reach only the two shared

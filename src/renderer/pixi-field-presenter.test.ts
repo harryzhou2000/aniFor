@@ -854,7 +854,14 @@ describe('Pixi presenter startup configuration', () => {
       'float liquidShallowBand = transmittedShoulder * transmittedShoulder\n    * opticalExperimentB;',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
-      '* finishResponse.w * (0.160 + crown * 0.040) * interiorContrast;',
+      '* finishResponse.w * (0.160 + crown * 0.040) * interiorContrast\n'
+        + '    * profileMiddleScatter;',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'float scatterProgress = clamp((finishInteriorScatter - 0.50) / 1.0, 0.0, 1.0);',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      '1.0, mix(0.78, 1.26, scatterProgress), opticalExperimentB',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'float gasProfileExtinctionB = mix(1.85, 2.85, gasTransmissionReserve);',
@@ -864,7 +871,7 @@ describe('Pixi presenter startup configuration', () => {
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'shade += gasDeepAbsorption * 0.024 * gasExtinctionScale\n'
-        + '    * mix(1.0, interiorContrast, opticalExperimentB);',
+        + '    * mix(1.0, interiorContrast, opticalExperimentB) * profileCoreExtinction;',
     );
     expect(normal.match(/materialBodyFinishParameters\(/g)).toHaveLength(5);
     expect(eight.match(/materialBodyFinishParameters\(/g)).toHaveLength(5);
