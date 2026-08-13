@@ -35,12 +35,16 @@ const captureStream = () => {
   };
 };
 
-const successfulReview = async (reviewRoot) => {
+const successfulReview = async (reviewRoot, { regions = true } = {}) => {
   const comparisonRoot = path.join(reviewRoot, 'comparison');
   await mkdir(comparisonRoot, { recursive: true });
   await Promise.all([
     writeFile(path.join(reviewRoot, 'index.html'), 'captures'),
     writeFile(path.join(reviewRoot, 'experiment-board.html'), 'experiment'),
+    ...(regions ? [
+      writeFile(path.join(reviewRoot, 'region-appearance.html'), 'appearance'),
+      writeFile(path.join(reviewRoot, 'region-response.html'), 'response'),
+    ] : []),
     writeFile(path.join(comparisonRoot, 'experiment-board.html'), 'experiment'),
     writeFile(path.join(comparisonRoot, 'review-board.html'), 'board'),
     writeFile(path.join(comparisonRoot, 'review-brief.html'), 'brief'),
@@ -50,6 +54,10 @@ const successfulReview = async (reviewRoot) => {
     batch: {
       contactSheet: path.join(reviewRoot, 'index.html'),
       experimentBoard: path.join(reviewRoot, 'experiment-board.html'),
+      ...(regions ? {
+        regionAppearanceBoard: path.join(reviewRoot, 'region-appearance.html'),
+        regionResponseBoard: path.join(reviewRoot, 'region-response.html'),
+      } : {}),
     },
     comparison: null,
   };
@@ -165,6 +173,8 @@ describe('Visual Lab developer review execution', () => {
     expect(stdout.read().split('\n')).toEqual([
       `Visual Lab review root: ${expectedRoot}`,
       `Experiment response: ${pathToFileURL(path.join(expectedRoot, 'experiment-board.html')).href}`,
+      `Region appearance: ${pathToFileURL(path.join(expectedRoot, 'region-appearance.html')).href}`,
+      `Region response: ${pathToFileURL(path.join(expectedRoot, 'region-response.html')).href}`,
       `Raw captures: ${pathToFileURL(path.join(expectedRoot, 'index.html')).href}`,
       '',
     ]);
@@ -334,11 +344,29 @@ describe('Visual Lab developer review execution', () => {
     expect(stdout.read().split('\n')).toEqual([
       `Visual Lab review root: ${root}`,
       `Experiment response: ${pathToFileURL(path.join(root, 'experiment-board.html')).href}`,
+      `Region appearance: ${pathToFileURL(path.join(root, 'region-appearance.html')).href}`,
+      `Region response: ${pathToFileURL(path.join(root, 'region-response.html')).href}`,
       `Review board: ${pathToFileURL(path.join(root, 'comparison', 'review-board.html')).href}`,
       `Compact brief: ${pathToFileURL(path.join(root, 'comparison', 'review-brief.html')).href}`,
       `Raw captures: ${pathToFileURL(path.join(root, 'index.html')).href}`,
       '',
     ]);
+  });
+
+  it('keeps regionless reviews usable without inventing optional artifact links', async () => {
+    const repositoryRoot = await temporaryRepository();
+    const stdout = captureStream();
+    const outcome = await runVisualLabDeveloperReview(['--candidate=water-motion'], {
+      repositoryRoot,
+      randomUUID: () => UUID_A,
+      stdout,
+      stderr: captureStream(),
+      runReviewCycle: async (options) => successfulReview(options.outputDir, { regions: false }),
+    });
+    expect(outcome.links).not.toHaveProperty('regionAppearanceBoard');
+    expect(outcome.links).not.toHaveProperty('regionResponseBoard');
+    expect(stdout.read()).not.toContain('Region appearance:');
+    expect(stdout.read()).not.toContain('Region response:');
   });
 
   it('reports a retained root on failure without emitting artifact URLs', async () => {
@@ -423,5 +451,22 @@ describe('Visual Lab developer review execution', () => {
         return result;
       },
     })).rejects.toThrow('outside its evidence root');
+  });
+
+  it('applies the same containment checks to optional current review artifacts', async () => {
+    const repositoryRoot = await temporaryRepository();
+    const outside = path.join(repositoryRoot, 'outside.html');
+    await writeFile(outside, 'outside');
+    await expect(runVisualLabDeveloperReview(['--candidate=water-motion'], {
+      repositoryRoot,
+      randomUUID: () => UUID_A,
+      stdout: captureStream(),
+      stderr: captureStream(),
+      runReviewCycle: async (options) => {
+        const result = await successfulReview(options.outputDir);
+        result.batch.regionAppearanceBoard = outside;
+        return result;
+      },
+    })).rejects.toThrow('region appearance board outside its evidence root');
   });
 });

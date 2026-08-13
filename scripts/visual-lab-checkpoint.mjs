@@ -10,6 +10,7 @@ import {
 } from './visual-lab-canvas-companion.mjs';
 import { resolveVisualLabCohort } from './visual-lab-cohort-catalog.mjs';
 import { runVisualLabDeveloperReview } from './visual-lab-developer-review.mjs';
+import { resolveVisualLabCurrentReviewArtifacts } from './visual-lab-review-artifacts.mjs';
 
 const MODULE_PATH = fileURLToPath(import.meta.url);
 const REPOSITORY_ROOT = path.resolve(path.dirname(MODULE_PATH), '..');
@@ -148,17 +149,14 @@ const relativeReviewFile = async (reviewRoot, file, label) => {
 };
 
 const writeCheckpoint = async (review, cohort, compact, canvas, filesystem) => {
+  const normal = Object.fromEntries(resolveVisualLabCurrentReviewArtifacts(review.links).map((artifact) => [
+    artifact.key,
+    relativeReviewLink(review.reviewRoot, artifact.path, artifact.description),
+  ]));
   const manifest = {
     schema: 'anifor.visual-checkpoint/v1',
     cohort,
-    normal: {
-      experimentBoard: relativeReviewLink(
-        review.reviewRoot, review.links?.experimentBoard, 'experiment response board',
-      ),
-      contactSheet: relativeReviewLink(
-        review.reviewRoot, review.links?.contactSheet, 'raw contact sheet',
-      ),
-    },
+    normal,
     compact: {
       label: compact.label,
       evidenceRelationship: compact.evidenceRelationship,

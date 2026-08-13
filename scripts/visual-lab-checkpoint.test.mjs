@@ -198,6 +198,8 @@ describe('Visual checkpoint', () => {
     await mkdir(reviewRoot);
     await Promise.all([
       writeFile(path.join(reviewRoot, 'experiment-board.html'), 'experiment'),
+      writeFile(path.join(reviewRoot, 'region-appearance.html'), 'appearance'),
+      writeFile(path.join(reviewRoot, 'region-response.html'), 'response'),
       writeFile(path.join(reviewRoot, 'index.html'), 'captures'),
     ]);
     const calls = [];
@@ -210,6 +212,12 @@ describe('Visual checkpoint', () => {
           reviewRoot,
           links: {
             experimentBoard: pathToFileURL(path.join(reviewRoot, 'experiment-board.html')).href,
+            regionAppearanceBoard: pathToFileURL(
+              path.join(reviewRoot, 'region-appearance.html'),
+            ).href,
+            regionResponseBoard: pathToFileURL(
+              path.join(reviewRoot, 'region-response.html'),
+            ).href,
             contactSheet: pathToFileURL(path.join(reviewRoot, 'index.html')).href,
           },
         };
@@ -235,7 +243,12 @@ describe('Visual checkpoint', () => {
     expect(JSON.parse(await readFile(path.join(reviewRoot, 'checkpoint.json'), 'utf8')))
       .toMatchObject({
         cohort: 'liquid-motion',
-        normal: { experimentBoard: 'experiment-board.html', contactSheet: 'index.html' },
+        normal: {
+          experimentBoard: 'experiment-board.html',
+          regionAppearanceBoard: 'region-appearance.html',
+          regionResponseBoard: 'region-response.html',
+          contactSheet: 'index.html',
+        },
         compact: { passed: true },
       });
     expect(result.checkpointLink).toBe(
@@ -289,5 +302,26 @@ describe('Visual checkpoint', () => {
       runCompactAudit: async () => {},
       stdout: { write() {} }, stderr: { write() {} },
     })).rejects.toThrow('outside its review root');
+  });
+
+  it('rejects an optional current-review link outside the unique evidence root', async () => {
+    const repositoryRoot = await mkdtemp(path.join(tmpdir(), 'visual-checkpoint-test-'));
+    temporaryDirectories.push(repositoryRoot);
+    const reviewRoot = path.join(repositoryRoot, 'review');
+    await mkdir(reviewRoot);
+    await expect(runVisualCheckpoint(['--cohort=atmosphere'], {
+      repositoryRoot,
+      runDeveloperReview: async () => ({
+        ok: true,
+        reviewRoot,
+        links: {
+          experimentBoard: pathToFileURL(path.join(reviewRoot, 'experiment-board.html')).href,
+          regionAppearanceBoard: pathToFileURL(path.join(repositoryRoot, 'outside.html')).href,
+          contactSheet: pathToFileURL(path.join(reviewRoot, 'index.html')).href,
+        },
+      }),
+      runCompactAudit: async () => {},
+      stdout: { write() {} }, stderr: { write() {} },
+    })).rejects.toThrow('region appearance board outside its review root');
   });
 });

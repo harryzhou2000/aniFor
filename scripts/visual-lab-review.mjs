@@ -9,6 +9,7 @@ import {
 import { runVisualLabBaseline } from './visual-lab-baseline.mjs';
 import { readVisualLabRecipeSet } from './visual-lab-recipe-set.mjs';
 import { runVisualLabPackageVerification } from './visual-lab-verify.mjs';
+import { projectVisualLabCurrentReviewArtifacts } from './visual-lab-review-artifacts.mjs';
 
 const MODULE_PATH = fileURLToPath(import.meta.url);
 const SCRIPT_DIRECTORY = path.dirname(MODULE_PATH);
@@ -214,6 +215,8 @@ export async function runVisualLabReviewCycle(options = {}, dependencies = {}) {
     requireCaptureGeometry: true,
     requireExecutionTuningPlan: true,
     requireExperimentResponse: true,
+    requireRegionResponse: batch.regionResponsePath != null,
+    requireRegionAppearance: batch.regionAppearancePath != null,
     requireOriginAttestation: options.baseUrl !== undefined,
     requireComplete: true,
     requireRecipeSet: true,
@@ -230,12 +233,7 @@ export async function runVisualLabReviewCycle(options = {}, dependencies = {}) {
     tool: TOOL,
     ok: true,
     reviewRoot: outputDirectory,
-    batch: {
-      index: batch.indexPath,
-      contactSheet: batch.contactSheetPath,
-      response: batch.responsePath,
-      experimentBoard: batch.experimentBoardPath,
-    },
+    batch: projectVisualLabCurrentReviewArtifacts(batch),
     recipeSet: {
       id: batch.recipeSet.id,
       path: batch.recipeSetPath,

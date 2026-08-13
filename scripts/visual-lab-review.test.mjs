@@ -30,6 +30,10 @@ const completeBatch = (outputDir) => ({
   contactSheetPath: path.join(outputDir, 'index.html'),
   responsePath: path.join(outputDir, 'experiment-response.json'),
   experimentBoardPath: path.join(outputDir, 'experiment-board.html'),
+  regionResponsePath: path.join(outputDir, 'region-response.json'),
+  regionResponseBoardPath: path.join(outputDir, 'region-response.html'),
+  regionAppearancePath: path.join(outputDir, 'region-appearance.json'),
+  regionAppearanceBoardPath: path.join(outputDir, 'region-appearance.html'),
   recipeSet: { id: 'sha256:recipe-set' },
   recipeSetPath: path.join(outputDir, 'recipe-set.json'),
 });
@@ -133,6 +137,8 @@ describe('Visual Lab review-cycle orchestration', () => {
       requireCaptureGeometry: true,
       requireExecutionTuningPlan: true,
       requireExperimentResponse: true,
+      requireRegionResponse: true,
+      requireRegionAppearance: true,
       requireOriginAttestation: false,
       requireComplete: true,
       requireRecipeSet: true,
@@ -141,6 +147,41 @@ describe('Visual Lab review-cycle orchestration', () => {
     expect(result.batch).toMatchObject({
       response: path.join(outputDir, 'experiment-response.json'),
       experimentBoard: path.join(outputDir, 'experiment-board.html'),
+      regionResponse: path.join(outputDir, 'region-response.json'),
+      regionResponseBoard: path.join(outputDir, 'region-response.html'),
+      regionAppearance: path.join(outputDir, 'region-appearance.json'),
+      regionAppearanceBoard: path.join(outputDir, 'region-appearance.html'),
+    });
+  });
+
+  it('keeps region artifacts optional when a selected recipe has no declared regions', async () => {
+    const root = await temporaryDirectory();
+    const outputDir = path.join(root, 'batch');
+    let verificationOptions;
+    const result = await runVisualLabReviewCycle({
+      candidates: ['regionless-candidate'], outputDir,
+    }, {
+      runBatch: async () => ({
+        ...completeBatch(outputDir),
+        regionResponsePath: null,
+        regionResponseBoardPath: null,
+        regionAppearancePath: null,
+        regionAppearanceBoardPath: null,
+      }),
+      verifyPackage: async (options) => {
+        verificationOptions = options;
+        return { ok: true, comparison: null };
+      },
+    });
+    expect(verificationOptions).toMatchObject({
+      requireRegionResponse: false,
+      requireRegionAppearance: false,
+    });
+    expect(result.batch).toMatchObject({
+      regionResponse: null,
+      regionResponseBoard: null,
+      regionAppearance: null,
+      regionAppearanceBoard: null,
     });
   });
 
@@ -197,6 +238,8 @@ describe('Visual Lab review-cycle orchestration', () => {
         requireCaptureGeometry: true,
         requireExecutionTuningPlan: true,
         requireExperimentResponse: true,
+        requireRegionResponse: true,
+        requireRegionAppearance: true,
         requireOriginAttestation: false,
         requireComplete: true,
         requireRecipeSet: true,

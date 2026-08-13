@@ -5135,6 +5135,16 @@ exact live closure plus hosted Water receipt-v2 smoke passed in 59s. Local
 focused validation covered 143 contracts plus typecheck, production build, and
 a real v9 review retaining the established plan and result identities.
 
+Current-only review navigation is scripts-owned and declarative. One frozen
+catalog maps the batch's existing index, response, experiment, and optional
+region artifact paths into the public review result, and separately declares
+the ordered HTML front doors. Developer review must validate every available
+front door as a canonical contained regular file before printing any URL;
+checkpoint v1 projects those same available links mechanically. Regionless
+reviews omit both optional region links. Keep legacy baseline/comparison links
+separate, keep checkpoint publication last, and do not turn this presentation
+catalog into capture authority, a package-identity input, or a new CI gate.
+
 Read [`docs/render-lab.md`](docs/render-lab.md) before changing reconstruction thresholds or blur radii. A TypeScript or Vite build does not compile Pixi's runtime GLSL; a browser screenshot with a clean shader console is required.
 
 The style lookup is an RGBA data texture, not display color: RGB stores phase/profile/emission and alpha stores the static `RenderTrait` mask. Keep nearest sampling and `no-premultiply-alpha`; zero-valued trait alpha must never erase the RGB metadata.

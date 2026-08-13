@@ -7929,6 +7929,18 @@ closes the proof-registration drift increment; the next framework work should
 improve reusable review-artifact navigation or another measured authoring
 boundary, not add another tuning schema.
 
+The active review-navigation increment makes the already-produced evidence
+easier to inspect without changing its bytes. A frozen scripts-only catalog
+owns the complete batch-path to public-result projection and the ordered subset
+of HTML front doors: experiment response, optional region appearance, optional
+region response, and raw captures. The review cycle requires portable region
+verification exactly when those region artifacts exist; developer review
+applies the established canonical-file and evidence-root containment checks;
+checkpoint v1 derives the same available relative links. Regionless recipes
+remain valid by omission, and legacy comparison navigation remains distinct.
+This is routing metadata only: no renderer, capture recipe, evidence schema,
+content identity, package file, or required CI behavior changes.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

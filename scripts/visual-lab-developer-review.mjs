@@ -14,6 +14,9 @@ import {
   visualLabCandidatesForAuthoringSource,
 } from './visual-lab-cohort-catalog.mjs';
 import { readVisualLabRecipeSet } from './visual-lab-recipe-set.mjs';
+import {
+  resolveVisualLabCurrentReviewArtifacts,
+} from './visual-lab-review-artifacts.mjs';
 
 const MODULE_PATH = fileURLToPath(import.meta.url);
 const REPOSITORY_ROOT = path.resolve(path.dirname(MODULE_PATH), '..');
@@ -305,14 +308,15 @@ export async function runVisualLabDeveloperReview(argv, runtime = {}) {
     if (result?.ok !== true) {
       throw new Error('Visual Lab developer review cycle did not report success');
     }
-    const [experimentBoard, contactSheet] = await Promise.all([
-      requireReviewArtifact(
-        result.batch?.experimentBoard, 'the experiment response board', reviewRoot, filesystem,
-      ),
-      requireReviewArtifact(
-        result.batch?.contactSheet, 'the raw capture sheet', reviewRoot, filesystem,
-      ),
-    ]);
+    const currentArtifacts = resolveVisualLabCurrentReviewArtifacts(result.batch);
+    const currentLinks = Object.freeze(Object.fromEntries(await Promise.all(
+      currentArtifacts.map(async (artifact) => [
+        artifact.key,
+        await requireReviewArtifact(
+          artifact.path, artifact.description, reviewRoot, filesystem,
+        ),
+      ]),
+    )));
     const legacyLinks = result.comparison == null ? {} : {
       board: await requireReviewArtifact(
         result.comparison.board, 'the review board', reviewRoot, filesystem,
@@ -321,11 +325,14 @@ export async function runVisualLabDeveloperReview(argv, runtime = {}) {
         result.comparison.brief, 'the compact review brief', reviewRoot, filesystem,
       ),
     };
-    const links = Object.freeze({ experimentBoard, ...legacyLinks, contactSheet });
-    stdout.write(`Experiment response: ${links.experimentBoard}\n`);
-    if (links.board !== undefined) stdout.write(`Review board: ${links.board}\n`);
-    if (links.brief !== undefined) stdout.write(`Compact brief: ${links.brief}\n`);
-    stdout.write(`Raw captures: ${links.contactSheet}\n`);
+    const links = Object.freeze({ ...currentLinks, ...legacyLinks });
+    for (const artifact of currentArtifacts) {
+      if (artifact.key === 'contactSheet') {
+        if (links.board !== undefined) stdout.write(`Review board: ${links.board}\n`);
+        if (links.brief !== undefined) stdout.write(`Compact brief: ${links.brief}\n`);
+      }
+      stdout.write(`${artifact.label}: ${links[artifact.key]}\n`);
+    }
     return Object.freeze({ ok: true, reviewRoot, links, result });
   } catch (error) {
     stderr.write(`Visual Lab review failed; evidence retained at: ${reviewRoot}\n`);
