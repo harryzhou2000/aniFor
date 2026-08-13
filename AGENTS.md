@@ -5092,6 +5092,18 @@ Pages deployed in 9s, and exact 19-resource closure plus the hosted Water smoke
 passed in 1m44s. The RenderOptics result remained
 `sha256:4891db2c82bb89cb4bce5a63a2927360fbc20e634a0a91b9d17a490deb630581`.
 
+The combined v9 proof is now the default only at the developer-review and
+manual-CI review front doors. Low-level batch/API callers retain stable
+snapshots, explicit capture-proof overrides remain authoritative, performance
+cohorts retain their separate default, and the hosted Water deployment smoke
+stays on completed-frame receipt v2. This promotion followed a full shared-host
+`material-lighting` control: source run `31730993482` established the v7
+comparison, then artifact-reuse run `31732508095` skipped the build and passed
+all ten candidates plus downloaded-package verification with exact execution-
+tuning v9 in 12m18s. The v9 mean total was about 71.46s versus 74.85s for v7;
+that timing is descriptive, while ten-for-ten portable compatibility is the
+promotion evidence. Never silently fall back inside v9.
+
 Read [`docs/render-lab.md`](docs/render-lab.md) before changing reconstruction thresholds or blur radii. A TypeScript or Vite build does not compile Pixi's runtime GLSL; a browser screenshot with a clean shader console is required.
 
 The style lookup is an RGBA data texture, not display color: RGB stores phase/profile/emission and alpha stores the static `RenderTrait` mask. Keep nearest sampling and `no-premultiply-alpha`; zero-valued trait alpha must never erase the RGB metadata.

@@ -32,9 +32,10 @@ selected recipe or cohort, verifies the current-only portable package, and print
 static file links only after verification succeeds. An explicit --baseline-root
 also enables the legacy accepted-baseline comparison.
 
-The developer defaults are dist/index.html, SwiftShader, completed-frame receipt,
-and a shared browser host on Linux (fresh elsewhere). --output-dir is deliberately
-unsupported because this launcher always reserves a unique evidence root.`;
+The developer defaults are dist/index.html, SwiftShader, combined activation-owned
+render-field readiness plus selector-owned receipt/alpha evidence, and a shared
+browser host on Linux (fresh elsewhere). --output-dir is deliberately unsupported
+because this launcher always reserves a unique evidence root.`;
 
 const optionName = (argument) => {
   if (typeof argument !== 'string' || !argument.startsWith('--')) return null;
@@ -194,7 +195,9 @@ export function parseVisualLabDeveloperReviewArguments(
       ? [] : [`--bundle=${path.join(repository, 'dist', 'index.html')}`]),
     ...(hasOption(normalizedArguments, 'gpu') ? [] : ['--gpu=swiftshader']),
     ...(hasOption(normalizedArguments, 'capture-proof')
-      ? [] : ['--capture-proof=completed-frame-receipt']),
+      ? [] : [
+        '--capture-proof=fixture-activation-render-field-generation-and-selection-owned-alpha-readback',
+      ]),
     ...(hasOption(normalizedArguments, 'browser-host')
       ? [] : [`--browser-host=${platform === 'linux' ? 'shared' : 'fresh'}`]),
   ];

@@ -29,7 +29,7 @@ on:
       visual_lab_capture_proof:
         description: Evidence proof used by an optional Visual Lab review
         required: true
-        default: stable-snapshots
+        default: fixture-activation-render-field-generation-and-selection-owned-alpha-readback
         type: choice
         options:
           - stable-snapshots

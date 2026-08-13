@@ -7876,6 +7876,24 @@ deployed in 9s, and exact live 19-resource closure plus the hosted Water smoke
 passed in 1m44s. The deployed RenderOptics result remained the same as the
 local source-selected review.
 
+The next framework leverage promotes the already-established combined v9 proof
+at the two human review front doors. Developer review and manual CI review now
+default to typed activation-owned render-field readiness plus selector-owned
+receipt/PBO evidence. Explicit overrides remain available, the low-level batch
+default remains stable snapshots, performance cohorts keep their independent
+default, and the live hosted Water smoke remains completed-frame receipt v2.
+The trusted review help now lists every supported proof rather than stopping at
+v3.
+
+This promotion was gated on the full ten-candidate `material-lighting` cohort.
+Workflow run `31730993482` supplied the v7 shared-host control and exact build
+artifact. Artifact-reuse run `31732508095` skipped rebuilding, then captured and
+portably reverified all ten candidates with execution-tuning v9 in 12m18s,
+redeployed in 8s, and passed exact live closure plus Water smoke in 1m45s. Mean
+candidate total fell from roughly 74.85s under v7 to 71.46s under v9 on this
+loaded runner; treat that as diagnostic, while ten-for-ten compatibility and
+portable verification authorize the default change.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

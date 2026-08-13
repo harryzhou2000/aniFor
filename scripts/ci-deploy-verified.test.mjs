@@ -58,13 +58,15 @@ describe('deploy-verified CI workflow contract', () => {
     expect(inputReferences).toHaveLength(1);
   });
 
-  it('exposes a bounded Visual Lab capture-proof choice without changing its default', () => {
+  it('defaults manual Visual Lab review to the hosted-compatible v9 proof', () => {
     const captureProof = indentedEntry(workflow, 'visual_lab_capture_proof', 6);
     const choices = [...captureProof.matchAll(/^          - ([a-z-]+)\s*$/gm)]
       .map(([, choice]) => choice);
     expect(captureProof).toContain('description: Evidence proof used by an optional Visual Lab review');
     expect(captureProof).toContain('required: true');
-    expect(captureProof).toContain('default: stable-snapshots');
+    expect(captureProof).toContain(
+      'default: fixture-activation-render-field-generation-and-selection-owned-alpha-readback',
+    );
     expect(captureProof).toContain('type: choice');
     expect(choices).toEqual([
       'stable-snapshots', 'completed-frame-receipt', 'readiness-completed-frame-receipt',

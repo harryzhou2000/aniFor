@@ -23,7 +23,7 @@ const HELP = `Usage:
     [--bundle=<dist/index.html> | --base-url=<http(s)-origin>] \\
     [--expected-revision=<40-hex-commit>] \\
     [--chrome=<path>] [--gpu=auto|swiftshader] [--browser-host=fresh|shared] \\
-    [--capture-proof=stable-snapshots|completed-frame-receipt|readiness-completed-frame-receipt] \\
+    [--capture-proof=stable-snapshots|completed-frame-receipt|readiness-completed-frame-receipt|selection-owned-frame-receipt|fixture-activation-generation|fixture-activation-work-generation|fixture-activation-render-field-generation|selection-owned-frame-receipt-and-alpha-readback|fixture-activation-render-field-generation-and-selection-owned-alpha-readback] \\
     [--candidate-timeout-ms=<milliseconds>]
 
 Runs one trusted review cycle against one existing production bundle or hosted origin:

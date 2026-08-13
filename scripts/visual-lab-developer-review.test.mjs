@@ -103,7 +103,7 @@ describe('Visual Lab developer review arguments', () => {
       candidates: ['water-motion'],
       bundle: path.join(repositoryRoot, 'dist', 'index.html'),
       gpu: 'swiftshader',
-      captureProof: 'completed-frame-receipt',
+      captureProof: 'fixture-activation-render-field-generation-and-selection-owned-alpha-readback',
       browserHost: 'shared',
     });
     expect(parseVisualLabDeveloperReviewArguments([
@@ -118,6 +118,11 @@ describe('Visual Lab developer review arguments', () => {
     ], { repositoryRoot, platform: 'linux' })).toMatchObject({
       cohortName: 'liquid-motion',
       recipeSetPath: path.join(repositoryRoot, 'visual-lab', 'recipe-sets', 'liquid-motion.json'),
+    });
+    expect(parseVisualLabDeveloperReviewArguments([
+      '--candidate=water-motion', '--capture-proof=stable-snapshots',
+    ], { repositoryRoot, platform: 'linux' })).toMatchObject({
+      captureProof: 'stable-snapshots',
     });
     expect(() => parseVisualLabDeveloperReviewArguments([
       '--cohort=liquid_motion',
@@ -152,7 +157,7 @@ describe('Visual Lab developer review execution', () => {
       outputDir: expectedRoot,
       bundle: path.join(repositoryRoot, 'dist', 'index.html'),
       gpu: 'swiftshader',
-      captureProof: 'completed-frame-receipt',
+      captureProof: 'fixture-activation-render-field-generation-and-selection-owned-alpha-readback',
       browserHost: 'shared',
     });
     expect((await lstat(expectedRoot)).isDirectory()).toBe(true);
