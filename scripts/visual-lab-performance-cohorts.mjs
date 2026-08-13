@@ -18,6 +18,7 @@ import {
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA,
 } from './visual-lab-execution-tuning-plan.mjs';
 
 export const VISUAL_LAB_PERFORMANCE_COHORT_SCHEMA = 'anifor.visual-lab.performance-cohorts/v1';
@@ -40,12 +41,14 @@ const COMPLETED_FRAME_RECEIPT_CAPTURE_PROOF = 'completed-frame-receipt';
 const READINESS_COMPLETED_FRAME_RECEIPT_CAPTURE_PROOF = 'readiness-completed-frame-receipt';
 const SELECTION_OWNED_FRAME_RECEIPT_CAPTURE_PROOF = 'selection-owned-frame-receipt';
 const FIXTURE_ACTIVATION_GENERATION_CAPTURE_PROOF = 'fixture-activation-generation';
+const FIXTURE_ACTIVATION_WORK_GENERATION_CAPTURE_PROOF = 'fixture-activation-work-generation';
 const EXECUTION_TUNING_SCHEMAS_BY_CAPTURE_PROOF = Object.freeze({
   [STABLE_SNAPSHOTS_CAPTURE_PROOF]: VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
   [COMPLETED_FRAME_RECEIPT_CAPTURE_PROOF]: VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
   [READINESS_COMPLETED_FRAME_RECEIPT_CAPTURE_PROOF]: VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
   [SELECTION_OWNED_FRAME_RECEIPT_CAPTURE_PROOF]: VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA,
   [FIXTURE_ACTIVATION_GENERATION_CAPTURE_PROOF]: VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA,
+  [FIXTURE_ACTIVATION_WORK_GENERATION_CAPTURE_PROOF]: VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA,
 });
 const RECYCLE_REASONS = Object.freeze([
   'launch-fault',
@@ -60,7 +63,7 @@ const HELP = `Usage:
   node scripts/visual-lab-performance-cohorts.mjs \\
     --recipe-set=<tracked-recipe-set.json> \\
     [--bundle=dist/index.html] [--output-dir=/tmp/anifor-visual-lab-performance-cohorts] \\
-    [--gpu=auto|swiftshader] [--capture-proof=stable-snapshots|completed-frame-receipt|readiness-completed-frame-receipt|selection-owned-frame-receipt|fixture-activation-generation] \\
+    [--gpu=auto|swiftshader] [--capture-proof=stable-snapshots|completed-frame-receipt|readiness-completed-frame-receipt|selection-owned-frame-receipt|fixture-activation-generation|fixture-activation-work-generation] \\
     [--chrome=/path/to/chrome]
 
 Runs the fixed fresh/shared/shared/fresh Visual Lab cohort order. Each cohort is
@@ -131,6 +134,8 @@ const summaryCaptureProof = (captureProof) => {
     mode: captureProof,
     tuningSchema: EXECUTION_TUNING_SCHEMAS_BY_CAPTURE_PROOF[captureProof],
     receiptSchema: 'anifor.renderer.completed-frame-receipt/v1',
+    ...(captureProof === FIXTURE_ACTIVATION_WORK_GENERATION_CAPTURE_PROOF
+      ? { readinessCapability: 'renderer-fixture-activation-generation/v2' } : {}),
   });
 };
 

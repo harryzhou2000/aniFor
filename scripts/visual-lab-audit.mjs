@@ -59,10 +59,12 @@ import {
   resolveVisualLabExecutionTuningPlanV3Entry,
   resolveVisualLabExecutionTuningPlanV4Entry,
   resolveVisualLabExecutionTuningPlanV5Entry,
+  resolveVisualLabExecutionTuningPlanV6Entry,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA,
 } from './visual-lab-execution-tuning-plan.mjs';
 import {
   createVisualCaptureGeometryProof,
@@ -97,6 +99,13 @@ const FIXTURE_ACTIVATION_READINESS_DESCRIPTOR = Object.freeze({
   capability: 'renderer-fixture-activation-generation/v1',
   requiredState: 'completed',
   bind: 'typed-fixture-activation',
+  snapshotAfterCompletion: true,
+});
+const FIXTURE_ACTIVATION_WORK_READINESS_DESCRIPTOR = Object.freeze({
+  capability: 'renderer-fixture-activation-generation/v2',
+  requiredState: 'completed',
+  bind: 'typed-fixture-activation',
+  completionScope: 'activation-owned-work',
   snapshotAfterCompletion: true,
 });
 
@@ -140,6 +149,9 @@ const resolveExecutionTuningPlanEntry = (
   }
   if (plan?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA) {
     return resolveVisualLabExecutionTuningPlanV5Entry(plan, entryId, expectedCaptureEntryId);
+  }
+  if (plan?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA) {
+    return resolveVisualLabExecutionTuningPlanV6Entry(plan, entryId, expectedCaptureEntryId);
   }
   if (plan?.schema === 'anifor.visual-lab.execution-tuning-plan/v1') {
     return resolveVisualLabExecutionTuningPlanEntry(plan, entryId, expectedCaptureEntryId);
@@ -537,7 +549,7 @@ async function captureVisualLabCandidateEvidence({
   const cdp = pageCdp;
   let startupFixtureActivationTicket;
   const startupSelection = await measure('startup', async () => {
-    if (hasFixtureActivationReadinessDescriptor(options.executionTuning.profile)) {
+    if (hasTypedFixtureActivationReadinessDescriptor(options.executionTuning.profile)) {
       const activation = await activateFixtureDuringStartup(cdp, options);
       startupFixtureActivationTicket = activation.ticket;
       return activation;
@@ -563,6 +575,7 @@ async function captureVisualLabCandidateEvidence({
   });
 
   let readinessFixtureActivationGeneration;
+  let readinessFixtureActivationWorkGeneration;
   const readinessCompletedFrameReceipt = await measure('readiness', async () => {
     const { profile, effectiveTimeouts } = options.executionTuning;
     // A readiness snapshot performs the same complete semantic, authoritative-
@@ -573,7 +586,7 @@ async function captureVisualLabCandidateEvidence({
       CDP_COMMAND_TIMEOUT_MS,
       effectiveTimeouts.readinessMs,
     );
-    if (hasFixtureActivationReadinessDescriptor(profile)) {
+    if (hasTypedFixtureActivationReadinessDescriptor(profile)) {
       assert(Number.isSafeInteger(startupFixtureActivationTicket)
         && startupFixtureActivationTicket > 0,
       'fixture activation readiness is missing its startup ticket');
@@ -602,7 +615,11 @@ async function captureVisualLabCandidateEvidence({
       const startupVariant = VARIANTS.find(({ name }) => name === profile.startup.variant);
       assert(startupVariant !== undefined, 'readiness profile names an unknown startup variant');
       assertVariantState(snapshot, options, startupVariant);
-      readinessFixtureActivationGeneration = generation;
+      if (hasFixtureActivationWorkReadinessDescriptor(profile)) {
+        readinessFixtureActivationWorkGeneration = generation;
+      } else {
+        readinessFixtureActivationGeneration = generation;
+      }
       return undefined;
     }
     await captureSubphases.measureReadiness(
@@ -789,6 +806,8 @@ async function captureVisualLabCandidateEvidence({
         ? {} : { readinessCompletedFrameReceipt }),
       ...(readinessFixtureActivationGeneration === undefined
         ? {} : { readinessFixtureActivationGeneration }),
+      ...(readinessFixtureActivationWorkGeneration === undefined
+        ? {} : { readinessFixtureActivationWorkGeneration }),
       captureSubphases: captureSubphases.finish(),
       startupSelection,
       backend: reference.backend.backend,
@@ -1273,6 +1292,9 @@ async function stageVariantDuringStartup(cdp, options) {
 
 async function activateFixtureDuringStartup(cdp, options) {
   const { profile, effectiveTimeouts } = options.executionTuning;
+  const activationMethod = hasFixtureActivationWorkReadinessDescriptor(profile)
+    ? 'activatePreparedVisualCaptureFixtureWithWorkGeneration'
+    : 'activatePreparedVisualCaptureFixture';
   const startupVariant = VARIANTS.find(({ name }) => name === profile.startup.variant);
   assert(startupVariant !== undefined, 'fixture activation profile names an unknown startup variant');
   await waitFor(
@@ -1281,7 +1303,7 @@ async function activateFixtureDuringStartup(cdp, options) {
       const canvas = document.querySelector('.semantic-field-canvas');
       const root = document.querySelector('[data-scene]');
       if (!audit || !canvas || !root
-        || typeof audit.activatePreparedVisualCaptureFixture !== 'function'
+        || typeof audit[${JSON.stringify(activationMethod)}] !== 'function'
         || typeof audit.fixtureActivationPresentationGeneration !== 'function'
         || root.dataset.scene !== ${JSON.stringify(options.fixtureAdapter.scene)}) return false;
       const backend = audit.backend();
@@ -1297,7 +1319,7 @@ async function activateFixtureDuringStartup(cdp, options) {
   );
   const ticket = await requestTypedFixtureActivationGeneration(
     (fixture, variant) => evaluate(cdp, `(() => (
-      window.__ANIFOR_INPUT_AUDIT__.activatePreparedVisualCaptureFixture(
+      window.__ANIFOR_INPUT_AUDIT__[${JSON.stringify(activationMethod)}](
         ${JSON.stringify(fixture)}, ${variant}
       )
     ))()`),
@@ -1805,6 +1827,22 @@ function hasFixtureActivationReadinessDescriptor(profile) {
   const keys = Object.keys(activation);
   return keys.length === Object.keys(expected).length
     && Object.keys(expected).every((name) => activation[name] === expected[name]);
+}
+
+function hasFixtureActivationWorkReadinessDescriptor(profile) {
+  const activation = profile?.readinessActivation;
+  if (activation === null || typeof activation !== 'object' || Array.isArray(activation)) {
+    return false;
+  }
+  const expected = FIXTURE_ACTIVATION_WORK_READINESS_DESCRIPTOR;
+  const keys = Object.keys(activation);
+  return keys.length === Object.keys(expected).length
+    && Object.keys(expected).every((name) => activation[name] === expected[name]);
+}
+
+function hasTypedFixtureActivationReadinessDescriptor(profile) {
+  return hasFixtureActivationReadinessDescriptor(profile)
+    || hasFixtureActivationWorkReadinessDescriptor(profile);
 }
 
 async function readFixtureActivationPresentationGeneration(cdp, label, ticket) {

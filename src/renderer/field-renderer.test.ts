@@ -9,8 +9,8 @@ describe('field renderer layout scheduling', () => {
       presenter?: { isContextLost(): boolean };
       fixtureActivationTicketSequence: number;
       fixtureActivationPresentationGeneration: number;
-      fixtureActivationPresentation?: { ticket: number; generation: number; state: string };
-      fixtureActivationPresentations?: Map<number, { ticket: number; generation: number; state: string }>;
+      fixtureActivationPresentation?: { ticket: number; generation: number; state: string; completionScope: string };
+      fixtureActivationPresentations?: Map<number, { ticket: number; generation: number; state: string; completionScope: string }>;
       dynamicPresentationInvalidated: boolean;
       changed: boolean;
       runWithNextFixtureActivationPresentationGeneration(action: () => void): number | undefined;
@@ -45,8 +45,8 @@ describe('field renderer layout scheduling', () => {
       disposed: boolean;
       fixtureActivationTicketSequence: number;
       fixtureActivationPresentationGeneration: number;
-      fixtureActivationPresentation?: { ticket: number; generation: number; state: string };
-      fixtureActivationPresentations?: Map<number, { ticket: number; generation: number; state: string }>;
+      fixtureActivationPresentation?: { ticket: number; generation: number; state: string; completionScope: string };
+      fixtureActivationPresentations?: Map<number, { ticket: number; generation: number; state: string; completionScope: string }>;
       dynamicPresentationInvalidated: boolean;
       changed: boolean;
       runWithNextFixtureActivationPresentationGeneration(action: () => void): number | undefined;
@@ -78,37 +78,51 @@ describe('field renderer layout scheduling', () => {
 
     const source = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
     expect(source).toMatch(
-      /this\.drawField\(time, visualTime, refreshDynamicFields\);\s*if \(this\.fixtureActivationPresentationSettled\(\)\) \{\s*this\.completeFixtureActivationPresentationGeneration\(\);/,
+      /this\.drawField\(time, visualTime, refreshDynamicFields\);[\s\S]*this\.fixtureActivationPresentationSettled\(this\.fixtureActivationPresentation\)/,
     );
   });
 
   it('keeps an activation pending until renderer-owned auxiliary presentation work settles', () => {
-    const settled = vi.fn(() => false);
+    const settled = vi.fn((_owner: number) => false);
     const renderer = Object.create(MaterialRenderer.prototype) as {
-      presenter?: { fixtureActivationPresentationSettled(): boolean };
-      boundaryEvolutionPending: boolean;
-      powderSurfaceDirty: boolean;
-      solidOpticalDepthDirty: boolean;
-      fallbackFields?: { hasPendingRefresh: boolean };
-      fixtureActivationPresentationSettled(): boolean;
+      presenter?: {
+        fixtureActivationPresentationSettled(owner: number): boolean;
+        fixtureActivationPresentationGloballySettled(): boolean;
+      };
+      fixtureActivationDynamicOwner: number;
+      fixtureActivationBoundaryOwner: number;
+      fixtureActivationPowderOwner: number;
+      fixtureActivationSolidOwner: number;
+      fallbackFields?: { hasPendingRefreshFor(owner: number): boolean };
+      fixtureActivationPresentationSettled(presentation: {
+        ticket: number; generation: number; state: string; completionScope: string;
+      } | undefined): boolean;
     };
-    renderer.presenter = { fixtureActivationPresentationSettled: settled };
+    renderer.presenter = {
+      fixtureActivationPresentationSettled: settled,
+      fixtureActivationPresentationGloballySettled: () => false,
+    };
 
-    expect(renderer.fixtureActivationPresentationSettled()).toBe(false);
+    const owned = { ticket: 7, generation: 1, state: 'pending', completionScope: 'activation-owned-work' };
+    expect(renderer.fixtureActivationPresentationSettled(owned)).toBe(false);
     settled.mockReturnValue(true);
-    expect(renderer.fixtureActivationPresentationSettled()).toBe(true);
+    expect(renderer.fixtureActivationPresentationSettled(owned)).toBe(true);
+    expect(settled).toHaveBeenLastCalledWith(7);
     expect(settled).toHaveBeenCalledTimes(2);
 
     renderer.presenter = undefined;
     Object.assign(renderer, {
-      boundaryEvolutionPending: false,
-      powderSurfaceDirty: false,
-      solidOpticalDepthDirty: false,
-      fallbackFields: { hasPendingRefresh: true },
+      fixtureActivationDynamicOwner: 0,
+      fixtureActivationBoundaryOwner: 0,
+      fixtureActivationPowderOwner: 0,
+      fixtureActivationSolidOwner: 0,
+      fallbackFields: { hasPendingRefreshFor: (owner: number) => owner === 7 },
     });
-    expect(renderer.fixtureActivationPresentationSettled()).toBe(false);
-    renderer.fallbackFields = { hasPendingRefresh: false };
-    expect(renderer.fixtureActivationPresentationSettled()).toBe(true);
+    expect(renderer.fixtureActivationPresentationSettled(owned)).toBe(false);
+    renderer.fallbackFields = { hasPendingRefreshFor: () => false };
+    expect(renderer.fixtureActivationPresentationSettled(owned)).toBe(true);
+    renderer.fixtureActivationPowderOwner = 7;
+    expect(renderer.fixtureActivationPresentationSettled(owned)).toBe(false);
   });
 
   it('fails fixture-activation generations on callback failure and rejects overlap or disposal', () => {
@@ -117,7 +131,7 @@ describe('field renderer layout scheduling', () => {
       presenter?: { isContextLost(): boolean };
       fixtureActivationTicketSequence: number;
       fixtureActivationPresentationGeneration: number;
-      fixtureActivationPresentations?: Map<number, { ticket: number; generation: number; state: string }>;
+      fixtureActivationPresentations?: Map<number, { ticket: number; generation: number; state: string; completionScope: string }>;
       dynamicPresentationInvalidated: boolean;
       changed: boolean;
       runWithNextFixtureActivationPresentationGeneration(action: () => void): number | undefined;

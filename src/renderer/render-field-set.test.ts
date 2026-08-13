@@ -98,6 +98,24 @@ describe('shared render field set', () => {
     expect(fields.emission.bytes.some(Boolean)).toBe(true);
   });
 
+  it('tracks only activation-owned staggered work and propagates liquid ownership to suspension', () => {
+    const materials = new Uint8Array(8 * 6);
+    materials[2] = Material.Water;
+    const fields = new RenderFieldSet(8, 6, ALL_MATERIALS);
+    expect(fields.hasPendingRefresh).toBe(true);
+    expect(fields.hasPendingRefreshFor(7)).toBe(false);
+
+    fields.markDirty(Material.Empty, Material.Water, 2, 7);
+    expect(fields.hasPendingRefreshFor(7)).toBe(true);
+    expect(fields.updateNext(materials, 0)).toBe('atmosphere');
+    expect(fields.hasPendingRefreshFor(7)).toBe(true);
+    expect(fields.updateNext(materials, 1)).toBe('liquid');
+    expect(fields.hasPendingRefreshFor(7)).toBe(true);
+    fields.refreshSuspension(materials, 1);
+    expect(fields.hasPendingRefreshFor(7)).toBe(false);
+    expect(fields.hasPendingRefresh).toBe(true);
+  });
+
   it('redirties only fields affected by a material transition', () => {
     const materials = new Uint8Array(16);
     const fields = new RenderFieldSet(4, 4, ALL_MATERIALS);

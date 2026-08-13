@@ -186,6 +186,7 @@ interface MutableFixtureActivationPresentationGeneration {
   ticket: number;
   generation: number;
   state: FixtureActivationPresentationGenerationState;
+  completionScope: 'global-quiescence' | 'activation-owned-work';
 }
 
 const FIXTURE_ACTIVATION_PRESENTATION_HISTORY = 4;
@@ -300,6 +301,11 @@ export class MaterialRenderer {
       this.contourChunks.markCell(index);
       this.powderSurfaceDirty = true;
       this.boundaryEvolutionPending = true;
+      const owner = this.fixtureActivationBoundaryConsumptionOwner;
+      if (owner > 0) {
+        this.fixtureActivationBoundaryOwner = owner;
+        this.fixtureActivationPowderOwner = owner;
+      }
     },
   };
   private presenter?: PixiFieldPresenter;
@@ -419,6 +425,12 @@ export class MaterialRenderer {
   private fixtureActivationPresentationGeneration = 0;
   private fixtureActivationPresentation?: MutableFixtureActivationPresentationGeneration;
   private fixtureActivationPresentations?: Map<number, MutableFixtureActivationPresentationGeneration>;
+  private fixtureActivationCaptureOwner = 0;
+  private fixtureActivationDynamicOwner = 0;
+  private fixtureActivationBoundaryOwner = 0;
+  private fixtureActivationPowderOwner = 0;
+  private fixtureActivationSolidOwner = 0;
+  private fixtureActivationBoundaryConsumptionOwner = 0;
   /** Latest same-page A/B choice, retained across asynchronous WebGL startup. */
   private desiredVisualLabVariant?: VisualLabVariant;
   /** Latest shared material-lighting choice, retained across WebGL startup. */
@@ -590,6 +602,7 @@ export class MaterialRenderer {
     if (time - this.lastDraw < FRAME_INTERVAL) return;
     for (const cell of this.simulation.consumeDirtyCells()) {
       const previous = this.rendered[cell.index];
+      if (previous === cell.material) continue;
       this.rendered[cell.index] = cell.material;
       const fallbackFields = this.fallbackFields;
       fallbackFields?.markDirty(previous, cell.material, cell.index);
@@ -611,6 +624,7 @@ export class MaterialRenderer {
     }
     for (const cell of this.simulation.consumeDirtyWalls?.() ?? []) {
       if (!this.renderedWalls) break;
+      if (this.renderedWalls[cell.index] === cell.wall) continue;
       this.renderedWalls[cell.index] = cell.wall;
       this.fallbackFields?.markAtmosphereBlockerDirty(cell.index);
       this.presenter?.markWallDirty(cell.index);
@@ -659,7 +673,11 @@ export class MaterialRenderer {
     }
     try {
       this.drawField(time, visualTime, refreshDynamicFields);
-      if (this.fixtureActivationPresentationSettled()) {
+      if (refreshDynamicFields
+        && this.fixtureActivationDynamicOwner === (this.fixtureActivationPresentation?.ticket ?? 0)) {
+        this.fixtureActivationDynamicOwner = 0;
+      }
+      if (this.fixtureActivationPresentationSettled(this.fixtureActivationPresentation)) {
         this.completeFixtureActivationPresentationGeneration();
       }
     } catch (error) {
@@ -694,6 +712,20 @@ export class MaterialRenderer {
   runWithNextFixtureActivationPresentationGeneration(
     activate: () => void,
   ): number | undefined {
+    return this.runWithFixtureActivationPresentationGeneration(activate, 'global-quiescence');
+  }
+
+  /** V2 audit primitive: waits only work causally dirtied by this activation. */
+  runWithNextFixtureActivationWorkGeneration(
+    activate: () => void,
+  ): number | undefined {
+    return this.runWithFixtureActivationPresentationGeneration(activate, 'activation-owned-work');
+  }
+
+  private runWithFixtureActivationPresentationGeneration(
+    activate: () => void,
+    completionScope: MutableFixtureActivationPresentationGeneration['completionScope'],
+  ): number | undefined {
     if (typeof activate !== 'function') {
       throw new TypeError('Fixture activation must be a function');
     }
@@ -710,6 +742,7 @@ export class MaterialRenderer {
       ticket,
       generation: this.fixtureActivationPresentationGeneration + 1,
       state: 'pending',
+      completionScope,
     };
     this.fixtureActivationTicketSequence = ticket;
     this.fixtureActivationPresentation = presentation;
@@ -720,12 +753,20 @@ export class MaterialRenderer {
       if (oldest === undefined) break;
       history.delete(oldest);
     }
+    const owned = completionScope === 'activation-owned-work';
+    this.fixtureActivationCaptureOwner = owned ? ticket : 0;
+    if (owned) this.presenter?.beginFixtureActivationPresentationWork(ticket);
     try {
       activate();
     } catch (error) {
+      this.fixtureActivationCaptureOwner = 0;
+      if (owned) this.presenter?.endFixtureActivationPresentationWork(ticket);
       this.failFixtureActivationPresentationGeneration();
       throw error;
     }
+    this.fixtureActivationCaptureOwner = 0;
+    this.fixtureActivationDynamicOwner = owned ? ticket : 0;
+    if (owned) this.presenter?.endFixtureActivationPresentationWork(ticket);
     // Synchronous rendering from an activation callback is outside this closed
     // transaction; it cannot be accepted retrospectively as the requested
     // next presentation.
@@ -758,12 +799,24 @@ export class MaterialRenderer {
     presentation.state = 'completed';
   }
 
-  private fixtureActivationPresentationSettled(): boolean {
-    if (this.presenter) return this.presenter.fixtureActivationPresentationSettled();
-    return !this.boundaryEvolutionPending
-      && !this.powderSurfaceDirty
-      && !this.solidOpticalDepthDirty
-      && !(this.fallbackFields?.hasPendingRefresh ?? false);
+  private fixtureActivationPresentationSettled(
+    presentation: MutableFixtureActivationPresentationGeneration | undefined,
+  ): boolean {
+    if (!presentation || presentation.state !== 'pending') return false;
+    if (presentation.completionScope === 'global-quiescence') {
+      if (this.presenter) return this.presenter.fixtureActivationPresentationGloballySettled();
+      return !this.boundaryEvolutionPending
+        && !this.powderSurfaceDirty
+        && !this.solidOpticalDepthDirty
+        && !(this.fallbackFields?.hasPendingRefresh ?? false);
+    }
+    const owner = presentation.ticket;
+    if (this.presenter) return this.presenter.fixtureActivationPresentationSettled(owner);
+    return this.fixtureActivationDynamicOwner !== owner
+      && this.fixtureActivationBoundaryOwner !== owner
+      && this.fixtureActivationPowderOwner !== owner
+      && this.fixtureActivationSolidOwner !== owner
+      && !(this.fallbackFields?.hasPendingRefreshFor(owner) ?? false);
   }
 
   private failFixtureActivationPresentationGeneration(): void {
@@ -778,6 +831,7 @@ export class MaterialRenderer {
    * cannot leave the presenter texture behind their semantic cells.
    */
   synchronizeFixtureMaterialPlane(): void {
+    const owner = this.fixtureActivationCaptureOwner;
     const cells = this.simulation.cells();
     if (cells.length !== this.rendered.length) throw new Error('Fixture material plane size mismatch');
     for (let index = 0; index < cells.length; index++) {
@@ -786,7 +840,7 @@ export class MaterialRenderer {
       if (previous === material) continue;
       this.rendered[index] = material;
       const fallbackFields = this.fallbackFields;
-      fallbackFields?.markDirty(previous, material, index);
+      fallbackFields?.markDirty(previous, material, index, owner);
       this.contourChunks.markCell(index);
       if (fallbackFields) {
         const previousPhase = fallbackFields.lookups.styleBytes[previous * 4];
@@ -795,12 +849,34 @@ export class MaterialRenderer {
           || nextPhase === RenderPhase.Solid || nextPhase === RenderPhase.Powder
           || powderAirBlocker(previous, previousPhase) !== powderAirBlocker(material, nextPhase)) {
           this.powderSurfaceDirty = true;
+          if (owner > 0) {
+            this.fixtureActivationBoundaryOwner = owner;
+            this.fixtureActivationPowderOwner = owner;
+          }
         }
         if (previousPhase === RenderPhase.Solid || nextPhase === RenderPhase.Solid) {
           this.solidOpticalDepthDirty = true;
+          if (owner > 0) this.fixtureActivationSolidOwner = owner;
         }
       }
       this.presenter?.markDirty(index, material);
+      this.changed = true;
+    }
+    const walls = this.simulation.walls?.();
+    if (walls && this.renderedWalls) for (let index = 0; index < walls.length; index++) {
+      const wall = walls[index];
+      if (this.renderedWalls[index] === wall) continue;
+      this.renderedWalls[index] = wall;
+      this.fallbackFields?.markAtmosphereBlockerDirty(index, owner);
+      this.presenter?.markWallDirty(index);
+      this.contourChunks.markCell(index);
+      this.powderSurfaceDirty = true;
+      this.solidOpticalDepthDirty = true;
+      if (owner > 0) {
+        this.fixtureActivationBoundaryOwner = owner;
+        this.fixtureActivationPowderOwner = owner;
+        this.fixtureActivationSolidOwner = owner;
+      }
       this.changed = true;
     }
     this.dynamicPresentationInvalidated = true;
@@ -2029,17 +2105,26 @@ export class MaterialRenderer {
       || !atmospherePixels || !emissionPixels || !liquidSurfaceScratch) {
       throw new Error('Canvas render fields unavailable');
     }
+    const activationOwner = this.fixtureActivationPresentation?.ticket ?? 0;
     this.boundaryEvolutionPending = false;
+    if (this.fixtureActivationBoundaryOwner === activationOwner) {
+      this.fixtureActivationBoundaryOwner = 0;
+      this.fixtureActivationBoundaryConsumptionOwner = activationOwner;
+    }
     updateBoundaryStabilityRect(
       this.boundaryStability, this.boundaryStabilityOwners, this.rendered, velocities,
       fields.lookups.styleBytes, width, { x: 0, y: 0, width, height }, this.boundaryDirtyMarker,
     );
+    this.fixtureActivationBoundaryConsumptionOwner = 0;
     if (this.powderSurfaceDirty
       && scheduleTime - this.lastPowderSurfaceRefresh >= POWDER_SURFACE_REFRESH_INTERVAL) {
       const powderSurfaceChanged = fields.powderSurface.update(
         this.rendered, this.boundaryStability, this.renderedWalls,
       );
       this.powderSurfaceDirty = false;
+      if (this.fixtureActivationPowderOwner === activationOwner) {
+        this.fixtureActivationPowderOwner = 0;
+      }
       this.lastPowderSurfaceRefresh = scheduleTime;
       if (powderSurfaceChanged) this.contourChunks.markAll();
     }
@@ -2050,12 +2135,17 @@ export class MaterialRenderer {
         width, this.renderedWalls, this.unusualSolidStylingEnabled,
       );
       this.solidOpticalDepthDirty = false;
+      if (this.fixtureActivationSolidOwner === activationOwner) {
+        this.fixtureActivationSolidOwner = 0;
+      }
       this.lastSolidOpticalDepthRefresh = scheduleTime;
       this.contourChunks.markAll();
     }
     const timingStart = this.canvasPresentationTimingEnabled ? performance.now() : undefined;
     let volumePlaneUploads = 0;
-    if (refreshDynamicFields && temperatures) fields.markThermalEmissionDirty();
+    if (refreshDynamicFields && temperatures) {
+      fields.markThermalEmissionDirty(this.fixtureActivationDynamicOwner);
+    }
     const rebuiltField = fields.updateNext(
       this.rendered, scheduleTime, this.renderedWalls, velocities, temperatures,
     );

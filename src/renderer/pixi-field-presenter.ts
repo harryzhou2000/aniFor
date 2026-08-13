@@ -12245,6 +12245,11 @@ export class PixiFieldPresenter {
       this.powderSurfaceDirty = true;
       this.boundaryEvolutionPending = true;
       this.chunks.markCell(index);
+      const owner = this.fixtureActivationBoundaryConsumptionOwner;
+      if (owner > 0) {
+        this.fixtureActivationBoundaryOwner = owner;
+        this.fixtureActivationPowderOwner = owner;
+      }
     },
   };
   private readonly uniforms: UniformGroup;
@@ -12276,6 +12281,15 @@ export class PixiFieldPresenter {
   private boundaryEvolutionPending = false;
   /** Distinguishes real semantic/wall/state delivery from auxiliary-only settling. */
   private semanticTextureMutationPending = true;
+  private fixtureActivationCaptureOwner = 0;
+  private fixtureActivationSemanticOwner = 0;
+  private fixtureActivationBoundaryOwner = 0;
+  private fixtureActivationPowderOwner = 0;
+  private fixtureActivationSolidOwner = 0;
+  private fixtureActivationDynamicOwner = 0;
+  private fixtureActivationBoundaryConsumptionOwner = 0;
+  private fixtureActivationSubmissionOwner = 0;
+  private fixtureActivationSubmissionBaseline = 0;
   private solidOpticalDepthDirty = true;
   private photonStateActive = false;
   private photonStateHydrated = false;
@@ -13794,26 +13808,51 @@ export class PixiFieldPresenter {
 
   markDirty(index: number, nextMaterial: number): void {
     const previousMaterial = this.fieldBytes[index * 4];
+    const owner = this.fixtureActivationCaptureOwner;
     this.semanticTextureMutationPending = true;
     this.chunks.markCell(index);
-    this.fieldSet.markDirty(previousMaterial, nextMaterial, index);
+    if (owner > 0) this.fixtureActivationSemanticOwner = owner;
+    this.fieldSet.markDirty(previousMaterial, nextMaterial, index, owner);
     if (this.powderRelevant(previousMaterial) || this.powderRelevant(nextMaterial)
       || this.powderAirBlocker(previousMaterial) !== this.powderAirBlocker(nextMaterial)) {
       this.powderSurfaceDirty = true;
+      if (owner > 0) {
+        this.fixtureActivationBoundaryOwner = owner;
+        this.fixtureActivationPowderOwner = owner;
+      }
     }
     if (this.solidRelevant(previousMaterial) || this.solidRelevant(nextMaterial)) {
       this.solidOpticalDepthDirty = true;
+      if (owner > 0) this.fixtureActivationSolidOwner = owner;
     }
   }
 
+  beginFixtureActivationPresentationWork(owner: number): void {
+    this.fixtureActivationCaptureOwner = owner;
+    this.fixtureActivationSubmissionOwner = owner;
+    this.fixtureActivationSubmissionBaseline = this.presentationSubmission;
+  }
+
+  endFixtureActivationPresentationWork(owner: number): void {
+    if (this.fixtureActivationCaptureOwner === owner) this.fixtureActivationCaptureOwner = 0;
+    this.fixtureActivationDynamicOwner = owner;
+  }
+
   markWallDirty(index: number): void {
+    const owner = this.fixtureActivationCaptureOwner;
     this.semanticTextureMutationPending = true;
+    if (owner > 0) {
+      this.fixtureActivationSemanticOwner = owner;
+      this.fixtureActivationBoundaryOwner = owner;
+      this.fixtureActivationPowderOwner = owner;
+      this.fixtureActivationSolidOwner = owner;
+    }
     this.wallChunks.markCell(index);
     // E09 packs exact ordinary Powder/Solid contact into the existing normal-
     // scale stability byte. Revisit the same halo when an independent native
     // wall changes so a 254 marker can neither survive nor appear stale.
     this.chunks.markCell(index);
-    this.fieldSet.markAtmosphereBlockerDirty(index);
+    this.fieldSet.markAtmosphereBlockerDirty(index, owner);
     this.powderSurfaceDirty = true;
     this.solidOpticalDepthDirty = true;
   }
@@ -14738,8 +14777,20 @@ export class PixiFieldPresenter {
         && time - this.lastSolidOpticalDepthRefresh >= POWDER_SURFACE_REFRESH_INTERVAL);
   }
 
-  /** True only after all CPU-owned presentation work caused by an activation settled. */
-  fixtureActivationPresentationSettled(): boolean {
+  /** Ignores unrelated dirt while retaining every successor owned by this activation. */
+  fixtureActivationPresentationSettled(owner: number): boolean {
+    return owner > 0 && this.fixtureActivationSubmissionOwner === owner
+      && this.presentationSubmission > this.fixtureActivationSubmissionBaseline
+      && this.fixtureActivationSemanticOwner !== owner
+      && this.fixtureActivationBoundaryOwner !== owner
+      && this.fixtureActivationPowderOwner !== owner
+      && this.fixtureActivationSolidOwner !== owner
+      && this.fixtureActivationDynamicOwner !== owner
+      && !this.fieldSet.hasPendingRefreshFor(owner);
+  }
+
+  /** V1 compatibility: every renderer-owned CPU presentation queue is empty. */
+  fixtureActivationPresentationGloballySettled(): boolean {
     return !this.semanticTextureMutationPending
       && !this.boundaryEvolutionPending
       && !this.powderSurfaceDirty
@@ -14758,12 +14809,25 @@ export class PixiFieldPresenter {
     visualTime: number,
     refreshDynamicFields: boolean,
   ): void {
+    const activationOwner = this.fixtureActivationSubmissionOwner;
+    const dynamicOwner = refreshDynamicFields
+      && this.fixtureActivationDynamicOwner === activationOwner ? activationOwner : 0;
     if (refreshDynamicFields) this.chunks.markAll();
     const hasExternalPresentationMutation = this.semanticTextureMutationPending
       || refreshDynamicFields;
     this.semanticTextureMutationPending = false;
     this.boundaryEvolutionPending = false;
     const rectangles = this.chunks.consume();
+    if (rectangles.length && this.fixtureActivationSemanticOwner === activationOwner) {
+      this.fixtureActivationSemanticOwner = 0;
+    }
+    if (refreshDynamicFields && this.fixtureActivationDynamicOwner === activationOwner) {
+      this.fixtureActivationDynamicOwner = 0;
+    }
+    if (this.fixtureActivationBoundaryOwner === activationOwner) {
+      this.fixtureActivationBoundaryOwner = 0;
+      this.fixtureActivationBoundaryConsumptionOwner = activationOwner;
+    }
     let boundaryTextureDirty = false;
     const encodePowderSolidContact = this.outputScale < 8
       && Number(this.uniforms.uniforms.uPowderSolidContactVfx) > 0.5;
@@ -14785,6 +14849,7 @@ export class PixiFieldPresenter {
         );
       }
     }
+    this.fixtureActivationBoundaryConsumptionOwner = 0;
     if (rectangles.length) {
       this.fieldSource.update();
       boundaryTextureDirty = true;
@@ -14826,6 +14891,9 @@ export class PixiFieldPresenter {
         materials, this.boundaryStabilityBytes, walls,
       );
       this.powderSurfaceDirty = false;
+      if (this.fixtureActivationPowderOwner === activationOwner) {
+        this.fixtureActivationPowderOwner = 0;
+      }
       this.lastPowderSurfaceRefresh = scheduleTime;
       this.uniforms.uniforms.uPowderSurfaceActive = this.fieldSet.powderSurface.hasSurface ? 1 : 0;
       if (changed) {
@@ -14841,6 +14909,9 @@ export class PixiFieldPresenter {
         this.fieldSource.width, walls, this.unusualSolidStylingEnabled,
       );
       this.solidOpticalDepthDirty = false;
+      if (this.fixtureActivationSolidOwner === activationOwner) {
+        this.fixtureActivationSolidOwner = 0;
+      }
       this.lastSolidOpticalDepthRefresh = scheduleTime;
       boundaryTextureDirty = true;
     }
@@ -14851,9 +14922,9 @@ export class PixiFieldPresenter {
     // packed plane hydrated; subsequent native velocity refreshes reuse the
     // same bounded atmosphere cadence.
     if (gasMotionActive && (!this.atmosphereMotionHydrated || refreshDynamicFields)) {
-      this.fieldSet.markAtmosphereMotionDirty();
+      this.fieldSet.markAtmosphereMotionDirty(dynamicOwner);
     }
-    if (refreshDynamicFields && temperatures) this.fieldSet.markThermalEmissionDirty();
+    if (refreshDynamicFields && temperatures) this.fieldSet.markThermalEmissionDirty(dynamicOwner);
     const volumeField = this.fieldSet.updateNext(
       materials, scheduleTime, walls, velocities, temperatures,
     );

@@ -70,6 +70,7 @@ describe('deploy-verified CI workflow contract', () => {
       'stable-snapshots', 'completed-frame-receipt', 'readiness-completed-frame-receipt',
       'selection-owned-frame-receipt',
       'fixture-activation-generation',
+      'fixture-activation-work-generation',
     ]);
 
     const inputReferences = workflow.match(
@@ -122,6 +123,7 @@ describe('deploy-verified CI workflow contract', () => {
     expect(proof).toContain('default: selection-owned-frame-receipt');
     expect(proofChoices).toEqual([
       'selection-owned-frame-receipt', 'fixture-activation-generation',
+      'fixture-activation-work-generation',
     ]);
     expect(workflow.match(
       /\$\{\{\s*inputs\.visual_lab_performance_cohorts\s*\}\}/g,

@@ -7080,6 +7080,30 @@ Do not wait on unrelated pre-existing renderer queues, add a GPU fence, add a
 second snapshot, or infer readiness from dataset state alone. This should remain
 an additive successor to v5; v1–v4 and the accepted v4 hosted control stay intact.
 
+That successor is now implemented as the explicit opt-in
+`anifor.visual-lab.execution-tuning-plan/v6`. Its capability is
+`renderer-fixture-activation-generation/v2`, its capture mode is
+`fixture-activation-work-generation`, and its descriptor states
+`completionScope: activation-owned-work`. V5 retains global-quiescence semantics;
+v6 alone tags and drains work caused by its typed prepare/synchronize/select/
+invalidate transaction. Ownership follows semantic and wall changes through
+boundary evolution, powder and solid-depth rebuilds, atmosphere/liquid/emission
+cadence, and liquid-to-suspension successor work. Unrelated owner-zero startup
+dirt cannot delay v6 completion. The public proof remains the bounded frozen
+`{ticket,generation,state}` record, but reports use the distinct
+`readinessFixtureActivationWorkGeneration` field and portable verification
+rejects cross-version proof fields.
+
+The first real local SwiftShader v6 package is
+`/tmp/anifor-v6-owned-work-20260813-1328`. It passed strict renderer/Chrome
+teardown and portable reconstruction with exactly one readiness snapshot,
+activation generation `1`, and result
+`sha256:b3edbc669cc2c2408ef712ea6089b42e85e1ba60944d3d78b4bd0942de23f67f`.
+The established OFF/A/B PNG hashes stayed byte-identical. Startup was 12.92s,
+activation readiness was 19.49s (including 4.75s complete readback), OFF/A/B
+were 2.08/1.97/1.98s, and total was 39.05s. These local timings are diagnostic;
+the next gate is the approved hosted fresh/shared/shared/fresh Powder cohort.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

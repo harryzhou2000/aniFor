@@ -30,8 +30,12 @@ const V4_PROFILE_FIELDS = Object.freeze([
 const V5_PROFILE_FIELDS = Object.freeze([
   'startup', 'readiness', 'readinessActivation', 'selection', 'stability', 'completion', 'screenshot',
 ]);
+const V6_PROFILE_FIELDS = V5_PROFILE_FIELDS;
 const READINESS_ACTIVATION_FIELDS = Object.freeze([
   'capability', 'requiredState', 'bind', 'snapshotAfterCompletion',
+]);
+const V6_READINESS_ACTIVATION_FIELDS = Object.freeze([
+  'capability', 'requiredState', 'bind', 'completionScope', 'snapshotAfterCompletion',
 ]);
 const COMPLETION_FIELDS = Object.freeze([
   'capability', 'receiptSchema', 'requiredState', 'bind', 'verifyAfterSnapshot',
@@ -115,13 +119,14 @@ const assertExactArray = (value, expected, label) => {
 const normalizeProfile = (profile, driverName, version) => {
   const label = `Visual capture execution capability ${driverName}`;
   const hasReadinessCompletion = version === 'v3';
-  const hasReadinessActivation = version === 'v5';
+  const hasReadinessActivation = version === 'v5' || version === 'v6';
   const hasCompletion = version === 'v2' || version === 'v3'
-    || version === 'v4' || version === 'v5';
+    || version === 'v4' || version === 'v5' || version === 'v6';
   assertJsonValue(profile, label);
   assertExactDataKeys(
     profile,
-    version === 'v5' ? V5_PROFILE_FIELDS
+    version === 'v6' ? V6_PROFILE_FIELDS
+      : version === 'v5' ? V5_PROFILE_FIELDS
       : version === 'v4' ? V4_PROFILE_FIELDS
       : version === 'v3' ? V3_PROFILE_FIELDS
         : version === 'v2' ? V2_PROFILE_FIELDS : PROFILE_FIELDS,
@@ -168,7 +173,7 @@ const normalizeProfile = (profile, driverName, version) => {
   assertIntegerInRange(stability.pollIntervalMs, 1, 1_000, `${label}.stability.pollIntervalMs`);
   if (hasCompletion) {
     assertExactDataKeys(completion, COMPLETION_FIELDS, `${label}.completion`);
-    const completionBind = version === 'v4' || version === 'v5'
+    const completionBind = version === 'v4' || version === 'v5' || version === 'v6'
       ? 'selection-owned-presentation'
       : 'selected-presentation';
     if (completion.capability !== 'renderer-completed-frame-receipt/v1'
@@ -238,11 +243,17 @@ const normalizeProfile = (profile, driverName, version) => {
   }
   if (hasReadinessActivation) {
     assertExactDataKeys(
-      readinessActivation, READINESS_ACTIVATION_FIELDS, `${label}.readinessActivation`,
+      readinessActivation,
+      version === 'v6' ? V6_READINESS_ACTIVATION_FIELDS : READINESS_ACTIVATION_FIELDS,
+      `${label}.readinessActivation`,
     );
-    if (readinessActivation.capability !== 'renderer-fixture-activation-generation/v1'
+    const expectedCapability = version === 'v6'
+      ? 'renderer-fixture-activation-generation/v2'
+      : 'renderer-fixture-activation-generation/v1';
+    if (readinessActivation.capability !== expectedCapability
       || readinessActivation.requiredState !== 'completed'
       || readinessActivation.bind !== 'typed-fixture-activation'
+      || (version === 'v6' && readinessActivation.completionScope !== 'activation-owned-work')
       || readinessActivation.snapshotAfterCompletion !== true) {
       throw new TypeError(`${label}.readinessActivation is not supported`);
     }
@@ -250,6 +261,7 @@ const normalizeProfile = (profile, driverName, version) => {
       capability: readinessActivation.capability,
       requiredState: readinessActivation.requiredState,
       bind: readinessActivation.bind,
+      ...(version === 'v6' ? { completionScope: readinessActivation.completionScope } : {}),
       snapshotAfterCompletion: readinessActivation.snapshotAfterCompletion,
     };
   }
@@ -361,6 +373,11 @@ export function createVisualCaptureExecutionV5CapabilityRegistry(drivers, profil
   return createCapabilityRegistry(drivers, profiles, 'v5');
 }
 
+/** Creates the closed v6 activation-owned work generation capability registry. */
+export function createVisualCaptureExecutionV6CapabilityRegistry(drivers, profiles) {
+  return createCapabilityRegistry(drivers, profiles, 'v6');
+}
+
 /** Returns a frozen map only for an exact, duplicate-free capture-order subset. */
 const capabilitiesForCaptureOrder = (driverNames, registry) => {
   if (!Array.isArray(driverNames) || driverNames.length === 0) {
@@ -401,6 +418,11 @@ export function visualCaptureExecutionV4CapabilitiesForCaptureOrder(driverNames)
 /** Returns the frozen v5 fixture-activation generation capture-order subset. */
 export function visualCaptureExecutionV5CapabilitiesForCaptureOrder(driverNames) {
   return capabilitiesForCaptureOrder(driverNames, V5_REGISTRY);
+}
+
+/** Returns the frozen v6 activation-owned work generation capture-order subset. */
+export function visualCaptureExecutionV6CapabilitiesForCaptureOrder(driverNames) {
+  return capabilitiesForCaptureOrder(driverNames, V6_REGISTRY);
 }
 
 const CONSERVATIVE_PROFILE = () => ({
@@ -519,6 +541,20 @@ const FIXTURE_ACTIVATION_GENERATION_PROFILE = () => {
   };
 };
 
+const FIXTURE_ACTIVATION_WORK_GENERATION_PROFILE = () => {
+  const profile = FIXTURE_ACTIVATION_GENERATION_PROFILE();
+  return {
+    ...profile,
+    readinessActivation: {
+      capability: 'renderer-fixture-activation-generation/v2',
+      requiredState: 'completed',
+      bind: 'typed-fixture-activation',
+      completionScope: 'activation-owned-work',
+      snapshotAfterCompletion: true,
+    },
+  };
+};
+
 const DECLARED_DRIVER_NAMES = VISUAL_CAPTURE_STATIC_CONTRACT.drivers.map(({ name }) => name);
 if (DECLARED_DRIVER_NAMES.length !== VISUAL_CAPTURE_DRIVER_NAMES.length
   || DECLARED_DRIVER_NAMES.some((name, index) => name !== VISUAL_CAPTURE_DRIVER_NAMES[index])) {
@@ -540,6 +576,9 @@ const V4_PROFILE_REGISTRY = Object.fromEntries(
 const V5_PROFILE_REGISTRY = Object.fromEntries(
   DECLARED_DRIVER_NAMES.map((name) => [name, FIXTURE_ACTIVATION_GENERATION_PROFILE()]),
 );
+const V6_PROFILE_REGISTRY = Object.fromEntries(
+  DECLARED_DRIVER_NAMES.map((name) => [name, FIXTURE_ACTIVATION_WORK_GENERATION_PROFILE()]),
+);
 const REGISTRY = createVisualCaptureExecutionCapabilityRegistry(
   VISUAL_CAPTURE_STATIC_CONTRACT.drivers,
   PROFILE_REGISTRY,
@@ -560,6 +599,10 @@ const V5_REGISTRY = createVisualCaptureExecutionV5CapabilityRegistry(
   VISUAL_CAPTURE_STATIC_CONTRACT.drivers,
   V5_PROFILE_REGISTRY,
 );
+const V6_REGISTRY = createVisualCaptureExecutionV6CapabilityRegistry(
+  VISUAL_CAPTURE_STATIC_CONTRACT.drivers,
+  V6_PROFILE_REGISTRY,
+);
 
 export const VISUAL_CAPTURE_EXECUTION_CAPABILITY_NAMES = REGISTRY.names;
 export const VISUAL_CAPTURE_EXECUTION_CAPABILITIES = REGISTRY.capabilities;
@@ -571,6 +614,8 @@ export const VISUAL_CAPTURE_EXECUTION_V4_CAPABILITY_NAMES = V4_REGISTRY.names;
 export const VISUAL_CAPTURE_EXECUTION_V4_CAPABILITIES = V4_REGISTRY.capabilities;
 export const VISUAL_CAPTURE_EXECUTION_V5_CAPABILITY_NAMES = V5_REGISTRY.names;
 export const VISUAL_CAPTURE_EXECUTION_V5_CAPABILITIES = V5_REGISTRY.capabilities;
+export const VISUAL_CAPTURE_EXECUTION_V6_CAPABILITY_NAMES = V6_REGISTRY.names;
+export const VISUAL_CAPTURE_EXECUTION_V6_CAPABILITIES = V6_REGISTRY.capabilities;
 
 export function resolveVisualCaptureExecutionCapabilities(name) {
   return REGISTRY.resolve(name);
@@ -590,4 +635,8 @@ export function resolveVisualCaptureExecutionV4Capabilities(name) {
 
 export function resolveVisualCaptureExecutionV5Capabilities(name) {
   return V5_REGISTRY.resolve(name);
+}
+
+export function resolveVisualCaptureExecutionV6Capabilities(name) {
+  return V6_REGISTRY.resolve(name);
 }

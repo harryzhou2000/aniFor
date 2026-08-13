@@ -134,6 +134,12 @@ export interface PreparedVisualCaptureActivationHost {
   invalidateDynamicPresentation(): void;
 }
 
+export interface PreparedVisualCaptureWorkActivationHost extends Omit<
+  PreparedVisualCaptureActivationHost, 'runWithNextFixtureActivationPresentationGeneration'
+> {
+  runWithNextFixtureActivationWorkGeneration(activate: () => void): number | undefined;
+}
+
 /**
  * Performs the complete typed fixture activation under one renderer-owned
  * next-presentation reservation. Runtime validation happens before authored
@@ -158,6 +164,20 @@ export function activatePreparedVisualCaptureFixture(
     throw new Error('Visual capture fixture activation could not reserve a presentation generation');
   }
   return generation;
+}
+
+/** V2 counterpart whose completion excludes unrelated pre-existing render work. */
+export function activatePreparedVisualCaptureFixtureWithWorkGeneration(
+  host: PreparedVisualCaptureWorkActivationHost,
+  fixture: VisualLabFixtureId,
+  variant: VisualCaptureControlVariant,
+): number {
+  return activatePreparedVisualCaptureFixture({
+    ...host,
+    runWithNextFixtureActivationPresentationGeneration: (activate) => (
+      host.runWithNextFixtureActivationWorkGeneration(activate)
+    ),
+  }, fixture, variant);
 }
 
 export interface BrowserInputAuditApi {
@@ -341,6 +361,10 @@ export interface BrowserInputAuditApi {
   prepareVisualLabFixture(fixture: VisualLabFixtureId): void;
   /** One typed prepare/select transaction bound to its next renderer presentation. */
   activatePreparedVisualCaptureFixture(
+    fixture: VisualLabFixtureId, variant: VisualCaptureControlVariant,
+  ): number;
+  /** V2 typed activation bound only to causally owned renderer work. */
+  activatePreparedVisualCaptureFixtureWithWorkGeneration(
     fixture: VisualLabFixtureId, variant: VisualCaptureControlVariant,
   ): number;
   /** Reads the renderer-owned state of a fixture activation generation. */

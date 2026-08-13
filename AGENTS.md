@@ -1760,6 +1760,23 @@ or review identity. Legacy omission remains valid. Do not claim that
 round trip. The first real Gas sample retained all accepted hashes and exposed
 readiness dataset wait plus readiness/OFF readback as the dominant cost.
 
+The activation-owned work generation is the explicit v6 successor to the
+hosted v5 global-quiescence experiment. Preserve v5 behavior and its
+`readinessFixtureActivationGeneration` report field. V6 alone uses capture mode
+`fixture-activation-work-generation`, capability
+`renderer-fixture-activation-generation/v2`, completion scope
+`activation-owned-work`, and report field
+`readinessFixtureActivationWorkGeneration`. Its typed browser transaction must
+own only work dirtied by prepare/synchronize/select/invalidate, propagate that
+ownership through boundary, powder, solid-depth, staggered field, and
+liquid-to-suspension successors, and require a presentation after the callback
+baseline. Do not let unrelated owner-zero dirt block completion or let a
+synchronous selector submission satisfy it. Keep exactly one complete readiness
+snapshot and reread the same completed generation afterward. The first real
+local SwiftShader v6 capture reproduced the established Powder result and all
+three PNG hashes with 19.49s readiness and 39.05s total; hosted ABBA evidence is
+the next acceptance gate.
+
 Performance comparisons use the opt-in
 `audit:visual-lab:performance-cohorts` runner. Preserve its fixed
 fresh/shared/shared/fresh order, tracked recipe-set requirement, distinct cohort

@@ -31,6 +31,13 @@ export interface RenderLookups {
 /** Suspension is a soft visual volume and can trail exact semantics slightly. */
 export const SUSPENSION_FIELD_REFRESH_INTERVAL = 1000 / 6;
 
+export const enum RenderFieldDirtyLane {
+  Atmosphere = 1,
+  Liquid = 2,
+  Emission = 4,
+  Suspension = 8,
+}
+
 /** Canonical render metadata shared by the WebGL and Canvas2D presenters. */
 export function createRenderLookups(materials: readonly RenderMaterialStyle[]): RenderLookups {
   const paletteBytes = new Uint8Array(256 * 4);
@@ -84,6 +91,10 @@ export class RenderFieldSet {
   private liquidDirty = true;
   private emissionDirty = true;
   private suspensionDirty = true;
+  private atmosphereOwner = 0;
+  private liquidOwner = 0;
+  private emissionOwner = 0;
+  private suspensionOwner = 0;
   private lastSuspensionRefresh = -Infinity;
 
   constructor(width: number, height: number, materials: readonly RenderMaterialStyle[]) {
@@ -112,44 +123,70 @@ export class RenderFieldSet {
     this.emissionDirty = true;
   }
 
-  markDirty(previousMaterial: number, nextMaterial: number, index = -1): void {
+  markDirty(previousMaterial: number, nextMaterial: number, index = -1, owner = 0): number {
+    let lanes = 0;
     if (this.lookups.gasByMaterial[previousMaterial] || this.lookups.gasByMaterial[nextMaterial]
-      || this.atmosphere.mayHaveIdentityNearWorldIndex(index)) this.atmosphereDirty = true;
-    if (this.lookups.liquidByMaterial[previousMaterial] || this.lookups.liquidByMaterial[nextMaterial]) this.liquidDirty = true;
+      || this.atmosphere.mayHaveIdentityNearWorldIndex(index)) {
+      this.atmosphereDirty = true; lanes |= RenderFieldDirtyLane.Atmosphere;
+      if (owner > 0) this.atmosphereOwner = owner;
+    }
+    if (this.lookups.liquidByMaterial[previousMaterial] || this.lookups.liquidByMaterial[nextMaterial]) {
+      this.liquidDirty = true; lanes |= RenderFieldDirtyLane.Liquid;
+      if (owner > 0) this.liquidOwner = owner;
+    }
     if (this.lookups.emissiveByMaterial[previousMaterial]
       || this.lookups.emissiveByMaterial[nextMaterial]
       || this.emission.canMaterialEmitThermally(previousMaterial)
-      || this.emission.canMaterialEmitThermally(nextMaterial)) this.emissionDirty = true;
+      || this.emission.canMaterialEmitThermally(nextMaterial)) {
+      this.emissionDirty = true; lanes |= RenderFieldDirtyLane.Emission;
+      if (owner > 0) this.emissionOwner = owner;
+    }
     const previousPhase = this.lookups.styleBytes[previousMaterial * 4];
     const nextPhase = this.lookups.styleBytes[nextMaterial * 4];
     if (previousPhase === RenderPhase.Powder || previousPhase === RenderPhase.Liquid
       || nextPhase === RenderPhase.Powder || nextPhase === RenderPhase.Liquid) {
-      this.suspensionDirty = true;
+      this.suspensionDirty = true; lanes |= RenderFieldDirtyLane.Suspension;
+      if (owner > 0) this.suspensionOwner = owner;
     }
+    return lanes;
   }
 
-  markAtmosphereBlockerDirty(index: number): void {
-    if (this.atmosphere.mayHaveIdentityNearWorldIndex(index)) this.atmosphereDirty = true;
+  markAtmosphereBlockerDirty(index: number, owner = 0): void {
+    if (this.atmosphere.mayHaveIdentityNearWorldIndex(index)) {
+      this.atmosphereDirty = true;
+      if (owner > 0) this.atmosphereOwner = owner;
+    }
     // Native walls are also discontinuities in the caller-owned vertical
     // liquid optical-depth plane. Reuse the bounded liquid cadence so a wall
     // edit cannot leave stale depth even when liquid semantics did not change.
     this.liquidDirty = true;
+    if (owner > 0) this.liquidOwner = owner;
     // The half-resolution suspension field rejects native-wall ownership while
     // deriving and packing its supported powder/liquid clusters. A wall-only
     // edit must therefore refresh that shared field too; otherwise valid bytes
     // can survive behind a newly placed wall until an unrelated material edit.
     this.suspensionDirty = true;
-    if (this.emission.longRangeTransportEnabled) this.emissionDirty = true;
+    if (owner > 0) this.suspensionOwner = owner;
+    if (this.emission.longRangeTransportEnabled) {
+      this.emissionDirty = true;
+      if (owner > 0) this.emissionOwner = owner;
+    }
   }
 
   /** Reuses the existing atmosphere cadence when only native gas flow changed. */
-  markAtmosphereMotionDirty(): void {
-    if (this.atmosphere.hasVolume) this.atmosphereDirty = true;
+  markAtmosphereMotionDirty(owner = 0): void {
+    if (this.atmosphere.hasVolume) {
+      this.atmosphereDirty = true;
+      if (owner > 0) this.atmosphereOwner = owner;
+    }
   }
 
   /** Queues temperature-derived light through the existing bounded field cadence. */
-  markThermalEmissionDirty(): void {
-    if (this.emission.hasThermalCandidate) this.emissionDirty = true;
+  markThermalEmissionDirty(owner = 0): void {
+    if (this.emission.hasThermalCandidate) {
+      this.emissionDirty = true;
+      if (owner > 0) this.emissionOwner = owner;
+    }
   }
 
   due(time: number): boolean {
@@ -163,6 +200,11 @@ export class RenderFieldSet {
     return this.atmosphereDirty || this.liquidDirty || this.emissionDirty || this.suspensionDirty;
   }
 
+  hasPendingRefreshFor(owner: number): boolean {
+    return owner > 0 && (this.atmosphereOwner === owner || this.liquidOwner === owner
+      || this.emissionOwner === owner || this.suspensionOwner === owner);
+  }
+
   updateNext(
     materials: Uint8Array, time: number, walls?: Uint8Array, velocities?: Int8Array,
     temperatures?: Uint16Array,
@@ -171,13 +213,18 @@ export class RenderFieldSet {
     if (field === 'atmosphere') {
       this.atmosphere.update(materials, walls, velocities);
       this.atmosphereDirty = false;
+      this.atmosphereOwner = 0;
     } else if (field === 'liquid') {
+      const owner = this.liquidOwner;
       this.liquid.update(materials);
       this.liquidDirty = false;
       this.suspensionDirty = true;
+      this.liquidOwner = 0;
+      if (owner > 0) this.suspensionOwner = owner;
     } else if (field === 'emission') {
       this.emission.update(materials, temperatures, walls);
       this.emissionDirty = false;
+      this.emissionOwner = 0;
     }
     if (field) this.schedule.refreshed(field, time);
     return field;
@@ -196,6 +243,7 @@ export class RenderFieldSet {
       || time - this.lastSuspensionRefresh < SUSPENSION_FIELD_REFRESH_INTERVAL) return undefined;
     const changed = this.updateSuspension(materials, walls);
     this.suspensionDirty = false;
+    this.suspensionOwner = 0;
     this.lastSuspensionRefresh = time;
     return changed;
   }

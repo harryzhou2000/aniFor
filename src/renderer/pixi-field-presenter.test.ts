@@ -140,33 +140,53 @@ function presenterHarness(outputScale = 2): PresenterHarness {
 }
 
 describe('Pixi presenter startup configuration', () => {
-  it('reports fixture activation settled only after every CPU presentation queue drains', () => {
+  it('ignores preexisting dirt but waits for every activation-owned successor lane', () => {
     const presenter = Object.create(PixiFieldPresenter.prototype) as unknown as {
       semanticTextureMutationPending: boolean;
       boundaryEvolutionPending: boolean;
       powderSurfaceDirty: boolean;
       solidOpticalDepthDirty: boolean;
-      fieldSet: { hasPendingRefresh: boolean };
-      fixtureActivationPresentationSettled(): boolean;
+      presentationSubmission: number;
+      fixtureActivationSubmissionOwner: number;
+      fixtureActivationSubmissionBaseline: number;
+      fixtureActivationSemanticOwner: number;
+      fixtureActivationBoundaryOwner: number;
+      fixtureActivationPowderOwner: number;
+      fixtureActivationSolidOwner: number;
+      fixtureActivationDynamicOwner: number;
+      fieldSet: { hasPendingRefreshFor(owner: number): boolean };
+      fixtureActivationPresentationSettled(owner: number): boolean;
     };
     Object.assign(presenter, {
-      semanticTextureMutationPending: false,
-      boundaryEvolutionPending: false,
-      powderSurfaceDirty: false,
-      solidOpticalDepthDirty: false,
-      fieldSet: { hasPendingRefresh: false },
+      semanticTextureMutationPending: true,
+      boundaryEvolutionPending: true,
+      powderSurfaceDirty: true,
+      solidOpticalDepthDirty: true,
+      presentationSubmission: 4,
+      fixtureActivationSubmissionOwner: 7,
+      fixtureActivationSubmissionBaseline: 3,
+      fixtureActivationSemanticOwner: 0,
+      fixtureActivationBoundaryOwner: 0,
+      fixtureActivationPowderOwner: 0,
+      fixtureActivationSolidOwner: 0,
+      fixtureActivationDynamicOwner: 0,
+      fieldSet: { hasPendingRefreshFor: () => false },
     });
-    expect(presenter.fixtureActivationPresentationSettled()).toBe(true);
+    expect(presenter.fixtureActivationPresentationSettled(7)).toBe(true);
     for (const pending of [
-      'semanticTextureMutationPending', 'boundaryEvolutionPending',
-      'powderSurfaceDirty', 'solidOpticalDepthDirty',
+      'fixtureActivationSemanticOwner', 'fixtureActivationBoundaryOwner',
+      'fixtureActivationPowderOwner', 'fixtureActivationSolidOwner',
+      'fixtureActivationDynamicOwner',
     ] as const) {
-      presenter[pending] = true;
-      expect(presenter.fixtureActivationPresentationSettled()).toBe(false);
-      presenter[pending] = false;
+      presenter[pending] = 7;
+      expect(presenter.fixtureActivationPresentationSettled(7)).toBe(false);
+      presenter[pending] = 0;
     }
-    presenter.fieldSet.hasPendingRefresh = true;
-    expect(presenter.fixtureActivationPresentationSettled()).toBe(false);
+    presenter.fieldSet.hasPendingRefreshFor = (owner) => owner === 7;
+    expect(presenter.fixtureActivationPresentationSettled(7)).toBe(false);
+    presenter.fieldSet.hasPendingRefreshFor = () => false;
+    presenter.presentationSubmission = 3;
+    expect(presenter.fixtureActivationPresentationSettled(7)).toBe(false);
   });
 
   it('can seed a retained Visual Lab choice without submitting an unhydrated frame', () => {
