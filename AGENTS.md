@@ -1674,6 +1674,16 @@ off. New CI review packages must require it fail-closed. Never rotate result,
 batch, baseline, comparison, promotion, or recipe-set v1 identities for this
 additive provenance.
 
+The retained Powder visual checkpoint uses the already-wide settled Smooth
+field rather than a second carrier. Volumetric B strengthens only its
+profile-driven shallow crown, compacted-core absorption, and deep pigment
+retention; OFF/A, Local, Grains, Canvas, and compact true 8x remain controls.
+An exact-owner-masked four-tap eight-cell prototype was numerically active but
+visually redundant and was removed. Keep Powder/Solid mesoscale radii at zero
+until a new carrier is visibly preferred. Do not add wide samples or exact
+visual pins to recover that rejected prototype; use current RenderOptics and
+topology-control captures plus human/agent inspection.
+
 The representative RenderOptics atlas is also the preferred fast loop for
 class-level appearance-profile experiments. It now proves that the sixth
 `interiorScatter` lane can drive the existing powder/liquid/gas middle and core

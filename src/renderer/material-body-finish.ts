@@ -820,8 +820,21 @@ vec3 applyMaterialVolumeLobe(
     * composition.volumeScatter;
   float powderMid = 4.0 * clamp(depth, 0.0, 1.0)
     * (1.0 - clamp(depth, 0.0, 1.0));
+  // Powder already arrives through the wide settled-Smooth carrier. Give that
+  // actual body signal enough optical weight to survive fit-view composition:
+  // a shallow profile-coloured crown and an opposing compacted core. This is
+  // deliberately stronger than the removed extra-stencil prototype, which
+  // duplicated the same field but stayed visually inert. Grain RGB remains
+  // untouched; the caller still owns support, alpha, holes, contacts, motion,
+  // Local/Grains, and the compact true-8x literal-Off path.
+  float powderOpenProfile = clamp(
+    (finishInteriorScatter - 0.50) / 1.0, 0.0, 1.0
+  );
+  float powderCrownScale = mix(0.090, 0.142, powderOpenProfile);
+  float powderCoreScale = mix(0.104, 0.070, powderOpenProfile);
   key += powderVolume * (
-    powderMid * 0.026 + max(facing, 0.0) * shoulder * 0.014
+    powderMid * powderCrownScale
+      + max(facing, 0.0) * shoulder * (0.046 + powderOpenProfile * 0.016)
   ) * finishResponse.x * profileMiddleScatter;
   key *= finishResponse.x;
   // Transmission is a separate optical lane: applying it after reflection
@@ -840,7 +853,8 @@ vec3 applyMaterialVolumeLobe(
     * (pocket * fieldBody * 0.022 + max(-facing, 0.0) * shoulder * 0.010
       + gasDeepAbsorption * 0.014);
   shade += powderVolume * (
-    core * core * 0.028 + max(-facing, 0.0) * shoulder * 0.010
+    core * core * powderCoreScale
+      + max(-facing, 0.0) * shoulder * (0.026 + (1.0 - powderOpenProfile) * 0.012)
   ) * profileCoreExtinction;
   shade *= finishResponse.y;
   shade *= mix(1.0, 0.82, sootyGasCharacter * core);
@@ -853,7 +867,7 @@ vec3 applyMaterialVolumeLobe(
   // distinction. This is B-only and RGB-only; shores, wisps, contacts, alpha,
   // and compact literal-Off stay owned by their callers.
   float materialDeepPigment = opticalExperimentB * finishResponse.z
-    * (powder * powderVolume * core * 0.012
+    * (powder * powderVolume * core * 0.030
       + liquid * deepColumn * 0.016 + gasDeepAbsorption * 0.024);
   float materialLuminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
   color += (color - vec3(materialLuminance)) * materialDeepPigment;

@@ -7669,6 +7669,38 @@ bounds and contain only ordinal, fresh/shared mode, candidate name, and fixed
 OFF/A/B variant names. V1 remains historical. Any structural mismatch or
 capture/verification failure still aborts immediately with no mismatch record.
 
+The next retained material increment strengthens the existing phase-owned
+Powder carrier instead of allocating another one. A normal-WebGL Volumetric-B
+prototype sampled the settled Smooth field at four additional exact-owner-
+masked eight-cell taps. It compiled, preserved alpha/topology, and changed the
+captured pixels, but full and enlarged crop review showed no meaningful visual
+improvement over the already-wide powder field; it was removed. Keep Powder and
+Solid mesoscale profile radii at explicit zero until a genuinely new visible
+carrier is proven, and do not resurrect extra reads merely because they are
+numerically active.
+
+The retained response instead gives the existing settled Smooth body enough
+profile-driven optical weight to survive fit-view composition. Volumetric B now
+uses the already-live wide density, gradient, support, depth, appearance, and
+composition values for a stronger shallow crown, opposing compacted-core
+absorption, and slightly greater deep pigment retention. It adds no sampler,
+texture read, field, target, pass, allocation, noise carrier, material-ID
+branch, support, alpha, or topology decision. OFF/A, moving or wet powder,
+holes, contacts, thin columns, Local, Grains, Canvas, and compact true 8x retain
+their established paths and internal grain colour remains authored rather than
+averaged.
+
+Real SwiftShader RenderOptics captures passed at 2x and 4x with WebGL/HDR,
+completed frames, exact semantic/field/framebuffer invariants, zero browser
+errors, and 1224x768 / 2448x1536 backing. The retained 2x result is
+`sha256:874335f84eb210a5daf27772110bcfc786c7da103ee73390ffbc61c644f276ad`;
+the explicit 4x result is
+`sha256:b9fae11a709e4525163f4529feaacddf0a33242fdd63de0bd2b64c603c3ef6e7`.
+Human/agent review preferred the stronger B powder bodies: Sand, Salt,
+Gunpowder, and Thermite keep their granular identity while reading as a more
+coherent illuminated mass. Treat these IDs as evidence for this revision, not
+cross-revision visual pins.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

@@ -742,7 +742,7 @@ describe('Pixi presenter startup configuration', () => {
       'float materialDeepPigment = opticalExperimentB * finishResponse.z',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
-      '* (powder * powderVolume * core * 0.012\n'
+      '* (powder * powderVolume * core * 0.030\n'
         + '      + liquid * deepColumn * 0.016 + gasDeepAbsorption * 0.024);',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
