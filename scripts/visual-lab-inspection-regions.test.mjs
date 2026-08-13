@@ -38,6 +38,7 @@ describe('Visual Lab inspection-region catalog', () => {
       'thermal-source-material-lighting-atlas',
       'opposed-source-material-lighting-atlas',
       'wax-material-lighting-atlas',
+      'render-optics-material-lighting-atlas',
     ]);
     expect(Object.isFrozen(VISUAL_CAPTURE_INSPECTION_SOURCE_CATALOG)).toBe(true);
     expect(Object.isFrozen(VISUAL_CAPTURE_INSPECTION_SOURCE_CATALOG.sources[0])).toBe(true);
