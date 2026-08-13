@@ -225,12 +225,21 @@ describe('Visual Lab recipe-set/v1', () => {
   it('keeps manual CI recipe-set selection quoted, gated, and fully cross-checked', async () => {
     const workflow = await readFile(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
     expect(workflow).toContain('visual_lab_recipe_set:');
+    expect(workflow).toContain('visual_lab_cohort:');
+    expect(workflow).toContain('VISUAL_LAB_COHORT: ${{ inputs.visual_lab_cohort }}');
     expect(workflow).toContain('VISUAL_LAB_RECIPE_SET: ${{ inputs.visual_lab_recipe_set }}');
     expect(workflow).toContain("github.event_name == 'workflow_dispatch' &&");
     expect(workflow).toContain('inputs.visual_lab_review == true &&');
     expect(workflow).toContain(
-      'visual_lab_candidates and visual_lab_recipe_set are mutually exclusive',
+      'visual_lab_candidates, visual_lab_cohort, and visual_lab_recipe_set are mutually exclusive',
     );
+    expect(workflow).toContain('resolveVisualLabCohort(process.env.VISUAL_LAB_COHORT)');
+    expect(workflow).toContain('readVisualLabRecipeSet(resolved.snapshotPath)');
+    expect(workflow).toContain('snapshot.name !== resolved.name || snapshot.id !== resolved.recipeSet.id');
+    expect(workflow).toContain(
+      'Visual Lab CI cohort snapshot is stale; run npm run visual-lab:authoring:sync',
+    );
+    expect(workflow).toContain('recipe_set_source=%s');
     expect(workflow).toContain('git --literal-pathspecs ls-files --error-unmatch');
     expect(workflow).toContain('path.posix.normalize(value) !== value');
     expect(workflow).toContain(
@@ -243,6 +252,9 @@ describe('Visual Lab recipe-set/v1', () => {
     expect(workflow).toContain('node scripts/visual-lab-verify.mjs "${verify_args[@]}"');
     expect(workflow).toContain('--require-recipe-set=1');
     expect(workflow).toContain('--require-browser-host-plan=1');
+    expect(workflow).toContain(
+      'VISUAL_LAB_RECIPE_SET: ${{ steps.visual-lab-batch.outputs.recipe_set_source }}',
+    );
     expect(workflow).toContain('--recipe-set-source=${VISUAL_LAB_RECIPE_SET}');
   });
 });

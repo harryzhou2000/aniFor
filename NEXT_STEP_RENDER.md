@@ -2315,9 +2315,12 @@ high-value material treatment.
 ### CI review acceptance
 
 Manual dispatch exposes `visual_lab_review`, optional `visual_lab_candidates`,
-and optional `visual_lab_recipe_set`. The latter must name a tracked file under
-`visual-lab/recipe-sets/` and is mutually exclusive with candidates. Empty
-selection inputs mean the complete frozen catalog; explicit comma-separated
+declarative `visual_lab_cohort`, and optional `visual_lab_recipe_set`. Cohort
+selection defaults to `material-lighting`, resolves through the shared catalog,
+and must match the name and identity of its tracked generated snapshot under
+`visual-lab/recipe-sets/`. An explicit recipe set must also name a tracked file
+there. Cohort, recipe-set, and ad-hoc candidate selection are mutually exclusive;
+clearing all three means the complete frozen catalog. Explicit comma-separated
 names remain catalog-validated and are emitted in canonical order. The review
 job depends on `build`, downloads that run's
 `anifortpt-static-site` into `dist`, and invokes `visual-lab-batch.mjs` directly
@@ -6869,6 +6872,24 @@ immediately preceding deployed material atlas it changed only 6,340 edge pixels
 and was visually indistinguishable in full and cropped views. The code was
 removed. Treat this as a proved dead end unless a future response is visibly
 preferred on the enlarged board; numerical pixel activity alone is insufficient.
+
+The declarative cohort authoring loop now reaches manual CI. CI compiles a safe
+cohort name through the same resolver used by developer review, rereads its
+checked-in recipe-set snapshot, and fails before capture when the snapshot name
+or content identity is stale. The resulting repository-relative path retains
+the existing tracked-file, canonical-path, containment, and symlink checks and
+is forwarded from capture into downloaded-package verification. This removes a
+workflow-specific copy of cohort membership and default snapshot paths.
+
+Three source-shaped visual carriers were tested and rejected before this
+framework checkpoint. Solid relief amplified repeated diagonal bands; dormant
+solid interior scatter, even at a deliberately strong coefficient, changed only
+a narrow emitter-side rim; and a signed liquid velocity/slope volume lobe
+flattened Oil while creating rectangular tonal bands in small liquid swatches.
+All three prototypes were removed. The next setup target is one frozen data-only
+candidate manifest projecting both capture-recipe and declared-inspection
+registration, while the app-owned typed preparer registry remains the explicit
+executable security boundary.
 
 ## Deferred long-term visual roadmap
 

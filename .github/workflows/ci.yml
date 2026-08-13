@@ -43,14 +43,19 @@ on:
           - shared
           - fresh
       visual_lab_candidates:
-        description: Optional ad-hoc comma-separated candidates; exclusive with recipe set
+        description: Optional ad-hoc comma-separated candidates; exclusive with cohort and recipe set
         required: false
         default: ''
         type: string
-      visual_lab_recipe_set:
-        description: Checked-in review cohort; clear only when supplying ad-hoc candidates
+      visual_lab_cohort:
+        description: Declarative checked-in review cohort; clear only for an ad-hoc selection
         required: false
-        default: visual-lab/recipe-sets/material-lighting.json
+        default: material-lighting
+        type: string
+      visual_lab_recipe_set:
+        description: Explicit checked-in recipe set; exclusive with cohort and ad-hoc candidates
+        required: false
+        default: ''
         type: string
 
 permissions:
@@ -263,6 +268,7 @@ jobs:
           VISUAL_LAB_CANDIDATES: ${{ inputs.visual_lab_candidates }}
           VISUAL_LAB_BROWSER_HOST: ${{ inputs.visual_lab_browser_host }}
           VISUAL_LAB_CAPTURE_PROOF: ${{ inputs.visual_lab_capture_proof }}
+          VISUAL_LAB_COHORT: ${{ inputs.visual_lab_cohort }}
           VISUAL_LAB_RECIPE_SET: ${{ inputs.visual_lab_recipe_set }}
         run: |
           review_args=(
@@ -277,10 +283,35 @@ jobs:
             "--capture-proof=${VISUAL_LAB_CAPTURE_PROOF}"
           )
           candidate_request="${VISUAL_LAB_CANDIDATES//[[:space:]]/}"
+          cohort_request="${VISUAL_LAB_COHORT//[[:space:]]/}"
           recipe_set_request="${VISUAL_LAB_RECIPE_SET//[[:space:]]/}"
-          if [[ -n "${candidate_request}" && -n "${recipe_set_request}" ]]; then
-            echo "visual_lab_candidates and visual_lab_recipe_set are mutually exclusive" >&2
+          selection_count=0
+          [[ -z "${candidate_request}" ]] || ((selection_count += 1))
+          [[ -z "${cohort_request}" ]] || ((selection_count += 1))
+          [[ -z "${recipe_set_request}" ]] || ((selection_count += 1))
+          if ((selection_count > 1)); then
+            echo "visual_lab_candidates, visual_lab_cohort, and visual_lab_recipe_set are mutually exclusive" >&2
             exit 2
+          fi
+          if [[ -n "${cohort_request}" ]]; then
+            if [[ ! "${VISUAL_LAB_COHORT}" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+              echo "visual_lab_cohort must be a safe kebab-case catalog name" >&2
+              exit 2
+            fi
+            VISUAL_LAB_RECIPE_SET="$(node --input-type=module -e '
+              import path from "node:path";
+              import { resolveVisualLabCohort } from "./scripts/visual-lab-cohort-catalog.mjs";
+              import { readVisualLabRecipeSet } from "./scripts/visual-lab-recipe-set.mjs";
+              const resolved = await resolveVisualLabCohort(process.env.VISUAL_LAB_COHORT);
+              const snapshot = await readVisualLabRecipeSet(resolved.snapshotPath);
+              if (snapshot.name !== resolved.name || snapshot.id !== resolved.recipeSet.id) {
+                throw new Error(
+                  "Visual Lab CI cohort snapshot is stale; run npm run visual-lab:authoring:sync",
+                );
+              }
+              process.stdout.write(path.relative(process.cwd(), resolved.snapshotPath));
+            ')"
+            recipe_set_request="${VISUAL_LAB_RECIPE_SET}"
           fi
           if [[ -n "${recipe_set_request}" ]]; then
             node --input-type=module -e '
@@ -313,6 +344,7 @@ jobs:
             # reject a tracked leaf or ancestor symlink rather than receiving
             # a pre-resolved path that has erased that evidence.
             review_args+=("--recipe-set=${VISUAL_LAB_RECIPE_SET}")
+            printf 'recipe_set_source=%s\n' "${VISUAL_LAB_RECIPE_SET}" >> "${GITHUB_OUTPUT}"
           elif [[ -n "${candidate_request}" ]]; then
             review_args+=("--candidates=${VISUAL_LAB_CANDIDATES}")
           fi
@@ -338,7 +370,7 @@ jobs:
         if: always()
         env:
           CAPTURE_OUTCOME: ${{ steps.visual-lab-batch.outcome }}
-          VISUAL_LAB_RECIPE_SET: ${{ inputs.visual_lab_recipe_set }}
+          VISUAL_LAB_RECIPE_SET: ${{ steps.visual-lab-batch.outputs.recipe_set_source }}
           REVIEW_ROOT: ${{ runner.temp }}/anifortpt-visual-lab-review
         run: |
           test "${CAPTURE_OUTCOME}" = success

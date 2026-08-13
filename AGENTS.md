@@ -617,8 +617,12 @@ preparer, `material-lighting-profile` driver, emission-alpha evidence, and
 generic capture lifecycle; do not add another browser method, driver, or shader
 branch. WebGL/HDR OFF/A/B, completed-frame evidence, fresh teardown, and
 portable verification passed with zero browser errors. The tracked
-material-lighting cohort now contains seven recipes and the manual CI default
-must stay derived-equivalent to that current cohort.
+material-lighting cohort is the manual CI default by catalog name. Resolve it
+through the shared cohort compiler, require its checked-in snapshot name and ID
+to match, and pass the exact resolved source from capture into portable
+verification. Keep cohort, explicit recipe-set, and ad-hoc candidate selection
+mutually exclusive; never duplicate membership in the workflow or silently
+accept a stale generated snapshot.
 
 This opposed-source authoring checkpoint is deployed at exact revision
 `b3fd9ec50efd888c0672e1e021d5a9416c2f7555` by workflow run `31554534234`

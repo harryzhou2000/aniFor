@@ -93,11 +93,15 @@ describe('deploy-verified CI workflow contract', () => {
   it('defaults manual review to the current material-lighting cohort', () => {
     const candidates = indentedEntry(workflow, 'visual_lab_candidates', 6);
     expect(candidates).toContain(
-      'description: Optional ad-hoc comma-separated candidates; exclusive with recipe set',
+      'description: Optional ad-hoc comma-separated candidates; exclusive with cohort and recipe set',
     );
     expect(candidates).toContain("default: ''");
+    const cohort = indentedEntry(workflow, 'visual_lab_cohort', 6);
+    expect(cohort).toContain('default: material-lighting');
+    expect(cohort).toContain('required: false');
+    expect(cohort).toContain('type: string');
     const recipeSet = indentedEntry(workflow, 'visual_lab_recipe_set', 6);
-    expect(recipeSet).toContain('default: visual-lab/recipe-sets/material-lighting.json');
+    expect(recipeSet).toContain("default: ''");
     expect(candidates).toContain('required: false');
     expect(candidates).toContain('type: string');
   });
