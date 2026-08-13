@@ -6943,6 +6943,27 @@ portable identity checks. Loaded-runner totals were 111.6–116.2s per leg, with
 This wider local/hosted spread reinforces that durations are observations, not
 thresholds, and that the next leverage is driver-owned readiness/settle work.
 
+That next opt-in capability is implemented as
+`anifor.visual-lab.execution-tuning-plan/v3`. It preserves receipt-v2 for every
+OFF/A/B capture and adds a separate `readinessCompletion` proof bound to the
+refreshed B presentation. After the existing exact dataset wait, explicit field
+refresh, and two RAFs, the audit requests and awaits one renderer-owned receipt,
+takes exactly one complete semantic/field/framebuffer snapshot, validates the
+exact B state, and rereads the same completed ticket/submission. Only
+pre-snapshot supersession may retry; failure, timeout, or post-snapshot drift is
+terminal. V1 and v2 profiles, schemas, defaults, tuning IDs, and live Water gate
+remain unchanged.
+
+The first same-bundle Powder control proved exact output parity: v2 and v3
+produced the same result ID
+`sha256:b3edbc669cc2c2408ef712ea6089b42e85e1ba60944d3d78b4bd0942de23f67f`
+and identical OFF/A/B PNG hashes. V3 reduced readiness from four full snapshot
+attempts and 8.68s of readback to one snapshot and 96ms of readback. Its extra
+completed-frame wait made the local readiness total 32.14s versus v2's 24.22s,
+so v3 remains explicitly opt-in. Manual CI performance cohorts now exercise v3
+to decide its value under the loaded hosted environment where v2 readback was
+35–43s. Never promote it by local timing alone.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

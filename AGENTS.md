@@ -1779,6 +1779,16 @@ site artifact, use the tracked one-candidate `powder-style` set with
 completed-frame-receipt v2, and upload only the bounded publish-last summary.
 Do not upload cohort packages or turn observed durations into CI thresholds.
 
+Execution-tuning-plan/v3 is an additive readiness-receipt experiment. It owns a
+separate `readinessCompletion` descriptor bound to the refreshed presentation,
+then retains one full semantic/field/framebuffer readiness snapshot and verifies
+the same receipt afterward. V3 also retains the complete v2 OFF/A/B receipt
+contract. Failed receipts are terminal; only pre-snapshot supersession may retry
+under the single readiness deadline. Keep v1/v2 bytes and defaults unchanged,
+keep the live Water gate on v2, and use the manual Powder performance matrix as
+the initial hosted proving path. Same-bundle v2/v3 PNG and result identity parity
+is required; timing is diagnostic and may regress locally.
+
 The renderer-owned completed-frame receipt is now a protected audit capability.
 `anifor.renderer.completed-frame-receipt/v1` binds every ticket to the exact
 presentation submission and exposes only `pending`, `completed`, `superseded`,

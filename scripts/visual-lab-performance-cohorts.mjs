@@ -15,6 +15,7 @@ import {
 import {
   VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
 } from './visual-lab-execution-tuning-plan.mjs';
 
 export const VISUAL_LAB_PERFORMANCE_COHORT_SCHEMA = 'anifor.visual-lab.performance-cohorts/v1';
@@ -33,9 +34,11 @@ const SHA256_ID = /^sha256:[0-9a-f]{64}$/;
 const NORMAL_DETAIL_SCALES = Object.freeze([1, 2, 4]);
 const STABLE_SNAPSHOTS_CAPTURE_PROOF = 'stable-snapshots';
 const COMPLETED_FRAME_RECEIPT_CAPTURE_PROOF = 'completed-frame-receipt';
+const READINESS_COMPLETED_FRAME_RECEIPT_CAPTURE_PROOF = 'readiness-completed-frame-receipt';
 const EXECUTION_TUNING_SCHEMAS_BY_CAPTURE_PROOF = Object.freeze({
   [STABLE_SNAPSHOTS_CAPTURE_PROOF]: VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
   [COMPLETED_FRAME_RECEIPT_CAPTURE_PROOF]: VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
+  [READINESS_COMPLETED_FRAME_RECEIPT_CAPTURE_PROOF]: VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
 });
 const RECYCLE_REASONS = Object.freeze([
   'launch-fault',
@@ -50,7 +53,7 @@ const HELP = `Usage:
   node scripts/visual-lab-performance-cohorts.mjs \\
     --recipe-set=<tracked-recipe-set.json> \\
     [--bundle=dist/index.html] [--output-dir=/tmp/anifor-visual-lab-performance-cohorts] \\
-    [--gpu=auto|swiftshader] [--capture-proof=stable-snapshots|completed-frame-receipt] \\
+    [--gpu=auto|swiftshader] [--capture-proof=stable-snapshots|completed-frame-receipt|readiness-completed-frame-receipt] \\
     [--chrome=/path/to/chrome]
 
 Runs the fixed fresh/shared/shared/fresh Visual Lab cohort order. Each cohort is
@@ -94,7 +97,7 @@ const assertOptions = (options) => {
   }
   const captureProof = options.captureProof ?? STABLE_SNAPSHOTS_CAPTURE_PROOF;
   if (!VISUAL_LAB_CAPTURE_PROOF_MODES.includes(captureProof)) {
-    throw new TypeError('Visual Lab performance cohort captureProof must be stable-snapshots or completed-frame-receipt');
+    throw new TypeError('Visual Lab performance cohort captureProof is unsupported');
   }
   return Object.freeze({
     recipeSetPath: path.resolve(options.recipeSetPath),
@@ -118,8 +121,8 @@ const assertExecutionTuningSchema = (ordinal, mode, captureProof, portablePlan) 
 const summaryCaptureProof = (captureProof) => {
   if (captureProof === STABLE_SNAPSHOTS_CAPTURE_PROOF) return undefined;
   return deepFreeze({
-    mode: COMPLETED_FRAME_RECEIPT_CAPTURE_PROOF,
-    tuningSchema: EXECUTION_TUNING_SCHEMAS_BY_CAPTURE_PROOF[COMPLETED_FRAME_RECEIPT_CAPTURE_PROOF],
+    mode: captureProof,
+    tuningSchema: EXECUTION_TUNING_SCHEMAS_BY_CAPTURE_PROOF[captureProof],
     receiptSchema: 'anifor.renderer.completed-frame-receipt/v1',
   });
 };
@@ -427,7 +430,7 @@ export function parseVisualLabPerformanceCohortArguments(argv) {
   if (gpu !== 'auto' && gpu !== 'swiftshader') throw new Error('--gpu must be auto or swiftshader');
   const captureProof = values.get('capture-proof') ?? STABLE_SNAPSHOTS_CAPTURE_PROOF;
   if (!VISUAL_LAB_CAPTURE_PROOF_MODES.includes(captureProof)) {
-    throw new Error('--capture-proof must be stable-snapshots or completed-frame-receipt');
+    throw new Error('--capture-proof is unsupported');
   }
   return Object.freeze({
     help: false,

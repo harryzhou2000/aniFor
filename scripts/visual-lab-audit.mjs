@@ -56,7 +56,9 @@ import {
 import {
   resolveVisualLabExecutionTuningPlanEntry,
   resolveVisualLabExecutionTuningPlanV2Entry,
+  resolveVisualLabExecutionTuningPlanV3Entry,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
 } from './visual-lab-execution-tuning-plan.mjs';
 import {
   createVisualCaptureGeometryProof,
@@ -78,6 +80,10 @@ const COMPLETED_FRAME_RECEIPT_DESCRIPTOR = Object.freeze({
   requiredState: 'completed',
   bind: 'selected-presentation',
   verifyAfterSnapshot: true,
+});
+const READINESS_COMPLETED_FRAME_RECEIPT_DESCRIPTOR = Object.freeze({
+  ...COMPLETED_FRAME_RECEIPT_DESCRIPTOR,
+  bind: 'refreshed-presentation',
 });
 
 /**
@@ -108,11 +114,18 @@ export function beginStagedVisualLabNavigation(pageCdp, url, timeoutMs) {
 
 const resolveExecutionTuningPlanEntry = (
   plan, entryId, expectedCaptureEntryId,
-) => (
-  plan?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA
-    ? resolveVisualLabExecutionTuningPlanV2Entry(plan, entryId, expectedCaptureEntryId)
-    : resolveVisualLabExecutionTuningPlanEntry(plan, entryId, expectedCaptureEntryId)
-);
+) => {
+  if (plan?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA) {
+    return resolveVisualLabExecutionTuningPlanV2Entry(plan, entryId, expectedCaptureEntryId);
+  }
+  if (plan?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA) {
+    return resolveVisualLabExecutionTuningPlanV3Entry(plan, entryId, expectedCaptureEntryId);
+  }
+  if (plan?.schema === 'anifor.visual-lab.execution-tuning-plan/v1') {
+    return resolveVisualLabExecutionTuningPlanEntry(plan, entryId, expectedCaptureEntryId);
+  }
+  throw new TypeError(`Unsupported Visual Lab execution-tuning schema ${String(plan?.schema)}`);
+};
 
 const VISUAL_CAPTURE_GEOMETRY_TOLERANCE = 0.001;
 
@@ -523,7 +536,7 @@ async function captureVisualLabCandidateEvidence({
     return selection;
   });
 
-  await measure('readiness', async () => {
+  const readinessCompletedFrameReceipt = await measure('readiness', async () => {
     const { profile, effectiveTimeouts } = options.executionTuning;
     // A readiness snapshot performs the same complete semantic, authoritative-
     // field, and framebuffer readback as a capture snapshot. On a loaded
@@ -556,6 +569,43 @@ async function captureVisualLabCandidateEvidence({
           requestAnimationFrame(advance);
         });
       })()`, snapshotCommandTimeoutMs));
+    if (hasReadinessCompletedFrameReceiptDescriptor(profile)) {
+      const deadline = Date.now() + effectiveTimeouts.readinessMs;
+      let ticket;
+      let receipt;
+      for (let attempt = 1; attempt <= 8; attempt++) {
+        const remainingMs = deadline - Date.now();
+        assert(remainingMs > 0, 'readiness completed-frame receipt proof timed out');
+        ticket = await requestCompletedFrameReceipt(
+          cdp, 'readiness', remainingMs, profile.readiness.pollIntervalMs,
+        );
+        const terminal = await awaitCompletedFrameReceipt(
+          cdp, 'readiness', ticket, deadline - Date.now(), profile.readiness.pollIntervalMs,
+        );
+        if (terminal.state === 'completed') {
+          receipt = terminal;
+          break;
+        }
+        assert(terminal.state === 'superseded',
+          `readiness completed-frame receipt ${ticket} is ${String(terminal.state)}`);
+      }
+      assert(receipt !== undefined && ticket !== undefined,
+        'readiness completed-frame receipt was superseded eight times');
+      const snapshot = await captureSubphases.measureSnapshot(
+        'readiness', () => snapshotState(cdp, options.executionPlan, snapshotCommandTimeoutMs),
+      );
+      assert(snapshot.semantic.occupied > 0
+        && snapshot.fieldAlpha.nonzero > 0
+        && snapshot.framebufferAlpha.nonzero > 0,
+      `readiness receipt completed without populated ${options.fixture} presentation fields`);
+      const startupVariant = VARIANTS.find(({ name }) => name === profile.startup.variant);
+      assert(startupVariant !== undefined, 'readiness profile names an unknown startup variant');
+      assertVariantState(snapshot, options, startupVariant);
+      const verified = await readCompletedFrameReceipt(cdp, 'readiness', ticket);
+      assert(verified.state === 'completed' && verified.submission === receipt.submission,
+        'readiness completed-frame receipt changed after its snapshot');
+      return verified;
+    }
     await waitFor(async () => {
       const snapshot = await captureSubphases.measureSnapshot(
         'readiness', () => snapshotState(
@@ -569,6 +619,7 @@ async function captureVisualLabCandidateEvidence({
         && snapshot.framebufferAlpha.nonzero > 0;
     }, effectiveTimeouts.readinessMs, `populated ${options.fixture} presentation fields`,
     profile.readiness.pollIntervalMs);
+    return undefined;
   });
 
   const captures = {};
@@ -674,6 +725,8 @@ async function captureVisualLabCandidateEvidence({
       renderScale: options.renderScale,
       gpu: options.gpu,
       ...(executionTuningProof === undefined ? {} : { executionTuning: executionTuningProof }),
+      ...(readinessCompletedFrameReceipt === undefined
+        ? {} : { readinessCompletedFrameReceipt }),
       captureSubphases: captureSubphases.finish(),
       startupSelection,
       backend: reference.backend.backend,
@@ -1293,10 +1346,10 @@ async function captureVariant(cdp, options, variant, captureSubphases) {
       const remainingMs = deadline - Date.now();
       assert(remainingMs > 0, `${variant.name} completed-frame receipt proof timed out`);
       ticket = await requestCompletedFrameReceipt(
-        cdp, variant, remainingMs, profile.stability.pollIntervalMs,
+        cdp, variant.name, remainingMs, profile.stability.pollIntervalMs,
       );
       const terminal = await awaitCompletedFrameReceipt(
-        cdp, variant, ticket, deadline - Date.now(), profile.stability.pollIntervalMs,
+        cdp, variant.name, ticket, deadline - Date.now(), profile.stability.pollIntervalMs,
       );
       if (terminal.state === 'completed') {
         receipt = terminal;
@@ -1311,7 +1364,7 @@ async function captureVariant(cdp, options, variant, captureSubphases) {
       variant.name,
       () => snapshotState(cdp, options.executionPlan, snapshotCommandTimeoutMs),
     );
-    const verified = await readCompletedFrameReceipt(cdp, variant, ticket);
+    const verified = await readCompletedFrameReceipt(cdp, variant.name, ticket);
     assert(verified.state === 'completed' && verified.submission === receipt.submission,
       `${variant.name} completed-frame receipt changed after its snapshot`);
     completedFrameReceipt = verified;
@@ -1556,40 +1609,51 @@ function hasCompletedFrameReceiptDescriptor(profile) {
     && Object.keys(expected).every((name) => completion[name] === expected[name]);
 }
 
-async function requestCompletedFrameReceipt(cdp, variant, timeoutMs, pollIntervalMs) {
+function hasReadinessCompletedFrameReceiptDescriptor(profile) {
+  const completion = profile?.readinessCompletion;
+  if (completion === null || typeof completion !== 'object' || Array.isArray(completion)) {
+    return false;
+  }
+  const expected = READINESS_COMPLETED_FRAME_RECEIPT_DESCRIPTOR;
+  const keys = Object.keys(completion);
+  return keys.length === Object.keys(expected).length
+    && Object.keys(expected).every((name) => completion[name] === expected[name]);
+}
+
+async function requestCompletedFrameReceipt(cdp, label, timeoutMs, pollIntervalMs) {
   return waitFor(async () => {
     const ticket = await evaluate(cdp, `(() => (
       window.__ANIFOR_INPUT_AUDIT__?.requestWebGLCompletedFrameReceipt?.()
     ))()`);
     return Number.isSafeInteger(ticket) && ticket > 0 ? ticket : false;
-  }, timeoutMs, `${variant.name} completed-frame receipt request`, pollIntervalMs);
+  }, timeoutMs, `${label} completed-frame receipt request`, pollIntervalMs);
 }
 
-async function readCompletedFrameReceipt(cdp, variant, ticket) {
+async function readCompletedFrameReceipt(cdp, label, ticket) {
   const receipt = await evaluate(cdp, `(() => (
     window.__ANIFOR_INPUT_AUDIT__?.webGLCompletedFrameReceipt?.(${ticket})
   ))()`);
   assert(receipt !== null && typeof receipt === 'object' && !Array.isArray(receipt),
-    `${variant.name} completed-frame receipt ${ticket} is unavailable`);
+    `${label} completed-frame receipt ${ticket} is unavailable`);
   assert(receipt.schema === COMPLETED_FRAME_RECEIPT_SCHEMA,
-    `${variant.name} completed-frame receipt ${ticket} has an invalid schema`);
+    `${label} completed-frame receipt ${ticket} has an invalid schema`);
   assert(receipt.ticket === ticket,
-    `${variant.name} completed-frame receipt ticket does not match its request`);
+    `${label} completed-frame receipt ticket does not match its request`);
   assert(Number.isSafeInteger(receipt.submission) && receipt.submission > 0,
-    `${variant.name} completed-frame receipt ${ticket} has an invalid submission`);
+    `${label} completed-frame receipt ${ticket} has an invalid submission`);
   assert(['pending', 'completed', 'superseded', 'failed'].includes(receipt.state),
-    `${variant.name} completed-frame receipt ${ticket} has an invalid state`);
+    `${label} completed-frame receipt ${ticket} has an invalid state`);
   return receipt;
 }
 
-async function awaitCompletedFrameReceipt(cdp, variant, ticket, timeoutMs, pollIntervalMs) {
+async function awaitCompletedFrameReceipt(cdp, label, ticket, timeoutMs, pollIntervalMs) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const receipt = await readCompletedFrameReceipt(cdp, variant, ticket);
+    const receipt = await readCompletedFrameReceipt(cdp, label, ticket);
     if (receipt.state !== 'pending') return receipt;
     await sleep(pollIntervalMs);
   }
-  throw new Error(`${variant.name} completed-frame receipt ${ticket} timed out`);
+  throw new Error(`${label} completed-frame receipt ${ticket} timed out`);
 }
 
 function sleep(milliseconds) {

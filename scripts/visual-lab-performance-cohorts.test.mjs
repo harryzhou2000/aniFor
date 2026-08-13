@@ -95,7 +95,7 @@ describe('Visual Lab performance cohort CLI', () => {
     ])).toThrow('Unknown option');
     expect(() => parseVisualLabPerformanceCohortArguments([
       '--recipe-set=set.json', '--capture-proof=raf-only',
-    ])).toThrow('--capture-proof must be stable-snapshots or completed-frame-receipt');
+    ])).toThrow('--capture-proof is unsupported');
     expect(() => assertVisualLabPerformanceCohortPlatform('darwin')).toThrow('require Linux');
     expect(() => assertVisualLabPerformanceCohortPlatform('linux')).not.toThrow();
   });

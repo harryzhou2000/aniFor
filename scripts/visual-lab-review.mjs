@@ -23,7 +23,7 @@ const HELP = `Usage:
     [--bundle=<dist/index.html> | --base-url=<http(s)-origin>] \\
     [--expected-revision=<40-hex-commit>] \\
     [--chrome=<path>] [--gpu=auto|swiftshader] [--browser-host=fresh|shared] \\
-    [--capture-proof=stable-snapshots|completed-frame-receipt] \\
+    [--capture-proof=stable-snapshots|completed-frame-receipt|readiness-completed-frame-receipt] \\
     [--candidate-timeout-ms=<milliseconds>]
 
 Runs one trusted review cycle against one existing production bundle or hosted origin:

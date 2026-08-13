@@ -3,12 +3,16 @@ import { describe, expect, it } from 'vitest';
 import {
   createVisualLabExecutionTuningPlan,
   createVisualLabExecutionTuningPlanV2,
+  createVisualLabExecutionTuningPlanV3,
   normalizeVisualLabExecutionTuningPlan,
   normalizeVisualLabExecutionTuningPlanV2,
+  normalizeVisualLabExecutionTuningPlanV3,
   resolveVisualLabExecutionTuningPlanEntry,
   resolveVisualLabExecutionTuningPlanV2Entry,
+  resolveVisualLabExecutionTuningPlanV3Entry,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
 } from './visual-lab-execution-tuning-plan.mjs';
 import {
   createVisualLabExecutionPlan,
@@ -72,6 +76,20 @@ const profilesFor = (capturePlan) => Object.fromEntries(
 const v2ProfilesFor = (capturePlan) => Object.fromEntries(
   [...new Set(capturePlan.inspection.entries.map(({ driver }) => driver.name))]
     .map((driver) => [driver, v2Profile()]),
+);
+const v3Profile = () => ({
+  ...v2Profile(),
+  readinessCompletion: {
+    capability: 'renderer-completed-frame-receipt/v1',
+    receiptSchema: 'anifor.renderer.completed-frame-receipt/v1',
+    requiredState: 'completed',
+    bind: 'refreshed-presentation',
+    verifyAfterSnapshot: true,
+  },
+});
+const v3ProfilesFor = (capturePlan) => Object.fromEntries(
+  [...new Set(capturePlan.inspection.entries.map(({ driver }) => driver.name))]
+    .map((driver) => [driver, v3Profile()]),
 );
 
 describe('Visual Lab execution tuning plan', () => {
@@ -180,6 +198,26 @@ describe('Visual Lab execution tuning plan', () => {
       .toThrow('exact completed-frame receipt proof');
     expect(() => createVisualLabExecutionTuningPlanV2(capturePlan, profilesFor(capturePlan)))
       .toThrow('must contain exactly');
+  });
+
+  it('creates and resolves additive readiness-receipt v3 plans without rotating capture identity', () => {
+    const capturePlan = createVisualLabExecutionPlan({
+      candidates: ['powder-style-atlas'], baseUrl: 'file:///bundle/index.html', outputDir: '/review',
+      gpu: 'swiftshader',
+    });
+    const created = createVisualLabExecutionTuningPlanV3(capturePlan, v3ProfilesFor(capturePlan));
+    expect(created.schema).toBe(VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA);
+    expect(created.capturePlan.id).toBe(capturePlan.inspection.id);
+    expect(created.entries[0].profile).toEqual(v3Profile());
+    expect(normalizeVisualLabExecutionTuningPlanV3(structuredClone(created), capturePlan))
+      .toEqual(created);
+    expect(resolveVisualLabExecutionTuningPlanV3Entry(
+      created, created.entries[0].id, capturePlan.inspection.entries[0].id, capturePlan,
+    )).toEqual(created.entries[0]);
+    const tampered = structuredClone(created);
+    tampered.entries[0].profile.readinessCompletion.bind = 'selected-presentation';
+    expect(() => normalizeVisualLabExecutionTuningPlanV3(tampered, capturePlan))
+      .toThrow('refreshed-presentation receipt proof');
   });
 
   it('rejects malformed/tampered data, profile drift, unsafe names, and capture-plan mismatch', () => {

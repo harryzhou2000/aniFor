@@ -13,6 +13,8 @@ export const VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA =
   'anifor.visual-lab.execution-tuning-plan/v1';
 export const VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA =
   'anifor.visual-lab.execution-tuning-plan/v2';
+export const VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA =
+  'anifor.visual-lab.execution-tuning-plan/v3';
 
 const SHA256_ID = /^sha256:[0-9a-f]{64}$/;
 const SAFE_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -43,6 +45,9 @@ const PROFILE_FIELDS = Object.freeze([
 ]);
 const V2_PROFILE_FIELDS = Object.freeze([
   'startup', 'readiness', 'selection', 'stability', 'completion', 'screenshot',
+]);
+const V3_PROFILE_FIELDS = Object.freeze([
+  'startup', 'readiness', 'readinessCompletion', 'selection', 'stability', 'completion', 'screenshot',
 ]);
 const STARTUP_FIELDS = Object.freeze(['variant', 'fieldRefresh', 'rafs']);
 const READINESS_FIELDS = Object.freeze(['planes', 'pollIntervalMs', 'timeoutMsByGpu']);
@@ -273,7 +278,8 @@ const normalizeTimeouts = (value, label, minimumPollMs) => {
 const normalizeProfile = (input, label, schema) => {
   assertJsonSafe(input, label);
   const isV2 = schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA;
-  assertExactFields(input, isV2 ? V2_PROFILE_FIELDS : PROFILE_FIELDS, label);
+  const isV3 = schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA;
+  assertExactFields(input, isV3 ? V3_PROFILE_FIELDS : isV2 ? V2_PROFILE_FIELDS : PROFILE_FIELDS, label);
   assertExactFields(input.startup, STARTUP_FIELDS, `${label}.startup`);
   if (input.startup.variant !== 'b' || input.startup.fieldRefresh !== 'explicit'
     || input.startup.rafs !== 2) {
@@ -293,7 +299,7 @@ const normalizeProfile = (input, label, schema) => {
   }
   assertExactFields(input.stability, STABILITY_FIELDS, `${label}.stability`);
   assertExactArray(input.stability.planes, EVIDENCE_PLANES, `${label}.stability.planes`);
-  if (isV2) {
+  if (isV2 || isV3) {
     assertExactFields(input.completion, COMPLETION_FIELDS, `${label}.completion`);
     if (input.completion.capability !== 'renderer-completed-frame-receipt/v1'
       || input.completion.receiptSchema !== 'anifor.renderer.completed-frame-receipt/v1'
@@ -337,7 +343,24 @@ const normalizeProfile = (input, label, schema) => {
       timeoutMsByGpu: stabilityTimeoutMsByGpu,
     },
   };
-  if (isV2) {
+  if (isV3) {
+    assertExactFields(input.readinessCompletion, COMPLETION_FIELDS, `${label}.readinessCompletion`);
+    if (input.readinessCompletion.capability !== 'renderer-completed-frame-receipt/v1'
+      || input.readinessCompletion.receiptSchema !== 'anifor.renderer.completed-frame-receipt/v1'
+      || input.readinessCompletion.requiredState !== 'completed'
+      || input.readinessCompletion.bind !== 'refreshed-presentation'
+      || input.readinessCompletion.verifyAfterSnapshot !== true) {
+      throw new TypeError(`${label}.readinessCompletion must be the exact refreshed-presentation receipt proof`);
+    }
+    normalized.readinessCompletion = {
+      capability: input.readinessCompletion.capability,
+      receiptSchema: input.readinessCompletion.receiptSchema,
+      requiredState: input.readinessCompletion.requiredState,
+      bind: input.readinessCompletion.bind,
+      verifyAfterSnapshot: input.readinessCompletion.verifyAfterSnapshot,
+    };
+  }
+  if (isV2 || isV3) {
     normalized.completion = {
       capability: input.completion.capability,
       receiptSchema: input.completion.receiptSchema,
@@ -433,6 +456,15 @@ export function createVisualLabExecutionTuningPlan(captureExecutionPlan, driverP
 export function createVisualLabExecutionTuningPlanV2(captureExecutionPlan, driverProfiles) {
   return createFromBindings(
     VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
+    captureBindings(captureExecutionPlan),
+    driverProfiles,
+  );
+}
+
+/** Creates the opt-in readiness-and-capture completed-frame-receipt v3 sibling plan. */
+export function createVisualLabExecutionTuningPlanV3(captureExecutionPlan, driverProfiles) {
+  return createFromBindings(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
     captureBindings(captureExecutionPlan),
     driverProfiles,
   );
@@ -555,6 +587,11 @@ export function normalizeVisualLabExecutionTuningPlanV2(input, captureExecutionP
   return normalizePlan(input, captureExecutionPlan, VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA);
 }
 
+/** Validates untrusted v3 readiness-and-capture receipt JSON. */
+export function normalizeVisualLabExecutionTuningPlanV3(input, captureExecutionPlan) {
+  return normalizePlan(input, captureExecutionPlan, VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA);
+}
+
 /** Resolves one fully validated tuning entry, optionally bound to capture entry ID. */
 export function resolveVisualLabExecutionTuningPlanEntry(
   input,
@@ -587,6 +624,26 @@ export function resolveVisualLabExecutionTuningPlanV2Entry(
     assertSha256Id(expectedCaptureEntryId, 'Expected Visual Lab capture entry id');
   }
   const plan = normalizeVisualLabExecutionTuningPlanV2(input, captureExecutionPlan);
+  const entry = plan.entries.find(({ id }) => id === entryId);
+  if (entry === undefined) throw new Error(`Unknown Visual Lab execution tuning entry id ${entryId}`);
+  if (expectedCaptureEntryId !== undefined && entry.captureEntryId !== expectedCaptureEntryId) {
+    throw new Error(`Visual Lab execution tuning entry ${entryId} does not bind capture entry ${expectedCaptureEntryId}`);
+  }
+  return entry;
+}
+
+/** Resolves one fully validated v3 tuning entry, optionally bound to capture entry ID. */
+export function resolveVisualLabExecutionTuningPlanV3Entry(
+  input,
+  entryId,
+  expectedCaptureEntryId,
+  captureExecutionPlan,
+) {
+  assertSha256Id(entryId, 'Visual Lab execution tuning entry id');
+  if (expectedCaptureEntryId !== undefined) {
+    assertSha256Id(expectedCaptureEntryId, 'Expected Visual Lab capture entry id');
+  }
+  const plan = normalizeVisualLabExecutionTuningPlanV3(input, captureExecutionPlan);
   const entry = plan.entries.find(({ id }) => id === entryId);
   if (entry === undefined) throw new Error(`Unknown Visual Lab execution tuning entry id ${entryId}`);
   if (expectedCaptureEntryId !== undefined && entry.captureEntryId !== expectedCaptureEntryId) {

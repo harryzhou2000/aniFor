@@ -43,6 +43,7 @@ import {
 import {
   createVisualLabExecutionTuningPlan,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
 } from './visual-lab-execution-tuning-plan.mjs';
 import {
   VISUAL_LAB_CAPTURE_SUBPHASE_TIMING_SCHEMA,
@@ -345,8 +346,8 @@ const writeValidCapture = async (directory, candidate, options = {}) => {
     ));
     const tuningEntry = tuningPlan.entries.find((entry) => entry.candidate === candidate);
     gpu = tuningPlan.gpuMode;
-    completedFrameReceiptProof = tuningPlan.schema
-      === VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA;
+    completedFrameReceiptProof = tuningPlan.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA
+      || tuningPlan.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA;
     if (tuningEntry) {
       executionTuning = {
         schema: tuningPlan.schema,
@@ -383,6 +384,14 @@ const writeValidCapture = async (directory, candidate, options = {}) => {
     renderScale: recipe.renderScale,
     gpu,
     ...(executionTuning === undefined ? {} : { executionTuning }),
+    ...(executionTuning?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA ? {
+      readinessCompletedFrameReceipt: {
+        schema: 'anifor.renderer.completed-frame-receipt/v1',
+        ticket: 1,
+        submission: 1,
+        state: 'completed',
+      },
+    } : {}),
     startupSelection: {
       requestedVariant: 2,
       fixture: recipe.fixture,
@@ -411,8 +420,8 @@ const writeValidCapture = async (directory, candidate, options = {}) => {
       ...(completedFrameReceiptProof ? {
         completedFrameReceipt: {
           schema: 'anifor.renderer.completed-frame-receipt/v1',
-          ticket: index + 1,
-          submission: index + 10,
+          ticket: index + (executionTuning?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA ? 2 : 1),
+          submission: index + (executionTuning?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA ? 2 : 10),
           state: 'completed',
         },
       } : {}),
@@ -1389,6 +1398,40 @@ describe('Visual Lab batch runner', () => {
       batchRoot: outputDirectory,
       requireExecutionTuningPlan: true,
     })).rejects.toThrow(/completed-frame receipt proof/);
+  });
+
+  it('portably verifies readiness-receipt v3 without changing result identity', async () => {
+    const root = await makeTemporaryDirectory();
+    const bundle = path.join(root, 'index.html');
+    const outputDirectory = path.join(root, 'readiness-receipt-proof');
+    await writeFile(bundle, '<!doctype html>');
+    let expectedResult;
+    const captured = await runVisualLabBatch({
+      candidates: ['powder-style-atlas'], bundle, outputDir: outputDirectory,
+      captureProof: 'readiness-completed-frame-receipt',
+    }, {
+      runCandidate: async (call) => {
+        ({ result: expectedResult } = await writeValidCapture(
+          call.candidateDirectory, call.recipe.name, { timings: timingRecord() },
+        ));
+        return { code: 0, signal: null, timedOut: false };
+      },
+    });
+    expect(captured.executionTuningPlan.schema).toBe(VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA);
+    expect(captured.index.candidates[0].result).toEqual(expectedResult);
+    const verified = await verifyVisualLabBatchPackage({
+      batchRoot: outputDirectory, requireExecutionTuningPlan: true, requireComplete: true,
+    });
+    expect(verified.executionTuningPlan).toEqual(captured.executionTuningPlan);
+    const reportPath = path.join(
+      outputDirectory, 'candidates', 'powder-style-atlas', 'report.json',
+    );
+    const report = JSON.parse(await readFile(reportPath, 'utf8'));
+    delete report.readinessCompletedFrameReceipt;
+    await writeFile(reportPath, `${JSON.stringify(report)}\n`);
+    await expect(verifyVisualLabBatchPackage({
+      batchRoot: outputDirectory, requireExecutionTuningPlan: true,
+    })).rejects.toThrow('readiness completed-frame receipt proof');
   });
 
   it('aggregates optional phase and capture-subphase telemetry outside frozen batch identity', async () => {
@@ -2650,7 +2693,7 @@ describe('Visual Lab batch CLI', () => {
     expect(() => parseVisualLabBatchArguments(['--browser-host=reuse']))
       .toThrow('--browser-host must be fresh or shared');
     expect(() => parseVisualLabBatchArguments(['--capture-proof=timer-query']))
-      .toThrow('--capture-proof must be stable-snapshots or completed-frame-receipt');
+      .toThrow('--capture-proof must be stable-snapshots, completed-frame-receipt, or readiness-completed-frame-receipt');
     expect(() => parseVisualLabBatchArguments(['--bundle=dist/index.html',
       '--base-url=https://example.test/']))
       .toThrow('--bundle and --base-url are mutually exclusive');
@@ -2688,6 +2731,6 @@ describe('Visual Lab batch CLI', () => {
     })).rejects.toThrow('candidate timeout must be a positive integer');
     await expect(runVisualLabBatch({
       candidates: ['gas-showcase'], captureProof: 'timer-query', indexOnly: true,
-    })).rejects.toThrow('captureProof must be stable-snapshots or completed-frame-receipt');
+    })).rejects.toThrow('captureProof must be stable-snapshots, completed-frame-receipt, or readiness-completed-frame-receipt');
   });
 });

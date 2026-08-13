@@ -66,7 +66,9 @@ describe('deploy-verified CI workflow contract', () => {
     expect(captureProof).toContain('required: true');
     expect(captureProof).toContain('default: stable-snapshots');
     expect(captureProof).toContain('type: choice');
-    expect(choices).toEqual(['stable-snapshots', 'completed-frame-receipt']);
+    expect(choices).toEqual([
+      'stable-snapshots', 'completed-frame-receipt', 'readiness-completed-frame-receipt',
+    ]);
 
     const inputReferences = workflow.match(
       /\$\{\{\s*inputs\.visual_lab_capture_proof\s*\}\}/g,
@@ -121,7 +123,7 @@ describe('deploy-verified CI workflow contract', () => {
     expect(job).toContain("github.event_name == 'workflow_dispatch'");
     expect(job).toContain('inputs.visual_lab_performance_cohorts == true');
     expect(job).toContain('--recipe-set=visual-lab/recipe-sets/powder-style.json');
-    expect(job).toContain('--capture-proof=completed-frame-receipt');
+    expect(job).toContain('--capture-proof=readiness-completed-frame-receipt');
     expect(job).toContain('--gpu=swiftshader');
     expect(job).toContain('timeout-minutes: 15');
     expect(job).toContain('path: ${{ runner.temp }}/anifortpt-visual-lab-performance/performance-summary.json');

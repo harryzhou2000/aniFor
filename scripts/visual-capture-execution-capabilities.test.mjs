@@ -2,14 +2,18 @@ import { describe, expect, it } from 'vitest';
 import {
   createVisualCaptureExecutionCapabilityRegistry,
   createVisualCaptureExecutionV2CapabilityRegistry,
+  resolveVisualCaptureExecutionV3Capabilities,
   resolveVisualCaptureExecutionCapabilities,
   resolveVisualCaptureExecutionV2Capabilities,
   VISUAL_CAPTURE_EXECUTION_CAPABILITIES,
   VISUAL_CAPTURE_EXECUTION_CAPABILITY_NAMES,
   VISUAL_CAPTURE_EXECUTION_V2_CAPABILITIES,
   VISUAL_CAPTURE_EXECUTION_V2_CAPABILITY_NAMES,
+  VISUAL_CAPTURE_EXECUTION_V3_CAPABILITIES,
+  VISUAL_CAPTURE_EXECUTION_V3_CAPABILITY_NAMES,
   visualCaptureExecutionCapabilitiesForCaptureOrder,
   visualCaptureExecutionV2CapabilitiesForCaptureOrder,
+  visualCaptureExecutionV3CapabilitiesForCaptureOrder,
 } from './visual-capture-execution-capabilities.mjs';
 import { VISUAL_CAPTURE_DRIVER_NAMES } from './visual-capture-drivers.mjs';
 import { VISUAL_CAPTURE_STATIC_CONTRACT } from '../src/shared/visual-capture-static-contract.js';
@@ -100,6 +104,27 @@ describe('visual capture execution capabilities', () => {
       .toBe(VISUAL_CAPTURE_EXECUTION_V2_CAPABILITIES['normal-hdr']);
     expect(resolveVisualCaptureExecutionCapabilities('normal-hdr'))
       .toBe(VISUAL_CAPTURE_EXECUTION_CAPABILITIES['normal-hdr']);
+  });
+
+  it('adds readiness receipt admission only through the distinct v3 registry', () => {
+    expect(VISUAL_CAPTURE_EXECUTION_V3_CAPABILITY_NAMES)
+      .toEqual(VISUAL_CAPTURE_EXECUTION_CAPABILITY_NAMES);
+    for (const name of VISUAL_CAPTURE_EXECUTION_V3_CAPABILITY_NAMES) {
+      expect(VISUAL_CAPTURE_EXECUTION_V3_CAPABILITIES[name]).toEqual({
+        ...v2Capability(),
+        readinessCompletion: {
+          capability: 'renderer-completed-frame-receipt/v1',
+          receiptSchema: 'anifor.renderer.completed-frame-receipt/v1',
+          requiredState: 'completed',
+          bind: 'refreshed-presentation',
+          verifyAfterSnapshot: true,
+        },
+      });
+    }
+    expect(resolveVisualCaptureExecutionV3Capabilities('powder-render-style'))
+      .toBe(VISUAL_CAPTURE_EXECUTION_V3_CAPABILITIES['powder-render-style']);
+    expect(visualCaptureExecutionV3CapabilitiesForCaptureOrder(['powder-render-style'])
+      ['powder-render-style']).toBe(VISUAL_CAPTURE_EXECUTION_V3_CAPABILITIES['powder-render-style']);
   });
 
   it('is recursively frozen and JSON-safe', () => {
