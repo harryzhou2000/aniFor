@@ -67,8 +67,13 @@ on:
         required: true
         default: false
         type: boolean
+      visual_lab_performance_cohort:
+        description: Declarative checked-in cohort for the non-gating performance matrix
+        required: true
+        default: powder-style
+        type: string
       visual_lab_performance_capture_proof:
-        description: Capture proof for the non-gating Powder performance matrix
+        description: Capture proof for the non-gating performance matrix
         required: true
         default: selection-owned-frame-receipt
         type: choice
@@ -316,19 +321,9 @@ jobs:
               echo "visual_lab_cohort must be a safe kebab-case catalog name" >&2
               exit 2
             fi
-            VISUAL_LAB_RECIPE_SET="$(node --input-type=module -e '
-              import path from "node:path";
-              import { resolveVisualLabCohort } from "./scripts/visual-lab-cohort-catalog.mjs";
-              import { readVisualLabRecipeSet } from "./scripts/visual-lab-recipe-set.mjs";
-              const resolved = await resolveVisualLabCohort(process.env.VISUAL_LAB_COHORT);
-              const snapshot = await readVisualLabRecipeSet(resolved.snapshotPath);
-              if (snapshot.name !== resolved.name || snapshot.id !== resolved.recipeSet.id) {
-                throw new Error(
-                  "Visual Lab CI cohort snapshot is stale; run npm run visual-lab:authoring:sync",
-                );
-              }
-              process.stdout.write(path.relative(process.cwd(), resolved.snapshotPath));
-            ')"
+            VISUAL_LAB_RECIPE_SET="$(node scripts/visual-lab-cohort-catalog.mjs \
+              resolve --name="${VISUAL_LAB_COHORT}")"
+            VISUAL_LAB_RECIPE_SET="$(realpath --relative-to=. -- "${VISUAL_LAB_RECIPE_SET}")"
             recipe_set_request="${VISUAL_LAB_RECIPE_SET}"
           fi
           if [[ -n "${recipe_set_request}" ]]; then
@@ -434,9 +429,27 @@ jobs:
           path: dist
 
       - name: Measure fresh and shared Visual Lab capture performance
+        env:
+          VISUAL_LAB_PERFORMANCE_COHORT: ${{ inputs.visual_lab_performance_cohort }}
         run: |
+          if [[ ! "${VISUAL_LAB_PERFORMANCE_COHORT}" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+            echo "visual_lab_performance_cohort must be a safe kebab-case catalog name" >&2
+            exit 2
+          fi
+          performance_recipe_set="$(node scripts/visual-lab-cohort-catalog.mjs \
+            resolve --name="${VISUAL_LAB_PERFORMANCE_COHORT}")"
+          performance_recipe_set="$(realpath --relative-to=. -- "${performance_recipe_set}")"
+          git --literal-pathspecs ls-files --error-unmatch -- "${performance_recipe_set}" >/dev/null
+          recipe_set_path="$(realpath -e -- "${performance_recipe_set}")"
+          case "${recipe_set_path}" in
+            "${GITHUB_WORKSPACE}"/visual-lab/recipe-sets/*.json) ;;
+            *)
+              echo "visual_lab_performance_cohort must resolve under visual-lab/recipe-sets" >&2
+              exit 2
+              ;;
+          esac
           node scripts/visual-lab-performance-cohorts.mjs \
-            --recipe-set=visual-lab/recipe-sets/powder-style.json \
+            --recipe-set="${performance_recipe_set}" \
             --bundle=dist/index.html \
             --output-dir="${RUNNER_TEMP}/anifortpt-visual-lab-performance" \
             --gpu=swiftshader \

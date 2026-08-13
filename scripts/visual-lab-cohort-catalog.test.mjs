@@ -13,6 +13,7 @@ import {
   readVisualLabCohortCatalog,
   resolveVisualLabCohort,
   resolveVisualLabCohortFromCatalog,
+  resolveTrackedVisualLabCohortSnapshot,
   serializeVisualLabRecipeSet,
   syncVisualLabCohortOutputs,
   VISUAL_LAB_COHORT_CATALOG_MAX_BYTES,
@@ -287,14 +288,32 @@ describe('Visual Lab declarative cohort catalog', () => {
       .toThrow('Unknown Visual Lab cohort');
   });
 
+  it('resolves only a current checked-in cohort snapshot for launchers', async () => {
+    const resolved = await resolveTrackedVisualLabCohortSnapshot('powder-style');
+    expect(resolved.name).toBe('powder-style');
+    expect(resolved.snapshot.name).toBe(resolved.name);
+    expect(resolved.snapshot.id).toBe(resolved.recipeSet.id);
+    expect(Object.isFrozen(resolved)).toBe(true);
+    await expect(resolveTrackedVisualLabCohortSnapshot('powder-style', {
+      readRecipeSet: async () => ({ name: 'powder-style', id: 'sha256:stale' }),
+    })).rejects.toThrow('cohort snapshot is stale');
+  });
+
   it('keeps CLI arguments strict and defaults usable', () => {
     expect(parseVisualLabCohortCatalogArguments(['check'])).toMatchObject({ command: 'check' });
     expect(parseVisualLabCohortCatalogArguments([
       'sync', '--catalog=/tmp/cohorts.json', '--output=/tmp/sets',
     ])).toEqual({ command: 'sync', catalog: '/tmp/cohorts.json', output: '/tmp/sets' });
-    expect(() => parseVisualLabCohortCatalogArguments(['write'])).toThrow('check or sync');
+    expect(parseVisualLabCohortCatalogArguments(['resolve', '--name=powder-style']))
+      .toMatchObject({ command: 'resolve', name: 'powder-style' });
+    expect(() => parseVisualLabCohortCatalogArguments(['resolve']))
+      .toThrow('requires --name');
+    expect(() => parseVisualLabCohortCatalogArguments(['check', '--name=powder-style']))
+      .toThrow('--name is not supported');
+    expect(() => parseVisualLabCohortCatalogArguments(['write']))
+      .toThrow('check, sync, or resolve');
     expect(() => parseVisualLabCohortCatalogArguments(['check', '--catalog=']))
-      .toThrow('requires a path');
+      .toThrow('requires a value');
     expect(() => parseVisualLabCohortCatalogArguments(['check', '--other=value']))
       .toThrow('Unknown option');
   });

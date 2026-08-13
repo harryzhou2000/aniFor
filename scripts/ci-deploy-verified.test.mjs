@@ -118,6 +118,10 @@ describe('deploy-verified CI workflow contract', () => {
     expect(control).toContain('required: true');
     expect(control).toContain('default: false');
     expect(control).toContain('type: boolean');
+    const cohort = indentedEntry(workflow, 'visual_lab_performance_cohort', 6);
+    expect(cohort).toContain('default: powder-style');
+    expect(cohort).toContain('required: true');
+    expect(cohort).toContain('type: string');
     const proof = indentedEntry(workflow, 'visual_lab_performance_capture_proof', 6);
     const proofChoices = [...proof.matchAll(/^          - ([a-z-]+)\s*$/gm)]
       .map(([, choice]) => choice);
@@ -135,7 +139,11 @@ describe('deploy-verified CI workflow contract', () => {
     const job = indentedEntry(workflow, 'visual-lab-performance-cohorts', 2);
     expect(job).toContain("github.event_name == 'workflow_dispatch'");
     expect(job).toContain('inputs.visual_lab_performance_cohorts == true');
-    expect(job).toContain('--recipe-set=visual-lab/recipe-sets/powder-style.json');
+    expect(job).toContain('VISUAL_LAB_PERFORMANCE_COHORT: ${{ inputs.visual_lab_performance_cohort }}');
+    expect(job).toContain('visual-lab-cohort-catalog.mjs');
+    expect(job).toContain('resolve --name="${VISUAL_LAB_PERFORMANCE_COHORT}"');
+    expect(job).toContain('git --literal-pathspecs ls-files --error-unmatch');
+    expect(job).toContain('--recipe-set="${performance_recipe_set}"');
     expect(job).toContain('--capture-proof=${{ inputs.visual_lab_performance_capture_proof }}');
     expect(job).toContain('--gpu=swiftshader');
     expect(job).toContain('timeout-minutes: 15');

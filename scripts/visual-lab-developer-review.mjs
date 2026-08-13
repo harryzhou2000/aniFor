@@ -9,7 +9,7 @@ import {
   parseVisualLabReviewArguments,
   runVisualLabReviewCycle,
 } from './visual-lab-review.mjs';
-import { resolveVisualLabCohort } from './visual-lab-cohort-catalog.mjs';
+import { resolveTrackedVisualLabCohortSnapshot } from './visual-lab-cohort-catalog.mjs';
 import { readVisualLabRecipeSet } from './visual-lab-recipe-set.mjs';
 
 const MODULE_PATH = fileURLToPath(import.meta.url);
@@ -233,12 +233,14 @@ export async function runVisualLabDeveloperReview(argv, runtime = {}) {
   const stderr = runtime.stderr ?? process.stderr;
   const createUuid = runtime.randomUUID ?? randomUUID;
   const runReviewCycle = runtime.runReviewCycle ?? runVisualLabReviewCycle;
-  const cohort = parsed.cohortName === undefined ? undefined : await (
-    runtime.resolveCohort ?? resolveVisualLabCohort
-  )(parsed.cohortName, {
-    catalogPath: path.join(repositoryRoot, 'visual-lab', 'cohorts.json'),
-    outputDirectory: path.join(repositoryRoot, 'visual-lab', 'recipe-sets'),
-  });
+  const cohortResolver = runtime.resolveCohort ?? resolveTrackedVisualLabCohortSnapshot;
+  const cohort = parsed.cohortName === undefined ? undefined : await cohortResolver(
+    parsed.cohortName,
+    {
+      catalogPath: path.join(repositoryRoot, 'visual-lab', 'cohorts.json'),
+      outputDirectory: path.join(repositoryRoot, 'visual-lab', 'recipe-sets'),
+    },
+  );
   if (cohort !== undefined) {
     const expectedSnapshotPath = path.join(
       repositoryRoot, 'visual-lab', 'recipe-sets', `${parsed.cohortName}.json`,
@@ -254,10 +256,11 @@ export async function runVisualLabDeveloperReview(argv, runtime = {}) {
       repositoryRoot,
     );
   }
-  if (cohort !== undefined) {
-    const snapshot = await (runtime.readRecipeSet ?? readVisualLabRecipeSet)(
-      cohort.snapshotPath,
-    );
+  // Production resolution already carries the validated snapshot. Retain the
+  // older injected-resolver seam for focused launcher tests and embedders,
+  // without making that injection an authority to bypass stale-byte checks.
+  if (cohort !== undefined && cohort.snapshot === undefined) {
+    const snapshot = await (runtime.readRecipeSet ?? readVisualLabRecipeSet)(cohort.snapshotPath);
     if (snapshot.id !== cohort.recipeSet?.id || snapshot.name !== cohort.name) {
       throw new Error('Visual Lab developer cohort snapshot is stale; run npm run visual-lab:authoring:sync');
     }

@@ -144,6 +144,23 @@ authenticated inspection scale. Do not restore that experiment merely because
 its response is measurable; a successor needs owner-safe dense-gas evidence and
 a visible preference over the retained rendering.
 
+Performance CI is cohort-selected rather than Powder-path-selected. The shared
+`resolveTrackedVisualLabCohortSnapshot` operation compiles a safe catalog name,
+reads its canonical checked-in recipe-set snapshot, and requires exact name and
+content identity before returning the path. Its `visual-lab-cohort-catalog.mjs
+resolve --name=<cohort>` CLI is the sole workflow-facing projection and prints
+only that validated absolute path. Developer review and both CI review modes use
+the same operation. Keep Git tracking, canonical repository-relative path,
+containment, and symlink checks in the callers; the resolver grants no Git,
+capture, browser, or execution authority.
+
+Manual CI exposes `visual_lab_performance_cohort`, defaulting to
+`powder-style`. The generic fresh/shared/shared/fresh runner receives the
+resolved tracked snapshot and remains opt-in, non-gating, publish-last, and
+independent of deploy. Adding or selecting another declared cohort must not
+require a workflow edit. Existing recipe-set, result, execution/tuning/host,
+performance-summary, and visual identities remain unchanged.
+
 The current review framework also covers the existing Oil- and Water-motion
 recipes through frozen declarative fixture/inspection catalogs. Preserve their
 historical public fixture APIs and exact material, velocity, and wall planes;

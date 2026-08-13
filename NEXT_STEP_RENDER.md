@@ -7628,6 +7628,29 @@ shape remained visually too close to the current output. Future gas work should
 first establish an owner-safe dense-body carrier or stronger visual separation,
 not keep a merely measurable effect.
 
+The next orchestration checkpoint removes the last workflow-owned performance
+cohort. `resolveTrackedVisualLabCohortSnapshot` now combines safe declarative
+cohort resolution with exact checked-in snapshot name/content validation; its
+path-only `visual-lab-cohort-catalog.mjs resolve --name=<cohort>` command is used
+by developer review, ordinary CI review, and performance CI. Callers still own
+tracked-file, canonical-path, containment, and symlink checks, so the shared
+resolver gains no Git, capture, browser, or execution authority.
+
+Manual workflow dispatch now exposes `visual_lab_performance_cohort`, with the
+historical `powder-style` selection as its default. The already-generic
+fresh/shared/shared/fresh runner receives the resolved tracked recipe set, so a
+future declared cohort becomes performance-runnable through catalog authoring
+and sync rather than another workflow edit. The diagnostic remains opt-in,
+non-gating, publish-last, and excluded from deployment authority. No recipe-set,
+result, batch, execution/tuning/host, performance-summary, or visual identity
+changes for existing cohorts.
+
+Local proof passes the focused cohort/developer/CI suite (37 tests), all eight
+authoring snapshots, 13 framework pretests, typecheck, the production build,
+and exact 19-resource closure. The release proof should deliberately select a
+non-default cohort so the new route is exercised rather than merely confirming
+the unchanged Powder default.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

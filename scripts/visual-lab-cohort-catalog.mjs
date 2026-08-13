@@ -5,7 +5,10 @@ import {
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { createVisualLabRecipeSet } from './visual-lab-recipe-set.mjs';
+import {
+  createVisualLabRecipeSet,
+  readVisualLabRecipeSet,
+} from './visual-lab-recipe-set.mjs';
 import { VISUAL_LAB_CAPTURE_RECIPES } from './visual-lab-recipes.mjs';
 import { VISUAL_CAPTURE_AUTHORING_MANIFEST } from '../src/shared/visual-capture-authoring-manifest.js';
 
@@ -29,6 +32,7 @@ const MAX_JSON_DEPTH = 32;
 const HELP = `Usage:
   node scripts/visual-lab-cohort-catalog.mjs check [--catalog=<cohorts.json>] [--output=<directory>]
   node scripts/visual-lab-cohort-catalog.mjs sync [--catalog=<cohorts.json>] [--output=<directory>]
+  node scripts/visual-lab-cohort-catalog.mjs resolve --name=<cohort> [--catalog=<cohorts.json>] [--output=<directory>]
 
 check fails unless the output directory contains exactly the canonical recipe
 sets compiled from the v1/v2/v3 cohort catalog. v2 may select recipes by their
@@ -375,6 +379,25 @@ export async function resolveVisualLabCohort(name, options = {}) {
   return resolveVisualLabCohortFromCatalog(catalog, name, outputDirectory);
 }
 
+/**
+ * Resolves one catalog cohort and proves that its checked-in recipe-set
+ * snapshot still represents the compiled catalog bytes. This grants no Git,
+ * path-containment, capture, or execution authority; callers retain those
+ * boundaries around the returned read-only path.
+ */
+export async function resolveTrackedVisualLabCohortSnapshot(name, options = {}) {
+  const resolved = await resolveVisualLabCohort(name, options);
+  const snapshot = await (options.readRecipeSet ?? readVisualLabRecipeSet)(
+    resolved.snapshotPath,
+  );
+  if (snapshot.name !== resolved.name || snapshot.id !== resolved.recipeSet.id) {
+    throw new Error(
+      'Visual Lab cohort snapshot is stale; run npm run visual-lab:authoring:sync',
+    );
+  }
+  return Object.freeze({ ...resolved, snapshot });
+}
+
 export async function visualLabCohortNames(options = {}) {
   const catalog = await readVisualLabCohortCatalog(options.catalogPath ?? DEFAULT_CATALOG);
   return visualLabCohortNamesFromCatalog(catalog);
@@ -452,22 +475,34 @@ export async function syncVisualLabCohortOutputs(catalog, outputDirectory) {
 export function parseVisualLabCohortCatalogArguments(argv) {
   if (argv.includes('--help')) return Object.freeze({ help: true });
   const [command, ...arguments_] = argv;
-  if (command !== 'check' && command !== 'sync') throw new Error('command must be check or sync');
+  if (command !== 'check' && command !== 'sync' && command !== 'resolve') {
+    throw new Error('command must be check, sync, or resolve');
+  }
   const values = new Map();
   for (const argument of arguments_) {
     if (!argument.startsWith('--') || !argument.includes('=')) throw new Error(`Unknown argument ${displayValue(argument)}`);
     const separator = argument.indexOf('=');
     const name = argument.slice(2, separator);
-    if (name !== 'catalog' && name !== 'output') throw new Error(`Unknown option --${name}`);
+    if (name !== 'catalog' && name !== 'output' && name !== 'name') {
+      throw new Error(`Unknown option --${name}`);
+    }
     if (values.has(name)) throw new Error(`Option --${name} may only be provided once`);
     const value = argument.slice(separator + 1);
-    if (!value) throw new Error(`--${name} requires a path`);
+    if (!value) throw new Error(`--${name} requires a value`);
     values.set(name, value);
+  }
+  const cohortName = values.get('name');
+  if (command === 'resolve' && cohortName === undefined) {
+    throw new Error('resolve requires --name=<cohort>');
+  }
+  if (command !== 'resolve' && cohortName !== undefined) {
+    throw new Error(`--name is not supported by ${command}`);
   }
   return Object.freeze({
     command,
     catalog: values.get('catalog') ?? DEFAULT_CATALOG,
     output: values.get('output') ?? DEFAULT_OUTPUT,
+    ...(cohortName === undefined ? {} : { name: cohortName }),
   });
 }
 
@@ -475,6 +510,14 @@ const main = async () => {
   try {
     const options = parseVisualLabCohortCatalogArguments(process.argv.slice(2));
     if (options.help) { process.stdout.write(`${HELP}\n`); return; }
+    if (options.command === 'resolve') {
+      const resolved = await resolveTrackedVisualLabCohortSnapshot(options.name, {
+        catalogPath: options.catalog,
+        outputDirectory: options.output,
+      });
+      process.stdout.write(`${resolved.snapshotPath}\n`);
+      return;
+    }
     const catalog = await readVisualLabCohortCatalog(options.catalog);
     const result = options.command === 'sync'
       ? await syncVisualLabCohortOutputs(catalog, options.output)
