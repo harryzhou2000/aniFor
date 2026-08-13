@@ -54,7 +54,7 @@ export const MATERIAL_COMPOSITION_PROFILES: MaterialCompositionProfiles = Object
   powder: profile(0.94, 0.30, 0.80, 0.84, 0.58, 0.34, 0.84, 1.08, 0.90, 0.34),
   liquid: profile(1.18, 1.28, 1.16, 0.56, 0.34, 1.30, 0.74, 0.78, 1.14, 1.22),
   gas: profile(1.14, 1.02, 1.08, 0.32, 0.24, 1.36, 0.56, 0.58, 1.18, 0.92),
-  solid: profile(1.10, 1.10, 0.94, 0.74, 0.44, 0.00, 0.98, 0.94, 1.00, 1.05),
+  solid: profile(1.10, 1.10, 0.94, 0.74, 0.44, 0.72, 0.98, 0.94, 1.00, 1.05),
 });
 
 const PROFILE_FIELDS = Object.freeze([

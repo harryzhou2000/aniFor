@@ -759,8 +759,9 @@ describe('Pixi presenter startup configuration', () => {
       'positiveExternal * midPath',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
-      '* phaseScatter * interiorScatter * transmissionReserve',
+      '* phaseScatter * solidScatterAdmission * interiorScatter * transmissionReserve',
     );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain('* solidScatterGain;');
     expect(normal).toContain('profileIrradianceProfile.interiorScatter');
     expect(normal).toContain(
       'color, 0.0, powderFinishProfile.optics, powderFinishProfile.roughness',

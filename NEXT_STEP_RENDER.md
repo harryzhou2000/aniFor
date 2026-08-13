@@ -7378,6 +7378,27 @@ regions, and portable verification as result
 `sha256:057d249918ae74ae74f35d8d40c95a62105aea85fd2a0b2a785bb06fad3f97d6`.
 Treat this as a visually accepted checkpoint, not an exact future PNG gate.
 
+The accepted transmissive-solid follow-up stays inside the existing
+`applyMaterialProfileIrradiance` source-shaped transport seam. Solid receives
+only its declarative `volumeScatter` coefficient `0.72`; smooth
+transmission-profile admission comes from `finishResponse.w`, and the solid
+gain is bounded at `2.35`. There is no exact Glass/Ice shader branch, sampler,
+field, texture, target, pass, allocation, alpha, support, topology, or contact
+change. In normal-WebGL B, broad Glass and Ice bodies now carry a clearer
+source-coloured interior while retaining restrained opaque comparison bodies.
+The `solid-material-lighting-atlas` keeps Glass/Ice holes, notches, thin and
+isolated controls, native walls, guarded blanks, and unlike contacts; Brick,
+Metal, Ceramic, Wood, BTRY, and ISZS remain opaque controls. The paired
+`multi-metal-material-lighting-atlas` remains the wider opaque-metal control.
+The portable SwiftShader package `/tmp/anifor-solid-scatter-v3` passed its
+OFF/A/B capture and verification with
+`solid-material-lighting-atlas` result
+`sha256:e87a96a541c2310e9b0a73d67eb2d30419cbe9b3381111e6bcaec28cf25349e6`
+and `multi-metal-material-lighting-atlas` result
+`sha256:e20442767c6d08b58f9b889ae2b10b2b0f7a39b6b875510ebd24e01a43acefeb`.
+This is current visual evidence for human review, not a cross-revision PNG
+gate or a requirement to preserve either result identity.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

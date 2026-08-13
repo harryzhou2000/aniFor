@@ -342,9 +342,19 @@ vec3 applyMaterialProfileIrradiance(
   float positiveExternal = max(lightIncidence, 0.0);
   float midPath = 4.0 * bodyDepth * (1.0 - bodyDepth);
   float phaseScatter = composition.volumeScatter;
+  // Solid phase scatter is reserved for genuinely transmissive optical
+  // profiles. Glass/Ice carry a high transmission reserve and enter smoothly;
+  // ordinary rigid, organic, device, radioactive, and metallic profiles stay
+  // below the knee. Liquid, gas, and settled powder retain their established
+  // phase response. This uses the existing profile lane rather than an exact
+  // material/class branch and cannot create support or emission.
+  float solidScatterAdmission = mix(
+    1.0, smoothstep(1.05, 1.30, finishResponse.w), solid
+  );
+  float solidScatterGain = mix(1.0, 2.35, solid * solidScatterAdmission);
   float transportLobe = lightReach * body * positiveExternal * midPath
-    * phaseScatter * interiorScatter * transmissionReserve
-    * (0.024 + finishResponse.x * 0.060);
+    * phaseScatter * solidScatterAdmission * interiorScatter * transmissionReserve
+    * (0.024 + finishResponse.x * 0.060) * solidScatterGain;
   vec3 transportLobeTint = mix(
     absorbedLightTint, lightTint, mix(0.28, 0.82, transmissionReserve)
   );

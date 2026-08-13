@@ -23,6 +23,24 @@ Powder and Solid profiles remain explicit zero-radius no-ops. Contact AO remains
 blocked until an owner-aware stable proximity carrier exists; categorical seam
 bits are not a substitute.
 
+The accepted transmissive-solid experiment is separate from the zero-radius
+solid mesoscale profile. In `applyMaterialProfileIrradiance`, Solid may use
+only the established source-shaped transport lobe with declarative
+`volumeScatter` `0.72`, smooth profile admission from `finishResponse.w`, and
+a bounded solid gain of `2.35`. It is normal-WebGL B RGB arithmetic only: no
+exact Glass/Ice branch, sampler, field, texture, target, pass, allocation,
+alpha, support, topology, or contact change. Broad Glass/Ice bodies should read
+as clearer source-coloured transmissive interiors, while Brick, Metal, Ceramic,
+Wood, BTRY, ISZS, and the multi-metal board remain opaque controls. Preserve
+Glass/Ice holes, notches, thin and isolated structures, native walls, blanks,
+and unlike contacts. The current portable evidence is
+`/tmp/anifor-solid-scatter-v3`, with `solid-material-lighting-atlas`
+`sha256:e87a96a541c2310e9b0a73d67eb2d30419cbe9b3381111e6bcaec28cf25349e6`
+and `multi-metal-material-lighting-atlas`
+`sha256:e20442767c6d08b58f9b889ae2b10b2b0f7a39b6b875510ebd24e01a43acefeb`.
+These are current visual evidence only, never cross-revision PNG gates or
+required future result identities.
+
 The current review framework also covers the existing Oil- and Water-motion
 recipes through frozen declarative fixture/inspection catalogs. Preserve their
 historical public fixture APIs and exact material, velocity, and wall planes;
