@@ -8078,6 +8078,21 @@ proof. Treat all timing from these individual software-GPU runs as diagnostic,
 not as a claimed speedup; use alternating performance cohorts for a comparative
 claim.
 
+That first-populated-frame increment is deployed at exact revision
+`42b72b6c88543bd22ee3784573173cdd227d3d25` by workflow run `31747381451`.
+The cached build passed in 3m43s with 269/270 ccache hits, 233 source test files,
+35 tooling test files, the four pretest files, and exact 19-resource closure.
+The shared-host RenderOptics review passed capture, downloaded-package
+verification, all 49 response and appearance regions, and strict teardown in
+1m35s. Its CI result
+`sha256:f7b9ea9eb0a4bc73f5817cb17251525bf7afde7180a6a82d7b9e1f2c24647d06`
+is a runner-specific encoded-output record and does not replace the exact local
+canonical result above. Pages deployed in 9s; exact revision and 19-resource
+closure passed, followed by the hosted Water receipt-v2 batch and portable
+verification with result
+`sha256:c83123c25c6181ecdc10d0668cb3b1c6a56d22888b7bb79d02d1739d5824be5b`.
+The bounded live evidence artifact is `9199743025`.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
