@@ -128,6 +128,14 @@ snapshot/CDP readback boundary next without removing semantic,
 authoritative-field, or framebuffer-alpha evidence or rotating frozen visual
 identities.
 
+The v6-only prearmed-readback increment overlaps that existing PBO transfer with
+activation completion: arm only on the exact final owned normal-scale
+submission, expose it through the unchanged one-shot readback request, and keep
+the snapshot's complete semantic/field/framebuffer proof plus screenshot order.
+The local ABBA package `/tmp/anifor-v6-prearmed-pbo-abba.2eoJER` passed portable
+identity and exact PNG parity in all four legs. Keep v5, Canvas, production
+owner-zero work, and true 8x excluded; the hosted ABBA cohort is the next gate.
+
 Local proof passed 1,544 source and 353 tooling tests, typecheck, production
 build, and exact 19-resource closure. The full eight-candidate material-lighting
 recipe set passed shared-host SwiftShader WebGL/HDR capture with 24 captures,

@@ -220,6 +220,19 @@ interface MutableWebGLFramebufferAlphaReadback extends WebGLFramebufferAlphaRead
   digest?: WebGLFramebufferAlphaDigest;
 }
 
+/**
+ * V6-only hand-off from activation-owned CPU settling to the existing
+ * framebuffer-alpha transfer. The public audit still sees the historical PBO
+ * ticket; this private record only lets its first request consume work that
+ * was armed against the activation's exact final submission.
+ */
+interface FixtureActivationFramebufferAlphaReadback {
+  readonly owner: number;
+  readonly ticket: number;
+  readonly submission: number;
+  consumed: boolean;
+}
+
 interface MutableWebGLCompletedFrameReceipt extends WebGLCompletedFrameReceipt {
   state: WebGLCompletedFrameReceiptState;
   fence?: WebGLSync;
@@ -12295,6 +12308,8 @@ export class PixiFieldPresenter {
   private fixtureActivationBoundaryConsumptionOwner = 0;
   private fixtureActivationSubmissionOwner = 0;
   private fixtureActivationSubmissionBaseline = 0;
+  private fixtureActivationFramebufferAlphaReadbackOwner = 0;
+  private fixtureActivationFramebufferAlphaReadback?: FixtureActivationFramebufferAlphaReadback;
   private solidOpticalDepthDirty = true;
   private photonStateActive = false;
   private photonStateHydrated = false;
@@ -13836,6 +13851,8 @@ export class PixiFieldPresenter {
     this.fixtureActivationCaptureOwner = owner;
     this.fixtureActivationSubmissionOwner = owner;
     this.fixtureActivationSubmissionBaseline = this.presentationSubmission;
+    this.fixtureActivationFramebufferAlphaReadbackOwner = owner;
+    this.fixtureActivationFramebufferAlphaReadback = undefined;
   }
 
   endFixtureActivationPresentationWork(owner: number): void {
@@ -14699,6 +14716,20 @@ export class PixiFieldPresenter {
    */
   requestWebGLFramebufferAlphaReadback(): number | undefined {
     this.pollFramebufferAlphaReadback();
+    const activationReadback = this.fixtureActivationFramebufferAlphaReadback;
+    if (activationReadback) {
+      if (!activationReadback.consumed
+        && activationReadback.submission === this.presentationSubmission) {
+        const readback = this.framebufferAlphaReadbacks?.get(activationReadback.ticket);
+        if (readback?.ticket === activationReadback.ticket
+          && readback.submission === activationReadback.submission
+          && (readback.state === 'pending' || readback.state === 'completed')) {
+          activationReadback.consumed = true;
+          return activationReadback.ticket;
+        }
+      }
+      this.fixtureActivationFramebufferAlphaReadback = undefined;
+    }
     if (this.destroyed || this.contextLost || this.outputScale === 8
       || this.framebufferAlphaReadback?.state === 'pending') return undefined;
     const gl = this.webGLContext();
@@ -15059,6 +15090,34 @@ export class PixiFieldPresenter {
       this.armCompletedFrameFence(submission);
     }
     if (this.outputScale !== 8) this.armFramebufferAlphaReadback(submission);
+    this.armFixtureActivationFramebufferAlphaReadback(submission);
+  }
+
+  /**
+   * Starts the normal-scale PBO transfer while the v6 activation's final HDR
+   * submission is already queued. The generation is completed by FieldRenderer
+   * only after this method returns, so later audit polling can overlap the
+   * transfer without accepting an earlier frame.
+   */
+  private armFixtureActivationFramebufferAlphaReadback(submission: number): void {
+    const owner = this.fixtureActivationFramebufferAlphaReadbackOwner;
+    if (owner <= 0 || this.outputScale === 8
+      || !this.fixtureActivationPresentationSettled(owner)
+      || submission !== this.presentationSubmission) return;
+    // One activation has one final submission. Even an unsupported/failing PBO
+    // must not be retried on an unrelated successor; the established snapshot
+    // request will retain its synchronous fallback when no ticket was created.
+    this.fixtureActivationFramebufferAlphaReadbackOwner = 0;
+    const ticket = this.requestWebGLFramebufferAlphaReadback();
+    if (ticket === undefined) return;
+    const readback = this.framebufferAlphaReadbacks?.get(ticket);
+    if (!readback || readback.ticket !== ticket || readback.submission !== submission) return;
+    this.fixtureActivationFramebufferAlphaReadback = {
+      owner,
+      ticket,
+      submission,
+      consumed: false,
+    };
   }
 
   private renderApplicationNow(): void {
@@ -15135,6 +15194,10 @@ export class PixiFieldPresenter {
     const readback = this.framebufferAlphaReadback;
     if (readback?.state === 'pending' && submission > readback.submission) {
       this.failFramebufferAlphaReadback(readback.submission);
+    }
+    if (this.fixtureActivationFramebufferAlphaReadback
+      && submission > this.fixtureActivationFramebufferAlphaReadback.submission) {
+      this.fixtureActivationFramebufferAlphaReadback = undefined;
     }
     return submission;
   }
@@ -15267,6 +15330,10 @@ export class PixiFieldPresenter {
   private armFramebufferAlphaReadback(submission: number): void {
     const readback = this.framebufferAlphaReadback;
     if (!readback || readback.state !== 'pending' || readback.submission !== submission) return;
+    // A V6 activation may create its PBO while the enclosing presentation call
+    // is still unwinding. Keep this idempotent so a later shared arm point can
+    // never enqueue a second readPixels/fence for the same ticket.
+    if (readback.fence) return;
     const gl = this.webGLContext();
     const buffer = readback.buffer;
     if (!gl || !buffer || this.contextLost || this.destroyed) {

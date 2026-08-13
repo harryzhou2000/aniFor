@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { digestFramebufferAlpha, PixiFieldPresenter } from './pixi-field-presenter';
+import {
+  digestFramebufferAlpha,
+  PixiFieldPresenter,
+  type WebGLFramebufferAlphaReadback,
+} from './pixi-field-presenter';
 import { MATERIAL_BODY_FINISH_GLSL } from './material-body-finish';
 import { POWDER_SMOOTH_COVERAGE_GLSL } from './powder-smooth-coverage';
 import { powderRenderStyleValue } from './powder-render-style';
@@ -5175,6 +5179,218 @@ describe('Pixi presenter startup configuration', () => {
     expect(gl.getBufferSubData).toHaveBeenCalledOnce();
     expect(gl.deleteSync).toHaveBeenCalledWith(fence);
     expect(gl.deleteBuffer).toHaveBeenCalledWith(buffer);
+  });
+
+  it('prearms one v6 activation-owned framebuffer transfer on its exact final submission', () => {
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const buffer = {} as WebGLBuffer;
+    const fence = {} as WebGLSync;
+    let status = 0x911b; // TIMEOUT_EXPIRED
+    const gl = {
+      PIXEL_PACK_BUFFER: 0x88eb,
+      STREAM_READ: 0x88e1,
+      RGBA: 0x1908,
+      UNSIGNED_BYTE: 0x1401,
+      SYNC_GPU_COMMANDS_COMPLETE: 0x9117,
+      SYNC_FLUSH_COMMANDS_BIT: 1,
+      TIMEOUT_EXPIRED: 0x911b,
+      WAIT_FAILED: 0x911d,
+      ALREADY_SIGNALED: 0x911a,
+      CONDITION_SATISFIED: 0x911c,
+      createBuffer: vi.fn(() => buffer),
+      bindBuffer: vi.fn(), bufferData: vi.fn(), readPixels: vi.fn(),
+      getBufferSubData: vi.fn(), deleteBuffer: vi.fn(),
+      fenceSync: vi.fn(() => fence), flush: vi.fn(),
+      clientWaitSync: vi.fn(() => status), deleteSync: vi.fn(),
+    } as unknown as WebGL2RenderingContext;
+    const presenter = presenterHarness() as unknown as {
+      app: { renderer?: { gl: WebGL2RenderingContext } };
+      presentationSubmission: number;
+      fixtureActivationFramebufferAlphaReadbackOwner: number;
+      fixtureActivationSubmissionOwner: number;
+      fixtureActivationSubmissionBaseline: number;
+      fixtureActivationSemanticOwner: number;
+      fixtureActivationBoundaryOwner: number;
+      fixtureActivationPowderOwner: number;
+      fixtureActivationSolidOwner: number;
+      fixtureActivationDynamicOwner: number;
+      fieldSet: { hasPendingRefreshFor(owner: number): boolean };
+      armFixtureActivationFramebufferAlphaReadback(submission: number): void;
+      requestWebGLFramebufferAlphaReadback(): number | undefined;
+      getWebGLFramebufferAlphaReadback(ticket: number): WebGLFramebufferAlphaReadback | undefined;
+    };
+    presenter.app.renderer = { gl };
+    Object.assign(presenter, {
+      presentationSubmission: 8,
+      fixtureActivationFramebufferAlphaReadbackOwner: 17,
+      fixtureActivationSubmissionOwner: 17,
+      fixtureActivationSubmissionBaseline: 7,
+      fixtureActivationSemanticOwner: 0,
+      fixtureActivationBoundaryOwner: 0,
+      fixtureActivationPowderOwner: 0,
+      fixtureActivationSolidOwner: 0,
+      fixtureActivationDynamicOwner: 0,
+      fieldSet: { hasPendingRefreshFor: () => false },
+    });
+
+    presenter.armFixtureActivationFramebufferAlphaReadback(8);
+
+    // The ordinary public request consumes the prearmed ticket rather than
+    // allocating/reading the same final framebuffer a second time.
+    expect(presenter.requestWebGLFramebufferAlphaReadback()).toBe(1);
+    expect(presenter.getWebGLFramebufferAlphaReadback(1)).toMatchObject({
+      ticket: 1, submission: 8, state: 'pending',
+    });
+    expect(gl.createBuffer).toHaveBeenCalledOnce();
+    expect(gl.readPixels).toHaveBeenCalledOnce();
+    expect(gl.fenceSync).toHaveBeenCalledOnce();
+
+    // The activation ticket is one-shot. Once it has served the readiness
+    // snapshot, an ordinary later caller gets a new current-frame transfer.
+    status = gl.CONDITION_SATISFIED;
+    expect(presenter.getWebGLFramebufferAlphaReadback(1)).toMatchObject({ state: 'completed' });
+    expect(presenter.requestWebGLFramebufferAlphaReadback()).toBe(2);
+    expect(gl.createBuffer).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not prearm incomplete, owner-zero, or true-8x activation work', () => {
+    const createBuffer = vi.fn(() => ({} as WebGLBuffer));
+    const makePresenter = (outputScale: number, owner: number, semanticOwner: number) => {
+      const presenter = presenterHarness(outputScale) as unknown as {
+        app: { renderer?: { gl: WebGL2RenderingContext } };
+        presentationSubmission: number;
+        fixtureActivationFramebufferAlphaReadbackOwner: number;
+        fixtureActivationSubmissionOwner: number;
+        fixtureActivationSubmissionBaseline: number;
+        fixtureActivationSemanticOwner: number;
+        fixtureActivationBoundaryOwner: number;
+        fixtureActivationPowderOwner: number;
+        fixtureActivationSolidOwner: number;
+        fixtureActivationDynamicOwner: number;
+        fieldSet: { hasPendingRefreshFor(owner: number): boolean };
+        armFixtureActivationFramebufferAlphaReadback(submission: number): void;
+      };
+      presenter.app.renderer = { gl: {
+        createBuffer, getBufferSubData: vi.fn(), fenceSync: vi.fn(), clientWaitSync: vi.fn(),
+      } as unknown as WebGL2RenderingContext };
+      Object.assign(presenter, {
+        presentationSubmission: 4,
+        fixtureActivationFramebufferAlphaReadbackOwner: owner,
+        fixtureActivationSubmissionOwner: owner,
+        fixtureActivationSubmissionBaseline: 3,
+        fixtureActivationSemanticOwner: semanticOwner,
+        fixtureActivationBoundaryOwner: 0,
+        fixtureActivationPowderOwner: 0,
+        fixtureActivationSolidOwner: 0,
+        fixtureActivationDynamicOwner: 0,
+        fieldSet: { hasPendingRefreshFor: () => false },
+      });
+      return presenter;
+    };
+
+    makePresenter(2, 9, 9).armFixtureActivationFramebufferAlphaReadback(4);
+    makePresenter(2, 0, 0).armFixtureActivationFramebufferAlphaReadback(4);
+    makePresenter(8, 9, 0).armFixtureActivationFramebufferAlphaReadback(4);
+
+    expect(createBuffer).not.toHaveBeenCalled();
+  });
+
+  it('prearms activation readback only after the ordinary normal-scale fence/PBO hooks', () => {
+    const calls: string[] = [];
+    const presenter = Object.create(PixiFieldPresenter.prototype) as unknown as {
+      outputScale: number;
+      webGLTimingFence: undefined;
+      renderFence: undefined;
+      renderQueued: boolean;
+      presentationSubmission: number;
+      pollWebGLTimingFence(): void;
+      renderApplicationNow(): void;
+      armCompletedFrameFence(submission: number): void;
+      armFramebufferAlphaReadback(submission: number): void;
+      armFixtureActivationFramebufferAlphaReadback(submission: number): void;
+      renderApplication(): void;
+    };
+    Object.assign(presenter, {
+      outputScale: 2,
+      webGLTimingFence: undefined,
+      renderFence: undefined,
+      renderQueued: false,
+      presentationSubmission: 0,
+      pollWebGLTimingFence: () => undefined,
+      renderApplicationNow: () => {
+        presenter.presentationSubmission = 12;
+        calls.push('render');
+      },
+      armCompletedFrameFence: (submission: number) => calls.push(`receipt:${submission}`),
+      armFramebufferAlphaReadback: (submission: number) => calls.push(`pbo:${submission}`),
+      armFixtureActivationFramebufferAlphaReadback: (submission: number) => calls.push(`activation:${submission}`),
+    });
+
+    presenter.renderApplication();
+
+    expect(calls).toEqual(['render', 'receipt:12', 'pbo:12', 'activation:12']);
+  });
+
+  it('arms exactly one PBO readPixels/fence through the complete v6 render path', () => {
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const gl = {
+      PIXEL_PACK_BUFFER: 0x88eb,
+      STREAM_READ: 0x88e1,
+      RGBA: 0x1908,
+      UNSIGNED_BYTE: 0x1401,
+      SYNC_GPU_COMMANDS_COMPLETE: 0x9117,
+      SYNC_FLUSH_COMMANDS_BIT: 1,
+      TIMEOUT_EXPIRED: 0x911b,
+      WAIT_FAILED: 0x911d,
+      ALREADY_SIGNALED: 0x911a,
+      CONDITION_SATISFIED: 0x911c,
+      createBuffer: vi.fn(() => ({} as WebGLBuffer)),
+      bindBuffer: vi.fn(), bufferData: vi.fn(), readPixels: vi.fn(),
+      getBufferSubData: vi.fn(), deleteBuffer: vi.fn(),
+      fenceSync: vi.fn(() => ({} as WebGLSync)), flush: vi.fn(),
+      clientWaitSync: vi.fn(() => 0x911b), deleteSync: vi.fn(),
+    } as unknown as WebGL2RenderingContext;
+    const presenter = presenterHarness() as unknown as {
+      app: { renderer?: { gl: WebGL2RenderingContext } };
+      presentationSubmission: number;
+      fixtureActivationFramebufferAlphaReadbackOwner: number;
+      fixtureActivationSubmissionOwner: number;
+      fixtureActivationSubmissionBaseline: number;
+      fixtureActivationSemanticOwner: number;
+      fixtureActivationBoundaryOwner: number;
+      fixtureActivationPowderOwner: number;
+      fixtureActivationSolidOwner: number;
+      fixtureActivationDynamicOwner: number;
+      fieldSet: { hasPendingRefreshFor(owner: number): boolean };
+      pollWebGLTimingFence(): void;
+      renderApplicationNow(): void;
+      armCompletedFrameFence(submission: number): void;
+      renderApplication(): void;
+    };
+    presenter.app.renderer = { gl };
+    Object.assign(presenter, {
+      presentationSubmission: 7,
+      fixtureActivationFramebufferAlphaReadbackOwner: 4,
+      fixtureActivationSubmissionOwner: 4,
+      fixtureActivationSubmissionBaseline: 7,
+      fixtureActivationSemanticOwner: 0,
+      fixtureActivationBoundaryOwner: 0,
+      fixtureActivationPowderOwner: 0,
+      fixtureActivationSolidOwner: 0,
+      fixtureActivationDynamicOwner: 0,
+      fieldSet: { hasPendingRefreshFor: () => false },
+      pollWebGLTimingFence: () => undefined,
+      renderApplicationNow: () => { presenter.presentationSubmission = 8; },
+      armCompletedFrameFence: () => undefined,
+    });
+
+    presenter.renderApplication();
+
+    expect(gl.createBuffer).toHaveBeenCalledOnce();
+    expect(gl.readPixels).toHaveBeenCalledOnce();
+    expect(gl.fenceSync).toHaveBeenCalledOnce();
   });
 
   it('leaves unsupported and true-8x framebuffer-alpha requests on the direct fallback', () => {

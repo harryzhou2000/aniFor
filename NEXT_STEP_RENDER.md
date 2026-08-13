@@ -7141,6 +7141,26 @@ observations. The next measured framework target is the complete readiness
 snapshot/CDP readback path; retain all semantic, authoritative-field, and
 framebuffer-alpha evidence and every frozen identity.
 
+The next v6-only readback overlap is implemented locally. When the exact final
+activation-owned normal-scale presentation has consumed every owned successor,
+the presenter prearms the existing framebuffer-alpha pixel-pack transfer before
+FieldRenderer publishes the completed activation generation. The later generic
+snapshot request consumes that exact one-shot ticket; it does not add a browser
+method, report field, evidence schema, target, or frozen identity. Successor
+submission, context loss, teardown, unsupported PBOs, and direct fallback retain
+their existing behavior. V5 global quiescence, Canvas, owner-zero production,
+and true 8x never prearm this transfer.
+
+The real local SwiftShader ABBA package is
+`/tmp/anifor-v6-prearmed-pbo-abba.2eoJER`. All four fresh/shared/shared/fresh
+legs passed portable verification with no restart, preserved exact result
+`sha256:b3edbc669cc2c2408ef712ea6089b42e85e1ba60944d3d78b4bd0942de23f67f`,
+and reproduced the established three PNG hashes byte-for-byte. Each retained
+one complete readiness snapshot. Readiness was 10.81-11.93s, total was
+30.54-32.12s, and the Node-observed readiness readback was 3.09-4.55s; these
+local timings are diagnostic. The next gate is the approved hosted v6 ABBA
+cohort, which must decide whether the overlap is robust under the loaded runner.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
