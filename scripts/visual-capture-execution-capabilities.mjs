@@ -25,7 +25,7 @@ const V3_PROFILE_FIELDS = Object.freeze([
   'startup', 'readiness', 'readinessCompletion', 'selection', 'stability', 'completion', 'screenshot',
 ]);
 const V4_PROFILE_FIELDS = Object.freeze([
-  'startup', 'readiness', 'readinessCompletion', 'selection', 'stability', 'completion', 'screenshot',
+  'startup', 'readiness', 'selection', 'stability', 'completion', 'screenshot',
 ]);
 const COMPLETION_FIELDS = Object.freeze([
   'capability', 'receiptSchema', 'requiredState', 'bind', 'verifyAfterSnapshot',
@@ -108,8 +108,8 @@ const assertExactArray = (value, expected, label) => {
 
 const normalizeProfile = (profile, driverName, version) => {
   const label = `Visual capture execution capability ${driverName}`;
-  const hasReadinessCompletion = version === 'v3' || version === 'v4';
-  const hasCompletion = version === 'v2' || hasReadinessCompletion;
+  const hasReadinessCompletion = version === 'v3';
+  const hasCompletion = version === 'v2' || version === 'v3' || version === 'v4';
   assertJsonValue(profile, label);
   assertExactDataKeys(
     profile,
@@ -324,7 +324,7 @@ export function createVisualCaptureExecutionV3CapabilityRegistry(drivers, profil
   return createCapabilityRegistry(drivers, profiles, 'v3');
 }
 
-/** Creates the closed v4 readiness and selection-owned capture receipt registry. */
+/** Creates the closed v4 stable-readiness and selection-owned capture receipt registry. */
 export function createVisualCaptureExecutionV4CapabilityRegistry(drivers, profiles) {
   return createCapabilityRegistry(drivers, profiles, 'v4');
 }
@@ -361,7 +361,7 @@ export function visualCaptureExecutionV3CapabilitiesForCaptureOrder(driverNames)
   return capabilitiesForCaptureOrder(driverNames, V3_REGISTRY);
 }
 
-/** Returns the frozen v4 readiness and selection-owned receipt capture-order subset. */
+/** Returns the frozen v4 stable-readiness and selection-owned receipt capture-order subset. */
 export function visualCaptureExecutionV4CapabilitiesForCaptureOrder(driverNames) {
   return capabilitiesForCaptureOrder(driverNames, V4_REGISTRY);
 }
@@ -444,11 +444,10 @@ const READINESS_COMPLETED_FRAME_RECEIPT_PROFILE = () => {
 };
 
 const SELECTION_OWNED_COMPLETED_FRAME_RECEIPT_PROFILE = () => {
-  const profile = READINESS_COMPLETED_FRAME_RECEIPT_PROFILE();
+  const profile = COMPLETED_FRAME_RECEIPT_PROFILE();
   return {
     startup: profile.startup,
     readiness: profile.readiness,
-    readinessCompletion: profile.readinessCompletion,
     selection: profile.selection,
     stability: profile.stability,
     completion: {

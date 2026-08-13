@@ -1816,15 +1816,25 @@ post-selection v2/v3 request path intact for rollback and comparison. A new
 tuning schema may declare the new binding, but must not rotate capture-plan,
 recipe, result, PNG, batch, baseline, or comparison identities.
 
-The first built same-bundle Powder v3/v4 control passed. Both modes produced
-result `sha256:b3edbc669cc2c2408ef712ea6089b42e85e1ba60944d3d78b4bd0942de23f67f`
-and identical OFF/A/B PNG hashes. V3 receipt submissions were
-`13 -> 15 -> 17 -> 19`; v4 proved the exact contiguous
-`13 -> 14 -> 15 -> 16` chain. Local OFF/A/B phases fell from 3.51–3.72s to
-2.12–2.15s and total capture from 44.48s to 40.31s. Portable v4 verification
-passed and rejects a merely monotonic but gapped submission chain. Keep hosted
-ABBA evidence as the remaining decision before calling v4 the performance
-control.
+The first hosted v4 attempts in workflow run `31665571437` failed before any
+v4 OFF/A/B selection: the inherited v3 readiness receipt first timed out and
+then failed under loaded SwiftShader, with bounded cleanup diagnostics retained.
+That prerequisite obscured the selection-owned experiment, so v4 now deliberately
+uses the stable full-snapshot readiness contract and applies receipts only to
+OFF/A/B. V1–v3 remain byte- and behavior-stable. Do not require the first v4
+capture submission to be adjacent to readiness; require the captured submissions
+themselves to be exactly `N -> N+1 -> N+2` in canonical OFF/A/B order in both
+the page transaction and portable verifier.
+
+The corrected same-bundle Powder v4 capture passed with result
+`sha256:b3edbc669cc2c2408ef712ea6089b42e85e1ba60944d3d78b4bd0942de23f67f`
+and the established OFF/A/B hashes. It used stable readiness with four complete
+snapshot attempts, no readiness receipt, then selection-owned submissions
+`9 -> 10 -> 11`. OFF/A/B phases were 2.06–2.14s and total capture was 31.88s.
+The downloaded-style portable verifier passed and both audit and verifier reject
+a missing, reordered, or gapped capture chain. Keep a fresh hosted ABBA run as
+the remaining decision before calling v4 the performance control; durations are
+diagnostic and visual/result identity parity is the correctness requirement.
 
 The renderer-owned completed-frame receipt is now a protected audit capability.
 `anifor.renderer.completed-frame-receipt/v1` binds every ticket to the exact

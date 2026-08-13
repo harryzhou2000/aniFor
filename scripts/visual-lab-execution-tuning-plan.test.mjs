@@ -96,7 +96,7 @@ const v3ProfilesFor = (capturePlan) => Object.fromEntries(
     .map((driver) => [driver, v3Profile()]),
 );
 const v4Profile = () => {
-  const result = v3Profile();
+  const result = v2Profile();
   result.completion.bind = 'selection-owned-presentation';
   return result;
 };
@@ -242,7 +242,7 @@ describe('Visual Lab execution tuning plan', () => {
     expect(created.schema).toBe(VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA);
     expect(created.capturePlan.id).toBe(capturePlan.inspection.id);
     expect(created.entries[0].profile).toEqual(v4Profile());
-    expect(created.entries[0].profile.readinessCompletion.bind).toBe('refreshed-presentation');
+    expect(created.entries[0].profile).not.toHaveProperty('readinessCompletion');
     expect(created.entries[0].profile.completion.bind).toBe('selection-owned-presentation');
     expect(normalizeVisualLabExecutionTuningPlanV4(structuredClone(created), capturePlan))
       .toEqual(created);
@@ -255,9 +255,13 @@ describe('Visual Lab execution tuning plan', () => {
     expect(() => normalizeVisualLabExecutionTuningPlanV4(v3Completion, capturePlan))
       .toThrow('exact completed-frame receipt proof');
 
-    const v4AsV3 = structuredClone(created);
-    v4AsV3.schema = VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA;
-    expect(() => normalizeVisualLabExecutionTuningPlanV3(v4AsV3, capturePlan))
+    const v3WithV4Completion = createVisualLabExecutionTuningPlanV3(
+      capturePlan,
+      v3ProfilesFor(capturePlan),
+    );
+    const v4BindInV3 = structuredClone(v3WithV4Completion);
+    v4BindInV3.entries[0].profile.completion.bind = 'selection-owned-presentation';
+    expect(() => normalizeVisualLabExecutionTuningPlanV3(v4BindInV3, capturePlan))
       .toThrow('exact completed-frame receipt proof');
   });
 

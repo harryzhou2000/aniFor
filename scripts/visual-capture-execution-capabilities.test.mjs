@@ -85,13 +85,6 @@ const v4Capability = () => {
   return {
     startup: profile.startup,
     readiness: profile.readiness,
-    readinessCompletion: {
-      capability: 'renderer-completed-frame-receipt/v1',
-      receiptSchema: 'anifor.renderer.completed-frame-receipt/v1',
-      requiredState: 'completed',
-      bind: 'refreshed-presentation',
-      verifyAfterSnapshot: true,
-    },
     selection: profile.selection,
     stability: profile.stability,
     completion: {
@@ -160,6 +153,8 @@ describe('visual capture execution capabilities', () => {
       .toEqual(VISUAL_CAPTURE_EXECUTION_CAPABILITY_NAMES);
     for (const name of VISUAL_CAPTURE_EXECUTION_V4_CAPABILITY_NAMES) {
       expect(VISUAL_CAPTURE_EXECUTION_V4_CAPABILITIES[name]).toEqual(v4Capability());
+      expect(VISUAL_CAPTURE_EXECUTION_V4_CAPABILITIES[name])
+        .not.toHaveProperty('readinessCompletion');
       expect(VISUAL_CAPTURE_EXECUTION_V3_CAPABILITIES[name].completion.bind)
         .toBe('selected-presentation');
     }

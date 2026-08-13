@@ -386,8 +386,7 @@ const writeValidCapture = async (directory, candidate, options = {}) => {
     renderScale: recipe.renderScale,
     gpu,
     ...(executionTuning === undefined ? {} : { executionTuning }),
-    ...([VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
-      VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA].includes(executionTuning?.schema) ? {
+    ...(executionTuning?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA ? {
       readinessCompletedFrameReceipt: {
         schema: 'anifor.renderer.completed-frame-receipt/v1',
         ticket: 1,
@@ -423,10 +422,9 @@ const writeValidCapture = async (directory, candidate, options = {}) => {
       ...(completedFrameReceiptProof ? {
         completedFrameReceipt: {
           schema: 'anifor.renderer.completed-frame-receipt/v1',
-          ticket: index + ([VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
-            VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA].includes(executionTuning?.schema) ? 2 : 1),
+          ticket: index + (executionTuning?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA ? 2 : 1),
           submission: executionTuning?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA
-            ? index + 2
+            ? index + 10
             : index + (executionTuning?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA ? 2 : 10),
           state: 'completed',
         },

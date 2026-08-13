@@ -1364,8 +1364,7 @@ const assertCompletedFrameReceiptReportProof = (report, tuningSchema) => {
   const variantReceiptRequired = tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA
     || tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA
     || tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA;
-  const readinessReceiptRequired = tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA
-    || tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA;
+  const readinessReceiptRequired = tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA;
   const contiguousSubmissionsRequired = tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA;
   const readinessReceipt = report?.readinessCompletedFrameReceipt;
   if (!readinessReceiptRequired && readinessReceipt !== undefined) {
@@ -1385,6 +1384,7 @@ const assertCompletedFrameReceiptReportProof = (report, tuningSchema) => {
   }
   let previousTicket = readinessReceiptRequired ? readinessReceipt.ticket : 0;
   let previousSubmission = readinessReceiptRequired ? readinessReceipt.submission : 0;
+  let firstCaptureReceipt = true;
   for (const variant of VARIANTS) {
     const receipt = report?.captures?.[variant]?.completedFrameReceipt;
     if (!variantReceiptRequired) {
@@ -1402,13 +1402,15 @@ const assertCompletedFrameReceiptReportProof = (report, tuningSchema) => {
       || !Number.isSafeInteger(receipt.ticket) || receipt.ticket <= previousTicket
       || !Number.isSafeInteger(receipt.submission)
       || receipt.submission <= previousSubmission
-      || (contiguousSubmissionsRequired && receipt.submission !== previousSubmission + 1)) {
+      || (contiguousSubmissionsRequired && !firstCaptureReceipt
+        && receipt.submission !== previousSubmission + 1)) {
       throw new Error(
         `${variant} completed-frame receipt proof is malformed or not monotonically bound`,
       );
     }
     previousTicket = receipt.ticket;
     previousSubmission = receipt.submission;
+    firstCaptureReceipt = false;
   }
 };
 

@@ -637,6 +637,7 @@ async function captureVisualLabCandidateEvidence({
       variant.name, () => captureVariant(cdp, options, variant, captureSubphases),
     );
   }
+  assertContiguousSelectionOwnedReceiptSubmissions(captures, options.executionTuning.profile);
 
   return measure('finalize', async () => {
     const reference = captures.off.state;
@@ -1657,6 +1658,26 @@ function hasSelectionOwnedCompletedFrameReceiptDescriptor(profile) {
   const keys = Object.keys(completion);
   return keys.length === Object.keys(expected).length
     && Object.keys(expected).every((name) => completion[name] === expected[name]);
+}
+
+/**
+ * A selection-owned capture transaction must reserve exactly the next three
+ * presentations in canonical OFF/A/B order. This prevents individually valid
+ * receipts from silently admitting an intervening or reordered submission.
+ */
+export function assertContiguousSelectionOwnedReceiptSubmissions(captures, profile) {
+  if (!hasSelectionOwnedCompletedFrameReceiptDescriptor(profile)) return;
+  const submissions = VARIANTS.map(({ name }) => {
+    const receipt = captures?.[name]?.completedFrameReceipt;
+    assert(receipt !== null && typeof receipt === 'object' && !Array.isArray(receipt)
+      && receipt.schema === COMPLETED_FRAME_RECEIPT_SCHEMA
+      && receipt.state === 'completed'
+      && Number.isSafeInteger(receipt.submission) && receipt.submission > 0,
+    `${name} selection-owned completed-frame receipt is missing or invalid`);
+    return receipt.submission;
+  });
+  assert(submissions.every((submission, index) => submission === submissions[0] + index),
+    `selection-owned completed-frame receipt submissions must be contiguous in OFF/A/B order; received ${submissions.join(', ')}`);
 }
 
 function hasReadinessCompletedFrameReceiptDescriptor(profile) {

@@ -6997,16 +6997,25 @@ monotonic tickets/submissions, and a one-submission advance per variant; then
 run the same hosted ABBA control. Keep the existing post-selection receipt modes
 as rollback controls.
 
-The first built same-bundle Powder control validates that design. V3 and v4
-have the same result ID
+The first hosted v4 attempts in workflow run `31665571437` did not reach the
+selection-owned path. Under loaded SwiftShader, the inherited v3 readiness
+receipt first timed out and then failed, followed by bounded cleanup timeouts.
+That mixed two experiments and made v4 less robust than its stable control.
+V4 therefore now keeps stable full-snapshot readiness and owns receipts only
+for OFF/A/B; v1–v3 remain unchanged. The first captured submission may follow
+any amount of readiness work, but the three captured submissions must be exactly
+contiguous in canonical order. Both the page transaction and portable verifier
+enforce that rule.
+
+The corrected built Powder capture retains the exact result ID
 `sha256:b3edbc669cc2c2408ef712ea6089b42e85e1ba60944d3d78b4bd0942de23f67f`
-and identical OFF/A/B PNG hashes. V3 advanced readiness/OFF/A/B submissions as
-`13/15/17/19`; v4 advanced them as `13/14/15/16`. Local OFF/A/B phases fell
-from 3.51–3.72s to 2.12–2.15s and total candidate time from 44.48s to 40.31s.
-The downloaded-style portable verifier accepts the v4 package and rejects a
-gapped v4 submission chain. The remaining acceptance evidence is the hosted
-fresh/shared/shared/fresh Powder control; do not infer its result from this
-local measurement.
+and established OFF/A/B PNG hashes. Stable readiness took four snapshot
+attempts and emitted no readiness receipt; OFF/A/B then claimed submissions
+`9/10/11`, used one full snapshot each, completed in 2.06–2.14s per phase, and
+finished the candidate in 31.88s. Downloaded-style portable verification passed.
+The remaining acceptance evidence is a fresh hosted
+fresh/shared/shared/fresh Powder control; do not infer its result from local
+timing, and do not promote v4 over the proven v3 control unless that run passes.
 
 ## Deferred long-term visual roadmap
 

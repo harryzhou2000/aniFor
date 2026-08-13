@@ -52,7 +52,7 @@ const V3_PROFILE_FIELDS = Object.freeze([
   'startup', 'readiness', 'readinessCompletion', 'selection', 'stability', 'completion', 'screenshot',
 ]);
 const V4_PROFILE_FIELDS = Object.freeze([
-  'startup', 'readiness', 'readinessCompletion', 'selection', 'stability', 'completion', 'screenshot',
+  'startup', 'readiness', 'selection', 'stability', 'completion', 'screenshot',
 ]);
 const STARTUP_FIELDS = Object.freeze(['variant', 'fieldRefresh', 'rafs']);
 const READINESS_FIELDS = Object.freeze(['planes', 'pollIntervalMs', 'timeoutMsByGpu']);
@@ -285,8 +285,8 @@ const normalizeProfile = (input, label, schema) => {
   const isV2 = schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA;
   const isV3 = schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA;
   const isV4 = schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA;
-  const hasReadinessCompletion = isV3 || isV4;
-  const hasCompletion = isV2 || hasReadinessCompletion;
+  const hasReadinessCompletion = isV3;
+  const hasCompletion = isV2 || isV3 || isV4;
   assertExactFields(
     input,
     isV4 ? V4_PROFILE_FIELDS : isV3 ? V3_PROFILE_FIELDS : isV2 ? V2_PROFILE_FIELDS : PROFILE_FIELDS,
@@ -483,7 +483,7 @@ export function createVisualLabExecutionTuningPlanV3(captureExecutionPlan, drive
   );
 }
 
-/** Creates the opt-in readiness and selection-owned receipt v4 sibling plan. */
+/** Creates the opt-in stable-readiness and selection-owned receipt v4 sibling plan. */
 export function createVisualLabExecutionTuningPlanV4(captureExecutionPlan, driverProfiles) {
   return createFromBindings(
     VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA,
@@ -614,7 +614,7 @@ export function normalizeVisualLabExecutionTuningPlanV3(input, captureExecutionP
   return normalizePlan(input, captureExecutionPlan, VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA);
 }
 
-/** Validates untrusted v4 readiness and selection-owned receipt JSON. */
+/** Validates untrusted v4 stable-readiness and selection-owned receipt JSON. */
 export function normalizeVisualLabExecutionTuningPlanV4(input, captureExecutionPlan) {
   return normalizePlan(input, captureExecutionPlan, VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA);
 }

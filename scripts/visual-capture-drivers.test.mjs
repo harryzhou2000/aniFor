@@ -380,6 +380,7 @@ describe('typed visual capture drivers', () => {
     expect(typeof audit.disposeVisualLabCandidatePage).toBe('function');
     expect(typeof audit.digestVisualLabFramebufferAlpha).toBe('function');
     expect(typeof audit.beginStagedVisualLabNavigation).toBe('function');
+    expect(typeof audit.assertContiguousSelectionOwnedReceiptSubmissions).toBe('function');
     const source = readFileSync(new URL('./visual-lab-audit.mjs', import.meta.url), 'utf8');
     expect(source).toContain('entry: options.executionPlan');
     expect(source).toContain('createVisualLabCaptureSubphaseTimingRecorder');
@@ -402,6 +403,48 @@ describe('typed visual capture drivers', () => {
       .toBeLessThan(source.lastIndexOf('captureVisualLabCandidateEvidence({'));
     expect(source).toContain('realpathSync(process.argv[1]) === realpathSync(MODULE_PATH)');
     expect(source).not.toMatch(/export async function captureVisualLabCandidatePage\(cdp, options/);
+  });
+
+  it('fails closed when selection-owned OFF/A/B receipt submissions are not contiguous', async () => {
+    const { assertContiguousSelectionOwnedReceiptSubmissions } = await import(
+      './visual-lab-audit.mjs'
+    );
+    const selectionOwnedProfile = {
+      completion: {
+        capability: 'renderer-completed-frame-receipt/v1',
+        receiptSchema: 'anifor.renderer.completed-frame-receipt/v1',
+        requiredState: 'completed',
+        bind: 'selection-owned-presentation',
+        verifyAfterSnapshot: true,
+      },
+    };
+    const captures = (submissions) => Object.fromEntries(
+      ['off', 'a', 'b'].map((name, index) => [name, {
+        completedFrameReceipt: {
+          schema: 'anifor.renderer.completed-frame-receipt/v1',
+          ticket: index + 1,
+          submission: submissions[index],
+          state: 'completed',
+        },
+      }]),
+    );
+
+    expect(() => assertContiguousSelectionOwnedReceiptSubmissions(
+      captures([41, 42, 43]), selectionOwnedProfile,
+    )).not.toThrow();
+    expect(() => assertContiguousSelectionOwnedReceiptSubmissions(
+      captures([41, 43, 44]), selectionOwnedProfile,
+    )).toThrow('must be contiguous in OFF/A/B order; received 41, 43, 44');
+
+    const missing = captures([41, 42, 43]);
+    delete missing.a.completedFrameReceipt;
+    expect(() => assertContiguousSelectionOwnedReceiptSubmissions(
+      missing, selectionOwnedProfile,
+    )).toThrow('a selection-owned completed-frame receipt is missing or invalid');
+
+    expect(() => assertContiguousSelectionOwnedReceiptSubmissions(
+      {}, { completion: { ...selectionOwnedProfile.completion, bind: 'selected-presentation' } },
+    )).not.toThrow();
   });
 
   it('uses bounded post-attachment navigation only for HTTP(S) capture targets', async () => {
