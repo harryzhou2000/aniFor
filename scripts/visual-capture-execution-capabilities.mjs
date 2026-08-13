@@ -24,6 +24,9 @@ const V2_PROFILE_FIELDS = Object.freeze([
 const V3_PROFILE_FIELDS = Object.freeze([
   'startup', 'readiness', 'readinessCompletion', 'selection', 'stability', 'completion', 'screenshot',
 ]);
+const V4_PROFILE_FIELDS = Object.freeze([
+  'startup', 'readiness', 'readinessCompletion', 'selection', 'stability', 'completion', 'screenshot',
+]);
 const COMPLETION_FIELDS = Object.freeze([
   'capability', 'receiptSchema', 'requiredState', 'bind', 'verifyAfterSnapshot',
 ]);
@@ -105,10 +108,14 @@ const assertExactArray = (value, expected, label) => {
 
 const normalizeProfile = (profile, driverName, version) => {
   const label = `Visual capture execution capability ${driverName}`;
+  const hasReadinessCompletion = version === 'v3' || version === 'v4';
+  const hasCompletion = version === 'v2' || hasReadinessCompletion;
   assertJsonValue(profile, label);
   assertExactDataKeys(
     profile,
-    version === 'v3' ? V3_PROFILE_FIELDS : version === 'v2' ? V2_PROFILE_FIELDS : PROFILE_FIELDS,
+    version === 'v4' ? V4_PROFILE_FIELDS
+      : version === 'v3' ? V3_PROFILE_FIELDS
+        : version === 'v2' ? V2_PROFILE_FIELDS : PROFILE_FIELDS,
     label,
   );
 
@@ -149,12 +156,15 @@ const normalizeProfile = (profile, driverName, version) => {
     throw new TypeError(`${label}.stability.timeoutMsByGpu.swiftshader must not be shorter than auto`);
   }
   assertIntegerInRange(stability.pollIntervalMs, 1, 1_000, `${label}.stability.pollIntervalMs`);
-  if (version === 'v2' || version === 'v3') {
+  if (hasCompletion) {
     assertExactDataKeys(completion, COMPLETION_FIELDS, `${label}.completion`);
+    const completionBind = version === 'v4'
+      ? 'selection-owned-presentation'
+      : 'selected-presentation';
     if (completion.capability !== 'renderer-completed-frame-receipt/v1'
       || completion.receiptSchema !== 'anifor.renderer.completed-frame-receipt/v1'
       || completion.requiredState !== 'completed'
-      || completion.bind !== 'selected-presentation'
+      || completion.bind !== completionBind
       || completion.verifyAfterSnapshot !== true) {
       throw new TypeError(`${label}.completion is not supported`);
     }
@@ -199,7 +209,7 @@ const normalizeProfile = (profile, driverName, version) => {
       },
     },
   };
-  if (version === 'v3') {
+  if (hasReadinessCompletion) {
     assertExactDataKeys(readinessCompletion, COMPLETION_FIELDS, `${label}.readinessCompletion`);
     if (readinessCompletion.capability !== 'renderer-completed-frame-receipt/v1'
       || readinessCompletion.receiptSchema !== 'anifor.renderer.completed-frame-receipt/v1'
@@ -216,7 +226,7 @@ const normalizeProfile = (profile, driverName, version) => {
       verifyAfterSnapshot: readinessCompletion.verifyAfterSnapshot,
     };
   }
-  if (version === 'v2' || version === 'v3') {
+  if (hasCompletion) {
     normalized.completion = {
       capability: completion.capability,
       receiptSchema: completion.receiptSchema,
@@ -314,6 +324,11 @@ export function createVisualCaptureExecutionV3CapabilityRegistry(drivers, profil
   return createCapabilityRegistry(drivers, profiles, 'v3');
 }
 
+/** Creates the closed v4 readiness and selection-owned capture receipt registry. */
+export function createVisualCaptureExecutionV4CapabilityRegistry(drivers, profiles) {
+  return createCapabilityRegistry(drivers, profiles, 'v4');
+}
+
 /** Returns a frozen map only for an exact, duplicate-free capture-order subset. */
 const capabilitiesForCaptureOrder = (driverNames, registry) => {
   if (!Array.isArray(driverNames) || driverNames.length === 0) {
@@ -344,6 +359,11 @@ export function visualCaptureExecutionV2CapabilitiesForCaptureOrder(driverNames)
 /** Returns the frozen v3 readiness-and-capture receipt capture-order subset. */
 export function visualCaptureExecutionV3CapabilitiesForCaptureOrder(driverNames) {
   return capabilitiesForCaptureOrder(driverNames, V3_REGISTRY);
+}
+
+/** Returns the frozen v4 readiness and selection-owned receipt capture-order subset. */
+export function visualCaptureExecutionV4CapabilitiesForCaptureOrder(driverNames) {
+  return capabilitiesForCaptureOrder(driverNames, V4_REGISTRY);
 }
 
 const CONSERVATIVE_PROFILE = () => ({
@@ -423,6 +443,22 @@ const READINESS_COMPLETED_FRAME_RECEIPT_PROFILE = () => {
   };
 };
 
+const SELECTION_OWNED_COMPLETED_FRAME_RECEIPT_PROFILE = () => {
+  const profile = READINESS_COMPLETED_FRAME_RECEIPT_PROFILE();
+  return {
+    startup: profile.startup,
+    readiness: profile.readiness,
+    readinessCompletion: profile.readinessCompletion,
+    selection: profile.selection,
+    stability: profile.stability,
+    completion: {
+      ...profile.completion,
+      bind: 'selection-owned-presentation',
+    },
+    screenshot: profile.screenshot,
+  };
+};
+
 const DECLARED_DRIVER_NAMES = VISUAL_CAPTURE_STATIC_CONTRACT.drivers.map(({ name }) => name);
 if (DECLARED_DRIVER_NAMES.length !== VISUAL_CAPTURE_DRIVER_NAMES.length
   || DECLARED_DRIVER_NAMES.some((name, index) => name !== VISUAL_CAPTURE_DRIVER_NAMES[index])) {
@@ -438,6 +474,9 @@ const V2_PROFILE_REGISTRY = Object.fromEntries(
 const V3_PROFILE_REGISTRY = Object.fromEntries(
   DECLARED_DRIVER_NAMES.map((name) => [name, READINESS_COMPLETED_FRAME_RECEIPT_PROFILE()]),
 );
+const V4_PROFILE_REGISTRY = Object.fromEntries(
+  DECLARED_DRIVER_NAMES.map((name) => [name, SELECTION_OWNED_COMPLETED_FRAME_RECEIPT_PROFILE()]),
+);
 const REGISTRY = createVisualCaptureExecutionCapabilityRegistry(
   VISUAL_CAPTURE_STATIC_CONTRACT.drivers,
   PROFILE_REGISTRY,
@@ -450,6 +489,10 @@ const V3_REGISTRY = createVisualCaptureExecutionV3CapabilityRegistry(
   VISUAL_CAPTURE_STATIC_CONTRACT.drivers,
   V3_PROFILE_REGISTRY,
 );
+const V4_REGISTRY = createVisualCaptureExecutionV4CapabilityRegistry(
+  VISUAL_CAPTURE_STATIC_CONTRACT.drivers,
+  V4_PROFILE_REGISTRY,
+);
 
 export const VISUAL_CAPTURE_EXECUTION_CAPABILITY_NAMES = REGISTRY.names;
 export const VISUAL_CAPTURE_EXECUTION_CAPABILITIES = REGISTRY.capabilities;
@@ -457,6 +500,8 @@ export const VISUAL_CAPTURE_EXECUTION_V2_CAPABILITY_NAMES = V2_REGISTRY.names;
 export const VISUAL_CAPTURE_EXECUTION_V2_CAPABILITIES = V2_REGISTRY.capabilities;
 export const VISUAL_CAPTURE_EXECUTION_V3_CAPABILITY_NAMES = V3_REGISTRY.names;
 export const VISUAL_CAPTURE_EXECUTION_V3_CAPABILITIES = V3_REGISTRY.capabilities;
+export const VISUAL_CAPTURE_EXECUTION_V4_CAPABILITY_NAMES = V4_REGISTRY.names;
+export const VISUAL_CAPTURE_EXECUTION_V4_CAPABILITIES = V4_REGISTRY.capabilities;
 
 export function resolveVisualCaptureExecutionCapabilities(name) {
   return REGISTRY.resolve(name);
@@ -468,4 +513,8 @@ export function resolveVisualCaptureExecutionV2Capabilities(name) {
 
 export function resolveVisualCaptureExecutionV3Capabilities(name) {
   return V3_REGISTRY.resolve(name);
+}
+
+export function resolveVisualCaptureExecutionV4Capabilities(name) {
+  return V4_REGISTRY.resolve(name);
 }

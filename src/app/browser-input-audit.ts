@@ -308,6 +308,10 @@ export interface BrowserInputAuditApi {
   setPreparedVisualCaptureVariant(
     fixture: VisualLabFixtureId, variant: VisualCaptureControlVariant,
   ): void;
+  /** Atomically arms proof for, then submits, the exact typed selector frame. */
+  setPreparedVisualCaptureVariantWithCompletedFrameReceipt(
+    fixture: VisualLabFixtureId, variant: VisualCaptureControlVariant,
+  ): number;
   /** Reads back the exact active fixture control for fail-closed capture selection. */
   preparedVisualCaptureVariant(fixture: VisualLabFixtureId): VisualCaptureControlVariant;
   /** E66 uses the same exact material topology in still/moving forms. */

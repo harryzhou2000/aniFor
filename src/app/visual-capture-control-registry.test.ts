@@ -38,6 +38,26 @@ describe('Visual capture control registry', () => {
     }
   });
 
+  it('arms a receipt before the typed selector and returns its ticket', () => {
+    const fake = new PowderStyleHost('grains');
+    const registry = new VisualCaptureControlRegistry(fake);
+    registry.markFixturePrepared(POWDER_FIXTURE);
+
+    expect(registry.setVariantWithCompletedFrameReceipt(POWDER_FIXTURE, 2)).toBe(41);
+    expect(fake.receiptTransactions).toBe(1);
+    expect(fake.style).toBe('grains');
+  });
+
+  it('fails closed when a selector-owned receipt cannot be armed', () => {
+    const fake = new PowderStyleHost();
+    fake.receiptTicket = undefined;
+    const registry = new VisualCaptureControlRegistry(fake);
+    registry.markFixturePrepared(POWDER_FIXTURE);
+
+    expect(() => registry.setVariantWithCompletedFrameReceipt(POWDER_FIXTURE, 2))
+      .toThrow('could not arm a completed-frame receipt');
+  });
+
   it('maps material-lighting variants directly through its fixture-owned host control', () => {
     const fake = new PowderStyleHost();
     const registry = new VisualCaptureControlRegistry(fake);
@@ -141,6 +161,8 @@ describe('Visual capture control registry', () => {
 });
 
 class PowderStyleHost implements VisualCaptureControlHost {
+  receiptTicket: number | undefined = 41;
+  receiptTransactions = 0;
   constructor(
     public style: PowderRenderStyle = 'smooth',
     private readonly ignoreWrites = false,
@@ -171,5 +193,12 @@ class PowderStyleHost implements VisualCaptureControlHost {
 
   getMaterialLightingVariant(): 0 | 1 | 2 {
     return this.materialLightingVariant;
+  }
+
+  runWithNextWebGLCompletedFrameReceipt(present: () => void): number | undefined {
+    this.receiptTransactions++;
+    if (this.receiptTicket === undefined) return undefined;
+    present();
+    return this.receiptTicket;
   }
 }

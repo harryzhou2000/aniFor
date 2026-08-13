@@ -312,6 +312,25 @@ describe('field renderer layout scheduling', () => {
     expect(renderer.getWebGLCompletedFrameReceipt(7)).toBeUndefined();
   });
 
+  it('forwards selector-owned receipt transactions only through an active presenter', () => {
+    const transaction = vi.fn((present: () => void) => {
+      present();
+      return 9;
+    });
+    const renderer = Object.create(MaterialRenderer.prototype) as {
+      presenter?: { runWithNextWebGLCompletedFrameReceipt(action: () => void): number | undefined };
+      runWithNextWebGLCompletedFrameReceipt(action: () => void): number | undefined;
+    };
+    const present = vi.fn();
+    renderer.presenter = { runWithNextWebGLCompletedFrameReceipt: transaction };
+
+    expect(renderer.runWithNextWebGLCompletedFrameReceipt(present)).toBe(9);
+    expect(present).toHaveBeenCalledOnce();
+    renderer.presenter = undefined;
+    expect(renderer.runWithNextWebGLCompletedFrameReceipt(present)).toBeUndefined();
+    expect(present).toHaveBeenCalledOnce();
+  });
+
   it('forwards framebuffer-alpha readback tickets only through an active WebGL presenter', () => {
     const readback = {
       schema: 'anifor.renderer.framebuffer-alpha-readback/v1' as const,

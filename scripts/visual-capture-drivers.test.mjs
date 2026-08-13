@@ -387,6 +387,10 @@ describe('typed visual capture drivers', () => {
     expect(source).toContain("measureSnapshot(\n        'readiness'");
     expect(source).toContain('effectiveTimeouts.readinessMs');
     expect(source).toContain('snapshotCommandTimeoutMs');
+    expect(source).toContain('setPreparedVisualCaptureVariantWithCompletedFrameReceipt');
+    expect(source).toContain('hasSelectionOwnedCompletedFrameReceiptDescriptor(profile)');
+    expect(source).toContain('ticket = await requestCompletedFrameReceipt(');
+    expect(source).toContain('selection = await performSelection()');
     expect(source).toContain('})()`, snapshotCommandTimeoutMs)');
     expect(source).toContain("pageCdp.send('Page.enable')");
     expect(source).toContain('browserErrors = collectBrowserErrors(pageCdp)');

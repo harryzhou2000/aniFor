@@ -178,6 +178,32 @@ describe('Visual Lab performance cohort orchestration', () => {
     expect(JSON.stringify(result.summary.captureProof)).not.toMatch(/path|result|ticket|sample/i);
   });
 
+  it('forwards selection-owned receipt proof and requires tuning v4', async () => {
+    const root = await temporaryRoot();
+    const batchCalls = [];
+    const result = await runVisualLabPerformanceCohorts({
+      recipeSetPath: 'set.json', outputDir: root,
+      captureProof: 'selection-owned-frame-receipt',
+    }, {
+      assertTrackedRecipeSet: async () => {},
+      readRecipeSet: async () => recipeSet(),
+      runBatch: async (options) => {
+        batchCalls.push(options);
+        return completeBatch(options.browserHost);
+      },
+      verifyBatch: async (options) => verifiedBatch(options, {
+        executionTuningPlan: tuningPlan('anifor.visual-lab.execution-tuning-plan/v4'),
+      }),
+    });
+    expect(batchCalls.map(({ captureProof }) => captureProof))
+      .toEqual(Array(4).fill('selection-owned-frame-receipt'));
+    expect(result.summary.captureProof).toEqual({
+      mode: 'selection-owned-frame-receipt',
+      tuningSchema: 'anifor.visual-lab.execution-tuning-plan/v4',
+      receiptSchema: 'anifor.renderer.completed-frame-receipt/v1',
+    });
+  });
+
   it('rejects mismatched portable tuning schemas before publishing', async () => {
     const stableRoot = await temporaryRoot();
     await expect(runVisualLabPerformanceCohorts({ recipeSetPath: 'set.json', outputDir: stableRoot }, {

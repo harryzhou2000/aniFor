@@ -14538,6 +14538,61 @@ export class PixiFieldPresenter {
    * it. At true 8x the ticket attaches to the existing sole render fence.
    */
   requestWebGLCompletedFrameReceipt(): number | undefined {
+    const ticket = this.beginWebGLCompletedFrameReceipt();
+    if (ticket === undefined) return undefined;
+    const submission = this.completedFrameReceipt!.submission;
+    try {
+      this.renderApplication();
+    } catch {
+      this.failCompletedFrameReceiptTicket(ticket);
+    }
+    // A context transition or an unexpected coalescing path can prevent the
+    // synchronous audit request from owning the promised submission.
+    if (this.completedFrameReceipt?.ticket === ticket
+      && this.completedFrameReceipt.state === 'pending'
+      && this.presentationSubmission < submission) {
+      this.failCompletedFrameReceiptTicket(ticket);
+    }
+    return ticket;
+  }
+
+  /**
+   * Arms a receipt before one caller-owned synchronous presentation. This is
+   * intentionally transactional: it cannot attach proof retrospectively to
+   * whatever frame happened to be latest when the caller arrived.
+   */
+  runWithNextWebGLCompletedFrameReceipt(present: () => void): number | undefined {
+    if (typeof present !== 'function') throw new TypeError('Receipt presentation must be a function');
+    const ticket = this.beginWebGLCompletedFrameReceipt();
+    if (ticket === undefined) return undefined;
+    const submission = this.completedFrameReceipt!.submission;
+    try {
+      present();
+    } catch (error) {
+      this.failCompletedFrameReceiptTicket(ticket);
+      throw error;
+    }
+    // A typed selector may intentionally retain its current value and avoid a
+    // redraw. The reservation still precedes that decision, so submit exactly
+    // one current-state presentation here rather than attaching to an older
+    // frame retrospectively.
+    if (this.presentationSubmission === submission - 1) {
+      try { this.renderApplication(); }
+      catch (error) {
+        this.failCompletedFrameReceiptTicket(ticket);
+        throw error;
+      }
+    }
+    const receipt = this.completedFrameReceipts?.get(ticket);
+    if (this.presentationSubmission !== submission
+      || !receipt || (receipt.state !== 'pending' && receipt.state !== 'completed')) {
+      this.failCompletedFrameReceiptTicket(ticket);
+      return undefined;
+    }
+    return ticket;
+  }
+
+  private beginWebGLCompletedFrameReceipt(): number | undefined {
     this.pollCompletedFrameFence();
     this.pollWebGLTimingQuery();
     this.pollWebGLTimingFence();
@@ -14576,18 +14631,6 @@ export class PixiFieldPresenter {
       const oldest = receipts.keys().next().value as number | undefined;
       if (oldest === undefined) break;
       receipts.delete(oldest);
-    }
-    try {
-      this.renderApplication();
-    } catch {
-      this.failCompletedFrameReceipt(submission);
-    }
-    // A context transition or an unexpected coalescing path can prevent the
-    // synchronous audit request from owning the promised submission.
-    if (this.completedFrameReceipt?.ticket === ticket
-      && this.completedFrameReceipt.state === 'pending'
-      && this.presentationSubmission < submission) {
-      this.failCompletedFrameReceipt(submission);
     }
     return ticket;
   }
@@ -15053,15 +15096,21 @@ export class PixiFieldPresenter {
     this.transitionCompletedFrameReceipt(receipt.submission, 'failed');
   }
 
+  private failCompletedFrameReceiptTicket(ticket: number): void {
+    const receipt = this.completedFrameReceipts?.get(ticket);
+    if (!receipt || receipt.state !== 'pending') return;
+    this.releaseCompletedFrameFence(receipt);
+    receipt.state = 'failed';
+  }
+
   private transitionCompletedFrameReceipt(
     submission: number,
     state: Exclude<WebGLCompletedFrameReceiptState, 'pending'>,
   ): void {
-    let receipt: MutableWebGLCompletedFrameReceipt | undefined;
-    for (const candidate of this.completedFrameReceipts?.values() ?? []) {
-      if (candidate.submission !== submission) continue;
-      receipt = candidate;
-      break;
+    let receipt = this.completedFrameReceipt?.submission === submission
+      ? this.completedFrameReceipt : undefined;
+    for (const candidate of receipt ? [] : this.completedFrameReceipts?.values() ?? []) {
+      if (candidate.submission === submission) { receipt = candidate; break; }
     }
     if (!receipt) return;
     if (receipt.state === 'failed' || receipt.state === 'superseded') return;

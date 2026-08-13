@@ -15,6 +15,7 @@ export interface VisualCaptureControlHost {
   getVisualLabVariant(): VisualCaptureControlVariant;
   setMaterialLightingVariant(variant: VisualCaptureControlVariant): void;
   getMaterialLightingVariant(): VisualCaptureControlVariant;
+  runWithNextWebGLCompletedFrameReceipt(present: () => void): number | undefined;
 }
 
 const POWDER_STYLE_BY_VARIANT = Object.freeze({
@@ -120,6 +121,27 @@ export class VisualCaptureControlRegistry {
         `Visual capture control host did not apply ${JSON.stringify(fixture)} variant ${variant}`,
       );
     }
+  }
+
+  setVariantWithCompletedFrameReceipt(
+    fixture: VisualLabFixtureId,
+    variant: VisualCaptureControlVariant,
+  ): number {
+    const control = this.requireActiveFixture(fixture);
+    assertVisualCaptureControlVariant(variant);
+    const ticket = this.host.runWithNextWebGLCompletedFrameReceipt(() => {
+      control.set(this.host, variant);
+      const observedVariant = this.readVariant(control);
+      if (observedVariant !== variant) {
+        throw new Error(
+          `Visual capture control host did not apply ${JSON.stringify(fixture)} variant ${variant}`,
+        );
+      }
+    });
+    if (ticket === undefined || !Number.isSafeInteger(ticket) || ticket <= 0) {
+      throw new Error('Visual capture control could not arm a completed-frame receipt');
+    }
+    return ticket;
   }
 
   getVariant(fixture: VisualLabFixtureId): VisualCaptureControlVariant {

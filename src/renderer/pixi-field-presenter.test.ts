@@ -32,6 +32,7 @@ interface PresenterHarness {
   setLiquidOpticalDepthEnabled: PixiFieldPresenter['setLiquidOpticalDepthEnabled'];
   setSolidOpticalDepthEnabled: PixiFieldPresenter['setSolidOpticalDepthEnabled'];
   setPowderBodyDepthEnabled: PixiFieldPresenter['setPowderBodyDepthEnabled'];
+  setPowderRenderStyle: PixiFieldPresenter['setPowderRenderStyle'];
   setSurfaceContourLightingEnabled: PixiFieldPresenter['setSurfaceContourLightingEnabled'];
   setPhaseContactLightingEnabled: PixiFieldPresenter['setPhaseContactLightingEnabled'];
   setSolidFieldLightingEnabled: PixiFieldPresenter['setSolidFieldLightingEnabled'];
@@ -84,6 +85,8 @@ interface PresenterHarness {
   requestWebGLPresentationTimingSample: PixiFieldPresenter['requestWebGLPresentationTimingSample'];
   getWebGLPresentationTiming: PixiFieldPresenter['getWebGLPresentationTiming'];
   requestWebGLCompletedFrameReceipt: PixiFieldPresenter['requestWebGLCompletedFrameReceipt'];
+  runWithNextWebGLCompletedFrameReceipt:
+    PixiFieldPresenter['runWithNextWebGLCompletedFrameReceipt'];
   getWebGLCompletedFrameReceipt: PixiFieldPresenter['getWebGLCompletedFrameReceipt'];
   requestWebGLFramebufferAlphaReadback: PixiFieldPresenter['requestWebGLFramebufferAlphaReadback'];
   getWebGLFramebufferAlphaReadback: PixiFieldPresenter['getWebGLFramebufferAlphaReadback'];
@@ -4879,6 +4882,92 @@ describe('Pixi presenter startup configuration', () => {
       ticket: 1, submission: 1, state: 'completed',
     });
     expect(gl.deleteSync).toHaveBeenCalledWith(fence);
+  });
+
+  it('arms selector-owned proof before one presentation without adding another render', () => {
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const fence = {} as WebGLSync;
+    const gl = {
+      SYNC_GPU_COMMANDS_COMPLETE: 0x9117,
+      SYNC_FLUSH_COMMANDS_BIT: 0x00000001,
+      TIMEOUT_EXPIRED: 0x911b,
+      WAIT_FAILED: 0x911d,
+      ALREADY_SIGNALED: 0x911a,
+      CONDITION_SATISFIED: 0x911c,
+      fenceSync: vi.fn(() => fence),
+      flush: vi.fn(),
+      clientWaitSync: vi.fn(() => 0x911a),
+      deleteSync: vi.fn(),
+    } as unknown as WebGL2RenderingContext;
+    const presenter = presenterHarness();
+    Object.assign(presenter.app, { renderer: { gl } });
+
+    const ticket = presenter.runWithNextWebGLCompletedFrameReceipt(() => {
+      expect(presenter.getWebGLCompletedFrameReceipt(1)).toMatchObject({
+        ticket: 1, submission: 1, state: 'pending',
+      });
+      presenter.setPowderRenderStyle('grains');
+    });
+
+    expect(ticket).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+    expect(gl.fenceSync).toHaveBeenCalledOnce();
+    expect(presenter.getWebGLCompletedFrameReceipt(ticket!)).toMatchObject({
+      ticket: 1, submission: 1, state: 'completed',
+    });
+  });
+
+  it('submits one selector-owned proof when an unchanged selector does not redraw', () => {
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const gl = {
+      SYNC_GPU_COMMANDS_COMPLETE: 0x9117,
+      SYNC_FLUSH_COMMANDS_BIT: 1,
+      TIMEOUT_EXPIRED: 0x911b,
+      WAIT_FAILED: 0x911d,
+      ALREADY_SIGNALED: 0x911a,
+      CONDITION_SATISFIED: 0x911c,
+      fenceSync: vi.fn(() => ({} as WebGLSync)), flush: vi.fn(),
+      clientWaitSync: vi.fn(() => 0x911a), deleteSync: vi.fn(),
+    } as unknown as WebGL2RenderingContext;
+    const presenter = presenterHarness();
+    Object.assign(presenter.app, { renderer: { gl } });
+
+    expect(presenter.runWithNextWebGLCompletedFrameReceipt(() => {})).toBe(1);
+    expect(presenter.app.render).toHaveBeenCalledOnce();
+    expect(presenter.getWebGLCompletedFrameReceipt(1)).toMatchObject({
+      submission: 1, state: 'completed',
+    });
+  });
+
+  it('fails selector-owned proof when its action throws or submits twice', () => {
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const gl = {
+      SYNC_GPU_COMMANDS_COMPLETE: 0x9117,
+      SYNC_FLUSH_COMMANDS_BIT: 1,
+      TIMEOUT_EXPIRED: 0x911b,
+      WAIT_FAILED: 0x911d,
+      ALREADY_SIGNALED: 0x911a,
+      CONDITION_SATISFIED: 0x911c,
+      fenceSync: vi.fn(() => ({} as WebGLSync)), flush: vi.fn(),
+      clientWaitSync: vi.fn(() => 0x911b), deleteSync: vi.fn(),
+    } as unknown as WebGL2RenderingContext;
+    const presenter = presenterHarness();
+    Object.assign(presenter.app, { renderer: { gl } });
+
+    expect(() => presenter.runWithNextWebGLCompletedFrameReceipt(() => {
+      throw new Error('selector failed');
+    })).toThrow('selector failed');
+    expect(presenter.getWebGLCompletedFrameReceipt(1)).toMatchObject({ state: 'failed' });
+
+    expect(presenter.runWithNextWebGLCompletedFrameReceipt(() => {
+      presenter.setPowderRenderStyle('local');
+      presenter.setPowderRenderStyle('grains');
+    })).toBeUndefined();
+    expect(presenter.getWebGLCompletedFrameReceipt(2)).toMatchObject({ state: 'superseded' });
+    expect(presenter.app.render).toHaveBeenCalledTimes(2);
   });
 
   it('preserves the historical framebuffer-alpha digest grammar', () => {

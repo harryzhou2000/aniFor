@@ -69,20 +69,25 @@ import {
   visualCaptureExecutionCapabilitiesForCaptureOrder,
   visualCaptureExecutionV2CapabilitiesForCaptureOrder,
   visualCaptureExecutionV3CapabilitiesForCaptureOrder,
+  visualCaptureExecutionV4CapabilitiesForCaptureOrder,
 } from './visual-capture-execution-capabilities.mjs';
 import {
   createVisualLabExecutionTuningPlan,
   createVisualLabExecutionTuningPlanV2,
   createVisualLabExecutionTuningPlanV3,
+  createVisualLabExecutionTuningPlanV4,
   normalizeVisualLabExecutionTuningPlan,
   normalizeVisualLabExecutionTuningPlanV2,
   normalizeVisualLabExecutionTuningPlanV3,
+  normalizeVisualLabExecutionTuningPlanV4,
   resolveVisualLabExecutionTuningPlanEntry,
   resolveVisualLabExecutionTuningPlanV2Entry,
   resolveVisualLabExecutionTuningPlanV3Entry,
+  resolveVisualLabExecutionTuningPlanV4Entry,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA,
 } from './visual-lab-execution-tuning-plan.mjs';
 import { startVisualLabChromeHost } from './visual-lab-chrome-host.mjs';
 import {
@@ -102,6 +107,7 @@ export const VISUAL_LAB_BATCH_SCHEMA = 'anifor.visual-lab.batch/v1';
 export const VISUAL_LAB_DEFAULT_CANDIDATE_TIMEOUT_MS = 300_000;
 export const VISUAL_LAB_CAPTURE_PROOF_MODES = Object.freeze([
   'stable-snapshots', 'completed-frame-receipt', 'readiness-completed-frame-receipt',
+  'selection-owned-frame-receipt',
 ]);
 
 const MODULE_PATH = fileURLToPath(import.meta.url);
@@ -141,6 +147,9 @@ const captureProofForTuningSchema = (schema) => {
   if (schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA) {
     return 'readiness-completed-frame-receipt';
   }
+  if (schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA) {
+    return 'selection-owned-frame-receipt';
+  }
   throw new TypeError(`Unsupported Visual Lab execution-tuning schema ${String(schema)}`);
 };
 
@@ -151,11 +160,19 @@ const normalizeExecutionTuningPlan = (input, captureExecutionPlan) => {
   if (input?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA) {
     return normalizeVisualLabExecutionTuningPlanV3(input, captureExecutionPlan);
   }
+  if (input?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA) {
+    return normalizeVisualLabExecutionTuningPlanV4(input, captureExecutionPlan);
+  }
   return normalizeVisualLabExecutionTuningPlan(input, captureExecutionPlan);
 };
 
 const createExecutionTuningPlan = (captureExecutionPlan, driverOrder, captureProof) => (
-  captureProof === 'readiness-completed-frame-receipt'
+  captureProof === 'selection-owned-frame-receipt'
+    ? createVisualLabExecutionTuningPlanV4(
+      captureExecutionPlan,
+      visualCaptureExecutionV4CapabilitiesForCaptureOrder(driverOrder),
+    )
+    : captureProof === 'readiness-completed-frame-receipt'
     ? createVisualLabExecutionTuningPlanV3(
       captureExecutionPlan,
       visualCaptureExecutionV3CapabilitiesForCaptureOrder(driverOrder),
@@ -184,6 +201,11 @@ const resolveExecutionTuningPlanEntry = (
       plan, entryId, expectedCaptureEntryId, captureExecutionPlan,
     );
   }
+  if (plan.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA) {
+    return resolveVisualLabExecutionTuningPlanV4Entry(
+      plan, entryId, expectedCaptureEntryId, captureExecutionPlan,
+    );
+  }
   return resolveVisualLabExecutionTuningPlanEntry(
     plan, entryId, expectedCaptureEntryId, captureExecutionPlan,
   );
@@ -202,7 +224,7 @@ Options (use --name=value):
   --chrome=/path/to/chrome               Forwarded to the generic capture runner
   --gpu=auto|swiftshader                 Forwarded to the generic capture runner
   --browser-host=fresh|shared            Opt-in sequential Chrome-host reuse (Linux only)
-  --capture-proof=stable-snapshots|completed-frame-receipt|readiness-completed-frame-receipt
+  --capture-proof=stable-snapshots|completed-frame-receipt|readiness-completed-frame-receipt|selection-owned-frame-receipt
                                          Default keeps the v1 two-snapshot proof
   --candidate-timeout-ms=300000          Per-candidate timeout before TERM/KILL cleanup
   --index-only=0|1                       Aggregate existing candidate reports without capture
@@ -1163,6 +1185,7 @@ const readCandidateReport = async (candidateDirectory, recipe, {
           VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
           VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
           VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
+          VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA,
         ].includes(proof.schema)
         || !/^sha256:[a-f0-9]{64}$/.test(proof.planId)
         || !/^sha256:[a-f0-9]{64}$/.test(proof.entryId)) {
@@ -1339,8 +1362,11 @@ const assertOriginAttestationCaptureIdentity = (
 
 const assertCompletedFrameReceiptReportProof = (report, tuningSchema) => {
   const variantReceiptRequired = tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA
-    || tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA;
-  const readinessReceiptRequired = tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA;
+    || tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA
+    || tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA;
+  const readinessReceiptRequired = tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA
+    || tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA;
+  const contiguousSubmissionsRequired = tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA;
   const readinessReceipt = report?.readinessCompletedFrameReceipt;
   if (!readinessReceiptRequired && readinessReceipt !== undefined) {
     throw new Error('non-v3 capture must not claim readiness completed-frame receipt proof');
@@ -1375,7 +1401,8 @@ const assertCompletedFrameReceiptReportProof = (report, tuningSchema) => {
       || receipt.state !== 'completed'
       || !Number.isSafeInteger(receipt.ticket) || receipt.ticket <= previousTicket
       || !Number.isSafeInteger(receipt.submission)
-      || receipt.submission <= previousSubmission) {
+      || receipt.submission <= previousSubmission
+      || (contiguousSubmissionsRequired && receipt.submission !== previousSubmission + 1)) {
       throw new Error(
         `${variant} completed-frame receipt proof is malformed or not monotonically bound`,
       );
@@ -2160,7 +2187,7 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   }
   if (!VISUAL_LAB_CAPTURE_PROOF_MODES.includes(captureProof)) {
     throw new Error(
-      'Visual Lab batch captureProof must be stable-snapshots, completed-frame-receipt, or readiness-completed-frame-receipt',
+      'Visual Lab batch captureProof must be stable-snapshots, completed-frame-receipt, readiness-completed-frame-receipt, or selection-owned-frame-receipt',
     );
   }
   if (browserHost === 'shared' && process.platform !== 'linux') {
@@ -2884,7 +2911,7 @@ export function parseVisualLabBatchArguments(argv) {
   }
   const captureProof = values.get('capture-proof') ?? 'stable-snapshots';
   if (!VISUAL_LAB_CAPTURE_PROOF_MODES.includes(captureProof)) {
-    throw new Error('--capture-proof must be stable-snapshots, completed-frame-receipt, or readiness-completed-frame-receipt');
+    throw new Error('--capture-proof must be stable-snapshots, completed-frame-receipt, readiness-completed-frame-receipt, or selection-owned-frame-receipt');
   }
   const candidateTimeoutMs = Number(
     values.get('candidate-timeout-ms') ?? VISUAL_LAB_DEFAULT_CANDIDATE_TIMEOUT_MS,

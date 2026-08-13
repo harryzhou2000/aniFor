@@ -542,6 +542,9 @@ export class Game {
         this.renderer.setMaterialLightingVariant(variant)
       ),
       getMaterialLightingVariant: () => this.renderer.getMaterialLightingVariant(),
+      runWithNextWebGLCompletedFrameReceipt: (present) => (
+        this.renderer.runWithNextWebGLCompletedFrameReceipt(present)
+      ),
     });
     window.__ANIFOR_INPUT_AUDIT__ = {
       version: 1,
@@ -942,6 +945,9 @@ export class Game {
       setPreparedVisualCaptureVariant: (fixture, variant) => {
         visualCaptureControls.setVariant(fixture, variant);
       },
+      setPreparedVisualCaptureVariantWithCompletedFrameReceipt: (fixture, variant) => (
+        visualCaptureControls.setVariantWithCompletedFrameReceipt(fixture, variant)
+      ),
       preparedVisualCaptureVariant: (fixture) => visualCaptureControls.getVariant(fixture),
       waterCurvatureVfxFixture: () => WATER_CURVATURE_VFX_AUDIT,
       prepareWaterCurvatureVfxFixture: (mode) => {

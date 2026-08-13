@@ -57,8 +57,10 @@ import {
   resolveVisualLabExecutionTuningPlanEntry,
   resolveVisualLabExecutionTuningPlanV2Entry,
   resolveVisualLabExecutionTuningPlanV3Entry,
+  resolveVisualLabExecutionTuningPlanV4Entry,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA,
 } from './visual-lab-execution-tuning-plan.mjs';
 import {
   createVisualCaptureGeometryProof,
@@ -84,6 +86,10 @@ const COMPLETED_FRAME_RECEIPT_DESCRIPTOR = Object.freeze({
 const READINESS_COMPLETED_FRAME_RECEIPT_DESCRIPTOR = Object.freeze({
   ...COMPLETED_FRAME_RECEIPT_DESCRIPTOR,
   bind: 'refreshed-presentation',
+});
+const SELECTION_OWNED_COMPLETED_FRAME_RECEIPT_DESCRIPTOR = Object.freeze({
+  ...COMPLETED_FRAME_RECEIPT_DESCRIPTOR,
+  bind: 'selection-owned-presentation',
 });
 
 /**
@@ -120,6 +126,9 @@ const resolveExecutionTuningPlanEntry = (
   }
   if (plan?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA) {
     return resolveVisualLabExecutionTuningPlanV3Entry(plan, entryId, expectedCaptureEntryId);
+  }
+  if (plan?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA) {
+    return resolveVisualLabExecutionTuningPlanV4Entry(plan, entryId, expectedCaptureEntryId);
   }
   if (plan?.schema === 'anifor.visual-lab.execution-tuning-plan/v1') {
     return resolveVisualLabExecutionTuningPlanEntry(plan, entryId, expectedCaptureEntryId);
@@ -1298,9 +1307,25 @@ async function captureVariant(cdp, options, variant, captureSubphases) {
   const selectionExpression = compiledVariant.selectionExpression;
   const expectedDriverState = compiledVariant.expectedDataset;
   const observedDriverState = options.executionPlan.compiled.datasetProjectionExpression;
-  await captureSubphases.measureCapture(variant.name, 'selectionMs', () => evaluate(cdp, `(() => {
+  const selectionOwnedReceipt = hasSelectionOwnedCompletedFrameReceiptDescriptor(profile);
+  const performSelection = () => captureSubphases.measureCapture(
+    variant.name, 'selectionMs', () => evaluate(cdp, `(() => {
       const audit = window.__ANIFOR_INPUT_AUDIT__;
-      const selection = ${selectionExpression};
+      const selection = ${selectionOwnedReceipt ? `(() => {
+        if (typeof audit?.setPreparedVisualCaptureVariantWithCompletedFrameReceipt !== 'function') {
+          return { ok: false, failure: 'missing-selection-owned-receipt-selector' };
+        }
+        try {
+          const ticket = audit.setPreparedVisualCaptureVariantWithCompletedFrameReceipt(
+            ${JSON.stringify(options.fixture)}, ${variant.value}
+          );
+          return Number.isSafeInteger(ticket) && ticket > 0
+            ? { ok: true, selection: ${JSON.stringify(variant.value)}, ticket }
+            : { ok: false, failure: 'invalid-selection-owned-receipt-ticket' };
+        } catch {
+          return { ok: false, failure: 'selection-owned-receipt-selector-threw' };
+        }
+      })()` : selectionExpression};
       if (!selection.ok) throw new Error('visual capture selector failed: ' + selection.failure);
       let remaining = ${profile.selection.rafs};
       return new Promise((resolve) => {
@@ -1311,8 +1336,10 @@ async function captureVariant(cdp, options, variant, captureSubphases) {
         };
         requestAnimationFrame(advance);
       });
-    })()`));
-  await captureSubphases.measureCapture(variant.name, 'datasetWaitMs', () => waitFor(
+    })()`),
+  );
+  const waitForSelectedDataset = () => captureSubphases.measureCapture(
+    variant.name, 'datasetWaitMs', () => waitFor(
     () => evaluate(cdp, `(() => {
       const audit = window.__ANIFOR_INPUT_AUDIT__;
       const canvas = document.querySelector('.semantic-field-canvas');
@@ -1335,19 +1362,27 @@ async function captureVariant(cdp, options, variant, captureSubphases) {
     `${variant.name} capture-driver state`,
     profile.stability.pollIntervalMs,
   ));
+  let selection = await performSelection();
+  await waitForSelectedDataset();
 
   let state;
   let completedFrameReceipt;
-  if (hasCompletedFrameReceiptDescriptor(profile)) {
+  if (hasCompletedFrameReceiptDescriptor(profile) || selectionOwnedReceipt) {
     const deadline = Date.now() + settleTimeoutMs;
     let ticket;
     let receipt;
     for (let attempt = 1; attempt <= 8; attempt++) {
       const remainingMs = deadline - Date.now();
       assert(remainingMs > 0, `${variant.name} completed-frame receipt proof timed out`);
-      ticket = await requestCompletedFrameReceipt(
-        cdp, variant.name, remainingMs, profile.stability.pollIntervalMs,
-      );
+      if (selectionOwnedReceipt) {
+        ticket = selection.ticket;
+        assert(Number.isSafeInteger(ticket) && ticket > 0,
+          `${variant.name} selection-owned completed-frame receipt ticket is invalid`);
+      } else {
+        ticket = await requestCompletedFrameReceipt(
+          cdp, variant.name, remainingMs, profile.stability.pollIntervalMs,
+        );
+      }
       const terminal = await awaitCompletedFrameReceipt(
         cdp, variant.name, ticket, deadline - Date.now(), profile.stability.pollIntervalMs,
       );
@@ -1357,6 +1392,10 @@ async function captureVariant(cdp, options, variant, captureSubphases) {
       }
       assert(terminal.state === 'superseded',
         `${variant.name} completed-frame receipt ${ticket} is ${String(terminal.state)}`);
+      if (selectionOwnedReceipt) {
+        selection = await performSelection();
+        await waitForSelectedDataset();
+      }
     }
     assert(receipt !== undefined && ticket !== undefined,
       `${variant.name} completed-frame receipt was superseded eight times`);
@@ -1604,6 +1643,17 @@ function hasCompletedFrameReceiptDescriptor(profile) {
     return false;
   }
   const expected = COMPLETED_FRAME_RECEIPT_DESCRIPTOR;
+  const keys = Object.keys(completion);
+  return keys.length === Object.keys(expected).length
+    && Object.keys(expected).every((name) => completion[name] === expected[name]);
+}
+
+function hasSelectionOwnedCompletedFrameReceiptDescriptor(profile) {
+  const completion = profile?.completion;
+  if (completion === null || typeof completion !== 'object' || Array.isArray(completion)) {
+    return false;
+  }
+  const expected = SELECTION_OWNED_COMPLETED_FRAME_RECEIPT_DESCRIPTOR;
   const keys = Object.keys(completion);
   return keys.length === Object.keys(expected).length
     && Object.keys(expected).every((name) => completion[name] === expected[name]);

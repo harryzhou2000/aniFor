@@ -897,6 +897,10 @@ export class MaterialRenderer {
     return this.presenter?.requestWebGLCompletedFrameReceipt();
   }
 
+  runWithNextWebGLCompletedFrameReceipt(present: () => void): number | undefined {
+    return this.presenter?.runWithNextWebGLCompletedFrameReceipt(present);
+  }
+
   getWebGLCompletedFrameReceipt(ticket: number): WebGLCompletedFrameReceipt | undefined {
     return this.presenter?.getWebGLCompletedFrameReceipt(ticket);
   }

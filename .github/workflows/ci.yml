@@ -35,6 +35,7 @@ on:
           - stable-snapshots
           - completed-frame-receipt
           - readiness-completed-frame-receipt
+          - selection-owned-frame-receipt
       visual_lab_browser_host:
         description: Browser topology for optional Visual Lab diagnosis
         required: true
@@ -428,7 +429,7 @@ jobs:
             --bundle=dist/index.html \
             --output-dir="${RUNNER_TEMP}/anifortpt-visual-lab-performance" \
             --gpu=swiftshader \
-            --capture-proof=readiness-completed-frame-receipt
+            --capture-proof=selection-owned-frame-receipt
 
       - name: Upload bounded performance summary
         if: success()

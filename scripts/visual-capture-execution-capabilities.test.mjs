@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   createVisualCaptureExecutionCapabilityRegistry,
   createVisualCaptureExecutionV2CapabilityRegistry,
+  createVisualCaptureExecutionV4CapabilityRegistry,
   resolveVisualCaptureExecutionV3Capabilities,
+  resolveVisualCaptureExecutionV4Capabilities,
   resolveVisualCaptureExecutionCapabilities,
   resolveVisualCaptureExecutionV2Capabilities,
   VISUAL_CAPTURE_EXECUTION_CAPABILITIES,
@@ -11,9 +13,12 @@ import {
   VISUAL_CAPTURE_EXECUTION_V2_CAPABILITY_NAMES,
   VISUAL_CAPTURE_EXECUTION_V3_CAPABILITIES,
   VISUAL_CAPTURE_EXECUTION_V3_CAPABILITY_NAMES,
+  VISUAL_CAPTURE_EXECUTION_V4_CAPABILITIES,
+  VISUAL_CAPTURE_EXECUTION_V4_CAPABILITY_NAMES,
   visualCaptureExecutionCapabilitiesForCaptureOrder,
   visualCaptureExecutionV2CapabilitiesForCaptureOrder,
   visualCaptureExecutionV3CapabilitiesForCaptureOrder,
+  visualCaptureExecutionV4CapabilitiesForCaptureOrder,
 } from './visual-capture-execution-capabilities.mjs';
 import { VISUAL_CAPTURE_DRIVER_NAMES } from './visual-capture-drivers.mjs';
 import { VISUAL_CAPTURE_STATIC_CONTRACT } from '../src/shared/visual-capture-static-contract.js';
@@ -75,9 +80,32 @@ const v2Capability = () => ({
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 
+const v4Capability = () => {
+  const profile = v2Capability();
+  return {
+    startup: profile.startup,
+    readiness: profile.readiness,
+    readinessCompletion: {
+      capability: 'renderer-completed-frame-receipt/v1',
+      receiptSchema: 'anifor.renderer.completed-frame-receipt/v1',
+      requiredState: 'completed',
+      bind: 'refreshed-presentation',
+      verifyAfterSnapshot: true,
+    },
+    selection: profile.selection,
+    stability: profile.stability,
+    completion: {
+      ...profile.completion,
+      bind: 'selection-owned-presentation',
+    },
+    screenshot: profile.screenshot,
+  };
+};
+
 const syntheticDrivers = Object.freeze([Object.freeze({ name: 'first' }), Object.freeze({ name: 'second' })]);
 const syntheticProfiles = () => ({ first: capability(), second: capability() });
 const syntheticV2Profiles = () => ({ first: v2Capability(), second: v2Capability() });
+const syntheticV4Profiles = () => ({ first: v4Capability(), second: v4Capability() });
 
 describe('visual capture execution capabilities', () => {
   it('is exhaustive and ordered exactly like the typed static capture drivers', () => {
@@ -125,6 +153,20 @@ describe('visual capture execution capabilities', () => {
       .toBe(VISUAL_CAPTURE_EXECUTION_V3_CAPABILITIES['powder-render-style']);
     expect(visualCaptureExecutionV3CapabilitiesForCaptureOrder(['powder-render-style'])
       ['powder-render-style']).toBe(VISUAL_CAPTURE_EXECUTION_V3_CAPABILITIES['powder-render-style']);
+  });
+
+  it('binds capture completion to the selecting presentation only through v4', () => {
+    expect(VISUAL_CAPTURE_EXECUTION_V4_CAPABILITY_NAMES)
+      .toEqual(VISUAL_CAPTURE_EXECUTION_CAPABILITY_NAMES);
+    for (const name of VISUAL_CAPTURE_EXECUTION_V4_CAPABILITY_NAMES) {
+      expect(VISUAL_CAPTURE_EXECUTION_V4_CAPABILITIES[name]).toEqual(v4Capability());
+      expect(VISUAL_CAPTURE_EXECUTION_V3_CAPABILITIES[name].completion.bind)
+        .toBe('selected-presentation');
+    }
+    expect(resolveVisualCaptureExecutionV4Capabilities('normal-hdr'))
+      .toBe(VISUAL_CAPTURE_EXECUTION_V4_CAPABILITIES['normal-hdr']);
+    expect(visualCaptureExecutionV4CapabilitiesForCaptureOrder(['normal-hdr'])['normal-hdr'])
+      .toBe(VISUAL_CAPTURE_EXECUTION_V4_CAPABILITIES['normal-hdr']);
   });
 
   it('is recursively frozen and JSON-safe', () => {
@@ -217,6 +259,12 @@ describe('visual capture execution capabilities', () => {
     expect(() => createVisualCaptureExecutionV2CapabilityRegistry(
       syntheticDrivers, twoSnapshotsWithReceipt,
     )).toThrow('must be 1 with the receipt');
+
+    const v3BindInV4 = syntheticV4Profiles();
+    v3BindInV4.first.completion.bind = 'selected-presentation';
+    expect(() => createVisualCaptureExecutionV4CapabilityRegistry(
+      syntheticDrivers, v3BindInV4,
+    )).toThrow('completion is not supported');
 
     const alteredDigest = syntheticProfiles();
     alteredDigest.first.stability.planes.reverse();

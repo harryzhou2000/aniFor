@@ -4,15 +4,19 @@ import {
   createVisualLabExecutionTuningPlan,
   createVisualLabExecutionTuningPlanV2,
   createVisualLabExecutionTuningPlanV3,
+  createVisualLabExecutionTuningPlanV4,
   normalizeVisualLabExecutionTuningPlan,
   normalizeVisualLabExecutionTuningPlanV2,
   normalizeVisualLabExecutionTuningPlanV3,
+  normalizeVisualLabExecutionTuningPlanV4,
   resolveVisualLabExecutionTuningPlanEntry,
   resolveVisualLabExecutionTuningPlanV2Entry,
   resolveVisualLabExecutionTuningPlanV3Entry,
+  resolveVisualLabExecutionTuningPlanV4Entry,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA,
 } from './visual-lab-execution-tuning-plan.mjs';
 import {
   createVisualLabExecutionPlan,
@@ -90,6 +94,15 @@ const v3Profile = () => ({
 const v3ProfilesFor = (capturePlan) => Object.fromEntries(
   [...new Set(capturePlan.inspection.entries.map(({ driver }) => driver.name))]
     .map((driver) => [driver, v3Profile()]),
+);
+const v4Profile = () => {
+  const result = v3Profile();
+  result.completion.bind = 'selection-owned-presentation';
+  return result;
+};
+const v4ProfilesFor = (capturePlan) => Object.fromEntries(
+  [...new Set(capturePlan.inspection.entries.map(({ driver }) => driver.name))]
+    .map((driver) => [driver, v4Profile()]),
 );
 
 describe('Visual Lab execution tuning plan', () => {
@@ -218,6 +231,34 @@ describe('Visual Lab execution tuning plan', () => {
     tampered.entries[0].profile.readinessCompletion.bind = 'selected-presentation';
     expect(() => normalizeVisualLabExecutionTuningPlanV3(tampered, capturePlan))
       .toThrow('refreshed-presentation receipt proof');
+  });
+
+  it('creates and resolves additive selection-owned receipt v4 plans', () => {
+    const capturePlan = createVisualLabExecutionPlan({
+      candidates: ['powder-style-atlas'], baseUrl: 'file:///bundle/index.html', outputDir: '/review',
+      gpu: 'swiftshader',
+    });
+    const created = createVisualLabExecutionTuningPlanV4(capturePlan, v4ProfilesFor(capturePlan));
+    expect(created.schema).toBe(VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA);
+    expect(created.capturePlan.id).toBe(capturePlan.inspection.id);
+    expect(created.entries[0].profile).toEqual(v4Profile());
+    expect(created.entries[0].profile.readinessCompletion.bind).toBe('refreshed-presentation');
+    expect(created.entries[0].profile.completion.bind).toBe('selection-owned-presentation');
+    expect(normalizeVisualLabExecutionTuningPlanV4(structuredClone(created), capturePlan))
+      .toEqual(created);
+    expect(resolveVisualLabExecutionTuningPlanV4Entry(
+      created, created.entries[0].id, capturePlan.inspection.entries[0].id, capturePlan,
+    )).toEqual(created.entries[0]);
+
+    const v3Completion = structuredClone(created);
+    v3Completion.entries[0].profile.completion.bind = 'selected-presentation';
+    expect(() => normalizeVisualLabExecutionTuningPlanV4(v3Completion, capturePlan))
+      .toThrow('exact completed-frame receipt proof');
+
+    const v4AsV3 = structuredClone(created);
+    v4AsV3.schema = VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA;
+    expect(() => normalizeVisualLabExecutionTuningPlanV3(v4AsV3, capturePlan))
+      .toThrow('exact completed-frame receipt proof');
   });
 
   it('rejects malformed/tampered data, profile drift, unsafe names, and capture-plan mismatch', () => {
