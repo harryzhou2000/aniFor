@@ -857,6 +857,12 @@ describe('Pixi presenter startup configuration', () => {
       '* finishResponse.w * (0.160 + crown * 0.040) * interiorContrast;',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'float gasProfileExtinctionB = mix(1.85, 2.85, gasTransmissionReserve);',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      '* mix(0.65, gasProfileExtinctionB, opticalExperimentB);',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'shade += gasDeepAbsorption * 0.024 * gasExtinctionScale\n'
         + '    * mix(1.0, interiorContrast, opticalExperimentB);',
     );

@@ -7474,6 +7474,24 @@ all 49 regions, and strict portable verification as result
 The board is current-only visual evidence for choosing the next profile
 experiment; its result and PNG bytes are not cross-revision gates.
 
+That board selected a first cross-phase profile correction: the generic gas B
+extinction envelope was strong enough to turn absorptive SootyGas into a dark,
+largely flat slab before its transmitted middle remained readable. The normal
+WebGL `applyMaterialVolumeLobe` now preserves variant A's exact added gas
+extinction of `0.65`, but derives B's bounded added value from the already-
+authored transmission lane as `mix(1.85, 2.85, transmissionReserve)`. No
+profile number, material ID, composition weight, sample, field, texture, pass,
+target, allocation, support, alpha, topology, Canvas, or compact true-8x path
+changed. In the real shared-host SwiftShader package
+`/tmp/anifor-gas-extinction-profile-v1`, Smoke body/core B-minus-OFF mean luma
+improved from `-3.23/-6.04` to `-1.96/-4.46`, while Oxygen improved from
+`-0.79/-3.91` to `-0.06/-2.93`; both retained their distinct hue, texture, and
+silhouette. OFF and A PNGs remained byte-identical to the pre-experiment
+capture, all 49 regions passed portable reconstruction, and the retained result
+is `sha256:75757da0977d15e58b1a39e98be69be70c8e323adad2428bce3c8dc49246f1fd`.
+These measurements navigate this current visual decision and are not future
+thresholds, PNG pins, or frozen result requirements.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

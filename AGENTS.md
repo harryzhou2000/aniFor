@@ -70,6 +70,19 @@ material-lighting driver, app registry, and source-backed
 `sha256:61328aa723024b29ab6e0fb62660a8d1597036b53f5cb0617f16e40370a468fa`;
 this is current-only review evidence, not an exact future visual pin.
 
+The first experiment selected on that board is the profile-governed gas
+extinction rebalance. In `applyMaterialVolumeLobe`, keep variant A's added gas
+extinction exactly `0.65`; variant B derives its bounded added envelope from
+the existing transmission lane as `mix(1.85, 2.85, transmissionReserve)`.
+This prevents absorptive SootyGas from becoming a dark slab while CleanGas
+remains the clearer control. Do not replace it with a material ID, change the
+appearance-profile values, raise the shared gas composition weights, or add a
+field, sample, texture, pass, target, support, alpha, or compact-8x path. The
+current portable evidence is `/tmp/anifor-gas-extinction-profile-v1`, result
+`sha256:75757da0977d15e58b1a39e98be69be70c8e323adad2428bce3c8dc49246f1fd`;
+OFF and A PNGs stayed byte-identical to the pre-experiment board. Treat all
+hashes and regional measurements as current-package evidence only.
+
 The current review framework also covers the existing Oil- and Water-motion
 recipes through frozen declarative fixture/inspection catalogs. Preserve their
 historical public fixture APIs and exact material, velocity, and wall planes;

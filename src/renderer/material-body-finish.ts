@@ -684,8 +684,19 @@ vec3 applyMaterialVolumeLobe(
     * mix(0.22, 0.66, opticalExperimentB);
   float gasMidScale = 1.0 + gas * opticalExperiment
     * mix(0.18, 1.75, opticalExperimentB);
+  // B previously multiplied every gas core by the same 5.25 extinction
+  // envelope. That turned the deliberately absorptive SootyGas profile into a
+  // dark slab before its transmitted middle could remain readable. Let the
+  // existing transmission lane choose a bounded B envelope instead: soot
+  // keeps stronger absorption than clean gas in the downstream finish, while
+  // both retain a visible volume. Variant A still selects exactly 0.65, and
+  // Off, non-gas phases, support, alpha, and compact true-8x remain unchanged.
+  float gasTransmissionReserve = clamp(
+    (finishResponse.w - 0.50) / 1.0, 0.0, 1.0
+  );
+  float gasProfileExtinctionB = mix(1.85, 2.85, gasTransmissionReserve);
   float gasExtinctionScale = 1.0 + gas * opticalExperiment
-    * mix(0.65, 4.25, opticalExperimentB);
+    * mix(0.65, gasProfileExtinctionB, opticalExperimentB);
   // Variant B may strengthen the cloud's existing field-proven lobe, but it
   // must not invent another noise field or grow support. Convex crowns and
   // lit shoulders catch a little more transmitted light while concave pockets
