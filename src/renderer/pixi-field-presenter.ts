@@ -17,7 +17,9 @@ import {
   WEBGL_EIGHT_X_FRAME_STALL_MS, webGLPromotionTimeout, type FieldOutputScale,
 } from './render-resolution';
 import { POWDER_SURFACE_REFRESH_INTERVAL } from './powder-surface-field';
-import { updateBoundaryStabilityRect } from './boundary-stability-field';
+import {
+  BOUNDARY_STABILITY_STEP, updateBoundaryStabilityRect,
+} from './boundary-stability-field';
 import { clientToCanvasWorld, clientToVisualViewport } from './client-coordinate-map';
 import { RenderFieldSet, type RenderMaterialStyle } from './render-field-set';
 import { packSemanticRect } from './semantic-field';
@@ -119,6 +121,9 @@ import {
   resolveVolumeVfxEnabled, resolveWetSedimentVfxEnabled,
 } from './render-look';
 interface PresenterViewport { readonly width: number; readonly height: number }
+
+/** Owner handoff, bounded 0 -> 255 evolution, then one confirming stable pass. */
+const FIXTURE_ACTIVATION_BOUNDARY_MAX_PASSES = 2 + Math.ceil(255 / BOUNDARY_STABILITY_STEP);
 
 /** Audit-only digest of the field that owns reconstructed gas support. */
 export interface AtmosphereSupportAudit {
@@ -14850,6 +14855,11 @@ export class PixiFieldPresenter {
       }
     }
     this.fixtureActivationBoundaryConsumptionOwner = 0;
+    if (activationOwner > 0) {
+      boundaryTextureDirty = this.convergeFixtureActivationBoundary(
+        activationOwner, materials, velocities, walls, encodePowderSolidContact,
+      ) || boundaryTextureDirty;
+    }
     if (rectangles.length) {
       this.fieldSource.update();
       boundaryTextureDirty = true;
@@ -14979,6 +14989,39 @@ export class PixiFieldPresenter {
     if (material === 0) return false;
     const phase = this.fieldSet.lookups.styleBytes[material * 4];
     return phase === RenderPhase.Solid || phase === RenderPhase.Powder;
+  }
+
+  /**
+   * V2 fixture activation only: consume presentation-only powder settling on
+   * the CPU before the activation's sole GPU presentation. Owner-zero frames
+   * retain the established visible 8 Hz evolution cadence.
+   */
+  private convergeFixtureActivationBoundary(
+    owner: number,
+    materials: Uint8Array,
+    velocities: Int8Array | undefined,
+    walls: Uint8Array | undefined,
+    encodePowderSolidContact: boolean,
+  ): boolean {
+    if (owner <= 0) return false;
+    let consumed = false;
+    // The caller already performed the owner-handoff pass.
+    for (let pass = 1; pass < FIXTURE_ACTIVATION_BOUNDARY_MAX_PASSES; pass++) {
+      if (this.fixtureActivationBoundaryOwner !== owner) break;
+      this.fixtureActivationBoundaryOwner = 0;
+      this.fixtureActivationBoundaryConsumptionOwner = owner;
+      this.boundaryEvolutionPending = false;
+      const rectangles = this.chunks.consume();
+      for (const rect of rectangles) updateBoundaryStabilityRect(
+        this.boundaryStabilityBytes, this.boundaryStabilityOwners, materials, velocities,
+        this.fieldSet.lookups.styleBytes, this.fieldSource.width, rect,
+        this.boundaryDirtyMarker, encodePowderSolidContact, walls,
+      );
+      this.fixtureActivationBoundaryConsumptionOwner = 0;
+      consumed ||= rectangles.length > 0;
+    }
+    this.fixtureActivationBoundaryConsumptionOwner = 0;
+    return consumed;
   }
 
   private powderAirBlocker(material: number): boolean {

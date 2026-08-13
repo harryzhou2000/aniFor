@@ -8,6 +8,11 @@ import {
   WEBGL_COMPLETED_FRAME_RECEIPT_TIMEOUT_MS,
   WEBGL_EIGHT_X_FRAME_STALL_MS, type FieldOutputScale,
 } from './render-resolution';
+import { Material } from '../shared/materials';
+import { RenderPhase } from './render-profile';
+import { DirtyChunkGrid } from './dirty-chunk-grid';
+import { updateBoundaryStabilityRect } from './boundary-stability-field';
+import { PowderSurfaceField } from './powder-surface-field';
 
 interface PresenterHarness {
   readonly uniforms: { readonly uniforms: Record<string, number> };
@@ -187,6 +192,92 @@ describe('Pixi presenter startup configuration', () => {
     presenter.fieldSet.hasPendingRefreshFor = () => false;
     presenter.presentationSubmission = 3;
     expect(presenter.fixtureActivationPresentationSettled(7)).toBe(false);
+  });
+
+  it('converges v2-owned powder stability byte-exactly without intermediate submissions', () => {
+    const width = 7;
+    const height = 7;
+    const materials = new Uint8Array(width * height);
+    materials.fill(Material.Sand, width + 1, materials.length - width - 1);
+    const velocities = new Int8Array(materials.length * 2);
+    const styles = new Uint8Array(256 * 4);
+    styles[Material.Sand * 4] = RenderPhase.Powder;
+    const rect = { x: 0, y: 0, width, height };
+    const conventional = new Uint8Array(materials.length);
+    const conventionalOwners = new Uint8Array(materials.length);
+    for (let pass = 0; pass < 8; pass++) updateBoundaryStabilityRect(
+      conventional, conventionalOwners, materials, velocities, styles, width, rect,
+    );
+
+    const chunks = new DirtyChunkGrid(width, height, width, 0);
+    chunks.markAll();
+    const renderApplication = vi.fn();
+    const presenter = Object.create(PixiFieldPresenter.prototype) as unknown as {
+      boundaryStabilityBytes: Uint8Array;
+      boundaryStabilityOwners: Uint8Array;
+      chunks: DirtyChunkGrid;
+      boundaryDirtyMarker: { markCell(index: number): void };
+      fixtureActivationBoundaryOwner: number;
+      fixtureActivationPowderOwner: number;
+      fixtureActivationBoundaryConsumptionOwner: number;
+      boundaryEvolutionPending: boolean;
+      fieldSet: { lookups: { styleBytes: Uint8Array } };
+      fieldSource: { width: number };
+      convergeFixtureActivationBoundary(
+        owner: number, materials: Uint8Array, velocities: Int8Array | undefined,
+        walls: Uint8Array | undefined, encodeContact: boolean,
+      ): boolean;
+      renderApplication(): void;
+    };
+    Object.assign(presenter, {
+      boundaryStabilityBytes: new Uint8Array(materials.length),
+      boundaryStabilityOwners: new Uint8Array(materials.length),
+      chunks,
+      fixtureActivationBoundaryOwner: 7,
+      fixtureActivationPowderOwner: 7,
+      fixtureActivationBoundaryConsumptionOwner: 7,
+      boundaryEvolutionPending: false,
+      fieldSet: { lookups: { styleBytes: styles } },
+      fieldSource: { width },
+      renderApplication,
+    });
+    presenter.boundaryDirtyMarker = {
+      markCell(index) {
+        presenter.fixtureActivationBoundaryOwner = 7;
+        presenter.fixtureActivationPowderOwner = 7;
+        presenter.boundaryEvolutionPending = true;
+        chunks.markCell(index);
+      },
+    };
+    for (const dirty of chunks.consume()) updateBoundaryStabilityRect(
+      presenter.boundaryStabilityBytes, presenter.boundaryStabilityOwners,
+      materials, velocities, styles, width, dirty, presenter.boundaryDirtyMarker,
+    );
+
+    expect(presenter.convergeFixtureActivationBoundary(
+      7, materials, velocities, undefined, false,
+    )).toBe(true);
+    expect(presenter.boundaryStabilityBytes).toEqual(conventional);
+    expect(presenter.boundaryStabilityOwners).toEqual(conventionalOwners);
+    expect(presenter.fixtureActivationBoundaryOwner).toBe(0);
+    expect(renderApplication).not.toHaveBeenCalled();
+
+    const conventionalPowder = new PowderSurfaceField(width, height, styles);
+    const drainedPowder = new PowderSurfaceField(width, height, styles);
+    conventionalPowder.update(materials, conventional);
+    drainedPowder.update(materials, presenter.boundaryStabilityBytes);
+    expect(drainedPowder.bytes).toEqual(conventionalPowder.bytes);
+    expect(drainedPowder.exteriorAirBytes).toEqual(conventionalPowder.exteriorAirBytes);
+
+    const ownerZeroBytes = new Uint8Array(materials.length);
+    presenter.boundaryStabilityBytes = ownerZeroBytes;
+    presenter.fixtureActivationBoundaryOwner = 0;
+    chunks.markAll();
+    expect(presenter.convergeFixtureActivationBoundary(
+      0, materials, velocities, undefined, false,
+    )).toBe(false);
+    expect(ownerZeroBytes.every((value) => value === 0)).toBe(true);
+    expect(chunks.consume()).toHaveLength(1);
   });
 
   it('can seed a retained Visual Lab choice without submitting an unhydrated frame', () => {
