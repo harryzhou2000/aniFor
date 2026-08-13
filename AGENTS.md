@@ -1775,9 +1775,12 @@ publishing, but do not serialize those identities into the summary.
 Manual CI may run that same diagnostic through the
 `visual_lab_performance_cohorts` control. Keep it false by default, non-gating,
 and independent of deploy/review success. It must consume the exact verified
-site artifact, use the tracked one-candidate `powder-style` set with
-completed-frame-receipt v2, and upload only the bounded publish-last summary.
+site artifact, use the tracked one-candidate `powder-style` set with readiness-
+completed-frame-receipt v3, and upload only the bounded publish-last summary.
 Do not upload cohort packages or turn observed durations into CI thresholds.
+If a cohort fails before its summary can be published, surface only the bounded
+candidate failure tombstone in the job log; never replace it with the generic
+portable-verifier `package incomplete` error or upload raw candidate evidence.
 
 Execution-tuning-plan/v3 is an additive readiness-receipt experiment. It owns a
 separate `readinessCompletion` descriptor bound to the refreshed presentation,
@@ -1788,6 +1791,14 @@ under the single readiness deadline. Keep v1/v2 bytes and defaults unchanged,
 keep the live Water gate on v2, and use the manual Powder performance matrix as
 the initial hosted proving path. Same-bundle v2/v3 PNG and result identity parity
 is required; timing is diagnostic and may regress locally.
+
+The hosted Powder v3 ABBA proving path passed at exact revision
+`bb9f9648bb73e83dbd8504013d03d64178bf9ea6` in workflow run `31663950050`.
+All four legs passed portable identity reconstruction with no host recycle.
+Readiness used exactly one snapshot with only 38–44ms readback, versus v2's
+four-to-five attempts and 35.7–42.9s readback. Readiness fell from 67.5–69.7s
+to 39.4–44.4s, and candidate totals from 111.6–116.2s to 56.3–67.8s. Keep v3
+as the manual performance control, not the stable default or live Water gate.
 
 The renderer-owned completed-frame receipt is now a protected audit capability.
 `anifor.renderer.completed-frame-receipt/v1` binds every ticket to the exact

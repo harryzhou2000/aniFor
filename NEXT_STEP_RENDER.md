@@ -6964,6 +6964,24 @@ so v3 remains explicitly opt-in. Manual CI performance cohorts now exercise v3
 to decide its value under the loaded hosted environment where v2 readback was
 35–43s. Never promote it by local timing alone.
 
+The decisive hosted v3 control passed at exact revision
+`bb9f9648bb73e83dbd8504013d03d64178bf9ea6` in workflow run `31663950050`.
+Build completed in 3m46s, and all four fresh/shared/shared/fresh Powder legs
+captured, portable-verified, and published their bounded summary in 4m18s.
+Every readiness proof used exactly one snapshot; Node-observed readback fell to
+38–44ms. Readiness fell to 39.4–44.4s from v2's 67.5–69.7s, and total candidate
+time fell to 56.3–67.8s from 111.6–116.2s. No leg recycled its host. The first
+hosted attempt had hidden its candidate fault behind `package incomplete`; the
+cohort runner now surfaces only the bounded failure tombstone before portable
+verification while continuing to withhold raw packages. V3 remains opt-in and
+is now the manual Powder performance control; v1 stays the stable default and
+the live Water gate stays v2.
+
+This closes the readiness-snapshot experiment. The next framework increment
+should target the remaining roughly 5.1–5.4s each in OFF/A/B or give authored
+visual experiments more leverage; do not spend another cycle on host launch or
+historical image pinning.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
