@@ -7176,6 +7176,29 @@ the current v6 performance checkpoint. Keep v4 and v5 as rollback/diagnostic
 controls; continue with authoring leverage or a newly measured bottleneck, not
 another weakening of readiness evidence.
 
+The next authoring-leverage increment closes the last recipe/inspection gap.
+The production `showcase` command stream is now frozen JSON-safe shared data and
+is executed by one typed validating app dispatcher; `applyMaterialShowcaseScene`
+remains its compatibility facade and preserves the exact v6 semantic hash,
+material counts, geometry, and audit regions. The same data-only source declares
+bounded response/control regions for the existing `gas-showcase` and
+`oxygen-showcase` recipes through null capture rows, because the base static
+contract already owns their fixture, driver, recipe, and execution. Thus all 13
+recipes now have canonical declared inspection coverage without a new fixture,
+preparer, browser method, capture branch, or evidence schema. `showcase` remains
+the explicit typed no-op preparer.
+
+The adjacent static-contract cleanup removes its last hand-maintained extension
+driver-order tuple. First occurrence in the existing extension-domain
+declarations now owns the unchanged Powder-then-material projection order;
+manifest row order cannot rotate public fixtures or recipes. Focused structural
+and scene tests, typecheck, authoring checks, production build, and exact
+19-resource closure pass. The current-only shared-host SwiftShader package at
+`/tmp/anifor-showcase-declared-review.bBOqnq` passed Gas+Oxygen receipt-v2
+capture, strict teardown, portable verification, and all ten new declared
+regions through one host with zero restart. This is a structural migration, not
+an aesthetic hash pin; the next gate is the approved CI review/package check.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

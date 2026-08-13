@@ -26,11 +26,13 @@ const metadata = () => ({
 describe('visual capture authoring manifest', () => {
   it('joins extension capture metadata and declared inspection atlases once', () => {
     expect(VISUAL_CAPTURE_AUTHORING_MANIFEST.map(({ name }) => name)).toEqual([
+      'material-showcase',
       'cross-phase', 'gas', 'solid', 'source-target', 'force-activity',
       'thermal-source', 'opposed-source', 'powder-style', 'liquid-motion', 'oil-motion',
     ]);
     const entries = VISUAL_CAPTURE_AUTHORING_MANIFEST.flatMap(({ entries }) => entries);
     expect(entries.map(({ atlas: entry }) => entry.candidate)).toEqual([
+      'gas-showcase', 'oxygen-showcase',
       'material-lighting-atlas', 'gas-material-lighting-atlas',
       'solid-material-lighting-atlas', 'multi-metal-material-lighting-atlas',
       'source-target-material-lighting-atlas', 'force-activity-material-lighting-atlas',
@@ -39,7 +41,9 @@ describe('visual capture authoring manifest', () => {
     ]);
     expect(entries.filter(({ capture }) => capture !== null)).toHaveLength(9);
     expect(entries.filter(({ capture }) => capture === null)
-      .map(({ atlas: entry }) => entry.candidate)).toEqual(['water-motion', 'oil-motion']);
+      .map(({ atlas: entry }) => entry.candidate)).toEqual([
+        'gas-showcase', 'oxygen-showcase', 'water-motion', 'oil-motion',
+      ]);
     expect(JSON.parse(JSON.stringify(VISUAL_CAPTURE_AUTHORING_MANIFEST)))
       .toEqual(VISUAL_CAPTURE_AUTHORING_MANIFEST);
     expect(Object.isFrozen(VISUAL_CAPTURE_AUTHORING_MANIFEST)).toBe(true);
@@ -89,7 +93,7 @@ describe('visual capture authoring manifest', () => {
       'b9dd73c7695853fc41cf52f6cc703a94a491a8d482fb9433833e4d027d3be3bb',
     );
     expect(digest(VISUAL_CAPTURE_INSPECTION_SOURCE_CATALOG)).toBe(
-      '7ad61fe01474846627a53bcca8baf1fff6359a0ee2c080680484c0bb6eb5cc0b',
+      '6ed6c896ce72c3d2a63984d130cf9e256e383cb4c5db3d7cf41fe30c0bc0476c',
     );
   });
 });

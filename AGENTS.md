@@ -143,6 +143,16 @@ total time 39.31-50.98s, materially below the immediately preceding loaded-runne
 sample. This is now the accepted v6 performance checkpoint; retain complete
 evidence and move to authoring leverage or a freshly measured bottleneck.
 
+The current authoring checkpoint gives all 13 recipes declared inspection
+coverage. The production showcase command stream is frozen data executed by a
+typed app dispatcher; Gas and Oxygen reuse it through null capture rows because
+the base contract already owns their execution. Keep `showcase` as the explicit
+non-mutating preparer and do not add a fixture, recipe, driver, browser method,
+or evidence schema for this projection. Extension driver order derives from the
+existing extension-domain declarations, never manifest row order. The local
+Gas+Oxygen package `/tmp/anifor-showcase-declared-review.bBOqnq` passed receipt-v2
+WebGL capture and portable verification of all ten declared regions.
+
 Local proof passed 1,544 source and 353 tooling tests, typecheck, production
 build, and exact 19-resource closure. The full eight-candidate material-lighting
 recipe set passed shared-host SwiftShader WebGL/HDR capture with 24 captures,

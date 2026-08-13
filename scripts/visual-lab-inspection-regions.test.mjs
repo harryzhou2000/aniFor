@@ -24,6 +24,8 @@ describe('Visual Lab inspection-region catalog', () => {
 
   it('orders the covered subset by canonical capture-recipe order', () => {
     expect(VISUAL_LAB_INSPECTION_REGIONS.fixtures.map(({ candidate }) => candidate)).toEqual([
+      'gas-showcase',
+      'oxygen-showcase',
       'oil-motion',
       'water-motion',
       'powder-style-atlas',
@@ -46,6 +48,23 @@ describe('Visual Lab inspection-region catalog', () => {
     ))).toEqual(VISUAL_CAPTURE_DECLARED_ATLAS_MANIFEST);
     expect(Object.isFrozen(VISUAL_CAPTURE_DECLARED_ATLAS_MANIFEST)).toBe(true);
     expect(Object.isFrozen(VISUAL_CAPTURE_DECLARED_ATLAS_MANIFEST[0])).toBe(true);
+  });
+
+  it('covers both base showcase recipes through declared data without capture authority', () => {
+    const gas = fixture('gas-showcase');
+    const oxygen = fixture('oxygen-showcase');
+    expect(gas.regions.map(({ name, role }) => [name, role])).toEqual([
+      ['smoke-body', 'response'], ['oxygen-control', 'control'],
+      ['noble-control', 'control'], ['carbon-dioxide-control', 'control'],
+      ['guarded-blank', 'control'],
+    ]);
+    expect(oxygen.regions.map(({ name, role }) => [name, role])).toEqual([
+      ['oxygen-body', 'response'], ['smoke-control', 'control'],
+      ['noble-control', 'control'], ['carbon-dioxide-control', 'control'],
+      ['guarded-blank', 'control'],
+    ]);
+    expect(gas.world).toEqual({ width: 612, height: 384 });
+    expect(oxygen.world).toEqual(gas.world);
   });
 
   it('projects Oil and Water motion response and ownership controls from declared fixtures', () => {

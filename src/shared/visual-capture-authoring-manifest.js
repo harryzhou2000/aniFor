@@ -1,6 +1,7 @@
 import { FORCE_ACTIVITY_MATERIAL_LIGHTING_ATLAS_CATALOG } from './force-activity-material-lighting-atlas-catalog.js';
 import { GAS_MATERIAL_LIGHTING_ATLAS_CATALOG } from './gas-material-lighting-atlas-catalog.js';
 import { LIQUID_MOTION_VFX_ATLAS_CATALOG } from './liquid-motion-vfx-atlas-catalog.js';
+import { MATERIAL_SHOWCASE_ATLAS_CATALOG } from './material-showcase-atlas-catalog.js';
 import { MATERIAL_LIGHTING_ATLAS_CATALOG } from './material-lighting-atlas-catalog.js';
 import { OIL_MOTION_VFX_ATLAS_CATALOG } from './oil-motion-vfx-atlas-catalog.js';
 import { OPPOSED_SOURCE_MATERIAL_LIGHTING_ATLAS_CATALOG } from './opposed-source-material-lighting-atlas-catalog.js';
@@ -107,6 +108,10 @@ const materialLighting = (preparationReportLabel) => capture(
  * are legacy base-contract candidates that only contribute inspection data.
  */
 export const VISUAL_CAPTURE_AUTHORING_MANIFEST = normalizeVisualCaptureAuthoringManifest([
+  source('material-showcase', MATERIAL_SHOWCASE_ATLAS_CATALOG.atlases, {
+    'gas-showcase': null,
+    'oxygen-showcase': null,
+  }),
   source('cross-phase', MATERIAL_LIGHTING_ATLAS_CATALOG.atlases, {
     'material-lighting-atlas': materialLighting('prepareMaterialLightingAtlasFixture'),
   }),

@@ -180,4 +180,17 @@ describe('visual capture driver static contract', () => {
     ]);
     visit(VISUAL_CAPTURE_STATIC_CATALOG, (nested) => expect(Object.isFrozen(nested)).toBe(true));
   });
+
+  it('derives extension fixture order from first-seen extension driver declarations', () => {
+    const extensionDriverOrder = [...new Set(
+      VISUAL_CAPTURE_STATIC_CONTRACT.extensionDomains.map(({ driver }) => driver),
+    )];
+    const authoredDriverOrder = [...new Set(
+      VISUAL_CAPTURE_STATIC_CONTRACT.fixtures.map(({ driver }) => driver),
+    )];
+    expect(authoredDriverOrder).toEqual(extensionDriverOrder);
+    expect(extensionDriverOrder).toEqual([
+      'powder-render-style', 'material-lighting-profile',
+    ]);
+  });
 });

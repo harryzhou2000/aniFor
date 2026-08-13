@@ -1,6 +1,8 @@
 import { Material } from '../shared/materials';
 import type { SimulationBackend } from '../simulation';
 import { RENDER_LAB_AMBIENT_TEMPERATURE } from '../simulation/render-lab-backend';
+import { prepareMaterialShowcaseAtlas } from '../app/material-showcase-atlas-authoring';
+import { MATERIAL_SHOWCASE_SCENE_AUTHORING } from '../shared/material-showcase-atlas-catalog.js';
 
 export const RENDER_LAB_QUERY = 'render-lab';
 export const MATERIAL_SHOWCASE_QUERY = 'showcase';
@@ -408,69 +410,7 @@ export function materialCandidateSurveyRequested(search = globalThis.location?.s
 export function applyMaterialShowcaseScene(simulation: SimulationBackend): void {
   simulation.clear();
   const plot = new ScenePlotter(simulation);
-
-  // A broad exact-Soap body floats in the unused air above the powder slope.
-  // Its scored interior spans both established sheen lobes at deep column
-  // support, so the survey measures pearlescent volume rather than one surface
-  // band or a sparse film.
-  plot.roundedRect(52, 196, 48, 28, 10, Material.Soap);
-
-  // A deep, native-solid ROCK ground gives the liquid, pile, tree, and devices
-  // a common contact surface. The small carved channel keeps the composition
-  // from becoming a set of disconnected cards. Keep this an actual Solid: the
-  // composed-rank solid region is deliberately sampled from this broad body.
-  plot.roundedRect(24, 280, 564, 76, 18, Material.ROCK);
-  plot.eraseRect(315, 280, 54, 18);
-
-  // Packed powder should read as one cohesive pile but keep its analytic slope
-  // and a narrow natural ridge rather than a rectangular block.
-  plot.slope(40, 186, 198, 142, Material.Sand);
-  plot.slope(76, 221, 132, 107, Material.Clay);
-  plot.roundedRect(50, 308, 178, 24, 10, Material.Concrete);
-
-  // A broad connected pool with a controlled Oil inlet presents surface depth,
-  // meniscus light, optical thickness, and an unlike-liquid seam at fit view.
-  // Draw the submerged Metal insert after the pool: drawing it beside the
-  // ground before Water used to erase all 880 intended Metal cells and made
-  // the production showcase incapable of reviewing a rigid/liquid contact.
-  plot.roundedRect(252, 192, 232, 128, 28, Material.Water);
-  plot.splitCapsule(332, 214, 116, 55, 24, 389, Material.Water, Material.Oil);
-  const metal = MATERIAL_SHOWCASE_AUDIT.metalInsert;
-  plot.roundedRect(
-    metal.rect.x, metal.rect.y, metal.rect.width, metal.rect.height, metal.radius, metal.material,
-  );
-  plot.roundedRect(277, 185, 14, 143, 7, Material.Glass);
-  plot.roundedRect(466, 185, 14, 143, 7, Material.Glass);
-  plot.roundedRect(277, 313, 203, 15, 7, Material.Glass);
-  plot.rect(276, 251, 6, 36, Material.Fire, 1, 0);
-  plot.rect(473, 235, 5, 30, Material.ELEC, 1, 0);
-
-  // Large, overlapping gas bodies deliberately have dense centres and soft
-  // outlines so atmosphere ownership can be judged without the atlas' gaps.
-  plot.ellipse(360, 92, 94, 49, Material.Smoke, 0.96, 811, 0.30);
-  plot.ellipse(427, 82, 82, 43, Material.Oxygen, 0.92, 823, 0.34);
-  plot.ellipse(497, 103, 64, 37, Material.NobleGas, 0.88, 827, 0.40);
-  // A lower, exact-CO2 cloud occupies the clear air band above the pool. Its
-  // semantic carrier remains separated from every existing cloud and surface,
-  // leaving atmosphere style 6 solely responsible for its connected volume.
-  plot.ellipse(398, 166, 55, 18, Material.CarbonDioxide, 0.96, 841, 0.30);
-  plot.roundedRect(296, 129, 30, 20, 9, Material.Plasma);
-
-  // Broad, separated radioactive solids make their deep-body optics visible at
-  // normal fit without letting gas, liquid, or unlike-solid contact influence
-  // the scored interiors. Their staggered silhouettes also avoid card-like
-  // repetition while retaining a generous exact-owner core at every scale.
-  plot.roundedRect(205, 38, 54, 70, 16, Material.ISZS);
-  plot.roundedRect(226, 123, 54, 62, 15, Material.VIBR);
-
-  // A small living silhouette and a device/radioactive cluster keep organic,
-  // hard-surface, energy, and native-state visual vocabulary in one scene.
-  plot.roundedRect(112, 121, 20, 158, 8, Material.Wood);
-  plot.roundedRect(66, 82, 112, 76, 32, Material.Plant);
-  plot.roundedRect(150, 151, 70, 44, 18, Material.Plant);
-  plot.curvaturePlate(510, 226, 54, 58, 14, Material.DTEC);
-  plot.roundedRect(522, 144, 38, 62, 15, Material.URAN);
-  plot.roundedRect(548, 166, 20, 30, 9, Material.POLO);
+  prepareMaterialShowcaseAtlas(plot, MATERIAL_SHOWCASE_SCENE_AUTHORING.commands);
 }
 
 /**

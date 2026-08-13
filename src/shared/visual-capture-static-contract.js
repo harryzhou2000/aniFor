@@ -32,8 +32,28 @@ const authoredCapture = (name, { domain, driver, preparationReportLabel }) => ({
   },
 });
 
+const EXTENSION_DOMAINS = [
+  {
+    name: 'powder',
+    targetKind: 'none',
+    driver: 'powder-render-style',
+    executionProfile: VISUAL_LAB_STATIC_CONTRACT.normalHdrExecutionProfile,
+    evidence: { plane: 'powder-surface-alpha' },
+    fixedUrlParameters: {},
+  },
+  {
+    name: 'material-lighting',
+    targetKind: 'none',
+    driver: 'material-lighting-profile',
+    executionProfile: VISUAL_LAB_STATIC_CONTRACT.normalHdrExecutionProfile,
+    evidence: { plane: 'emission-alpha' },
+    fixedUrlParameters: {},
+  },
+];
+
+/** First declaration owns stable extension-driver order; no manifest row may reorder it. */
 const CAPTURE_AUTHORING_DRIVER_ORDER = Object.freeze([
-  'powder-render-style', 'material-lighting-profile',
+  ...new Set(EXTENSION_DOMAINS.map(({ driver }) => driver)),
 ]);
 const CAPTURE_AUTHORING_ENTRIES = VISUAL_CAPTURE_AUTHORING_MANIFEST
   .flatMap(({ entries }) => entries)
@@ -91,24 +111,7 @@ const contract = {
       ],
     },
   ],
-  extensionDomains: [
-    {
-      name: 'powder',
-      targetKind: 'none',
-      driver: 'powder-render-style',
-      executionProfile: VISUAL_LAB_STATIC_CONTRACT.normalHdrExecutionProfile,
-      evidence: { plane: 'powder-surface-alpha' },
-      fixedUrlParameters: {},
-    },
-    {
-      name: 'material-lighting',
-      targetKind: 'none',
-      driver: 'material-lighting-profile',
-      executionProfile: VISUAL_LAB_STATIC_CONTRACT.normalHdrExecutionProfile,
-      evidence: { plane: 'emission-alpha' },
-      fixedUrlParameters: {},
-    },
-  ],
+  extensionDomains: EXTENSION_DOMAINS,
   fixtures: AUTHORED_CAPTURE_FIXTURES.map(({ fixture }) => fixture),
   captureRecipes: AUTHORED_CAPTURE_FIXTURES.map(({ recipe }) => recipe),
 };
