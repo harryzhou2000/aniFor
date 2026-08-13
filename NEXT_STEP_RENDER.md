@@ -7868,6 +7868,14 @@ It retained result
 `sha256:4891db2c82bb89cb4bce5a63a2927360fbc20e634a0a91b9d17a490deb630581`;
 the retained pixels are current evidence rather than a cross-revision gate.
 
+The release gate then passed at exact revision
+`82c8bef8c8ac3b399e5c121afd41db5ad7de1472` in workflow run `31729834595`.
+The ccache-backed build completed in 3m35s with 269/270 hits, the tracked
+RenderOptics review and downloaded-package verifier passed in 2m27s, Pages
+deployed in 9s, and exact live 19-resource closure plus the hosted Water smoke
+passed in 1m44s. The deployed RenderOptics result remained the same as the
+local source-selected review.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

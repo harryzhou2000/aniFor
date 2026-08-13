@@ -5084,6 +5084,13 @@ closed. The compatibility-named RenderOptics compiler remains only a wrapper
 over the generic projection. Presentation metadata intentionally changes the
 inspection-source semantic oracle, but not static capture contracts, recipes,
 region evidence schemas, or frozen result/batch identities.
+This increment is deployed at revision
+`82c8bef8c8ac3b399e5c121afd41db5ad7de1472` by workflow run `31729834595`.
+The ccache-backed build completed in 3m35s with 269/270 compilation hits; the
+tracked RenderOptics review and downloaded-package verifier passed in 2m27s,
+Pages deployed in 9s, and exact 19-resource closure plus the hosted Water smoke
+passed in 1m44s. The RenderOptics result remained
+`sha256:4891db2c82bb89cb4bce5a63a2927360fbc20e634a0a91b9d17a490deb630581`.
 
 Read [`docs/render-lab.md`](docs/render-lab.md) before changing reconstruction thresholds or blur radii. A TypeScript or Vite build does not compile Pixi's runtime GLSL; a browser screenshot with a clean shader console is required.
 
