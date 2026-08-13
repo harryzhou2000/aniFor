@@ -1877,6 +1877,16 @@ scratch reuse as a cleaner bounded mechanism, not a proven local speedup. The
 next optimization must reduce actual framebuffer transfer/digest cost without
 caching or weakening evidence.
 
+Hosted overlap workflow `31682013887` completed through cohort 4 but rejected
+that fresh cohort for changed encoded result identity and published no success
+summary. With neutral local timing, do not promote or repeat this optimization
+solely for speed. WebGL2 cannot read only alpha from the RGBA default framebuffer:
+`RED` is not component selection and packed RGBA formats lose exact 8-bit alpha.
+An R8 sidecar requires a full-resolution target/pass and is not authoritative
+for final default-buffer quantization/composition. Do not add it without an
+explicit opt-in parity prototype and measured hosted benefit. Prefer diagnostic
+leverage or reusable experiment authoring next.
+
 Performance comparisons use the opt-in
 `audit:visual-lab:performance-cohorts` runner. Preserve its fixed
 fresh/shared/shared/fresh order, tracked recipe-set requirement, distinct cohort

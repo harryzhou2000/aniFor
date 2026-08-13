@@ -7302,6 +7302,20 @@ allocation reuse, not as a local performance win. One hosted cohort may test
 whether loaded-runner overlap helps; regardless, the next optimization must
 reduce the actual default-framebuffer transfer or digest cost, not add caching.
 
+Hosted workflow `31682013887` completed all four overlap cohorts but rejected
+fresh cohort 4 for changed encoded result identity, so it published no bounded
+success summary. This is the same transient output-outlier class already seen
+before the independent v7 success, not a malformed snapshot or readback proof;
+nevertheless the locally neutral overlap is not promoted and does not merit a
+repeat build. Keep it as a safe checkpoint only. A direct one-byte alpha read
+from the RGBA default framebuffer is not available in WebGL2: `RED` reads red,
+and packed RGBA types lose the exact 8-bit alpha required by the historical
+digest. An R8 sidecar would require a full-resolution target/pass and could
+diverge from final default-buffer quantization/composition. Do not add that
+resource speculatively. The next framework increment should improve diagnostic
+leverage for transient visual outliers or return to experiment authoring, not
+add another readiness schema or unmeasured render target.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
