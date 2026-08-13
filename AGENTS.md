@@ -5044,6 +5044,14 @@ Do not implement it with another browser API or renderer resource, weaken the
 full evidence snapshot, overwrite a pending readiness transfer, or change v1-v8
 bytes. Keep ordinary review and live Water defaults unchanged until a hosted
 fresh/shared/shared/fresh RenderOptics cohort establishes operational value.
+That hosted control is now complete at revision
+`b4064d6832c89d0f18ec29e4f95097da9d865ee7`: workflow run `31725357414`
+built, reviewed with v9, deployed, and passed live closure, while artifact-reuse
+run `31726235190` skipped the build and passed the explicit v9 four-leg cohort.
+All four cohort packages kept equal portable identities, no identity diagnostic
+was uploaded, and live verification passed again. Keep v9 opt-in while the
+ordinary review and live Water defaults remain deliberate stable controls; use
+the hosted cohort as compatibility evidence, not as a fixed timing threshold.
 
 Read [`docs/render-lab.md`](docs/render-lab.md) before changing reconstruction thresholds or blur radii. A TypeScript or Vite build does not compile Pixi's runtime GLSL; a browser screenshot with a clean shader console is required.
 

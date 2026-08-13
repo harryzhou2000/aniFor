@@ -7794,8 +7794,22 @@ generation ticket/generation `1/1`, used exactly one complete readiness
 snapshot, retained contiguous captured submissions `6/7/8`, and took 9.15
 seconds of readiness and 28.40 seconds total with zero host restarts or browser
 errors. Treat these timings as descriptive single-run evidence, not a gate.
-The next hosted control should run the fixed fresh/shared/shared/fresh
-RenderOptics cohort before making v9 a broader default.
+
+The hosted control is complete at revision
+`b4064d6832c89d0f18ec29e4f95097da9d865ee7`. Workflow run `31725357414`
+built and deployed the revision, completed its v9 RenderOptics review in 1m25s,
+and passed exact live resource closure plus the hosted Water smoke. Because its
+separate performance input remained at the v4 default, artifact-reuse workflow
+run `31726235190` then skipped the build, republished the exact verified artifact
+in 12 seconds, and ran the explicit v9 fixed fresh/shared/shared/fresh cohort.
+All four portable result identities matched, the bounded identity diagnostic
+was not uploaded, and the four legs completed in approximately 91.70, 80.31,
+80.25, and 81.29 seconds with no failed cohort. That run also redeployed in 10
+seconds and passed live verification again. This establishes hosted fresh/shared
+compatibility and useful one-snapshot readiness behavior; it does not create a
+timing gate or change the ordinary review and live Water defaults. Keep v9 as
+the explicit combined-proof control until a later framework decision promotes
+it intentionally.
 
 ## Deferred long-term visual roadmap
 
