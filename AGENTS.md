@@ -5053,6 +5053,17 @@ was uploaded, and live verification passed again. Keep v9 opt-in while the
 ordinary review and live Water defaults remain deliberate stable controls; use
 the hosted cohort as compatibility evidence, not as a fixed timing threshold.
 
+Developer-focused Visual Lab review may now select one closed authoring source
+directly with `npm run visual-lab:review:reuse -- --source=<name>`. Resolve it
+through the shared manifest-to-canonical-recipe projection and package the
+ordinary ad-hoc recipe set; never accept paths, raw candidate lists, missing
+capture recipes, or mixed selectors. This is local review convenience only.
+CI, deploy, performance release controls, fixture preparation, and browser
+authority must continue to use their existing tracked recipes/cohorts and typed
+registries. The performance orchestrator must map every advertised batch proof
+to its exact tuning schema; v8 is the independent selector receipt/PBO control,
+while v9 additionally owns typed render-field readiness.
+
 Read [`docs/render-lab.md`](docs/render-lab.md) before changing reconstruction thresholds or blur radii. A TypeScript or Vite build does not compile Pixi's runtime GLSL; a browser screenshot with a clean shader console is required.
 
 The style lookup is an RGBA data texture, not display color: RGB stores phase/profile/emission and alpha stores the static `RenderTrait` mask. Keep nearest sampling and `no-premultiply-alpha`; zero-valued trait alpha must never erase the RGB metadata.

@@ -7811,6 +7811,32 @@ timing gate or change the ordinary review and live Water defaults. Keep v9 as
 the explicit combined-proof control until a later framework decision promotes
 it intentionally.
 
+The next authoring-loop increment removes the need to create and synchronize a
+named cohort solely to inspect one manifest-owned atlas source. The developer
+launcher accepts exactly one `--source=<authoring-source>`, resolves it through
+the data-only authoring manifest into canonical capture-recipe order, and sends
+that closed candidate set through the unchanged ad-hoc recipe packaging,
+capture, current-only boards, and portable verifier. Unknown/unsafe sources,
+mixed selectors, empty sources, and declared atlases without canonical recipes
+fail before an evidence root is reserved. CI and deployment do not expose this
+selector and retain tracked cohort/snapshot authority.
+
+A real production-bundle SwiftShader review invoked only as
+`npm run visual-lab:review:reuse -- --source=render-optics` and passed WebGL/HDR
+capture, all 49 regions, zero browser errors, strict portable reconstruction,
+and clean Chrome teardown at
+`.artifacts/visual-lab-reviews/render-optics-8833ea02-e301-43bc-8bab-cffa7701aeb3`.
+It retained result
+`sha256:4891db2c82bb89cb4bce5a63a2927360fbc20e634a0a91b9d17a490deb630581`;
+that ID is current evidence, not a cross-revision visual gate.
+
+The adjacent measurement repair restores the advertised v8 four-leg route:
+`selection-owned-frame-receipt-and-alpha-readback` now maps to execution-tuning
+plan v8 in the performance orchestrator and its help/tests. Previously the
+shared proof parser accepted v8 but the orchestrator expected an undefined
+schema, so the comparative control could not run. V9 remains the combined v7
+readiness plus v8 selection proof; neither default nor frozen identity changed.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

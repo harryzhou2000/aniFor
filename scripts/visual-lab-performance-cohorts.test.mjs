@@ -294,6 +294,32 @@ describe('Visual Lab performance cohort orchestration', () => {
     });
   });
 
+  it('forwards selection-owned alpha readback and requires tuning v8', async () => {
+    const root = await temporaryRoot();
+    const batchCalls = [];
+    const captureProof = 'selection-owned-frame-receipt-and-alpha-readback';
+    const result = await runVisualLabPerformanceCohorts({
+      recipeSetPath: 'set.json', outputDir: root, captureProof,
+    }, {
+      assertTrackedRecipeSet: async () => {},
+      readRecipeSet: async () => recipeSet(),
+      runBatch: async (options) => {
+        batchCalls.push(options);
+        return completeBatch(options.browserHost);
+      },
+      verifyBatch: async (options) => verifiedBatch(options, {
+        executionTuningPlan: tuningPlan('anifor.visual-lab.execution-tuning-plan/v8'),
+      }),
+    });
+    expect(batchCalls.map(({ captureProof: forwardedProof }) => forwardedProof))
+      .toEqual(Array(4).fill(captureProof));
+    expect(result.summary.captureProof).toEqual({
+      mode: captureProof,
+      tuningSchema: 'anifor.visual-lab.execution-tuning-plan/v8',
+      receiptSchema: 'anifor.renderer.completed-frame-receipt/v1',
+    });
+  });
+
   it('forwards render-field generation with selection-owned alpha readback and requires tuning v9', async () => {
     const root = await temporaryRoot();
     const batchCalls = [];

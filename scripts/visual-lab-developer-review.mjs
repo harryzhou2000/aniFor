@@ -9,7 +9,10 @@ import {
   parseVisualLabReviewArguments,
   runVisualLabReviewCycle,
 } from './visual-lab-review.mjs';
-import { resolveTrackedVisualLabCohortSnapshot } from './visual-lab-cohort-catalog.mjs';
+import {
+  resolveTrackedVisualLabCohortSnapshot,
+  visualLabCandidatesForAuthoringSource,
+} from './visual-lab-cohort-catalog.mjs';
 import { readVisualLabRecipeSet } from './visual-lab-recipe-set.mjs';
 
 const MODULE_PATH = fileURLToPath(import.meta.url);
@@ -20,7 +23,7 @@ const execFileAsync = promisify(execFile);
 
 const HELP = `Usage:
   node scripts/visual-lab-developer-review.mjs \\
-    (--candidate=<name> | --cohort=<kebab-name> | --recipe-set=<recipe-set.json>) \\
+    (--candidate=<name> | --source=<authoring-source> | --cohort=<kebab-name> | --recipe-set=<recipe-set.json>) \\
     [Visual Lab review capture options]
 
 Runs one local edit-to-review cycle through the existing trusted review API. It
@@ -44,9 +47,9 @@ const hasOption = (argumentsList, name) => (
 );
 
 const safeRootLabel = (parsed) => {
-  const source = parsed.recipeSetPath === undefined
+  const source = parsed.sourceName ?? (parsed.recipeSetPath === undefined
     ? parsed.candidates.length === 1 ? parsed.candidates[0] : 'cohort'
-    : path.basename(parsed.recipeSetPath, path.extname(parsed.recipeSetPath));
+    : path.basename(parsed.recipeSetPath, path.extname(parsed.recipeSetPath)));
   const normalized = source.toLowerCase()
     .replace(/[^a-z0-9]+/gu, '-')
     .replace(/^-+|-+$/gu, '')
@@ -135,15 +138,15 @@ export function parseVisualLabDeveloperReviewArguments(
 
   if (hasOption(argv, 'candidates')) {
     throw new Error(
-      '--candidates is not supported by the developer launcher; use one --candidate, a catalog --cohort, or a tracked --recipe-set',
+      '--candidates is not supported by the developer launcher; use one --candidate, one authoring --source, a catalog --cohort, or a tracked --recipe-set',
     );
   }
   const selectionArguments = argv.filter((argument) => (
-    ['candidate', 'cohort', 'recipe-set'].includes(optionName(argument))
+    ['candidate', 'source', 'cohort', 'recipe-set'].includes(optionName(argument))
   ));
   if (selectionArguments.length !== 1) {
     throw new Error(
-      'Visual Lab developer review requires exactly one of --candidate, --cohort, or --recipe-set',
+      'Visual Lab developer review requires exactly one of --candidate, --source, --cohort, or --recipe-set',
     );
   }
   if (hasOption(argv, 'output-dir')) {
@@ -152,6 +155,7 @@ export function parseVisualLabDeveloperReviewArguments(
 
   const repository = path.resolve(repositoryRoot);
   let cohortName;
+  let sourceName;
   const normalizedArguments = argv.map((argument) => {
     if (optionName(argument) === 'cohort') {
       const separator = argument.indexOf('=');
@@ -167,6 +171,13 @@ export function parseVisualLabDeveloperReviewArguments(
       const separator = argument.indexOf('=');
       if (separator === -1) return argument;
       return `--recipe-set=${path.resolve(repository, argument.slice(separator + 1))}`;
+    }
+    if (optionName(argument) === 'source') {
+      const separator = argument.indexOf('=');
+      if (separator === -1) return argument;
+      sourceName = argument.slice(separator + 1);
+      const candidates = visualLabCandidatesForAuthoringSource(sourceName);
+      return `--candidates=${candidates.join(',')}`;
     }
     if (optionName(argument) !== 'candidate') return argument;
     const separator = argument.indexOf('=');
@@ -191,6 +202,7 @@ export function parseVisualLabDeveloperReviewArguments(
   return Object.freeze({
     ...parsed,
     ...(cohortName === undefined ? {} : { cohortName }),
+    ...(sourceName === undefined ? {} : { sourceName }),
   });
 }
 
@@ -277,6 +289,7 @@ export async function runVisualLabDeveloperReview(argv, runtime = {}) {
     help: _help,
     outputDir: _placeholderOutput,
     cohortName: _cohortName,
+    sourceName: _sourceName,
     ...reviewOptions
   } = parsed;
   try {

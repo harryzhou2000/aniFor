@@ -22,6 +22,7 @@ import {
   VISUAL_LAB_COHORT_CATALOG_SCHEMA_V3,
   visualLabCohortNames,
   visualLabCohortNamesFromCatalog,
+  visualLabCandidatesForAuthoringSource,
 } from './visual-lab-cohort-catalog.mjs';
 
 const temporaryDirectories = [];
@@ -102,6 +103,18 @@ describe('Visual Lab declarative cohort catalog', () => {
     expect(compiled[2].recipes.map(({ name }) => name)).toEqual([
       'solid-material-lighting-atlas', 'multi-metal-material-lighting-atlas',
     ]);
+  });
+
+  it('resolves one authoring source directly in canonical capture order', () => {
+    const candidates = visualLabCandidatesForAuthoringSource('solid');
+    expect(candidates).toEqual([
+      'solid-material-lighting-atlas', 'multi-metal-material-lighting-atlas',
+    ]);
+    expect(Object.isFrozen(candidates)).toBe(true);
+    expect(() => visualLabCandidatesForAuthoringSource('missing-source'))
+      .toThrow('Unknown Visual Lab recipe authoring source');
+    expect(() => visualLabCandidatesForAuthoringSource('../solid'))
+      .toThrow('safe kebab-case');
   });
 
   it('keeps v2 catalogs readable without granting authoring-source selectors', () => {

@@ -64,6 +64,9 @@ describe('Visual Lab developer review arguments', () => {
       '--candidate=water-motion', '--recipe-set=visual-lab/recipe-sets/liquid-motion.json',
     ], context)).toThrow('exactly one');
     expect(() => parseVisualLabDeveloperReviewArguments([
+      '--source=render-optics', '--cohort=material-optics',
+    ], context)).toThrow('exactly one');
+    expect(() => parseVisualLabDeveloperReviewArguments([
       '--candidates=water-motion,oil-motion',
     ], context)).toThrow('tracked --recipe-set');
     expect(() => parseVisualLabDeveloperReviewArguments([
@@ -72,6 +75,23 @@ describe('Visual Lab developer review arguments', () => {
     expect(() => parseVisualLabDeveloperReviewArguments([
       '--candidate=water-motion,oil-motion',
     ], context)).toThrow('exactly one recipe name');
+  });
+
+  it('resolves a manifest authoring source without requiring a tracked cohort', () => {
+    const repositoryRoot = '/workspace/anifor';
+    const parsed = parseVisualLabDeveloperReviewArguments(
+      ['--source=render-optics'], { repositoryRoot, platform: 'linux' },
+    );
+    expect(parsed).toMatchObject({
+      sourceName: 'render-optics',
+      candidates: ['render-optics-material-lighting-atlas'],
+      bundle: path.join(repositoryRoot, 'dist', 'index.html'),
+      browserHost: 'shared',
+    });
+    expect(parsed).not.toHaveProperty('recipeSetPath');
+    expect(() => parseVisualLabDeveloperReviewArguments(
+      ['--source=missing-source'], { repositoryRoot, platform: 'linux' },
+    )).toThrow('Unknown Visual Lab recipe authoring source');
   });
 
   it('normalizes a singular recipe and supplies deterministic developer defaults', () => {
@@ -163,6 +183,27 @@ describe('Visual Lab developer review execution', () => {
 
     expect(second.reviewRoot).not.toBe(first.reviewRoot);
     expect(await readFile(marker, 'utf8')).toBe('retain me');
+  });
+
+  it('delegates a direct authoring source as its canonical candidate set', async () => {
+    const repositoryRoot = await temporaryRepository();
+    let cycleOptions;
+    const outcome = await runVisualLabDeveloperReview(['--source=render-optics'], {
+      repositoryRoot,
+      randomUUID: () => UUID_A,
+      stdout: captureStream(),
+      stderr: captureStream(),
+      runReviewCycle: async (options) => {
+        cycleOptions = options;
+        return successfulReview(options.outputDir);
+      },
+    });
+    expect(cycleOptions).toMatchObject({
+      candidates: ['render-optics-material-lighting-atlas'],
+    });
+    expect(cycleOptions).not.toHaveProperty('sourceName');
+    expect(cycleOptions).not.toHaveProperty('recipeSetPath');
+    expect(path.basename(outcome.reviewRoot)).toBe(`render-optics-${UUID_A}`);
   });
 
   it('requires recipe sets to be tracked before reserving evidence', async () => {

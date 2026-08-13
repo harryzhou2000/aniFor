@@ -85,6 +85,29 @@ const AUTHORING_SOURCE_CANDIDATES = new Map(VISUAL_CAPTURE_AUTHORING_MANIFEST.ma
 ]));
 const AUTHORING_SOURCES = new Set(AUTHORING_SOURCE_CANDIDATES.keys());
 
+/** Canonical data-only projection; grants no fixture, browser, Git, or deploy authority. */
+export function visualLabCandidatesForAuthoringSource(name) {
+  const normalizedName = normalizeName(name, 'Visual Lab authoring source');
+  const declared = AUTHORING_SOURCE_CANDIDATES.get(normalizedName);
+  if (declared === undefined) {
+    throw new TypeError(`Unknown Visual Lab recipe authoring source ${displayValue(normalizedName)}`);
+  }
+  const candidates = VISUAL_LAB_CAPTURE_RECIPES
+    .filter(({ name: candidate }) => declared.has(candidate))
+    .map(({ name: candidate }) => candidate);
+  if (candidates.length !== declared.size) {
+    const registered = new Set(candidates);
+    const missing = [...declared].filter((candidate) => !registered.has(candidate));
+    throw new TypeError(
+      `Visual Lab authoring source ${displayValue(normalizedName)} has unregistered capture candidates: ${missing.join(', ')}`,
+    );
+  }
+  if (candidates.length === 0) {
+    throw new TypeError(`Visual Lab authoring source ${displayValue(normalizedName)} has no capture candidates`);
+  }
+  return Object.freeze(candidates);
+}
+
 const normalizeSelectorList = (value, label, known, kind) => {
   const names = normalizeNameList(value, label);
   for (const name of names) {
@@ -326,11 +349,12 @@ export function compileVisualLabCohortCatalog(input) {
     const hasSourceSelector = cohort.selectors.sources.length > 0;
     const hasDomainSelector = cohort.selectors.domains.length > 0;
     const hasFixtureSelector = cohort.selectors.fixtures.length > 0;
+    const sourceCandidates = new Set(cohort.selectors.sources.flatMap(
+      (source) => visualLabCandidatesForAuthoringSource(source),
+    ));
     const selected = VISUAL_LAB_CAPTURE_RECIPES.filter((recipe) => (
       (hasSourceSelector || hasDomainSelector || hasFixtureSelector)
-      && (!hasSourceSelector || cohort.selectors.sources.some((source) => (
-        AUTHORING_SOURCE_CANDIDATES.get(source).has(recipe.name)
-      )))
+      && (!hasSourceSelector || sourceCandidates.has(recipe.name))
       && (!hasDomainSelector || cohort.selectors.domains.includes(recipe.domain))
       && (!hasFixtureSelector || cohort.selectors.fixtures.includes(recipe.fixture))
     )).map((recipe) => recipe.name);
