@@ -5,7 +5,10 @@ import {
   HDR_VOLUME_LAB_DOMAIN_ADAPTERS,
   HDR_VOLUME_LAB_GLSL,
 } from './hdr-volume-lab';
-import { HDR_VOLUME_LAB_ADAPTER_REGISTRY } from './hdr-volume-lab-adapters';
+import {
+  HDR_VOLUME_LAB_ADAPTER_REGISTRY,
+  HDR_VOLUME_LAB_LEAF_ADAPTERS_BY_DOMAIN,
+} from './hdr-volume-lab-adapters';
 import { HDR_VOLUME_LAB_EMISSION_DESCRIPTOR } from './hdr-volume-lab-emission';
 import { HDR_VOLUME_LAB_GAS_DESCRIPTOR } from './hdr-volume-lab-gas';
 import { HDR_VOLUME_LAB_LIQUID_DESCRIPTOR } from './hdr-volume-lab-liquid';
@@ -24,12 +27,31 @@ const KNOWN_VISUAL_LAB_SAMPLERS = new Set<VisualLabSampler>([
 ]);
 
 describe('HDR Visual Lab domain adapters', () => {
-  it('projects the frozen leaf registry into the assembled public adapter tuple', () => {
+  it('derives the frozen public tuple from explicit leaves in implemented-domain order', () => {
+    expect(HDR_VOLUME_LAB_LEAF_ADAPTERS_BY_DOMAIN).toEqual({
+      liquid: HDR_VOLUME_LAB_LIQUID_DESCRIPTOR,
+      gas: HDR_VOLUME_LAB_GAS_DESCRIPTOR,
+      emission: HDR_VOLUME_LAB_EMISSION_DESCRIPTOR,
+    });
+    expect(Object.keys(HDR_VOLUME_LAB_LEAF_ADAPTERS_BY_DOMAIN)).toEqual([
+      'liquid', 'gas', 'emission',
+    ]);
+    expect(Object.keys(VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS)).toEqual(
+      Object.keys(HDR_VOLUME_LAB_LEAF_ADAPTERS_BY_DOMAIN),
+    );
     expect(HDR_VOLUME_LAB_ADAPTER_REGISTRY).toEqual([
       HDR_VOLUME_LAB_LIQUID_DESCRIPTOR,
       HDR_VOLUME_LAB_GAS_DESCRIPTOR,
       HDR_VOLUME_LAB_EMISSION_DESCRIPTOR,
     ]);
+    expect(HDR_VOLUME_LAB_ADAPTER_REGISTRY).toEqual(
+      Object.keys(VISUAL_LAB_IMPLEMENTED_DOMAIN_DESCRIPTORS).map(
+        (domain) => HDR_VOLUME_LAB_LEAF_ADAPTERS_BY_DOMAIN[
+          domain as keyof typeof HDR_VOLUME_LAB_LEAF_ADAPTERS_BY_DOMAIN
+        ],
+      ),
+    );
+    expect(Object.isFrozen(HDR_VOLUME_LAB_LEAF_ADAPTERS_BY_DOMAIN)).toBe(true);
     expect(Object.isFrozen(HDR_VOLUME_LAB_ADAPTER_REGISTRY)).toBe(true);
     for (const adapter of HDR_VOLUME_LAB_ADAPTER_REGISTRY) {
       expect(Object.isFrozen(adapter)).toBe(true);

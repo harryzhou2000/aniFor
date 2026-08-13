@@ -12,6 +12,10 @@ import { THERMAL_SOURCE_MATERIAL_LIGHTING_ATLAS_CATALOG } from './thermal-source
 
 const SAFE_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const SOURCE_FIELDS = Object.freeze(['name', 'entries']);
+const DEFAULT_CAPTURE_SOURCE_FIELDS = Object.freeze(['name', 'atlases', 'capture']);
+const DEFAULT_CAPTURE_SOURCE_WITH_OVERRIDES_FIELDS = Object.freeze([
+  'name', 'atlases', 'capture', 'captureOverrides',
+]);
 const ENTRY_FIELDS = Object.freeze(['atlas', 'capture']);
 const CAPTURE_FIELDS = Object.freeze(['domain', 'driver', 'preparationReportLabel']);
 
@@ -33,22 +37,42 @@ const capture = (domain, driver, preparationReportLabel) => ({
   domain, driver, preparationReportLabel,
 });
 
-const source = (name, atlases, captures) => {
-  const atlasCandidates = new Set(atlases.map(({ candidate }) => candidate));
-  const captureCandidates = Reflect.ownKeys(captures);
-  if (captureCandidates.length !== atlasCandidates.size
-    || captureCandidates.some((candidate) => (
-      typeof candidate !== 'string' || !atlasCandidates.has(candidate)
-    ))) {
-    throw new TypeError(`Visual capture authoring source ${name} has incomplete capture ownership`);
-  }
-  return {
-    name,
-    entries: atlases.map((atlas) => ({
-      atlas,
-      capture: captures[atlas.candidate],
-    })),
-  };
+const source = (name, atlases, defaultCapture, captureOverrides) => (captureOverrides === undefined
+  ? { name, atlases, capture: defaultCapture }
+  : {
+    name, atlases, capture: defaultCapture, captureOverrides,
+  });
+
+const isValidCapture = (value) => value === null || (hasExactFields(value, CAPTURE_FIELDS)
+  && SAFE_NAME.test(value.domain ?? '')
+  && SAFE_NAME.test(value.driver ?? '')
+  && typeof value.preparationReportLabel === 'string'
+  && value.preparationReportLabel.length > 0);
+
+const normalizeSourceEntries = (candidateSource) => {
+  if (hasExactFields(candidateSource, SOURCE_FIELDS)) return candidateSource.entries;
+
+  const hasDefaultCaptureFields = hasExactFields(candidateSource, DEFAULT_CAPTURE_SOURCE_FIELDS)
+    || hasExactFields(candidateSource, DEFAULT_CAPTURE_SOURCE_WITH_OVERRIDES_FIELDS);
+  if (!hasDefaultCaptureFields
+    || !Array.isArray(candidateSource.atlases)
+    || candidateSource.atlases.length === 0
+    || !isValidCapture(candidateSource.capture)) return null;
+
+  const overrides = candidateSource.captureOverrides ?? {};
+  if (overrides === null || typeof overrides !== 'object' || Array.isArray(overrides)) return null;
+  const atlasCandidates = new Set(candidateSource.atlases.map((atlas) => atlas?.candidate));
+  if (Reflect.ownKeys(overrides).some((candidate) => (
+    typeof candidate !== 'string'
+    || !atlasCandidates.has(candidate)
+    || !isValidCapture(overrides[candidate])
+  ))) return null;
+  return candidateSource.atlases.map((atlas) => ({
+    atlas,
+    capture: Object.hasOwn(overrides, atlas.candidate)
+      ? overrides[atlas.candidate]
+      : candidateSource.capture,
+  }));
 };
 
 /**
@@ -63,15 +87,18 @@ export function normalizeVisualCaptureAuthoringManifest(sources) {
   const sourceNames = new Set();
   const candidates = new Set();
   const normalized = sources.map((candidateSource) => {
-    if (!hasExactFields(candidateSource, SOURCE_FIELDS)
+    const entries = normalizeSourceEntries(candidateSource);
+    if ((!(hasExactFields(candidateSource, SOURCE_FIELDS)
+      || hasExactFields(candidateSource, DEFAULT_CAPTURE_SOURCE_FIELDS)
+      || hasExactFields(candidateSource, DEFAULT_CAPTURE_SOURCE_WITH_OVERRIDES_FIELDS)))
       || !SAFE_NAME.test(candidateSource.name ?? '')
       || sourceNames.has(candidateSource.name)
-      || !Array.isArray(candidateSource.entries)
-      || candidateSource.entries.length === 0) {
+      || entries === null
+      || entries.length === 0) {
       throw new TypeError('Visual capture authoring source is malformed');
     }
     sourceNames.add(candidateSource.name);
-    const entries = candidateSource.entries.map((entry) => {
+    const normalizedEntries = entries.map((entry) => {
       if (!hasExactFields(entry, ENTRY_FIELDS)
         || !hasExactFields(entry.atlas, ['candidate', 'world', 'descriptor'])
         || !SAFE_NAME.test(entry.atlas.candidate ?? '')
@@ -84,16 +111,12 @@ export function normalizeVisualCaptureAuthoringManifest(sources) {
         throw new TypeError('Visual capture authoring atlas is malformed or duplicated');
       }
       candidates.add(entry.atlas.candidate);
-      if (entry.capture !== null && (!hasExactFields(entry.capture, CAPTURE_FIELDS)
-        || !SAFE_NAME.test(entry.capture.domain ?? '')
-        || !SAFE_NAME.test(entry.capture.driver ?? '')
-        || typeof entry.capture.preparationReportLabel !== 'string'
-        || entry.capture.preparationReportLabel.length === 0)) {
+      if (!isValidCapture(entry.capture)) {
         throw new TypeError('Visual capture authoring metadata is malformed');
       }
       return { atlas: entry.atlas, capture: entry.capture };
     });
-    return { name: candidateSource.name, entries };
+    return { name: candidateSource.name, entries: normalizedEntries };
   });
   return deepFreeze(normalized);
 }
@@ -108,49 +131,27 @@ const materialLighting = (preparationReportLabel) => capture(
  * are legacy base-contract candidates that only contribute inspection data.
  */
 export const VISUAL_CAPTURE_AUTHORING_MANIFEST = normalizeVisualCaptureAuthoringManifest([
-  source('material-showcase', MATERIAL_SHOWCASE_ATLAS_CATALOG.atlases, {
-    'gas-showcase': null,
-    'oxygen-showcase': null,
-  }),
-  source('cross-phase', MATERIAL_LIGHTING_ATLAS_CATALOG.atlases, {
-    'material-lighting-atlas': materialLighting('prepareMaterialLightingAtlasFixture'),
-  }),
-  source('gas', GAS_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases, {
-    'gas-material-lighting-atlas': materialLighting('prepareGasMaterialLightingAtlasFixture'),
-  }),
-  source('solid', SOLID_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases, {
+  source('material-showcase', MATERIAL_SHOWCASE_ATLAS_CATALOG.atlases, null),
+  source('cross-phase', MATERIAL_LIGHTING_ATLAS_CATALOG.atlases,
+    materialLighting('prepareMaterialLightingAtlasFixture')),
+  source('gas', GAS_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases,
+    materialLighting('prepareGasMaterialLightingAtlasFixture')),
+  source('solid', SOLID_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases, null, {
     'solid-material-lighting-atlas': materialLighting('prepareSolidMaterialLightingAtlasFixture'),
     'multi-metal-material-lighting-atlas': materialLighting(
       'prepareMultiMetalMaterialLightingAtlasFixture',
     ),
   }),
-  source('source-target', SOURCE_TARGET_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases, {
-    'source-target-material-lighting-atlas': materialLighting(
-      'prepareSourceTargetGraphicsAuditFixture',
-    ),
-  }),
-  source('force-activity', FORCE_ACTIVITY_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases, {
-    'force-activity-material-lighting-atlas': materialLighting(
-      'prepareForceActivityGraphicsAuditFixture',
-    ),
-  }),
-  source('thermal-source', THERMAL_SOURCE_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases, {
-    'thermal-source-material-lighting-atlas': materialLighting(
-      'prepareCeramicTemperatureVfxFixture',
-    ),
-  }),
-  source('opposed-source', OPPOSED_SOURCE_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases, {
-    'opposed-source-material-lighting-atlas': materialLighting('preparePowderLightVfxFixture'),
-  }),
-  source('powder-style', POWDER_STYLE_ATLAS_CATALOG.atlases, {
-    'powder-style-atlas': capture(
-      'powder', 'powder-render-style', 'preparePowderStyleAtlasFixture',
-    ),
-  }),
-  source('liquid-motion', LIQUID_MOTION_VFX_ATLAS_CATALOG.atlases, {
-    'water-motion': null,
-  }),
-  source('oil-motion', OIL_MOTION_VFX_ATLAS_CATALOG.atlases, {
-    'oil-motion': null,
-  }),
+  source('source-target', SOURCE_TARGET_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases,
+    materialLighting('prepareSourceTargetGraphicsAuditFixture')),
+  source('force-activity', FORCE_ACTIVITY_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases,
+    materialLighting('prepareForceActivityGraphicsAuditFixture')),
+  source('thermal-source', THERMAL_SOURCE_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases,
+    materialLighting('prepareCeramicTemperatureVfxFixture')),
+  source('opposed-source', OPPOSED_SOURCE_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases,
+    materialLighting('preparePowderLightVfxFixture')),
+  source('powder-style', POWDER_STYLE_ATLAS_CATALOG.atlases,
+    capture('powder', 'powder-render-style', 'preparePowderStyleAtlasFixture')),
+  source('liquid-motion', LIQUID_MOTION_VFX_ATLAS_CATALOG.atlases, null),
+  source('oil-motion', OIL_MOTION_VFX_ATLAS_CATALOG.atlases, null),
 ]);

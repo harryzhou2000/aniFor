@@ -7332,6 +7332,25 @@ only `performance-summary.json`. This closes the diagnostic gap exposed by
 workflows `31679545685` and `31682013887`. Return next to declarative experiment
 authoring leverage rather than extending the performance-proof ladder.
 
+The next authoring-leverage checkpoint now removes two more repeated
+registrations without broadening static-data authority. A source in
+`visual-capture-authoring-manifest` may declare one default capture descriptor
+plus bounded per-candidate overrides; normalization still exports the exact
+historical frozen `{ name, entries: [{ atlas, capture }] }` shape, and the
+explicit app-owned preparer registry remains the only fixture-mutation
+authority. The normal-HDR renderer still imports every leaf shader descriptor
+explicitly, but derives its canonical public adapter tuple order from the
+implemented-domain contract instead of repeating `liquid`, `gas`, and
+`emission` in a second ordered tuple. Focused authoring/static-contract/renderer
+checks preserve the existing JSON digests and shader ABI. A production build
+closed all 19 resources, and a real shared-host SwiftShader capture of
+`material-lighting-atlas` compiled and exercised the assembled WebGL shader,
+passed all OFF/A/B captures, and passed portable verification as result
+`sha256:560920b905644c475da7b406a1d1c8faa7bbf338e0853c2c3cd6a26255209d31`.
+Continue by measuring the remaining normal-HDR candidate registration steps;
+keep explicit leaf imports and typed preparers rather than moving module paths,
+GLSL, callbacks, or browser execution into the data-only manifest.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

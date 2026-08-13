@@ -1899,6 +1899,21 @@ result-ID/variant drift is a structural failure with no diagnostic. CI may
 upload only this JSON on failure; keep raw cohorts runner-local and keep the
 success summary publish-last and unchanged.
 
+The current authoring checkpoint removes repeated metadata and ordering while
+preserving explicit executable boundaries. Authoring sources may use one
+default capture descriptor plus bounded per-candidate overrides, but
+normalization must retain the exact public frozen entry shape and app fixture
+mutation must remain in the exhaustive typed preparer registry. The normal-HDR
+renderer may derive canonical adapter order from the implemented-domain static
+contract, but every shader leaf import and the domain-to-leaf map remain
+explicit renderer authority; never place module paths, GLSL, callbacks, or
+browser methods in the static manifest. The representative real SwiftShader
+`material-lighting-atlas` package passed WebGL compilation/capture and portable
+verification with result
+`sha256:560920b905644c475da7b406a1d1c8faa7bbf338e0853c2c3cd6a26255209d31`.
+Use this seam to shorten the next normal-HDR experiment registration, not to
+merge release selection, executable preparation, or shader loading into data.
+
 Performance comparisons use the opt-in
 `audit:visual-lab:performance-cohorts` runner. Preserve its fixed
 fresh/shared/shared/fresh order, tracked recipe-set requirement, distinct cohort

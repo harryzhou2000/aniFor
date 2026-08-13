@@ -71,12 +71,40 @@ describe('visual capture authoring manifest', () => {
         atlas: atlas(), capture: { ...metadata(), preparationReportLabel: '' },
       }],
     }])).toThrow('metadata is malformed');
+    expect(() => normalizeVisualCaptureAuthoringManifest([{
+      name: 'source', atlases: [atlas()], capture: null, captureOverrides: { missing: null },
+    }])).toThrow('source is malformed');
     const sourceText = await import('node:fs/promises').then(({ readFile }) => (
       readFile(new URL('./visual-capture-authoring-manifest.js', import.meta.url), 'utf8')
     ));
     for (const forbidden of ['browserMethod', 'modulePath', 'arguments:', 'preparer:']) {
       expect(sourceText).not.toContain(forbidden);
     }
+  });
+
+  it('expands default capture metadata and bounded per-candidate overrides before export', () => {
+    const defaultCapture = metadata();
+    const override = { ...metadata(), preparationReportLabel: 'overrideLabel' };
+    const normalized = normalizeVisualCaptureAuthoringManifest([{
+      name: 'source',
+      atlases: [atlas('first'), atlas('second')],
+      capture: defaultCapture,
+      captureOverrides: { second: override },
+    }]);
+    expect(normalized).toEqual([{
+      name: 'source',
+      entries: [
+        { atlas: atlas('first'), capture: defaultCapture },
+        { atlas: atlas('second'), capture: override },
+      ],
+    }]);
+    expect(JSON.stringify(normalized)).toBe(JSON.stringify([{
+      name: 'source',
+      entries: [
+        { atlas: atlas('first'), capture: defaultCapture },
+        { atlas: atlas('second'), capture: override },
+      ],
+    }]));
   });
 
   it('preserves every public capture and inspection byte through the migration', () => {
