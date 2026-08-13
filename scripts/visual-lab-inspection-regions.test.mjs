@@ -37,6 +37,7 @@ describe('Visual Lab inspection-region catalog', () => {
       'force-activity-material-lighting-atlas',
       'thermal-source-material-lighting-atlas',
       'opposed-source-material-lighting-atlas',
+      'wax-material-lighting-atlas',
     ]);
     expect(Object.isFrozen(VISUAL_CAPTURE_INSPECTION_SOURCE_CATALOG)).toBe(true);
     expect(Object.isFrozen(VISUAL_CAPTURE_INSPECTION_SOURCE_CATALOG.sources[0])).toBe(true);
@@ -135,6 +136,14 @@ describe('Visual Lab inspection-region catalog', () => {
     ]);
     expect(Object.isFrozen(VISUAL_LAB_INSPECTION_REGIONS)).toBe(true);
     expect(Object.isFrozen(opposed.regions[0])).toBe(true);
+  });
+
+  it('derives paired Wax/MWAX material-lighting controls from shared declared authoring', () => {
+    const wax = fixture('wax-material-lighting-atlas');
+    expect(wax.world).toEqual({ width: 612, height: 384 });
+    expect(wax.regions).toHaveLength(22);
+    expect(wax.regions.map(({ name }) => name)).toContain('wax-warm-emitter');
+    expect(wax.regions.map(({ name }) => name)).toContain('mwax-warm-emitter');
   });
 
   it('derives solid and multi-metal review regions from shared data-only atlas authoring', () => {
