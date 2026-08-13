@@ -32,16 +32,49 @@ on:
         options:
           - stable-snapshots
           - completed-frame-receipt
+          - readiness-completed-frame-receipt
+          - selection-owned-frame-receipt
+          - fixture-activation-generation
+          - fixture-activation-work-generation
+          - fixture-activation-render-field-generation
+      visual_lab_browser_host:
+        description: Browser topology for optional Visual Lab diagnosis
+        required: true
+        default: shared
+        type: choice
+        options:
+          - shared
+          - fresh
       visual_lab_candidates:
-        description: Optional comma-separated Visual Lab candidates; empty runs the frozen catalog
+        description: Optional ad-hoc comma-separated candidates; exclusive with cohort and recipe set
         required: false
         default: ''
+        type: string
+      visual_lab_cohort:
+        description: Declarative checked-in review cohort; clear only for an ad-hoc selection
+        required: false
+        default: material-lighting
         type: string
       visual_lab_recipe_set:
-        description: Optional checked-in recipe-set JSON; exclusive with Visual Lab candidates
+        description: Explicit checked-in recipe set; exclusive with cohort and ad-hoc candidates
         required: false
         default: ''
         type: string
+      visual_lab_performance_cohorts:
+        description: Run the non-gating fresh/shared performance matrix
+        required: true
+        default: false
+        type: boolean
+      visual_lab_performance_capture_proof:
+        description: Capture proof for the non-gating Powder performance matrix
+        required: true
+        default: selection-owned-frame-receipt
+        type: choice
+        options:
+          - selection-owned-frame-receipt
+          - fixture-activation-generation
+          - fixture-activation-work-generation
+          - fixture-activation-render-field-generation
 
 permissions:
   contents: read
