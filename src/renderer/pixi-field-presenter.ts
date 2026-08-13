@@ -12296,6 +12296,8 @@ export class PixiFieldPresenter {
   private framebufferAlphaReadbacks?: Map<number, MutableWebGLFramebufferAlphaReadback>;
   private framebufferAlphaReadbackPoll = 0;
   private framebufferAlphaReadbackWatchdog?: ReturnType<typeof setTimeout>;
+  /** Reused CPU destination for completed audit PBO transfers, never evidence state. */
+  private framebufferAlphaReadbackScratch?: Uint8Array;
   private powderSurfaceDirty = true;
   /** Bounded follow-up cadence while a slow powder owner evolves 0 -> 255. */
   private boundaryEvolutionPending = false;
@@ -12360,6 +12362,7 @@ export class PixiFieldPresenter {
       this.releaseRenderFence('failed');
       this.failCompletedFrameReceipt();
       this.failFramebufferAlphaReadback();
+      this.releaseFramebufferAlphaReadbackScratch();
       this.releaseWebGLTimingQuery();
       this.releaseWebGLTimingFence();
       this.contextLossHandler?.();
@@ -13608,6 +13611,7 @@ export class PixiFieldPresenter {
     this.releaseRenderFence('failed');
     this.failCompletedFrameReceipt();
     this.failFramebufferAlphaReadback();
+    this.releaseFramebufferAlphaReadbackScratch();
     this.releaseWebGLTimingQuery();
     this.releaseWebGLTimingFence();
     try { this.hdrVfxPipeline?.destroy(); }
@@ -13652,6 +13656,7 @@ export class PixiFieldPresenter {
     attempt(() => this.releaseRenderFence('failed'));
     attempt(() => this.failCompletedFrameReceipt());
     attempt(() => this.failFramebufferAlphaReadback());
+    attempt(() => this.releaseFramebufferAlphaReadbackScratch());
     attempt(() => this.releaseWebGLTimingQuery());
     attempt(() => this.releaseWebGLTimingFence());
     attempt(() => this.hdrVfxPipeline?.destroy());
@@ -15480,7 +15485,9 @@ export class PixiFieldPresenter {
       return;
     }
     try {
-      const rgba = new Uint8Array(this.app.canvas.width * this.app.canvas.height * 4);
+      const rgba = this.framebufferAlphaReadbackDestination(
+        this.app.canvas.width * this.app.canvas.height * 4,
+      );
       gl.bindBuffer(gl.PIXEL_PACK_BUFFER, readback.buffer);
       gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, rgba);
       gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
@@ -15523,6 +15530,19 @@ export class PixiFieldPresenter {
       readback.buffer = undefined;
       readback.fenceStartedAt = 0;
     }
+  }
+
+  /** Keeps one bounded CPU destination across serial audit PBO completions. */
+  private framebufferAlphaReadbackDestination(byteLength: number): Uint8Array {
+    const existing = this.framebufferAlphaReadbackScratch;
+    if (existing && existing.byteLength === byteLength) return existing;
+    const destination = new Uint8Array(byteLength);
+    this.framebufferAlphaReadbackScratch = destination;
+    return destination;
+  }
+
+  private releaseFramebufferAlphaReadbackScratch(): void {
+    this.framebufferAlphaReadbackScratch = undefined;
   }
 
   /**

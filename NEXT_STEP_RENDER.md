@@ -7279,6 +7279,22 @@ loaded-runner readiness, but preserves it with a stronger explicit render-field
 convergence contract. Keep v7 opt-in and move next to reducing the dominant
 complete readiness readback rather than adding another activation schema.
 
+The first evidence-preserving readiness-readback increment is implemented
+locally. Normal WebGL now requests the submission-bound framebuffer-alpha PBO
+ticket first, overlaps its fence/poll/digest with the fresh semantic, selected
+authoritative-field, dataset, backend, and geometry observation, then merges the
+same four-number digest into the exact historical snapshot shape. Unsupported
+PBO contexts retain the one combined synchronous `gl.readPixels` fallback. The
+presenter also reuses one same-sized private CPU destination for serial PBO
+transfers and releases it on resize replacement, context loss, and teardown;
+it is scratch storage, never evidence or cache authority. A real local
+SwiftShader Powder capture at `/tmp/anifor-overlap-powder.ZIvqxc` retained result
+`sha256:b3edbc669cc2c2408ef712ea6089b42e85e1ba60944d3d78b4bd0942de23f67f`,
+tuning plan `sha256:341fdc327710f547d7e973050b706edbc2acdfb9333998aefb20ee38d53d3e1a`,
+all 16 regions, one snapshot, and zero restarts. Its complete readiness
+readback/hash was 3.08s and total readiness 7.82s. Treat that as promising
+single-sample evidence only; use the fixed cohort before claiming improvement.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

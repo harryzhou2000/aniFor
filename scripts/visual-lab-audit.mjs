@@ -1697,14 +1697,11 @@ async function snapshotState(cdp, executionPlan, commandTimeoutMs = CDP_COMMAND_
     executionPlan.compiled
   );
   const evidencePlane = executionPlan.domainAdapter.evidence.plane;
-  const asynchronousFramebufferAlpha = await readFramebufferAlphaDigest(
-    cdp, commandTimeoutMs,
-  );
-  return evaluate(cdp, `(() => {
+  const readbackTicket = await requestFramebufferAlphaReadback(cdp);
+  const snapshotExpression = (readFramebufferFallback) => `(() => {
     const audit = window.__ANIFOR_INPUT_AUDIT__;
     const canvas = document.querySelector('.semantic-field-canvas');
     if (!audit || !canvas) throw new Error('visual-lab audit API/canvas disappeared');
-    const digestRgbaAlpha = ${digestVisualLabFramebufferAlpha.toString()};
     const material = audit.materialPlaneDigest();
     let countHash = 2166136261 >>> 0;
     for (let index = 0; index < material.materialCounts.length; index++) {
@@ -1716,9 +1713,7 @@ async function snapshotState(cdp, executionPlan, commandTimeoutMs = CDP_COMMAND_
       throw new Error('visual-capture evidence digest bridge is unavailable');
     }
     const fieldAlpha = audit.visualCaptureEvidenceDigest(${JSON.stringify(evidencePlane)});
-    const asynchronousFramebufferAlpha = ${JSON.stringify(asynchronousFramebufferAlpha)};
-    let framebufferAlpha = asynchronousFramebufferAlpha;
-    if (framebufferAlpha === null) {
+    ${readFramebufferFallback ? `const digestRgbaAlpha = ${digestVisualLabFramebufferAlpha.toString()};
       const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
       if (!gl) throw new Error('semantic-field canvas has no readable WebGL context');
       const readbackKey = Symbol.for('anifor.visual-lab.framebuffer-readback/v1');
@@ -1727,8 +1722,7 @@ async function snapshotState(cdp, executionPlan, commandTimeoutMs = CDP_COMMAND_
       const rgba = reuseReadback(canvas[readbackKey], readbackByteLength);
       canvas[readbackKey] = rgba;
       gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, rgba);
-      framebufferAlpha = digestRgbaAlpha(rgba);
-    }
+      const framebufferAlpha = digestRgbaAlpha(rgba);` : ''}
     const rect = canvas.getBoundingClientRect();
     return {
       world: { width: audit.width, height: audit.height },
@@ -1748,20 +1742,30 @@ async function snapshotState(cdp, executionPlan, commandTimeoutMs = CDP_COMMAND_
       },
       semantic: { hash: material.hash, occupied: material.occupied, countHash },
       fieldAlpha,
-      framebufferAlpha,
+      ${readFramebufferFallback ? 'framebufferAlpha,' : ''}
       canvas: {
         width: canvas.width, height: canvas.height,
         cssWidth: rect.width, cssHeight: rect.height,
       },
     };
-  })()`, commandTimeoutMs);
+  })()`;
+  if (readbackTicket === null) {
+    return evaluate(cdp, snapshotExpression(true), commandTimeoutMs);
+  }
+  return overlapVisualLabSnapshotEvidence(
+    () => awaitFramebufferAlphaDigest(cdp, readbackTicket, commandTimeoutMs),
+    () => evaluate(cdp, snapshotExpression(false), commandTimeoutMs),
+  );
 }
 
-async function readFramebufferAlphaDigest(cdp, timeoutMs) {
+async function requestFramebufferAlphaReadback(cdp) {
   const ticket = await evaluate(cdp, `(() => (
     window.__ANIFOR_INPUT_AUDIT__?.requestWebGLFramebufferAlphaReadback?.()
   ))()`);
-  if (!Number.isSafeInteger(ticket) || ticket <= 0) return null;
+  return Number.isSafeInteger(ticket) && ticket > 0 ? ticket : null;
+}
+
+async function awaitFramebufferAlphaDigest(cdp, ticket, timeoutMs) {
   const readback = await waitFor(async () => {
     const observation = await evaluate(cdp, `(() => (
       window.__ANIFOR_INPUT_AUDIT__?.webGLFramebufferAlphaReadback?.(${ticket})
@@ -1783,6 +1787,30 @@ async function readFramebufferAlphaDigest(cdp, timeoutMs) {
       Number.isSafeInteger(digest[name]) && digest[name] >= 0
     )), `framebuffer-alpha readback ${ticket} digest is malformed`);
   return digest;
+}
+
+/**
+ * Overlaps a renderer-owned framebuffer transfer with the remaining evidence
+ * read, then restores the historical snapshot key order and value shape.
+ */
+export async function overlapVisualLabSnapshotEvidence(readFramebufferAlpha, readCoreSnapshot) {
+  if (typeof readFramebufferAlpha !== 'function' || typeof readCoreSnapshot !== 'function') {
+    throw new TypeError('Visual Lab snapshot overlap requires framebuffer and core readers');
+  }
+  const [framebufferAlpha, core] = await Promise.all([
+    readFramebufferAlpha(), readCoreSnapshot(),
+  ]);
+  assert(core !== null && typeof core === 'object' && !Array.isArray(core),
+    'Visual Lab core snapshot is malformed');
+  return {
+    world: core.world,
+    backend: core.backend,
+    dataset: core.dataset,
+    semantic: core.semantic,
+    fieldAlpha: core.fieldAlpha,
+    framebufferAlpha,
+    canvas: core.canvas,
+  };
 }
 
 function sameDigest(left, right) {

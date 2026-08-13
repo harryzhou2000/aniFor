@@ -383,9 +383,13 @@ describe('typed visual capture drivers', () => {
     expect(typeof audit.assertContiguousSelectionOwnedReceiptSubmissions).toBe('function');
     expect(typeof audit.requestTypedFixtureActivationGeneration).toBe('function');
     expect(typeof audit.proveFixtureActivationReadiness).toBe('function');
+    expect(typeof audit.overlapVisualLabSnapshotEvidence).toBe('function');
     const source = readFileSync(new URL('./visual-lab-audit.mjs', import.meta.url), 'utf8');
     expect(source).toContain('entry: options.executionPlan');
     expect(source).toContain('createVisualLabCaptureSubphaseTimingRecorder');
+    expect(source).toContain('if (readbackTicket === null)');
+    expect(source).toContain('gl.readPixels');
+    expect(source).toContain('Promise.all');
     expect(source).toContain('captureSubphases: captureSubphases.finish()');
     expect(source).toContain("measureSnapshot(\n        'readiness'");
     expect(source).toContain('effectiveTimeouts.readinessMs');
@@ -407,6 +411,51 @@ describe('typed visual capture drivers', () => {
       .toBeLessThan(source.lastIndexOf('captureVisualLabCandidateEvidence({'));
     expect(source).toContain('realpathSync(process.argv[1]) === realpathSync(MODULE_PATH)');
     expect(source).not.toMatch(/export async function captureVisualLabCandidatePage\(cdp, options/);
+  });
+
+  it('overlaps framebuffer and core evidence while preserving historical snapshot shape', async () => {
+    const { overlapVisualLabSnapshotEvidence } = await import('./visual-lab-audit.mjs');
+    const events = [];
+    let releaseFramebuffer;
+    const framebuffer = new Promise((resolve) => { releaseFramebuffer = resolve; });
+    const resultPromise = overlapVisualLabSnapshotEvidence(
+      async () => {
+        events.push('framebuffer:start');
+        const digest = await framebuffer;
+        events.push('framebuffer:end');
+        return digest;
+      },
+      async () => {
+        events.push('core:start');
+        await Promise.resolve();
+        events.push('core:end');
+        return {
+          world: { width: 612, height: 384 }, backend: { backend: 'webgl' },
+          dataset: { renderer: 'pixi-webgl' }, semantic: { hash: 1 },
+          fieldAlpha: { hash: 2 }, canvas: { width: 1224, height: 768 },
+        };
+      },
+    );
+    await Promise.resolve();
+    expect(events).toEqual(['framebuffer:start', 'core:start', 'core:end']);
+    releaseFramebuffer({ hash: 3, supportHash: 4, alphaSum: 5, nonzero: 6 });
+    const result = await resultPromise;
+    expect(Object.keys(result)).toEqual([
+      'world', 'backend', 'dataset', 'semantic', 'fieldAlpha', 'framebufferAlpha', 'canvas',
+    ]);
+    expect(result.framebufferAlpha).toEqual({ hash: 3, supportHash: 4, alphaSum: 5, nonzero: 6 });
+  });
+
+  it('propagates overlapping snapshot reader failures and rejects malformed core evidence', async () => {
+    const { overlapVisualLabSnapshotEvidence } = await import('./visual-lab-audit.mjs');
+    await expect(overlapVisualLabSnapshotEvidence(
+      async () => { throw new Error('readback failed'); }, async () => ({}),
+    )).rejects.toThrow('readback failed');
+    await expect(overlapVisualLabSnapshotEvidence(
+      async () => ({}), async () => null,
+    )).rejects.toThrow('core snapshot is malformed');
+    await expect(overlapVisualLabSnapshotEvidence(null, async () => ({})))
+      .rejects.toThrow('requires framebuffer and core readers');
   });
 
   it('activates v5 startup once and proves readiness with one snapshot and one reread', async () => {

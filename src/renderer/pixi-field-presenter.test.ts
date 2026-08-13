@@ -5228,6 +5228,30 @@ describe('Pixi presenter startup configuration', () => {
     });
   });
 
+  it('reuses a bounded PBO destination at one size, replaces it on resize, and clears it on teardown', () => {
+    const presenter = Object.create(PixiFieldPresenter.prototype) as unknown as {
+      framebufferAlphaReadbackScratch?: Uint8Array;
+      framebufferAlphaReadbackDestination(byteLength: number): Uint8Array;
+      releaseFramebufferAlphaReadbackScratch(): void;
+    };
+    const first = presenter.framebufferAlphaReadbackDestination(8);
+    expect(presenter.framebufferAlphaReadbackDestination(8)).toBe(first);
+    const resized = presenter.framebufferAlphaReadbackDestination(12);
+    expect(resized).not.toBe(first);
+    expect(resized).toHaveLength(12);
+    presenter.releaseFramebufferAlphaReadbackScratch();
+    expect(presenter.framebufferAlphaReadbackScratch).toBeUndefined();
+
+    const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
+    expect(source).toMatch(/const rgba = this\.framebufferAlphaReadbackDestination\(/);
+    expect(source).toMatch(
+      /this\.failFramebufferAlphaReadback\(\);\s*this\.releaseFramebufferAlphaReadbackScratch\(\);/,
+    );
+    expect(source).toMatch(
+      /attempt\(\(\) => this\.failFramebufferAlphaReadback\(\)\);\s*attempt\(\(\) => this\.releaseFramebufferAlphaReadbackScratch\(\)\);/,
+    );
+  });
+
   it('completes a pixel-pack framebuffer-alpha transfer without a synchronous readback', () => {
     let status = 0x911b; // TIMEOUT_EXPIRED
     vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));

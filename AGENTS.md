@@ -1859,6 +1859,19 @@ hosted encoded-output outlier. V7 preserves v6's accepted hosted readiness
 range rather than materially beating it, so keep it opt-in and target the
 dominant complete readiness readback next; do not add v8 activation semantics.
 
+The readiness snapshot may overlap only independent evidence work. Request the
+submission-bound asynchronous framebuffer-alpha ticket first, compute a fresh
+semantic digest, selected authoritative-field digest, dataset, backend, and
+geometry concurrently, then merge the unchanged digest into the historical
+snapshot key order. Keep the synchronous `gl.readPixels` fallback intact when
+the renderer declines a ticket. A presenter-private same-sized RGBA scratch may
+be reused across serial PBO completions, but it is never evidence, cache
+authority, or cross-submission state and must be released on context loss and
+teardown. Do not cache semantic or field digests: their simulation and renderer
+ownership clocks differ. The first real local Powder package preserved the
+established result and v7 plan with all 16 regions; its 3.08s readback and 7.82s
+readiness are single-sample evidence pending the fixed cohort.
+
 Performance comparisons use the opt-in
 `audit:visual-lab:performance-cohorts` runner. Preserve its fixed
 fresh/shared/shared/fresh order, tracked recipe-set requirement, distinct cohort
