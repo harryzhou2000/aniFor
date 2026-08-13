@@ -10,6 +10,7 @@ import {
   createVisualLabExecutionTuningPlanV7,
   createVisualLabExecutionTuningPlanV8,
   createVisualLabExecutionTuningPlanV9,
+  createVisualLabExecutionTuningPlanForSchema,
   normalizeVisualLabExecutionTuningPlan,
   normalizeVisualLabExecutionTuningPlanV2,
   normalizeVisualLabExecutionTuningPlanV3,
@@ -19,6 +20,7 @@ import {
   normalizeVisualLabExecutionTuningPlanV7,
   normalizeVisualLabExecutionTuningPlanV8,
   normalizeVisualLabExecutionTuningPlanV9,
+  normalizeVisualLabExecutionTuningPlanForSchema,
   resolveVisualLabExecutionTuningPlanEntry,
   resolveVisualLabExecutionTuningPlanV2Entry,
   resolveVisualLabExecutionTuningPlanV3Entry,
@@ -28,6 +30,7 @@ import {
   resolveVisualLabExecutionTuningPlanV7Entry,
   resolveVisualLabExecutionTuningPlanV8Entry,
   resolveVisualLabExecutionTuningPlanV9Entry,
+  resolveVisualLabExecutionTuningPlanEntryForPlanSchema,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
@@ -37,11 +40,18 @@ import {
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V9_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMAS,
 } from './visual-lab-execution-tuning-plan.mjs';
 import {
   createVisualLabExecutionPlan,
   VISUAL_LAB_EXECUTION_PLAN_SCHEMA,
 } from './visual-lab-execution-plan.mjs';
+import {
+  createVisualLabExecutionTuningPlanForCaptureProof,
+  resolveVisualLabCaptureProof,
+  visualLabCaptureProofForTuningSchema,
+  VISUAL_LAB_CAPTURE_PROOF_MODES,
+} from './visual-lab-capture-proof-registry.mjs';
 
 const clone = (value) => structuredClone(value);
 
@@ -203,6 +213,82 @@ const v9ProfilesFor = (capturePlan) => Object.fromEntries(
 );
 
 describe('Visual Lab execution tuning plan', () => {
+  it('keeps the closed proof dispatcher invertible and rejects unknown proof/schema values', () => {
+    expect(VISUAL_LAB_CAPTURE_PROOF_MODES).toEqual([
+      'stable-snapshots', 'completed-frame-receipt', 'readiness-completed-frame-receipt',
+      'selection-owned-frame-receipt', 'fixture-activation-generation',
+      'fixture-activation-work-generation', 'fixture-activation-render-field-generation',
+      'selection-owned-frame-receipt-and-alpha-readback',
+      'fixture-activation-render-field-generation-and-selection-owned-alpha-readback',
+    ]);
+    for (const mode of VISUAL_LAB_CAPTURE_PROOF_MODES) {
+      const descriptor = resolveVisualLabCaptureProof(mode);
+      expect(visualLabCaptureProofForTuningSchema(descriptor.schema)).toBe(mode);
+    }
+    const capturePlan = createVisualLabExecutionPlan({
+      candidates: ['powder-style-atlas'], baseUrl: 'file:///bundle/index.html', outputDir: '/review',
+    });
+    expect(createVisualLabExecutionTuningPlanForCaptureProof(
+      capturePlan, ['powder-render-style'],
+      'fixture-activation-render-field-generation-and-selection-owned-alpha-readback',
+    ).schema).toBe(VISUAL_LAB_EXECUTION_TUNING_PLAN_V9_SCHEMA);
+    expect(() => resolveVisualLabCaptureProof('timer-query'))
+      .toThrow('Unsupported Visual Lab capture proof');
+    expect(() => visualLabCaptureProofForTuningSchema('anifor.visual-lab.execution-tuning-plan/v10'))
+      .toThrow('Unsupported Visual Lab execution-tuning schema');
+  });
+
+  it('keeps every named v1-v9 facade byte-identical to the closed generic dispatcher', () => {
+    const capturePlan = createVisualLabExecutionPlan({
+      candidates: ['powder-style-atlas'], baseUrl: 'file:///bundle/index.html', outputDir: '/review',
+      gpu: 'swiftshader',
+    });
+    const facades = [
+      [VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA, createVisualLabExecutionTuningPlan,
+        profilesFor, normalizeVisualLabExecutionTuningPlan, resolveVisualLabExecutionTuningPlanEntry],
+      [VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA, createVisualLabExecutionTuningPlanV2,
+        v2ProfilesFor, normalizeVisualLabExecutionTuningPlanV2, resolveVisualLabExecutionTuningPlanV2Entry],
+      [VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA, createVisualLabExecutionTuningPlanV3,
+        v3ProfilesFor, normalizeVisualLabExecutionTuningPlanV3, resolveVisualLabExecutionTuningPlanV3Entry],
+      [VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA, createVisualLabExecutionTuningPlanV4,
+        v4ProfilesFor, normalizeVisualLabExecutionTuningPlanV4, resolveVisualLabExecutionTuningPlanV4Entry],
+      [VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA, createVisualLabExecutionTuningPlanV5,
+        v5ProfilesFor, normalizeVisualLabExecutionTuningPlanV5, resolveVisualLabExecutionTuningPlanV5Entry],
+      [VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA, createVisualLabExecutionTuningPlanV6,
+        v6ProfilesFor, normalizeVisualLabExecutionTuningPlanV6, resolveVisualLabExecutionTuningPlanV6Entry],
+      [VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA, createVisualLabExecutionTuningPlanV7,
+        v7ProfilesFor, normalizeVisualLabExecutionTuningPlanV7, resolveVisualLabExecutionTuningPlanV7Entry],
+      [VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA, createVisualLabExecutionTuningPlanV8,
+        v8ProfilesFor, normalizeVisualLabExecutionTuningPlanV8, resolveVisualLabExecutionTuningPlanV8Entry],
+      [VISUAL_LAB_EXECUTION_TUNING_PLAN_V9_SCHEMA, createVisualLabExecutionTuningPlanV9,
+        v9ProfilesFor, normalizeVisualLabExecutionTuningPlanV9, resolveVisualLabExecutionTuningPlanV9Entry],
+    ];
+    expect(facades.map(([schema]) => schema)).toEqual(VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMAS);
+    for (const [schema, create, profilesForSchema, normalize, resolve] of facades) {
+      const named = create(capturePlan, profilesForSchema(capturePlan));
+      const generic = createVisualLabExecutionTuningPlanForSchema(
+        schema, capturePlan, profilesForSchema(capturePlan),
+      );
+      const parsed = structuredClone(named);
+      expect(generic).toEqual(named);
+      expect(normalize(parsed, capturePlan)).toEqual(named);
+      expect(normalizeVisualLabExecutionTuningPlanForSchema(schema, parsed, capturePlan))
+        .toEqual(named);
+      expect(resolve(
+        parsed, named.entries[0].id, capturePlan.inspection.entries[0].id, capturePlan,
+      )).toEqual(named.entries[0]);
+      expect(resolveVisualLabExecutionTuningPlanEntryForPlanSchema(
+        parsed, named.entries[0].id, capturePlan.inspection.entries[0].id, capturePlan,
+      )).toEqual(named.entries[0]);
+    }
+    expect(() => createVisualLabExecutionTuningPlanForSchema(
+      'anifor.visual-lab.execution-tuning-plan/v10', capturePlan, profilesFor(capturePlan),
+    )).toThrow('Unsupported Visual Lab execution-tuning schema');
+    expect(() => resolveVisualLabExecutionTuningPlanEntryForPlanSchema(
+      { schema: 'anifor.visual-lab.execution-tuning-plan/v10' }, 'sha256:'.concat('0'.repeat(64)),
+    )).toThrow('Unsupported Visual Lab execution-tuning schema');
+  });
+
   it('creates deterministic sibling identities without changing capture-plan IDs', () => {
     const capturePlan = createVisualLabExecutionPlan({
       candidates: ['gas-showcase', 'powder-style-atlas'],

@@ -70,44 +70,8 @@ import {
   resolveVisualLabBrowserHostPlanEntry,
 } from './visual-lab-browser-host-plan.mjs';
 import {
-  visualCaptureExecutionCapabilitiesForCaptureOrder,
-  visualCaptureExecutionV2CapabilitiesForCaptureOrder,
-  visualCaptureExecutionV3CapabilitiesForCaptureOrder,
-  visualCaptureExecutionV4CapabilitiesForCaptureOrder,
-  visualCaptureExecutionV5CapabilitiesForCaptureOrder,
-  visualCaptureExecutionV6CapabilitiesForCaptureOrder,
-  visualCaptureExecutionV7CapabilitiesForCaptureOrder,
-  visualCaptureExecutionV8CapabilitiesForCaptureOrder,
-  visualCaptureExecutionV9CapabilitiesForCaptureOrder,
-} from './visual-capture-execution-capabilities.mjs';
-import {
-  createVisualLabExecutionTuningPlan,
-  createVisualLabExecutionTuningPlanV2,
-  createVisualLabExecutionTuningPlanV3,
-  createVisualLabExecutionTuningPlanV4,
-  createVisualLabExecutionTuningPlanV5,
-  createVisualLabExecutionTuningPlanV6,
-  createVisualLabExecutionTuningPlanV7,
-  createVisualLabExecutionTuningPlanV8,
-  createVisualLabExecutionTuningPlanV9,
-  normalizeVisualLabExecutionTuningPlan,
-  normalizeVisualLabExecutionTuningPlanV2,
-  normalizeVisualLabExecutionTuningPlanV3,
-  normalizeVisualLabExecutionTuningPlanV4,
-  normalizeVisualLabExecutionTuningPlanV5,
-  normalizeVisualLabExecutionTuningPlanV6,
-  normalizeVisualLabExecutionTuningPlanV7,
-  normalizeVisualLabExecutionTuningPlanV8,
-  normalizeVisualLabExecutionTuningPlanV9,
-  resolveVisualLabExecutionTuningPlanEntry,
-  resolveVisualLabExecutionTuningPlanV2Entry,
-  resolveVisualLabExecutionTuningPlanV3Entry,
-  resolveVisualLabExecutionTuningPlanV4Entry,
-  resolveVisualLabExecutionTuningPlanV5Entry,
-  resolveVisualLabExecutionTuningPlanV6Entry,
-  resolveVisualLabExecutionTuningPlanV7Entry,
-  resolveVisualLabExecutionTuningPlanV8Entry,
-  resolveVisualLabExecutionTuningPlanV9Entry,
+  normalizeVisualLabExecutionTuningPlanForSchema,
+  resolveVisualLabExecutionTuningPlanEntryForPlanSchema,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
@@ -118,6 +82,11 @@ import {
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V9_SCHEMA,
 } from './visual-lab-execution-tuning-plan.mjs';
+import {
+  createVisualLabExecutionTuningPlanForCaptureProof,
+  visualLabCaptureProofForTuningSchema,
+  VISUAL_LAB_CAPTURE_PROOF_MODES,
+} from './visual-lab-capture-proof-registry.mjs';
 import { startVisualLabChromeHost } from './visual-lab-chrome-host.mjs';
 import {
   normalizeLivePagesRevision,
@@ -134,15 +103,7 @@ export { inspectVisualLabPng } from './visual-lab-png.mjs';
 
 export const VISUAL_LAB_BATCH_SCHEMA = 'anifor.visual-lab.batch/v1';
 export const VISUAL_LAB_DEFAULT_CANDIDATE_TIMEOUT_MS = 300_000;
-export const VISUAL_LAB_CAPTURE_PROOF_MODES = Object.freeze([
-  'stable-snapshots', 'completed-frame-receipt', 'readiness-completed-frame-receipt',
-  'selection-owned-frame-receipt',
-  'fixture-activation-generation',
-  'fixture-activation-work-generation',
-  'fixture-activation-render-field-generation',
-  'selection-owned-frame-receipt-and-alpha-readback',
-  'fixture-activation-render-field-generation-and-selection-owned-alpha-readback',
-]);
+export { VISUAL_LAB_CAPTURE_PROOF_MODES } from './visual-lab-capture-proof-registry.mjs';
 
 const MODULE_PATH = fileURLToPath(import.meta.url);
 const SCRIPT_DIRECTORY = path.dirname(MODULE_PATH);
@@ -173,157 +134,19 @@ const FAILURE_CODES = new Set([
   'capture-failed', 'report-missing', 'report-invalid', 'artifact-invalid',
 ]);
 
-const captureProofForTuningSchema = (schema) => {
-  if (schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA) return 'stable-snapshots';
-  if (schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA) {
-    return 'completed-frame-receipt';
-  }
-  if (schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA) {
-    return 'readiness-completed-frame-receipt';
-  }
-  if (schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA) {
-    return 'selection-owned-frame-receipt';
-  }
-  if (schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA) {
-    return 'fixture-activation-generation';
-  }
-  if (schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA) {
-    return 'fixture-activation-work-generation';
-  }
-  if (schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA) {
-    return 'fixture-activation-render-field-generation';
-  }
-  if (schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA) {
-    return 'selection-owned-frame-receipt-and-alpha-readback';
-  }
-  if (schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V9_SCHEMA) {
-    return 'fixture-activation-render-field-generation-and-selection-owned-alpha-readback';
-  }
-  throw new TypeError(`Unsupported Visual Lab execution-tuning schema ${String(schema)}`);
-};
-
 const normalizeExecutionTuningPlan = (input, captureExecutionPlan) => {
-  if (input?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA) {
-    return normalizeVisualLabExecutionTuningPlanV2(input, captureExecutionPlan);
-  }
-  if (input?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA) {
-    return normalizeVisualLabExecutionTuningPlanV3(input, captureExecutionPlan);
-  }
-  if (input?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA) {
-    return normalizeVisualLabExecutionTuningPlanV4(input, captureExecutionPlan);
-  }
-  if (input?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA) {
-    return normalizeVisualLabExecutionTuningPlanV5(input, captureExecutionPlan);
-  }
-  if (input?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA) {
-    return normalizeVisualLabExecutionTuningPlanV6(input, captureExecutionPlan);
-  }
-  if (input?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA) {
-    return normalizeVisualLabExecutionTuningPlanV7(input, captureExecutionPlan);
-  }
-  if (input?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA) {
-    return normalizeVisualLabExecutionTuningPlanV8(input, captureExecutionPlan);
-  }
-  if (input?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V9_SCHEMA) {
-    return normalizeVisualLabExecutionTuningPlanV9(input, captureExecutionPlan);
-  }
-  return normalizeVisualLabExecutionTuningPlan(input, captureExecutionPlan);
+  return normalizeVisualLabExecutionTuningPlanForSchema(
+    input?.schema, input, captureExecutionPlan,
+  );
 };
 
-const createExecutionTuningPlan = (captureExecutionPlan, driverOrder, captureProof) => (
-  captureProof === 'fixture-activation-render-field-generation-and-selection-owned-alpha-readback'
-    ? createVisualLabExecutionTuningPlanV9(
-      captureExecutionPlan,
-      visualCaptureExecutionV9CapabilitiesForCaptureOrder(driverOrder),
-    )
-    : captureProof === 'selection-owned-frame-receipt-and-alpha-readback'
-    ? createVisualLabExecutionTuningPlanV8(
-      captureExecutionPlan,
-      visualCaptureExecutionV8CapabilitiesForCaptureOrder(driverOrder),
-    )
-    : captureProof === 'fixture-activation-render-field-generation'
-    ? createVisualLabExecutionTuningPlanV7(
-      captureExecutionPlan,
-      visualCaptureExecutionV7CapabilitiesForCaptureOrder(driverOrder),
-    )
-    : captureProof === 'fixture-activation-work-generation'
-    ? createVisualLabExecutionTuningPlanV6(
-      captureExecutionPlan,
-      visualCaptureExecutionV6CapabilitiesForCaptureOrder(driverOrder),
-    )
-    : captureProof === 'fixture-activation-generation'
-    ? createVisualLabExecutionTuningPlanV5(
-      captureExecutionPlan,
-      visualCaptureExecutionV5CapabilitiesForCaptureOrder(driverOrder),
-    )
-    : captureProof === 'selection-owned-frame-receipt'
-    ? createVisualLabExecutionTuningPlanV4(
-      captureExecutionPlan,
-      visualCaptureExecutionV4CapabilitiesForCaptureOrder(driverOrder),
-    )
-    : captureProof === 'readiness-completed-frame-receipt'
-    ? createVisualLabExecutionTuningPlanV3(
-      captureExecutionPlan,
-      visualCaptureExecutionV3CapabilitiesForCaptureOrder(driverOrder),
-    )
-    : captureProof === 'completed-frame-receipt'
-    ? createVisualLabExecutionTuningPlanV2(
-      captureExecutionPlan,
-      visualCaptureExecutionV2CapabilitiesForCaptureOrder(driverOrder),
-    )
-    : createVisualLabExecutionTuningPlan(
-      captureExecutionPlan,
-      visualCaptureExecutionCapabilitiesForCaptureOrder(driverOrder),
-    )
-);
+const createExecutionTuningPlan = createVisualLabExecutionTuningPlanForCaptureProof;
 
 const resolveExecutionTuningPlanEntry = (
   plan, entryId, expectedCaptureEntryId, captureExecutionPlan,
-) => {
-  if (plan.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA) {
-    return resolveVisualLabExecutionTuningPlanV2Entry(
-      plan, entryId, expectedCaptureEntryId, captureExecutionPlan,
-    );
-  }
-  if (plan.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA) {
-    return resolveVisualLabExecutionTuningPlanV3Entry(
-      plan, entryId, expectedCaptureEntryId, captureExecutionPlan,
-    );
-  }
-  if (plan.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA) {
-    return resolveVisualLabExecutionTuningPlanV4Entry(
-      plan, entryId, expectedCaptureEntryId, captureExecutionPlan,
-    );
-  }
-  if (plan.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA) {
-    return resolveVisualLabExecutionTuningPlanV5Entry(
-      plan, entryId, expectedCaptureEntryId, captureExecutionPlan,
-    );
-  }
-  if (plan.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA) {
-    return resolveVisualLabExecutionTuningPlanV6Entry(
-      plan, entryId, expectedCaptureEntryId, captureExecutionPlan,
-    );
-  }
-  if (plan.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA) {
-    return resolveVisualLabExecutionTuningPlanV7Entry(
-      plan, entryId, expectedCaptureEntryId, captureExecutionPlan,
-    );
-  }
-  if (plan.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA) {
-    return resolveVisualLabExecutionTuningPlanV8Entry(
-      plan, entryId, expectedCaptureEntryId, captureExecutionPlan,
-    );
-  }
-  if (plan.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V9_SCHEMA) {
-    return resolveVisualLabExecutionTuningPlanV9Entry(
-      plan, entryId, expectedCaptureEntryId, captureExecutionPlan,
-    );
-  }
-  return resolveVisualLabExecutionTuningPlanEntry(
-    plan, entryId, expectedCaptureEntryId, captureExecutionPlan,
-  );
-};
+) => resolveVisualLabExecutionTuningPlanEntryForPlanSchema(
+  plan, entryId, expectedCaptureEntryId, captureExecutionPlan,
+);
 
 const HELP = `Usage:
   node scripts/visual-lab-batch.mjs [options]
@@ -1819,7 +1642,7 @@ const assertExecutionTuningPlanCaptureIdentity = (
     reconstructed.entries.map(({ captureDriver }) => captureDriver.name),
   )];
   const expected = createExecutionTuningPlan(
-    reconstructed, driverOrder, captureProofForTuningSchema(executionTuningPlan.schema),
+    reconstructed, driverOrder, visualLabCaptureProofForTuningSchema(executionTuningPlan.schema),
   );
   if (!isDeepStrictEqual(executionTuningPlan, expected)) {
     throw new TypeError(

@@ -27,6 +27,17 @@ export const VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA =
   'anifor.visual-lab.execution-tuning-plan/v8';
 export const VISUAL_LAB_EXECUTION_TUNING_PLAN_V9_SCHEMA =
   'anifor.visual-lab.execution-tuning-plan/v9';
+export const VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMAS = Object.freeze([
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V9_SCHEMA,
+]);
 
 const SHA256_ID = /^sha256:[0-9a-f]{64}$/;
 const SAFE_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -198,6 +209,13 @@ const normalizeGpuMode = (value) => {
     throw new TypeError(`Visual Lab capture gpuMode must be auto or swiftshader; received ${displayValue(value)}`);
   }
   return value;
+};
+
+const assertSupportedSchema = (schema) => {
+  if (!VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMAS.includes(schema)) {
+    throw new TypeError(`Unsupported Visual Lab execution-tuning schema ${String(schema)}`);
+  }
+  return schema;
 };
 
 const captureEntryIdentity = (entry) => ({
@@ -523,6 +541,7 @@ const createEntry = (schema, capturePlan, binding, profile, gpuMode, sequence) =
 };
 
 const createFromBindings = (schema, bindings, driverProfiles) => {
+  assertSupportedSchema(schema);
   const profiles = normalizeDriverProfiles(driverProfiles, bindings, schema);
   const entries = Object.freeze(bindings.entries.map((binding, sequence) => (
     createEntry(schema, bindings.capturePlan, binding, profiles[binding.driver], bindings.gpuMode, sequence)
@@ -548,82 +567,75 @@ const createFromBindings = (schema, bindings, driverProfiles) => {
  * accepted or serialized here.
  */
 export function createVisualLabExecutionTuningPlan(captureExecutionPlan, driverProfiles) {
+  return createVisualLabExecutionTuningPlanForSchema(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA, captureExecutionPlan, driverProfiles,
+  );
+}
+
+/** Creates a closed, schema-selected sibling plan without serializing executable authority. */
+export function createVisualLabExecutionTuningPlanForSchema(
+  schema,
+  captureExecutionPlan,
+  driverProfiles,
+) {
   return createFromBindings(
-    VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
-    captureBindings(captureExecutionPlan),
-    driverProfiles,
+    assertSupportedSchema(schema), captureBindings(captureExecutionPlan), driverProfiles,
   );
 }
 
 /** Creates the opt-in completed-frame-receipt v2 sibling plan. */
 export function createVisualLabExecutionTuningPlanV2(captureExecutionPlan, driverProfiles) {
-  return createFromBindings(
-    VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
-    captureBindings(captureExecutionPlan),
-    driverProfiles,
+  return createVisualLabExecutionTuningPlanForSchema(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA, captureExecutionPlan, driverProfiles,
   );
 }
 
 /** Creates the opt-in readiness-and-capture completed-frame-receipt v3 sibling plan. */
 export function createVisualLabExecutionTuningPlanV3(captureExecutionPlan, driverProfiles) {
-  return createFromBindings(
-    VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
-    captureBindings(captureExecutionPlan),
-    driverProfiles,
+  return createVisualLabExecutionTuningPlanForSchema(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA, captureExecutionPlan, driverProfiles,
   );
 }
 
 /** Creates the opt-in stable-readiness and selection-owned receipt v4 sibling plan. */
 export function createVisualLabExecutionTuningPlanV4(captureExecutionPlan, driverProfiles) {
-  return createFromBindings(
-    VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA,
-    captureBindings(captureExecutionPlan),
-    driverProfiles,
+  return createVisualLabExecutionTuningPlanForSchema(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA, captureExecutionPlan, driverProfiles,
   );
 }
 
 /** Creates the opt-in fixture-activation generation and selection-owned receipt v5 plan. */
 export function createVisualLabExecutionTuningPlanV5(captureExecutionPlan, driverProfiles) {
-  return createFromBindings(
-    VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA,
-    captureBindings(captureExecutionPlan),
-    driverProfiles,
+  return createVisualLabExecutionTuningPlanForSchema(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA, captureExecutionPlan, driverProfiles,
   );
 }
 
 /** Creates the opt-in activation-owned work generation v6 plan. */
 export function createVisualLabExecutionTuningPlanV6(captureExecutionPlan, driverProfiles) {
-  return createFromBindings(
-    VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA,
-    captureBindings(captureExecutionPlan),
-    driverProfiles,
+  return createVisualLabExecutionTuningPlanForSchema(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA, captureExecutionPlan, driverProfiles,
   );
 }
 
 /** Creates the opt-in activation-owned render-field generation v7 plan. */
 export function createVisualLabExecutionTuningPlanV7(captureExecutionPlan, driverProfiles) {
-  return createFromBindings(
-    VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA,
-    captureBindings(captureExecutionPlan),
-    driverProfiles,
+  return createVisualLabExecutionTuningPlanForSchema(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA, captureExecutionPlan, driverProfiles,
   );
 }
 
 /** Creates the opt-in selection-owned receipt plus alpha-readback v8 plan. */
 export function createVisualLabExecutionTuningPlanV8(captureExecutionPlan, driverProfiles) {
-  return createFromBindings(
-    VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA,
-    captureBindings(captureExecutionPlan),
-    driverProfiles,
+  return createVisualLabExecutionTuningPlanForSchema(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA, captureExecutionPlan, driverProfiles,
   );
 }
 
 /** Creates the opt-in render-field readiness plus selection alpha-readback v9 plan. */
 export function createVisualLabExecutionTuningPlanV9(captureExecutionPlan, driverProfiles) {
-  return createFromBindings(
-    VISUAL_LAB_EXECUTION_TUNING_PLAN_V9_SCHEMA,
-    captureBindings(captureExecutionPlan),
-    driverProfiles,
+  return createVisualLabExecutionTuningPlanForSchema(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_V9_SCHEMA, captureExecutionPlan, driverProfiles,
   );
 }
 
@@ -734,49 +746,116 @@ const normalizePlan = (input, captureExecutionPlan, schema) => {
   return expected;
 };
 
+/** Validates untrusted JSON against one closed tuning schema. */
+export function normalizeVisualLabExecutionTuningPlanForSchema(
+  schema,
+  input,
+  captureExecutionPlan,
+) {
+  return normalizePlan(input, captureExecutionPlan, assertSupportedSchema(schema));
+}
+
 /** Validates untrusted v1 JSON and returns a detached canonical frozen sibling plan. */
 export function normalizeVisualLabExecutionTuningPlan(input, captureExecutionPlan) {
-  return normalizePlan(input, captureExecutionPlan, VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA);
+  return normalizeVisualLabExecutionTuningPlanForSchema(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA, input, captureExecutionPlan,
+  );
 }
 
 /** Validates untrusted v2 completed-frame-receipt JSON and returns a frozen sibling plan. */
 export function normalizeVisualLabExecutionTuningPlanV2(input, captureExecutionPlan) {
-  return normalizePlan(input, captureExecutionPlan, VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA);
+  return normalizeVisualLabExecutionTuningPlanForSchema(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA, input, captureExecutionPlan,
+  );
 }
 
 /** Validates untrusted v3 readiness-and-capture receipt JSON. */
 export function normalizeVisualLabExecutionTuningPlanV3(input, captureExecutionPlan) {
-  return normalizePlan(input, captureExecutionPlan, VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA);
+  return normalizeVisualLabExecutionTuningPlanForSchema(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA, input, captureExecutionPlan,
+  );
 }
 
 /** Validates untrusted v4 stable-readiness and selection-owned receipt JSON. */
 export function normalizeVisualLabExecutionTuningPlanV4(input, captureExecutionPlan) {
-  return normalizePlan(input, captureExecutionPlan, VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA);
+  return normalizeVisualLabExecutionTuningPlanForSchema(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA, input, captureExecutionPlan,
+  );
 }
 
 /** Validates untrusted v5 fixture-activation generation JSON. */
 export function normalizeVisualLabExecutionTuningPlanV5(input, captureExecutionPlan) {
-  return normalizePlan(input, captureExecutionPlan, VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA);
+  return normalizeVisualLabExecutionTuningPlanForSchema(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA, input, captureExecutionPlan,
+  );
 }
 
 /** Validates untrusted v6 activation-owned work generation JSON. */
 export function normalizeVisualLabExecutionTuningPlanV6(input, captureExecutionPlan) {
-  return normalizePlan(input, captureExecutionPlan, VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA);
+  return normalizeVisualLabExecutionTuningPlanForSchema(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA, input, captureExecutionPlan,
+  );
 }
 
 /** Validates untrusted v7 activation-owned render-field generation JSON. */
 export function normalizeVisualLabExecutionTuningPlanV7(input, captureExecutionPlan) {
-  return normalizePlan(input, captureExecutionPlan, VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA);
+  return normalizeVisualLabExecutionTuningPlanForSchema(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA, input, captureExecutionPlan,
+  );
 }
 
 /** Validates untrusted v8 selection-owned receipt plus alpha-readback JSON. */
 export function normalizeVisualLabExecutionTuningPlanV8(input, captureExecutionPlan) {
-  return normalizePlan(input, captureExecutionPlan, VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA);
+  return normalizeVisualLabExecutionTuningPlanForSchema(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA, input, captureExecutionPlan,
+  );
 }
 
 /** Validates untrusted v9 render-field readiness plus selection alpha-readback JSON. */
 export function normalizeVisualLabExecutionTuningPlanV9(input, captureExecutionPlan) {
-  return normalizePlan(input, captureExecutionPlan, VISUAL_LAB_EXECUTION_TUNING_PLAN_V9_SCHEMA);
+  return normalizeVisualLabExecutionTuningPlanForSchema(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_V9_SCHEMA, input, captureExecutionPlan,
+  );
+}
+
+const resolveNormalizedEntry = (plan, entryId, expectedCaptureEntryId) => {
+  assertSha256Id(entryId, 'Visual Lab execution tuning entry id');
+  if (expectedCaptureEntryId !== undefined) {
+    assertSha256Id(expectedCaptureEntryId, 'Expected Visual Lab capture entry id');
+  }
+  const entry = plan.entries.find(({ id }) => id === entryId);
+  if (entry === undefined) throw new Error(`Unknown Visual Lab execution tuning entry id ${entryId}`);
+  if (expectedCaptureEntryId !== undefined && entry.captureEntryId !== expectedCaptureEntryId) {
+    throw new Error(`Visual Lab execution tuning entry ${entryId} does not bind capture entry ${expectedCaptureEntryId}`);
+  }
+  return entry;
+};
+
+/** Resolves one fully validated entry from one closed tuning schema. */
+export function resolveVisualLabExecutionTuningPlanEntryForSchema(
+  schema,
+  input,
+  entryId,
+  expectedCaptureEntryId,
+  captureExecutionPlan,
+) {
+  return resolveNormalizedEntry(
+    normalizeVisualLabExecutionTuningPlanForSchema(schema, input, captureExecutionPlan),
+    entryId,
+    expectedCaptureEntryId,
+  );
+}
+
+/** Resolves one fully validated entry using the plan's own closed schema. */
+export function resolveVisualLabExecutionTuningPlanEntryForPlanSchema(
+  input,
+  entryId,
+  expectedCaptureEntryId,
+  captureExecutionPlan,
+) {
+  return resolveVisualLabExecutionTuningPlanEntryForSchema(
+    input?.schema, input, entryId, expectedCaptureEntryId, captureExecutionPlan,
+  );
 }
 
 /** Resolves one fully validated tuning entry, optionally bound to capture entry ID. */
@@ -786,17 +865,13 @@ export function resolveVisualLabExecutionTuningPlanEntry(
   expectedCaptureEntryId,
   captureExecutionPlan,
 ) {
-  assertSha256Id(entryId, 'Visual Lab execution tuning entry id');
-  if (expectedCaptureEntryId !== undefined) {
-    assertSha256Id(expectedCaptureEntryId, 'Expected Visual Lab capture entry id');
-  }
-  const plan = normalizeVisualLabExecutionTuningPlan(input, captureExecutionPlan);
-  const entry = plan.entries.find(({ id }) => id === entryId);
-  if (entry === undefined) throw new Error(`Unknown Visual Lab execution tuning entry id ${entryId}`);
-  if (expectedCaptureEntryId !== undefined && entry.captureEntryId !== expectedCaptureEntryId) {
-    throw new Error(`Visual Lab execution tuning entry ${entryId} does not bind capture entry ${expectedCaptureEntryId}`);
-  }
-  return entry;
+  return resolveVisualLabExecutionTuningPlanEntryForSchema(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
+    input,
+    entryId,
+    expectedCaptureEntryId,
+    captureExecutionPlan,
+  );
 }
 
 /** Resolves one fully validated v2 tuning entry, optionally bound to capture entry ID. */
@@ -806,17 +881,10 @@ export function resolveVisualLabExecutionTuningPlanV2Entry(
   expectedCaptureEntryId,
   captureExecutionPlan,
 ) {
-  assertSha256Id(entryId, 'Visual Lab execution tuning entry id');
-  if (expectedCaptureEntryId !== undefined) {
-    assertSha256Id(expectedCaptureEntryId, 'Expected Visual Lab capture entry id');
-  }
-  const plan = normalizeVisualLabExecutionTuningPlanV2(input, captureExecutionPlan);
-  const entry = plan.entries.find(({ id }) => id === entryId);
-  if (entry === undefined) throw new Error(`Unknown Visual Lab execution tuning entry id ${entryId}`);
-  if (expectedCaptureEntryId !== undefined && entry.captureEntryId !== expectedCaptureEntryId) {
-    throw new Error(`Visual Lab execution tuning entry ${entryId} does not bind capture entry ${expectedCaptureEntryId}`);
-  }
-  return entry;
+  return resolveVisualLabExecutionTuningPlanEntryForSchema(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA, input, entryId, expectedCaptureEntryId,
+    captureExecutionPlan,
+  );
 }
 
 /** Resolves one fully validated v3 tuning entry, optionally bound to capture entry ID. */
@@ -826,17 +894,10 @@ export function resolveVisualLabExecutionTuningPlanV3Entry(
   expectedCaptureEntryId,
   captureExecutionPlan,
 ) {
-  assertSha256Id(entryId, 'Visual Lab execution tuning entry id');
-  if (expectedCaptureEntryId !== undefined) {
-    assertSha256Id(expectedCaptureEntryId, 'Expected Visual Lab capture entry id');
-  }
-  const plan = normalizeVisualLabExecutionTuningPlanV3(input, captureExecutionPlan);
-  const entry = plan.entries.find(({ id }) => id === entryId);
-  if (entry === undefined) throw new Error(`Unknown Visual Lab execution tuning entry id ${entryId}`);
-  if (expectedCaptureEntryId !== undefined && entry.captureEntryId !== expectedCaptureEntryId) {
-    throw new Error(`Visual Lab execution tuning entry ${entryId} does not bind capture entry ${expectedCaptureEntryId}`);
-  }
-  return entry;
+  return resolveVisualLabExecutionTuningPlanEntryForSchema(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA, input, entryId, expectedCaptureEntryId,
+    captureExecutionPlan,
+  );
 }
 
 /** Resolves one fully validated v4 tuning entry, optionally bound to capture entry ID. */
@@ -846,17 +907,10 @@ export function resolveVisualLabExecutionTuningPlanV4Entry(
   expectedCaptureEntryId,
   captureExecutionPlan,
 ) {
-  assertSha256Id(entryId, 'Visual Lab execution tuning entry id');
-  if (expectedCaptureEntryId !== undefined) {
-    assertSha256Id(expectedCaptureEntryId, 'Expected Visual Lab capture entry id');
-  }
-  const plan = normalizeVisualLabExecutionTuningPlanV4(input, captureExecutionPlan);
-  const entry = plan.entries.find(({ id }) => id === entryId);
-  if (entry === undefined) throw new Error(`Unknown Visual Lab execution tuning entry id ${entryId}`);
-  if (expectedCaptureEntryId !== undefined && entry.captureEntryId !== expectedCaptureEntryId) {
-    throw new Error(`Visual Lab execution tuning entry ${entryId} does not bind capture entry ${expectedCaptureEntryId}`);
-  }
-  return entry;
+  return resolveVisualLabExecutionTuningPlanEntryForSchema(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA, input, entryId, expectedCaptureEntryId,
+    captureExecutionPlan,
+  );
 }
 
 /** Resolves one fully validated v5 tuning entry, optionally bound to capture entry ID. */
@@ -866,17 +920,10 @@ export function resolveVisualLabExecutionTuningPlanV5Entry(
   expectedCaptureEntryId,
   captureExecutionPlan,
 ) {
-  assertSha256Id(entryId, 'Visual Lab execution tuning entry id');
-  if (expectedCaptureEntryId !== undefined) {
-    assertSha256Id(expectedCaptureEntryId, 'Expected Visual Lab capture entry id');
-  }
-  const plan = normalizeVisualLabExecutionTuningPlanV5(input, captureExecutionPlan);
-  const entry = plan.entries.find(({ id }) => id === entryId);
-  if (entry === undefined) throw new Error(`Unknown Visual Lab execution tuning entry id ${entryId}`);
-  if (expectedCaptureEntryId !== undefined && entry.captureEntryId !== expectedCaptureEntryId) {
-    throw new Error(`Visual Lab execution tuning entry ${entryId} does not bind capture entry ${expectedCaptureEntryId}`);
-  }
-  return entry;
+  return resolveVisualLabExecutionTuningPlanEntryForSchema(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA, input, entryId, expectedCaptureEntryId,
+    captureExecutionPlan,
+  );
 }
 
 /** Resolves one fully validated v6 tuning entry, optionally bound to capture entry ID. */
@@ -886,17 +933,10 @@ export function resolveVisualLabExecutionTuningPlanV6Entry(
   expectedCaptureEntryId,
   captureExecutionPlan,
 ) {
-  assertSha256Id(entryId, 'Visual Lab execution tuning entry id');
-  if (expectedCaptureEntryId !== undefined) {
-    assertSha256Id(expectedCaptureEntryId, 'Expected Visual Lab capture entry id');
-  }
-  const plan = normalizeVisualLabExecutionTuningPlanV6(input, captureExecutionPlan);
-  const entry = plan.entries.find(({ id }) => id === entryId);
-  if (entry === undefined) throw new Error(`Unknown Visual Lab execution tuning entry id ${entryId}`);
-  if (expectedCaptureEntryId !== undefined && entry.captureEntryId !== expectedCaptureEntryId) {
-    throw new Error(`Visual Lab execution tuning entry ${entryId} does not bind capture entry ${expectedCaptureEntryId}`);
-  }
-  return entry;
+  return resolveVisualLabExecutionTuningPlanEntryForSchema(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA, input, entryId, expectedCaptureEntryId,
+    captureExecutionPlan,
+  );
 }
 
 /** Resolves one fully validated v7 tuning entry, optionally bound to capture entry ID. */
@@ -906,17 +946,10 @@ export function resolveVisualLabExecutionTuningPlanV7Entry(
   expectedCaptureEntryId,
   captureExecutionPlan,
 ) {
-  assertSha256Id(entryId, 'Visual Lab execution tuning entry id');
-  if (expectedCaptureEntryId !== undefined) {
-    assertSha256Id(expectedCaptureEntryId, 'Expected Visual Lab capture entry id');
-  }
-  const plan = normalizeVisualLabExecutionTuningPlanV7(input, captureExecutionPlan);
-  const entry = plan.entries.find(({ id }) => id === entryId);
-  if (entry === undefined) throw new Error(`Unknown Visual Lab execution tuning entry id ${entryId}`);
-  if (expectedCaptureEntryId !== undefined && entry.captureEntryId !== expectedCaptureEntryId) {
-    throw new Error(`Visual Lab execution tuning entry ${entryId} does not bind capture entry ${expectedCaptureEntryId}`);
-  }
-  return entry;
+  return resolveVisualLabExecutionTuningPlanEntryForSchema(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA, input, entryId, expectedCaptureEntryId,
+    captureExecutionPlan,
+  );
 }
 
 /** Resolves one fully validated v8 tuning entry, optionally bound to capture entry ID. */
@@ -926,17 +959,10 @@ export function resolveVisualLabExecutionTuningPlanV8Entry(
   expectedCaptureEntryId,
   captureExecutionPlan,
 ) {
-  assertSha256Id(entryId, 'Visual Lab execution tuning entry id');
-  if (expectedCaptureEntryId !== undefined) {
-    assertSha256Id(expectedCaptureEntryId, 'Expected Visual Lab capture entry id');
-  }
-  const plan = normalizeVisualLabExecutionTuningPlanV8(input, captureExecutionPlan);
-  const entry = plan.entries.find(({ id }) => id === entryId);
-  if (entry === undefined) throw new Error(`Unknown Visual Lab execution tuning entry id ${entryId}`);
-  if (expectedCaptureEntryId !== undefined && entry.captureEntryId !== expectedCaptureEntryId) {
-    throw new Error(`Visual Lab execution tuning entry ${entryId} does not bind capture entry ${expectedCaptureEntryId}`);
-  }
-  return entry;
+  return resolveVisualLabExecutionTuningPlanEntryForSchema(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA, input, entryId, expectedCaptureEntryId,
+    captureExecutionPlan,
+  );
 }
 
 /** Resolves one fully validated v9 tuning entry, optionally bound to capture entry ID. */
@@ -946,15 +972,8 @@ export function resolveVisualLabExecutionTuningPlanV9Entry(
   expectedCaptureEntryId,
   captureExecutionPlan,
 ) {
-  assertSha256Id(entryId, 'Visual Lab execution tuning entry id');
-  if (expectedCaptureEntryId !== undefined) {
-    assertSha256Id(expectedCaptureEntryId, 'Expected Visual Lab capture entry id');
-  }
-  const plan = normalizeVisualLabExecutionTuningPlanV9(input, captureExecutionPlan);
-  const entry = plan.entries.find(({ id }) => id === entryId);
-  if (entry === undefined) throw new Error(`Unknown Visual Lab execution tuning entry id ${entryId}`);
-  if (expectedCaptureEntryId !== undefined && entry.captureEntryId !== expectedCaptureEntryId) {
-    throw new Error(`Visual Lab execution tuning entry ${entryId} does not bind capture entry ${expectedCaptureEntryId}`);
-  }
-  return entry;
+  return resolveVisualLabExecutionTuningPlanEntryForSchema(
+    VISUAL_LAB_EXECUTION_TUNING_PLAN_V9_SCHEMA, input, entryId, expectedCaptureEntryId,
+    captureExecutionPlan,
+  );
 }

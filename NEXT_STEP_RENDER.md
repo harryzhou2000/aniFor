@@ -7905,6 +7905,21 @@ input to execution-tuning v9, captured and portably verified the one-candidate
 19-resource closure plus Water receipt-v2 smoke in 1m42s. Manual controls on the
 default-branch scaffold are synchronized at `main` revision `3f7025e`.
 
+The next reusable framework increment removes the proof-routing drift that had
+previously left the implemented v8 performance control unreachable. A closed,
+scripts-only capture-proof registry owns each existing mode's v1-v9 tuning
+schema, capture-order capability factory, and bounded performance-summary
+metadata. Batch create/normalize/reconstruct/resolve paths, candidate audit,
+and performance cohorts now consume the registry; generic schema-selected plan
+operations back every historical named facade. This is dispatch authority only:
+it is never serialized, imported by the browser/static contract, or allowed to
+change plan/result/batch identities. Unknown proof modes and schemas fail
+closed. Focused parity proves each named v1-v9 facade returns the exact generic
+bytes, and a real default v9 RenderOptics review retained tuning plan
+`sha256:e7f8960ecc75300f9796ae6c5c59c0b952fee0500d27801504bf400be4d753a6`
+and result
+`sha256:4891db2c82bb89cb4bce5a63a2927360fbc20e634a0a91b9d17a490deb630581`.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

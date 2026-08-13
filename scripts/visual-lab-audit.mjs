@@ -54,23 +54,7 @@ import {
   resolveVisualCaptureExecutionCapabilities,
 } from './visual-capture-execution-capabilities.mjs';
 import {
-  resolveVisualLabExecutionTuningPlanEntry,
-  resolveVisualLabExecutionTuningPlanV2Entry,
-  resolveVisualLabExecutionTuningPlanV3Entry,
-  resolveVisualLabExecutionTuningPlanV4Entry,
-  resolveVisualLabExecutionTuningPlanV5Entry,
-  resolveVisualLabExecutionTuningPlanV6Entry,
-  resolveVisualLabExecutionTuningPlanV7Entry,
-  resolveVisualLabExecutionTuningPlanV8Entry,
-  resolveVisualLabExecutionTuningPlanV9Entry,
-  VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
-  VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
-  VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA,
-  VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA,
-  VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA,
-  VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA,
-  VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA,
-  VISUAL_LAB_EXECUTION_TUNING_PLAN_V9_SCHEMA,
+  resolveVisualLabExecutionTuningPlanEntryForPlanSchema,
 } from './visual-lab-execution-tuning-plan.mjs';
 import {
   createVisualCaptureGeometryProof,
@@ -156,36 +140,9 @@ export function beginStagedVisualLabNavigation(pageCdp, url, timeoutMs) {
 
 const resolveExecutionTuningPlanEntry = (
   plan, entryId, expectedCaptureEntryId,
-) => {
-  if (plan?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA) {
-    return resolveVisualLabExecutionTuningPlanV2Entry(plan, entryId, expectedCaptureEntryId);
-  }
-  if (plan?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA) {
-    return resolveVisualLabExecutionTuningPlanV3Entry(plan, entryId, expectedCaptureEntryId);
-  }
-  if (plan?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA) {
-    return resolveVisualLabExecutionTuningPlanV4Entry(plan, entryId, expectedCaptureEntryId);
-  }
-  if (plan?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA) {
-    return resolveVisualLabExecutionTuningPlanV5Entry(plan, entryId, expectedCaptureEntryId);
-  }
-  if (plan?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA) {
-    return resolveVisualLabExecutionTuningPlanV6Entry(plan, entryId, expectedCaptureEntryId);
-  }
-  if (plan?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA) {
-    return resolveVisualLabExecutionTuningPlanV7Entry(plan, entryId, expectedCaptureEntryId);
-  }
-  if (plan?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA) {
-    return resolveVisualLabExecutionTuningPlanV8Entry(plan, entryId, expectedCaptureEntryId);
-  }
-  if (plan?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V9_SCHEMA) {
-    return resolveVisualLabExecutionTuningPlanV9Entry(plan, entryId, expectedCaptureEntryId);
-  }
-  if (plan?.schema === 'anifor.visual-lab.execution-tuning-plan/v1') {
-    return resolveVisualLabExecutionTuningPlanEntry(plan, entryId, expectedCaptureEntryId);
-  }
-  throw new TypeError(`Unsupported Visual Lab execution-tuning schema ${String(plan?.schema)}`);
-};
+) => resolveVisualLabExecutionTuningPlanEntryForPlanSchema(
+  plan, entryId, expectedCaptureEntryId,
+);
 
 const VISUAL_CAPTURE_GEOMETRY_TOLERANCE = 0.001;
 

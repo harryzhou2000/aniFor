@@ -5116,6 +5116,17 @@ passed exact 19-resource closure plus hosted Water receipt-v2 smoke in 1m42s.
 The default-branch scaffold exposing the same controls is revision `3f7025e` on
 `main`.
 
+The next framework checkpoint consolidates the scripts-owned capture-proof
+dispatch. One closed frozen registry now binds every existing proof mode to its
+v1-v9 tuning schema, exact capture-order capability factory, and bounded
+performance-summary metadata. Generic schema-selected create, normalize, and
+resolve functions back the historical named v1-v9 facades. Batch planning and
+portable reconstruction, candidate audit, and performance cohorts consume that
+single registry instead of maintaining independent ladders. Keep workflow
+choices literal for GitHub's UI, keep the registry out of browser/static
+contracts and portable identities, reject unknown modes/schemas, and require
+facade/generic byte parity for every existing version before extension.
+
 Read [`docs/render-lab.md`](docs/render-lab.md) before changing reconstruction thresholds or blur radii. A TypeScript or Vite build does not compile Pixi's runtime GLSL; a browser screenshot with a clean shader console is required.
 
 The style lookup is an RGBA data texture, not display color: RGB stores phase/profile/emission and alpha stores the static `RenderTrait` mask. Keep nearest sampling and `no-premultiply-alpha`; zero-valued trait alpha must never erase the RGB metadata.

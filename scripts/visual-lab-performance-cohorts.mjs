@@ -13,16 +13,8 @@ import {
   VISUAL_LAB_CAPTURE_PROOF_MODES,
 } from './visual-lab-batch.mjs';
 import {
-  VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
-  VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
-  VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
-  VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA,
-  VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA,
-  VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA,
-  VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA,
-  VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA,
-  VISUAL_LAB_EXECUTION_TUNING_PLAN_V9_SCHEMA,
-} from './visual-lab-execution-tuning-plan.mjs';
+  resolveVisualLabCaptureProof,
+} from './visual-lab-capture-proof-registry.mjs';
 
 export const VISUAL_LAB_PERFORMANCE_COHORT_SCHEMA = 'anifor.visual-lab.performance-cohorts/v1';
 export const VISUAL_LAB_PERFORMANCE_COHORT_RECEIPT_SCHEMA = 'anifor.visual-lab.performance-cohorts/v2';
@@ -48,29 +40,6 @@ const SHA256_HEX = /^[0-9a-f]{64}$/;
 const CAPTURE_VARIANTS = Object.freeze(['off', 'a', 'b']);
 const NORMAL_DETAIL_SCALES = Object.freeze([1, 2, 4]);
 const STABLE_SNAPSHOTS_CAPTURE_PROOF = 'stable-snapshots';
-const COMPLETED_FRAME_RECEIPT_CAPTURE_PROOF = 'completed-frame-receipt';
-const READINESS_COMPLETED_FRAME_RECEIPT_CAPTURE_PROOF = 'readiness-completed-frame-receipt';
-const SELECTION_OWNED_FRAME_RECEIPT_CAPTURE_PROOF = 'selection-owned-frame-receipt';
-const FIXTURE_ACTIVATION_GENERATION_CAPTURE_PROOF = 'fixture-activation-generation';
-const FIXTURE_ACTIVATION_WORK_GENERATION_CAPTURE_PROOF = 'fixture-activation-work-generation';
-const FIXTURE_ACTIVATION_RENDER_FIELD_GENERATION_CAPTURE_PROOF = 'fixture-activation-render-field-generation';
-const SELECTION_OWNED_FRAME_RECEIPT_AND_ALPHA_READBACK_CAPTURE_PROOF =
-  'selection-owned-frame-receipt-and-alpha-readback';
-const FIXTURE_ACTIVATION_RENDER_FIELD_GENERATION_AND_SELECTION_OWNED_ALPHA_READBACK_CAPTURE_PROOF =
-  'fixture-activation-render-field-generation-and-selection-owned-alpha-readback';
-const EXECUTION_TUNING_SCHEMAS_BY_CAPTURE_PROOF = Object.freeze({
-  [STABLE_SNAPSHOTS_CAPTURE_PROOF]: VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
-  [COMPLETED_FRAME_RECEIPT_CAPTURE_PROOF]: VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
-  [READINESS_COMPLETED_FRAME_RECEIPT_CAPTURE_PROOF]: VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
-  [SELECTION_OWNED_FRAME_RECEIPT_CAPTURE_PROOF]: VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA,
-  [FIXTURE_ACTIVATION_GENERATION_CAPTURE_PROOF]: VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA,
-  [FIXTURE_ACTIVATION_WORK_GENERATION_CAPTURE_PROOF]: VISUAL_LAB_EXECUTION_TUNING_PLAN_V6_SCHEMA,
-  [FIXTURE_ACTIVATION_RENDER_FIELD_GENERATION_CAPTURE_PROOF]: VISUAL_LAB_EXECUTION_TUNING_PLAN_V7_SCHEMA,
-  [SELECTION_OWNED_FRAME_RECEIPT_AND_ALPHA_READBACK_CAPTURE_PROOF]:
-    VISUAL_LAB_EXECUTION_TUNING_PLAN_V8_SCHEMA,
-  [FIXTURE_ACTIVATION_RENDER_FIELD_GENERATION_AND_SELECTION_OWNED_ALPHA_READBACK_CAPTURE_PROOF]:
-    VISUAL_LAB_EXECUTION_TUNING_PLAN_V9_SCHEMA,
-});
 const RECYCLE_REASONS = Object.freeze([
   'launch-fault',
   'fresh-only-entry',
@@ -141,7 +110,7 @@ const assertOptions = (options) => {
 };
 
 const assertExecutionTuningSchema = (ordinal, mode, captureProof, portablePlan) => {
-  const expectedSchema = EXECUTION_TUNING_SCHEMAS_BY_CAPTURE_PROOF[captureProof];
+  const expectedSchema = resolveVisualLabCaptureProof(captureProof).schema;
   if (portablePlan?.schema !== expectedSchema) {
     throw new Error(
       `Visual Lab performance cohort ${ordinal} (${mode}) requires portable ${expectedSchema} for ${captureProof}`,
@@ -151,16 +120,13 @@ const assertExecutionTuningSchema = (ordinal, mode, captureProof, portablePlan) 
 
 const summaryCaptureProof = (captureProof) => {
   if (captureProof === STABLE_SNAPSHOTS_CAPTURE_PROOF) return undefined;
+  const descriptor = resolveVisualLabCaptureProof(captureProof);
   return deepFreeze({
     mode: captureProof,
-    tuningSchema: EXECUTION_TUNING_SCHEMAS_BY_CAPTURE_PROOF[captureProof],
-    receiptSchema: 'anifor.renderer.completed-frame-receipt/v1',
-    ...(captureProof === FIXTURE_ACTIVATION_WORK_GENERATION_CAPTURE_PROOF
-      ? { readinessCapability: 'renderer-fixture-activation-generation/v2' } : {}),
-    ...(captureProof === FIXTURE_ACTIVATION_RENDER_FIELD_GENERATION_CAPTURE_PROOF
-      || captureProof
-        === FIXTURE_ACTIVATION_RENDER_FIELD_GENERATION_AND_SELECTION_OWNED_ALPHA_READBACK_CAPTURE_PROOF
-      ? { readinessCapability: 'renderer-fixture-activation-generation/v3' } : {}),
+    tuningSchema: descriptor.schema,
+    receiptSchema: descriptor.receiptSchema,
+    ...(descriptor.readinessCapability === undefined
+      ? {} : { readinessCapability: descriptor.readinessCapability }),
   });
 };
 
