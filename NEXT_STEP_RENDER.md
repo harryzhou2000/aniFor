@@ -7399,6 +7399,25 @@ and `multi-metal-material-lighting-atlas` result
 This is current visual evidence for human review, not a cross-revision PNG
 gate or a requirement to preserve either result identity.
 
+The next framework-leverage checkpoint makes the existing paired WAX/MWAX
+audit fixture a first-class normal-HDR Visual Lab candidate. One frozen,
+data-only `wax-material-lighting-atlas` catalog now owns the established body,
+cavity, chimney, phase-structure, contact, motif, isolated, blank, and bounded
+Fire-source geometry. The legacy Wax audit and the capture-facing preparer both
+project that catalog; only the latter overlays the declared emitters needed by
+the material-lighting evidence plane, so the historical audit bytes remain
+unchanged. Capture metadata flows through the existing authoring manifest,
+material-lighting driver, typed app preparer, generic execution plan, and
+portable verifier—there is no new browser method, driver branch, renderer
+resource, or executable static data. A real shared-host SwiftShader OFF/A/B run
+at `/tmp/anifor-wax-framework-v3` passed all 22 declared regions and portable
+verification as result
+`sha256:12d2ca659cfdc1df90cb8eac8d91ce5d56be11979ad67107cbf9c0005b905bb3`.
+The resulting board confirms that solid WAX remains warm and patterned but
+largely opaque beside darker flowing MWAX; use this retained current-only
+evidence to decide a later Wax optics-profile experiment. It is not a
+cross-revision PNG or result-identity gate.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

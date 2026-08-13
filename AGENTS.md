@@ -41,6 +41,19 @@ and `multi-metal-material-lighting-atlas`
 These are current visual evidence only, never cross-revision PNG gates or
 required future result identities.
 
+Wax material experiments use the declarative `wax-material-lighting-atlas`.
+Keep its shared catalog data-only and single-owner for WAX/MWAX bodies,
+cavities, chimneys, phase structures, contacts, motifs, blanks, and capture
+emitters. `prepareWaxGraphicsAuditFixture` must retain its historical output;
+only `prepareWaxMaterialLightingAtlasFixture` may overlay the catalog's bounded
+Fire rectangles for the material-lighting evidence plane. Continue through the
+generic material-lighting driver and typed app registry—do not add a browser
+method, harness branch, callback/module path in static data, or material-ID
+shader branch. Current portable evidence is
+`/tmp/anifor-wax-framework-v3`, result
+`sha256:12d2ca659cfdc1df90cb8eac8d91ce5d56be11979ad67107cbf9c0005b905bb3`;
+it is review evidence, never a future exact-image gate.
+
 The current review framework also covers the existing Oil- and Water-motion
 recipes through frozen declarative fixture/inspection catalogs. Preserve their
 historical public fixture APIs and exact material, velocity, and wall planes;

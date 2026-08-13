@@ -1,6 +1,6 @@
 {
   "schema": "anifor.visual-lab.recipe-set/v1",
-  "id": "sha256:08c65744f2c43c2496d8c39665c91e0bf060a9474834c4d320642a84aebcd402",
+  "id": "sha256:4f364cad6b11c0a1f016785e4d87087f88818e7cc3eeadee0a8f4371f417edcd",
   "name": "material-lighting",
   "recipes": [
     {
@@ -64,6 +64,14 @@
       "domain": "material-lighting",
       "target": 0,
       "fixture": "opposed-source-material-lighting-atlas",
+      "gain": 1,
+      "renderScale": 2
+    },
+    {
+      "name": "wax-material-lighting-atlas",
+      "domain": "material-lighting",
+      "target": 0,
+      "fixture": "wax-material-lighting-atlas",
       "gain": 1,
       "renderScale": 2
     }

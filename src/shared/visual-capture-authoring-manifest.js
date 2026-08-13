@@ -9,6 +9,7 @@ import { POWDER_STYLE_ATLAS_CATALOG } from './powder-style-atlas-catalog.js';
 import { SOLID_MATERIAL_LIGHTING_ATLAS_CATALOG } from './solid-material-lighting-atlas-catalog.js';
 import { SOURCE_TARGET_MATERIAL_LIGHTING_ATLAS_CATALOG } from './source-target-material-lighting-atlas-catalog.js';
 import { THERMAL_SOURCE_MATERIAL_LIGHTING_ATLAS_CATALOG } from './thermal-source-material-lighting-atlas-catalog.js';
+import { WAX_MATERIAL_LIGHTING_ATLAS_CATALOG } from './wax-material-lighting-atlas-catalog.js';
 
 const SAFE_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const SOURCE_FIELDS = Object.freeze(['name', 'entries']);
@@ -150,6 +151,8 @@ export const VISUAL_CAPTURE_AUTHORING_MANIFEST = normalizeVisualCaptureAuthoring
     materialLighting('prepareCeramicTemperatureVfxFixture')),
   source('opposed-source', OPPOSED_SOURCE_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases,
     materialLighting('preparePowderLightVfxFixture')),
+  source('wax', WAX_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases,
+    materialLighting('prepareWaxMaterialLightingAtlasFixture')),
   source('powder-style', POWDER_STYLE_ATLAS_CATALOG.atlases,
     capture('powder', 'powder-render-style', 'preparePowderStyleAtlasFixture')),
   source('liquid-motion', LIQUID_MOTION_VFX_ATLAS_CATALOG.atlases, null),
