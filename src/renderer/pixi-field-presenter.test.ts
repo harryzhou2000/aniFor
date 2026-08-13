@@ -751,7 +751,8 @@ describe('Pixi presenter startup configuration', () => {
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       '* (powder * powderVolume * core * 0.030\n'
-        + '      + liquid * deepColumn * 0.016 + gasDeepAbsorption * 0.024);',
+        + '      + liquid * (deepColumn * 0.016 + liquidMidRetention * 0.010)\n'
+        + '      + gasDeepAbsorption * 0.024);',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'float profileSheenWeight = composition.profileSheen;',
@@ -877,6 +878,15 @@ describe('Pixi presenter startup configuration', () => {
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'float liquidShallowBand = transmittedShoulder * transmittedShoulder\n    * opticalExperimentB;',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'float liquidMidColumn = liquid * 4.0 * liquidColumnDepth',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'float liquidMidLens = liquidMidColumn * opticalExperimentB',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'shade += liquidMidRetention * profileCoreExtinction;',
     );
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       '* finishResponse.w * (0.160 + crown * 0.040) * interiorContrast\n'

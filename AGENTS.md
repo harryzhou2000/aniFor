@@ -5014,6 +5014,16 @@ real RenderOptics and focused Solid atlas inspection over expanding exact-pixel
 unit tests. Cavities, isolated points, contacts, fine controls, native walls,
 and guarded blank regions are the topology controls.
 
+Shared Liquid material lighting may fill the optical gap between its shallow
+shoulder and deep column with the existing smooth mid-depth envelope. Keep the
+current broad-body admission gate, B-only RGB ownership, and profile-driven
+clear-lens versus dense-pigment split. Do not turn it into a new surface,
+support, sample, field, pass, material-ID table, or Canvas/compact-8x effect.
+Judge it on real Water, Oil, and RenderOptics boards; preserve cavities,
+notches, sparse strands, isolated drops, seams, contacts, walls, and blank
+space. Horizontal banding or pigment washout means removing the mid-column
+pair, not accumulating profile-specific patches or exact-pixel tests.
+
 Execution-tuning v8 is the opt-in selector-owned completed-frame receipt plus
 prearmed framebuffer-alpha readback path. Reserve both tickets before exactly
 one typed selector presentation, bind both to the same submission, consume the

@@ -695,6 +695,14 @@ vec3 applyMaterialVolumeLobe(
   float transmittedShoulder = liquid
     * (1.0 - smoothstep(0.24, 0.70, depth)) * fieldBody;
   float deepColumn = liquid * smoothstep(0.56, 0.94, depth) * fieldBody;
+  // Fill the optical gap between the shallow transmitted shoulder and deepest
+  // absorption with one smooth column-scale lens. It is zero at both ends of
+  // the normalized depth and therefore cannot create another shore or flatten
+  // the authoritative deep pigment. This is arithmetic over the existing
+  // caller-owned depth/body proof, not another field sample.
+  float liquidColumnDepth = clamp(depth, 0.0, 1.0);
+  float liquidMidColumn = liquid * 4.0 * liquidColumnDepth
+    * (1.0 - liquidColumnDepth) * fieldBody;
   // A broad gas billow can be locally uniform after the atmosphere field has
   // merged its particles, making both curvature and slope approach zero. Give
   // that proven volume a restrained translucent middle and denser core so it
@@ -727,6 +735,21 @@ vec3 applyMaterialVolumeLobe(
   float profileCoreExtinction = mix(
     1.0, mix(1.15, 0.86, scatterProgress), opticalExperimentB
   );
+  // The profile decides whether the mid-column reads as an open lens or a
+  // pigment-bearing dense body. Clear/soft liquids exchange more of the
+  // existing optical energy into transmission; oily and metallic families
+  // retain the opposing absorption. Both terms remain bounded and B-only.
+  float liquidTransmissionReserve = clamp(
+    (finishResponse.w - 0.50) / 1.0, 0.0, 1.0
+  );
+  float liquidMidOpenness = clamp(
+    liquidTransmissionReserve * 0.62 + scatterProgress * 0.38, 0.0, 1.0
+  );
+  float liquidMidLens = liquidMidColumn * opticalExperimentB
+    * (0.040 + liquidMidOpenness * 0.080) * finishResponse.w
+    * interiorContrast;
+  float liquidMidRetention = liquidMidColumn * opticalExperimentB
+    * (0.016 + (1.0 - liquidMidOpenness) * 0.034);
   // Convert the static family roughness lane into an energy-bounded lobe width.
   // The original crown/facing response remains exact outside B. Tight optical
   // families concentrate their reflection; broad families trade peak for a
@@ -867,11 +890,13 @@ vec3 applyMaterialVolumeLobe(
   // scaling keeps aqueous and oily bodies distinct instead of multiplying the
   // authored response by the reflection lane a second time.
   key += liquidBroadTransmission;
+  key += liquidMidLens;
   float shade = fluid * (pocket * mix(0.030, 0.038, gas)
       + max(-facing, 0.0) * shoulder * mix(0.010, 0.014, gas)
       + core * mix(0.010, 0.007, gas)) * fieldBody;
   shade += deepColumn * 0.032 * liquidCoreScale
     * mix(1.0, interiorContrast, opticalExperimentB) * profileCoreExtinction;
+  shade += liquidMidRetention * profileCoreExtinction;
   shade += gasDeepAbsorption * 0.024 * gasExtinctionScale
     * mix(1.0, interiorContrast, opticalExperimentB) * profileCoreExtinction;
   shade += max(-macroRelief, 0.0) * gasMacroBody * 0.036;
@@ -894,7 +919,8 @@ vec3 applyMaterialVolumeLobe(
   // and compact literal-Off stay owned by their callers.
   float materialDeepPigment = opticalExperimentB * finishResponse.z
     * (powder * powderVolume * core * 0.030
-      + liquid * deepColumn * 0.016 + gasDeepAbsorption * 0.024);
+      + liquid * (deepColumn * 0.016 + liquidMidRetention * 0.010)
+      + gasDeepAbsorption * 0.024);
   float materialLuminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
   color += (color - vec3(materialLuminance)) * materialDeepPigment;
   color += (vec3(1.12) - clamp(color, 0.0, 1.12))

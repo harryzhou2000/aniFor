@@ -7747,6 +7747,30 @@ and varied independently. Treat those timings as diagnostic evidence, never a
 performance threshold. Keep v8 opt-in until alternating multi-candidate cohorts
 show that the overlap remains useful on loaded software GPUs.
 
+The retained Liquid follow-up closes the visual gap between the existing
+shallow transmitted shoulder and deepest pigment without adding another
+carrier. Volumetric B evaluates one smooth `4d(1-d)` mid-column envelope from
+the caller-owned liquid depth/body proof. The existing appearance profile then
+splits its bounded response between an open transmitted lens for clearer,
+higher-scatter liquids and denser identity-coloured retention for oily or
+metallic families. The deep column remains authoritative, so this is a gentle
+interior light-transport cue rather than a new surface, shore, or blur.
+
+The established admission gate is unchanged: ordinary supported liquid bodies
+only, excluding emissive and molten matter, foreign or unlike contacts, steep
+species transitions, unsupported cells, and exposed topology. The increment is
+B-only and RGB-only and adds no sample, texture, field, target, pass,
+allocation, support, alpha, topology reconstruction, or material-ID branch.
+OFF/A, Canvas, and compact true 8x retain their existing paths. Real
+SwiftShader Water, Oil, and 20-profile RenderOptics captures passed WebGL/HDR,
+exact semantic/field/framebuffer invariants, zero browser errors, and visual
+review of cavities, open notches, sparse strands, isolated particles, seams,
+contacts, walls, and guarded blank space. The retained RenderOptics result is
+revision evidence only:
+`sha256:4dba625557e126d128db63c412f55e8a7ed58bf45a6135f1ffb90d6e3d2a9a93`.
+If a later profile exposes horizontal bands or washed-out pigment, remove the
+mid-column lens/retention pair rather than adding per-material exceptions.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
