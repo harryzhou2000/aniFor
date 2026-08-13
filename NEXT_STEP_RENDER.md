@@ -8001,6 +8001,16 @@ dominant 11.18-second readiness interval and host load vary independently.
 The next framework increment should target measured readiness or reusable
 authoring leverage rather than add a new proof schema or visual hash gate.
 
+The bulk-digest checkpoint is deployed at exact revision
+`60d440eaeb980af4edce6bc3875c0c4708b82d01` by workflow run `31742395092`.
+The clean runner passed 1,623 source and 417 tooling tests, restored and saved
+the SHA-scoped ccache, completed the build in 3m38s, and retained the exact
+RenderOptics result above through downloaded-package verification. On the loaded
+SwiftShader runner, OFF/A/B readback/hash fell to approximately 5.65/5.61/5.51
+ms; the 38.44-second readiness interval remained dominant as expected. Pages
+deployed in 9s, then exact revision and 19-resource closure passed on the first
+attempt together with the hosted Water receipt-v2 package and portable verifier.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
