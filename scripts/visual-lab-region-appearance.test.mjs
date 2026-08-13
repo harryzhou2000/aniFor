@@ -31,7 +31,7 @@ const batch = (candidate = 'opposed-source-material-lighting-atlas') => ({
 describe('Visual Lab current region appearance', () => {
   it('returns null when the complete batch has no configured regions', async () => {
     await expect(createVisualLabCurrentRegionAppearance(
-      batch('gas-showcase'), async (_candidate, variant) => captures[variant],
+      batch('synthetic-regionless-candidate'), async (_candidate, variant) => captures[variant],
     )).resolves.toBeNull();
   });
 

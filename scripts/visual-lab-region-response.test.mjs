@@ -39,7 +39,7 @@ describe('Visual Lab current region response', () => {
   });
 
   it('returns null when the complete batch has no configured regions', async () => {
-    await expect(createVisualLabCurrentRegionResponse(batch('gas-showcase'), async (_candidate, variant) => captures[variant])).resolves.toBeNull();
+    await expect(createVisualLabCurrentRegionResponse(batch('synthetic-regionless-candidate'), async (_candidate, variant) => captures[variant])).resolves.toBeNull();
   });
 
   it('maps world regions, authenticates captures, and retains signed response without a verdict', async () => {
