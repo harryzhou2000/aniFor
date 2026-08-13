@@ -6792,6 +6792,7 @@ void main() {
     );
     color = applyMaterialEnvironmentTransport(
       color, 2.0, gasFinishResponse, gasFinishProfile.roughness,
+      gasFinishProfile.interiorScatter,
       gasShadeDensity, opticalDepth, gasLightingSlope, gasInterior,
       uMaterialBodyFinish, uMaterialLightingVariant
     );
@@ -8538,6 +8539,7 @@ void main() {
       );
       color = applyMaterialEnvironmentTransport(
         color, 1.0, liquidFinishResponse, liquidFinishProfile.roughness,
+        liquidFinishProfile.interiorScatter,
         liquidSurfaceDensity, liquidFinishDepth, liquidLightingSlope,
         liquidFinishEligibility, uMaterialBodyFinish, uMaterialLightingVariant
       );
@@ -8861,6 +8863,7 @@ void main() {
       );
       color = applyMaterialEnvironmentTransport(
         color, 3.0, solidFinishProfile.optics, solidFinishProfile.roughness,
+        solidFinishProfile.interiorScatter,
         density, solidOpticalDepth, normal.xy,
         solidInterior * solidLightingFamily, uMaterialBodyFinish,
         uMaterialLightingVariant
@@ -11728,6 +11731,7 @@ void main() {
     );
     color = applyMaterialEnvironmentTransport(
       color, 0.0, powderFinishProfile.optics, powderFinishProfile.roughness,
+      powderFinishProfile.interiorScatter,
       density, powderLightBodyDepth, widePowderShape.yz,
       powderLightBodyGate, uMaterialBodyFinish, uMaterialLightingVariant
     );

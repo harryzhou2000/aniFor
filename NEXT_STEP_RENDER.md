@@ -7543,6 +7543,30 @@ with the pre-existing result ID
 `sha256:f6fa6dbc4fa5c5a066bb5685ebb354c078962d22785fd9c5a3f58efdac7e6a91`,
 proving the extraction and legend did not rotate capture evidence.
 
+The first experiment chosen directly from that resolved profile board is now
+retained. The existing B-only `applyMaterialEnvironmentTransport` helper takes
+the same `interiorScatter` lane at its Powder, Liquid, Gas, and Solid call sites
+and trades concentrated shell light for quiet interior transport. Its bounded
+mapping is `mix(1.16, 0.84, scatterProgress)` for shell concentration and
+`mix(0.62, 1.48, scatterProgress)` for interior openness. This makes the lane
+useful beyond the nearby-emitter volume lobe without adding a new material
+branch or renderer resource. Existing body/depth/phase eligibility remains the
+sole source of support; the change is normal-WebGL Volumetric/B RGB arithmetic.
+OFF/A, Canvas2D, compact true-8x, alpha, topology, contacts, fields, samples,
+textures, passes, and targets remain unchanged.
+
+The real shared-host SwiftShader package
+`/tmp/anifor-environment-scatter-v1` passed WebGL/HDR capture, all 49 declared
+regions, exact OFF/A comparison, and strict portable verification as result
+`sha256:57c1ad6b30f6b7b5aebf467186e05cee07691748f7cfe2612267c549a82354c9`.
+Against the profile-legend checkpoint, Water and liquid-nitrogen body/core mean
+luma rose by about `0.15/0.17` and `0.17/0.25`; Oil and Mercury tightened by
+about `0.05/0.05` and `0.03/0.03`. Oxygen rose by about `0.05/0.08`, while
+Smoke and dense powders moved slightly in the opposite direction. The current
+board shows a restrained class-selective depth exchange rather than a global
+wash. These values and hashes guide this checkpoint only and are not future
+visual thresholds or exact-image gates.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

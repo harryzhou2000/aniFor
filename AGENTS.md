@@ -83,6 +83,22 @@ current portable evidence is `/tmp/anifor-gas-extinction-profile-v1`, result
 OFF and A PNGs stayed byte-identical to the pre-experiment board. Treat all
 hashes and regional measurements as current-package evidence only.
 
+The retained profile-driven environment-depth exchange is the next consumer of
+that same declarative vocabulary. In `applyMaterialEnvironmentTransport`, pass
+the resolved `interiorScatter` lane for all four phase call sites. Volumetric/B
+maps it to a bounded shell concentration of `mix(1.16, 0.84,
+scatterProgress)` and interior openness of `mix(0.62, 1.48,
+scatterProgress)`. This keeps high-scatter aqueous, cryogenic, clean-gas, and
+translucent families more open inside while oily, sooty, metallic, and other
+low-scatter families retain a tighter shell/core. Preserve the helper's existing
+body, depth, and phase gates: the exchange is RGB-only and cannot create
+support. OFF/A, Canvas2D, compact true-8x, fields, samples, textures, targets,
+alpha, topology, and contacts remain unchanged. Current review evidence is
+`/tmp/anifor-environment-scatter-v1`, result
+`sha256:57c1ad6b30f6b7b5aebf467186e05cee07691748f7cfe2612267c549a82354c9`;
+OFF and A stayed byte-identical to the preceding profile-legend checkpoint.
+Treat the result and regional measurements as current-only evidence.
+
 The current review framework also covers the existing Oil- and Water-motion
 recipes through frozen declarative fixture/inspection catalogs. Preserve their
 historical public fixture APIs and exact material, velocity, and wall planes;

@@ -682,6 +682,14 @@ describe('Pixi presenter startup configuration', () => {
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
       'float responseWeight = composition.environmentTransport;',
     );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'float shellConcentration = mix(1.16, 0.84, scatterProgress);',
+    );
+    expect(MATERIAL_BODY_FINISH_GLSL).toContain(
+      'float interiorOpenness = mix(0.62, 1.48, scatterProgress);',
+    );
+    expect(normal.match(/applyMaterialEnvironmentTransport\([\s\S]{0,180}?FinishProfile\.interiorScatter,/g))
+      .toHaveLength(4);
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('mix(1.08, 0.62, transmission)');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('float gasCompactMacroRelief(vec2 position)');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain('float liquidBodyFinishDepth(');

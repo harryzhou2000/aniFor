@@ -445,6 +445,7 @@ vec3 applyMaterialEnvironmentTransport(
   float phase,
   vec4 finishResponse,
   float finishRoughness,
+  float finishInteriorScatter,
   float density,
   float depth,
   vec2 slope,
@@ -485,16 +486,23 @@ vec3 applyMaterialEnvironmentTransport(
 
   float transmission = clamp((finishResponse.w - 0.50) / 1.0, 0.0, 1.0);
   float roughness = clamp((finishRoughness - 0.5) / 1.0, 0.0, 1.0);
+  // The shared class profile trades a concentrated shell for readable quiet
+  // interior transport. This is source-independent B-only RGB arithmetic over
+  // the existing body/depth proofs; it cannot manufacture material support.
+  float scatterProgress = clamp((finishInteriorScatter - 0.50) / 1.0, 0.0, 1.0);
+  float shellConcentration = mix(1.16, 0.84, scatterProgress);
+  float interiorOpenness = mix(0.62, 1.48, scatterProgress);
   float shell = body * (1.0 - smoothstep(0.28, 0.82, bodyDepth));
   float horizon = pow(1.0 - clamp(bodyNormal.z, 0.0, 1.0), mix(3.2, 1.15, roughness));
   float shellTransport = shell * finishResponse.x
     * mix(0.22, 1.0, transmission)
-    * (0.012 + horizon * mix(0.080, 0.040, roughness));
+    * (0.012 + horizon * mix(0.080, 0.040, roughness)) * shellConcentration;
 
   float quietInterior = body * smoothstep(0.20, 0.76, bodyDepth)
     * (1.0 - smoothstep(0.025, 0.20, slopeLength));
   float bodyCarry = quietInterior * finishResponse.w
-    * mix(0.18, 1.0, transmission) * (0.006 + skyFacing * 0.012);
+    * mix(0.18, 1.0, transmission) * (0.006 + skyFacing * 0.012)
+    * interiorOpenness;
   float transport = responseWeight * (shellTransport + bodyCarry);
 
   float identityPeak = max(max(color.r, color.g), max(color.b, 0.12));
