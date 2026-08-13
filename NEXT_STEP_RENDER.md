@@ -7102,7 +7102,21 @@ activation generation `1`, and result
 The established OFF/A/B PNG hashes stayed byte-identical. Startup was 12.92s,
 activation readiness was 19.49s (including 4.75s complete readback), OFF/A/B
 were 2.08/1.97/1.98s, and total was 39.05s. These local timings are diagnostic;
-the next gate is the approved hosted fresh/shared/shared/fresh Powder cohort.
+the next gate was the approved hosted fresh/shared/shared/fresh Powder cohort.
+
+That hosted gate passed at exact revision
+`597fd5af374ee84cc27ed99bdc1d7bd8232cf866` in workflow run `31670580838`.
+The build completed in 3m24s with 269/270 ccache hits; the v6 ABBA job then
+completed in 4m27s and uploaded only its 3,672-byte bounded summary artifact
+`9169698134`. All four cohorts reconstructed the same portable Powder result,
+used one readiness snapshot, and reported no host restart or fault recycle.
+Fresh/shared/shared/fresh totals were 80.22/62.95/59.13/61.17s; activation
+readiness was 41.84/38.19/35.61/36.43s, versus 78.45–79.89s for hosted v5.
+OFF/A/B stayed between 3.12s and 3.87s. This accepts v6 as the current typed
+readiness framework while retaining v4 as the independent selection-performance
+control and v5 as explicit global-quiescence evidence. The next framework work
+should profile the remaining owned pre-snapshot interval without weakening its
+single complete semantic/field/framebuffer proof.
 
 ## Deferred long-term visual roadmap
 

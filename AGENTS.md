@@ -1775,7 +1775,13 @@ synchronous selector submission satisfy it. Keep exactly one complete readiness
 snapshot and reread the same completed generation afterward. The first real
 local SwiftShader v6 capture reproduced the established Powder result and all
 three PNG hashes with 19.49s readiness and 39.05s total; hosted ABBA evidence is
-the next acceptance gate.
+the next acceptance gate. That gate passed at exact revision
+`597fd5af374ee84cc27ed99bdc1d7bd8232cf866` in workflow run `31670580838`:
+all four fresh/shared/shared/fresh cohorts portably matched, each retained one
+readiness snapshot, no host restarted or fault-recycled, and hosted readiness
+fell to 35.61–41.84s from v5's 78.45–79.89s. The build restored 269/270 ccache
+hits. Treat v6 as the current typed readiness framework, v4 as the independent
+selection-performance control, and v5 as explicit global-quiescence evidence.
 
 Performance comparisons use the opt-in
 `audit:visual-lab:performance-cohorts` runner. Preserve its fixed
