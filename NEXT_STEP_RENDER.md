@@ -6932,6 +6932,17 @@ opt-in driver-owned settling capability only where retained evidence proves
 redundancy; do not change stable-v1, receipt-v2, deploy gating, or frozen visual
 identities merely to improve these timings.
 
+The first hosted use passed at exact revision
+`3bde80babf8dc08498dff11aefec9f27f6afc772` in workflow run
+`31661815667`. Build completed in 3m41s with 1,563 source tests, 363 tooling
+tests, 269/270 ccache hits, and the pinned Powder Toy package cache restored.
+The non-gating performance job completed in 7m46s and uploaded only its 3,631
+byte summary. All four fresh/shared/shared/fresh legs passed receipt-v2 and
+portable identity checks. Loaded-runner totals were 111.6–116.2s per leg, with
+67.5–69.7s in readiness; shared-host launch savings remained below one second.
+This wider local/hosted spread reinforces that durations are observations, not
+thresholds, and that the next leverage is driver-owned readiness/settle work.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
