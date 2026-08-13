@@ -8093,6 +8093,36 @@ verification with result
 `sha256:c83123c25c6181ecdc10d0668cb3b1c6a56d22888b7bb79d02d1739d5824be5b`.
 The bounded live evidence artifact is `9199743025`.
 
+The next local readiness-preparation increment extends exact-owner coalescing
+to wall-bearing fixtures and removes orphaned Canvas contour work after WebGL
+promotion. During the same drained native-field activation, per-wall mutations
+retain blocker dirt, semantic/boundary/powder/solid owners, and auxiliary dirt,
+but defer both dirty-grid expansions; the required full semantic refresh and one
+full wall repack consume them immediately before the populated presentation.
+Rejected activation restores both full grids. Separately, material and wall
+reconciliation mark Canvas contour chunks only while fallback field storage is
+actually live. Canvas startup/promotion retains that storage, and WebGL failure
+recreates it and marks the complete contour grid before recovery rendering, so
+ordinary Canvas and recovery remain exact.
+
+The full source and tooling command passes, as do 294 focused renderer tests and
+the production Pages build with exact 19-resource closure. A wall-bearing
+source-target capture passed WebGL/HDR, semantic, authoritative-field, and
+framebuffer-alpha invariants with zero browser errors. A fresh default-v9
+RenderOptics review at
+`.artifacts/visual-lab-reviews/render-optics-fe564511-590e-4f8b-b3f3-a5590f8afc19`
+retained exact result
+`sha256:4891db2c82bb89cb4bce5a63a2927360fbc20e634a0a91b9d17a490deb630581`
+and all established OFF/A/B PNG hashes. It completed one typed activation
+generation with WebGL/HDR and zero errors. Its approximately 12.35-second
+startup and 9.64-second readiness are single-run diagnostics, not comparative
+performance evidence. Profiling shows no duplicate readiness proof or large CDP
+payload remains: loaded SwiftShader time is dominated by GPU/HDR presentation
+and the exact default-framebuffer transfer. The next high-leverage experiment
+should fuse typed fixture activation with WebGL promotion so the first HDR frame
+is already the owner-bound populated frame, behind an implementation experiment
+that preserves the existing v9 plan/report and exact result identities.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

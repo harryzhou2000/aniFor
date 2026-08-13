@@ -608,7 +608,7 @@ export class MaterialRenderer {
       this.rendered[cell.index] = cell.material;
       const fallbackFields = this.fallbackFields;
       fallbackFields?.markDirty(previous, cell.material, cell.index);
-      this.contourChunks.markCell(cell.index);
+      if (fallbackFields) this.contourChunks.markCell(cell.index);
       if (fallbackFields) {
         const previousPhase = fallbackFields.lookups.styleBytes[previous * 4];
         const nextPhase = fallbackFields.lookups.styleBytes[cell.material * 4];
@@ -628,9 +628,10 @@ export class MaterialRenderer {
       if (!this.renderedWalls) break;
       if (this.renderedWalls[cell.index] === cell.wall) continue;
       this.renderedWalls[cell.index] = cell.wall;
-      this.fallbackFields?.markAtmosphereBlockerDirty(cell.index);
+      const fallbackFields = this.fallbackFields;
+      fallbackFields?.markAtmosphereBlockerDirty(cell.index);
       this.presenter?.markWallDirty(cell.index);
-      this.contourChunks.markCell(cell.index);
+      if (fallbackFields) this.contourChunks.markCell(cell.index);
       this.powderSurfaceDirty = true;
       this.solidOpticalDepthDirty = true;
       this.changed = true;
@@ -858,7 +859,7 @@ export class MaterialRenderer {
       this.rendered[index] = material;
       const fallbackFields = this.fallbackFields;
       fallbackFields?.markDirty(previous, material, index, owner);
-      this.contourChunks.markCell(index);
+      if (fallbackFields) this.contourChunks.markCell(index);
       if (fallbackFields) {
         const previousPhase = fallbackFields.lookups.styleBytes[previous * 4];
         const nextPhase = fallbackFields.lookups.styleBytes[material * 4];
@@ -884,9 +885,10 @@ export class MaterialRenderer {
       const wall = walls[index];
       if (this.renderedWalls[index] === wall) continue;
       this.renderedWalls[index] = wall;
-      this.fallbackFields?.markAtmosphereBlockerDirty(index, owner);
+      const fallbackFields = this.fallbackFields;
+      fallbackFields?.markAtmosphereBlockerDirty(index, owner);
       this.presenter?.markWallDirty(index);
-      this.contourChunks.markCell(index);
+      if (fallbackFields) this.contourChunks.markCell(index);
       this.powderSurfaceDirty = true;
       this.solidOpticalDepthDirty = true;
       if (owner > 0) {

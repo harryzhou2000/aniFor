@@ -1,8 +1,57 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createAnimationFrameCoalescer, MaterialRenderer } from './field-renderer';
 import { readFileSync } from 'node:fs';
+import { Material } from '../shared/materials';
 
 describe('field renderer layout scheduling', () => {
+  it('keeps Canvas contour dirt owned by live fallback storage', () => {
+    const source = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    expect(source.match(/if \(fallbackFields\) this\.contourChunks\.markCell\(/g)).toHaveLength(4);
+    expect(source).not.toMatch(/this\.fallbackFields\?\.markAtmosphereBlockerDirty/);
+    expect(source).toContain('if (!this.fallbackFields) this.initFallback();\n    this.contourChunks.markAll();');
+  });
+
+  it('reconciles WebGL fixture cells and walls without orphaned Canvas contour work', () => {
+    const contourMarkCell = vi.fn();
+    const presenterMarkDirty = vi.fn();
+    const presenterMarkWallDirty = vi.fn();
+    const materials = new Uint8Array([Material.Water]);
+    const walls = new Uint8Array([1]);
+    const renderer = Object.create(MaterialRenderer.prototype) as any;
+    Object.assign(renderer, {
+      fixtureActivationCaptureOwner: 7,
+      simulation: { cells: () => materials, walls: () => walls },
+      rendered: new Uint8Array([Material.Empty]),
+      renderedWalls: new Uint8Array([0]),
+      contourChunks: { markCell: contourMarkCell },
+      presenter: { markDirty: presenterMarkDirty, markWallDirty: presenterMarkWallDirty },
+      changed: false,
+      dynamicPresentationInvalidated: false,
+      powderSurfaceDirty: false,
+      solidOpticalDepthDirty: false,
+    });
+
+    renderer.synchronizeFixtureMaterialPlane();
+    expect(presenterMarkDirty).toHaveBeenCalledWith(0, Material.Water);
+    expect(presenterMarkWallDirty).toHaveBeenCalledWith(0);
+    expect(contourMarkCell).not.toHaveBeenCalled();
+    expect(renderer.dynamicPresentationInvalidated).toBe(true);
+
+    const markDirty = vi.fn();
+    const markAtmosphereBlockerDirty = vi.fn();
+    renderer.fallbackFields = {
+      markDirty,
+      markAtmosphereBlockerDirty,
+      lookups: { styleBytes: new Uint8Array(1024) },
+    };
+    materials[0] = Material.Sand;
+    walls[0] = 2;
+    renderer.synchronizeFixtureMaterialPlane();
+    expect(markDirty).toHaveBeenCalledWith(Material.Water, Material.Sand, 0, 7);
+    expect(markAtmosphereBlockerDirty).toHaveBeenCalledWith(0, 7);
+    expect(contourMarkCell).toHaveBeenCalledTimes(2);
+  });
+
   it('reserves a frozen fixture-activation generation before queuing its next draw', () => {
     const renderer = Object.create(MaterialRenderer.prototype) as {
       disposed: boolean;

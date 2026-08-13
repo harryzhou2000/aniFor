@@ -247,6 +247,7 @@ describe('Pixi presenter startup configuration', () => {
       fixtureActivationDrainVolumeFieldsOwner: number;
       fixtureActivationFramebufferAlphaReadbackOwner: number;
       fixtureActivationFullSemanticRepackOwner: number;
+      fixtureActivationFullWallRepackOwner: number;
       fixtureActivationFramebufferAlphaReadback?: unknown;
       presentationSubmission: number;
       beginFixtureActivationPresentationWork(owner: number, drain?: boolean, fullRepack?: boolean): void;
@@ -258,6 +259,60 @@ describe('Pixi presenter startup configuration', () => {
     expect(presenter.fixtureActivationDrainVolumeFieldsOwner).toBe(8);
     presenter.beginFixtureActivationPresentationWork(9, true, true);
     expect(presenter.fixtureActivationFullSemanticRepackOwner).toBe(9);
+    expect(presenter.fixtureActivationFullWallRepackOwner).toBe(0);
+  });
+
+  it('coalesces only activation-owned wall dirt behind its required full repacks', () => {
+    const semanticMarkCell = vi.fn();
+    const wallMarkCell = vi.fn();
+    const presenter = Object.create(PixiFieldPresenter.prototype) as any;
+    Object.assign(presenter, {
+      chunks: { markCell: semanticMarkCell },
+      wallChunks: { markCell: wallMarkCell },
+      fieldSet: { markAtmosphereBlockerDirty: vi.fn() },
+      fixtureActivationCaptureOwner: 11,
+      fixtureActivationFullSemanticRepackOwner: 11,
+      fixtureActivationFullWallRepackOwner: 0,
+      semanticTextureMutationPending: false,
+      powderSurfaceDirty: false,
+      solidOpticalDepthDirty: false,
+    });
+
+    presenter.markWallDirty(37);
+    expect(semanticMarkCell).not.toHaveBeenCalled();
+    expect(wallMarkCell).not.toHaveBeenCalled();
+    expect(presenter.fixtureActivationFullWallRepackOwner).toBe(11);
+    expect(presenter.fieldSet.markAtmosphereBlockerDirty).toHaveBeenCalledWith(37, 11);
+    expect(presenter.fixtureActivationSemanticOwner).toBe(11);
+    expect(presenter.fixtureActivationBoundaryOwner).toBe(11);
+    expect(presenter.fixtureActivationPowderOwner).toBe(11);
+    expect(presenter.fixtureActivationSolidOwner).toBe(11);
+    expect(presenter.powderSurfaceDirty).toBe(true);
+    expect(presenter.solidOpticalDepthDirty).toBe(true);
+
+    presenter.fixtureActivationCaptureOwner = 0;
+    presenter.markWallDirty(38);
+    expect(semanticMarkCell).toHaveBeenCalledWith(38);
+    expect(wallMarkCell).toHaveBeenCalledWith(38);
+  });
+
+  it('restores both full dirt grids when an activation transaction rejects', () => {
+    const semanticMarkAll = vi.fn();
+    const wallMarkAll = vi.fn();
+    const presenter = Object.create(PixiFieldPresenter.prototype) as any;
+    Object.assign(presenter, {
+      chunks: { markAll: semanticMarkAll },
+      wallChunks: { markAll: wallMarkAll },
+      fixtureActivationDrainVolumeFieldsOwner: 13,
+      fixtureActivationFullSemanticRepackOwner: 13,
+      fixtureActivationFullWallRepackOwner: 13,
+    });
+
+    presenter.cancelFixtureActivationDrainedWork(13);
+    expect(semanticMarkAll).toHaveBeenCalledOnce();
+    expect(wallMarkAll).toHaveBeenCalledOnce();
+    expect(presenter.fixtureActivationFullSemanticRepackOwner).toBe(0);
+    expect(presenter.fixtureActivationFullWallRepackOwner).toBe(0);
   });
 
   it('skips only activation-owned chunk dirt when a full semantic repack is reserved', () => {

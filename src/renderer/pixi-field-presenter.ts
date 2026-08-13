@@ -12353,6 +12353,8 @@ export class PixiFieldPresenter {
   private fixtureActivationDrainVolumeFieldsOwner = 0;
   /** Activation whose required dynamic refresh will replace cell dirt with one full repack. */
   private fixtureActivationFullSemanticRepackOwner = 0;
+  /** Same activation's wall dirt, expanded once immediately before wall packing. */
+  private fixtureActivationFullWallRepackOwner = 0;
   private fixtureActivationFramebufferAlphaReadbackOwner = 0;
   private fixtureActivationFramebufferAlphaReadback?: FixtureActivationFramebufferAlphaReadback;
   private solidOpticalDepthDirty = true;
@@ -13919,6 +13921,7 @@ export class PixiFieldPresenter {
     this.fixtureActivationSubmissionBaseline = this.presentationSubmission;
     this.fixtureActivationDrainVolumeFieldsOwner = drainOwnedVolumeFields ? owner : 0;
     this.fixtureActivationFullSemanticRepackOwner = fullSemanticRepack ? owner : 0;
+    this.fixtureActivationFullWallRepackOwner = 0;
     this.fixtureActivationFramebufferAlphaReadbackOwner = owner;
     this.fixtureActivationFramebufferAlphaReadback = undefined;
   }
@@ -13939,6 +13942,10 @@ export class PixiFieldPresenter {
       this.fixtureActivationFullSemanticRepackOwner = 0;
       this.chunks.markAll();
     }
+    if (this.fixtureActivationFullWallRepackOwner === owner) {
+      this.fixtureActivationFullWallRepackOwner = 0;
+      this.wallChunks.markAll();
+    }
   }
 
   markWallDirty(index: number): void {
@@ -13950,11 +13957,13 @@ export class PixiFieldPresenter {
       this.fixtureActivationPowderOwner = owner;
       this.fixtureActivationSolidOwner = owner;
     }
-    this.wallChunks.markCell(index);
+    const fullRepack = owner > 0 && this.fixtureActivationFullSemanticRepackOwner === owner;
+    if (fullRepack) this.fixtureActivationFullWallRepackOwner = owner;
+    if (!fullRepack) this.wallChunks.markCell(index);
     // E09 packs exact ordinary Powder/Solid contact into the existing normal-
     // scale stability byte. Revisit the same halo when an independent native
     // wall changes so a 254 marker can neither survive nor appear stale.
-    this.chunks.markCell(index);
+    if (!fullRepack) this.chunks.markCell(index);
     this.fieldSet.markAtmosphereBlockerDirty(index, owner);
     this.powderSurfaceDirty = true;
     this.solidOpticalDepthDirty = true;
@@ -15035,6 +15044,10 @@ export class PixiFieldPresenter {
     }
     let wallTextureDirty = rectangles.length > 0 && presentationState !== undefined;
     const photonTextureDirty = rectangles.length > 0 && photonState !== undefined;
+    if (this.fixtureActivationFullWallRepackOwner === activationOwner) {
+      this.fixtureActivationFullWallRepackOwner = 0;
+      this.wallChunks.markAll();
+    }
     const wallRectangles = this.wallChunks.consume();
     if (walls) for (const rect of wallRectangles) packWallRect(this.wallBytes, this.wallSource.width, walls, rect);
     if (walls && wallRectangles.length) wallTextureDirty = true;
