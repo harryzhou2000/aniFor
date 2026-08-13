@@ -5162,6 +5162,12 @@ all declared files and atomic `.tmp` stages; this specifically prevents stale
 region-appearance evidence surviving an interrupted rerun. Preserve the runner
 `response` versus verifier `experimentResponse` compatibility names, and keep
 contact-sheet then index publication last.
+This lifecycle checkpoint is deployed at exact revision
+`d6979a748eab1a676c7a29c9c342f5b8b4e6cce7` by workflow run `31740451897`.
+The cached build completed in 3m15s with 269/270 ccache hits, default-v9
+RenderOptics capture and downloaded-package verification in 1m47s with both
+49-region products, Pages deployment in 10s, and exact 19-resource closure plus
+the hosted Water smoke in 1m37s.
 
 Read [`docs/render-lab.md`](docs/render-lab.md) before changing reconstruction thresholds or blur radii. A TypeScript or Vite build does not compile Pixi's runtime GLSL; a browser screenshot with a clean shader console is required.
 

@@ -7964,6 +7964,17 @@ now removes both region-appearance files and their `.tmp` stages, fixing stale
 evidence after an interrupted rerun. No evidence bytes, schemas, renderer
 resources, capture identities, browser methods, or CI requirements change.
 
+That lifecycle increment is deployed at exact revision
+`d6979a748eab1a676c7a29c9c342f5b8b4e6cce7` by workflow run `31740451897`.
+The cached build finished in 3m15s with 269/270 ccache hits. Default-v9
+RenderOptics capture and downloaded-package verification passed in 1m47s and
+reconstructed both 49-region products; Pages deployed in 10s; exact live
+19-resource closure and the hosted Water receipt-v2 smoke passed in 1m37s.
+The next measured performance option is schema-free exact bulk evidence-digest
+kernels, but it should proceed only with byte-parity proof because hosted
+readiness remains dominated by GPU/CDP transfer variation rather than the fast
+OFF/A/B selector digests.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
