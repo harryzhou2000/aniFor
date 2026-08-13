@@ -5127,6 +5127,14 @@ choices literal for GitHub's UI, keep the registry out of browser/static
 contracts and portable identities, reject unknown modes/schemas, and require
 facade/generic byte parity for every existing version before extension.
 
+That proof-dispatch checkpoint is deployed at exact revision
+`c6287c1a14823a9090152940c163370419563516` by workflow run `31736600754`.
+The cached build passed in 3m20s, the default v9 RenderOptics review and
+downloaded-package verification passed in 1m50s, Pages deployed in 10s, and
+exact live closure plus hosted Water receipt-v2 smoke passed in 59s. Local
+focused validation covered 143 contracts plus typecheck, production build, and
+a real v9 review retaining the established plan and result identities.
+
 Read [`docs/render-lab.md`](docs/render-lab.md) before changing reconstruction thresholds or blur radii. A TypeScript or Vite build does not compile Pixi's runtime GLSL; a browser screenshot with a clean shader console is required.
 
 The style lookup is an RGBA data texture, not display color: RGB stores phase/profile/emission and alpha stores the static `RenderTrait` mask. Keep nearest sampling and `no-premultiply-alpha`; zero-valued trait alpha must never erase the RGB metadata.

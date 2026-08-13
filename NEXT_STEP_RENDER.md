@@ -7920,6 +7920,15 @@ bytes, and a real default v9 RenderOptics review retained tuning plan
 and result
 `sha256:4891db2c82bb89cb4bce5a63a2927360fbc20e634a0a91b9d17a490deb630581`.
 
+The consolidated dispatcher is deployed at exact revision
+`c6287c1a14823a9090152940c163370419563516` by workflow run `31736600754`.
+The cached clean-checkout build completed in 3m20s, default v9 RenderOptics
+capture plus downloaded-package verification in 1m50s, Pages deployment in
+10s, and exact live closure plus hosted Water receipt-v2 smoke in 59s. This
+closes the proof-registration drift increment; the next framework work should
+improve reusable review-artifact navigation or another measured authoring
+boundary, not add another tuning schema.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
