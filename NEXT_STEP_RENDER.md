@@ -7063,6 +7063,23 @@ that drain 120 seconds on SwiftShader. The evidence contract is unchanged:
 exactly one readiness snapshot, same-generation reread, and v4 OFF/A/B receipts.
 All v1–v4 timeouts and behaviors remain frozen.
 
+The bounded rerun passed at exact revision
+`5f5be476f9bdaf7a7f9177621850ade03fbce62a` in workflow run `31668629286`.
+Every fresh/shared/shared/fresh leg reconstructed the same portable result and
+no host recycled. Each readiness proof used exactly one full snapshot; activation
+quiescence plus snapshot took 78.45–79.89s, with 19.18–19.44s in complete
+readback, and candidate totals were 114.15–124.73s. Thus v5 validates the typed
+app-owned activation boundary and its portable proof, but does not replace v4 as
+the performance control. Keep v5 explicit/diagnostic.
+
+The next performance-framework increment should make generation ownership more
+precise rather than relaxing evidence: tag only the semantic, dynamic, boundary,
+powder, solid-depth, volume, and suspension work actually dirtied by the typed
+activation, and retire that bounded generation when its owned work is consumed.
+Do not wait on unrelated pre-existing renderer queues, add a GPU fence, add a
+second snapshot, or infer readiness from dataset state alone. This should remain
+an additive successor to v5; v1–v4 and the accepted v4 hosted control stay intact.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

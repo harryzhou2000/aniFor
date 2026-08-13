@@ -1874,6 +1874,18 @@ a 120-second SwiftShader scheduling bound while retaining one snapshot, the same
 generation reread, and all v1–v4 timeout bytes. Do not broaden this bound to the
 stable modes or interpret it as a performance threshold.
 
+That bounded hosted v5 control passed at exact revision
+`5f5be476f9bdaf7a7f9177621850ade03fbce62a` in workflow run `31668629286`.
+All four fresh/shared/shared/fresh packages passed portable identity equality
+with no host recycle. Each used exactly one readiness snapshot, but activation
+quiescence plus that snapshot consumed 78.45–79.89s; totals were
+114.15–124.73s. V5 is therefore a successful authoring/readiness correctness
+framework, not the performance winner. Keep v4 as the manual performance control
+and v5 as an explicit diagnostic option. The measurement also makes the next
+optimization precise: replace global renderer quiescence with activation-owned
+generation accounting, without dropping the complete snapshot or widening
+stable/deploy gates.
+
 The renderer-owned completed-frame receipt is now a protected audit capability.
 `anifor.renderer.completed-frame-receipt/v1` binds every ticket to the exact
 presentation submission and exposes only `pending`, `completed`, `superseded`,
