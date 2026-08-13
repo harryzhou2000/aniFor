@@ -1870,7 +1870,12 @@ authority, or cross-submission state and must be released on context loss and
 teardown. Do not cache semantic or field digests: their simulation and renderer
 ownership clocks differ. The first real local Powder package preserved the
 established result and v7 plan with all 16 regions; its 3.08s readback and 7.82s
-readiness are single-sample evidence pending the fixed cohort.
+readiness were single-sample evidence. The fixed local cohort then passed all
+four identities with zero restarts but showed neutral timing: 8.92–9.35s
+readiness, 3.91–4.57s readback/hash, and 27.62–29.62s total. Retain overlap and
+scratch reuse as a cleaner bounded mechanism, not a proven local speedup. The
+next optimization must reduce actual framebuffer transfer/digest cost without
+caching or weakening evidence.
 
 Performance comparisons use the opt-in
 `audit:visual-lab:performance-cohorts` runner. Preserve its fixed

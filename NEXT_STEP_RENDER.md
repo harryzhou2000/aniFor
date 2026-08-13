@@ -7293,7 +7293,14 @@ SwiftShader Powder capture at `/tmp/anifor-overlap-powder.ZIvqxc` retained resul
 tuning plan `sha256:341fdc327710f547d7e973050b706edbc2acdfb9333998aefb20ee38d53d3e1a`,
 all 16 regions, one snapshot, and zero restarts. Its complete readiness
 readback/hash was 3.08s and total readiness 7.82s. Treat that as promising
-single-sample evidence only; use the fixed cohort before claiming improvement.
+single-sample evidence only. The fixed local cohort at
+`/tmp/anifor-overlap-abba.9FgPIP` passed four-for-four with equal identities and
+zero restarts, but did not confirm a speedup: readiness was 8.92–9.35s,
+readback/hash 3.91–4.57s, and total 27.62–29.62s, overlapping the prior v7
+cohort. Retain the increment for its simpler overlap boundary and bounded
+allocation reuse, not as a local performance win. One hosted cohort may test
+whether loaded-runner overlap helps; regardless, the next optimization must
+reduce the actual default-framebuffer transfer or digest cost, not add caching.
 
 ## Deferred long-term visual roadmap
 
