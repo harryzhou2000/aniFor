@@ -1951,6 +1951,9 @@ describe('Visual Lab batch runner', () => {
     expect(appearanceBoard.indexOf('sand-body off'))
       .toBeLessThan(appearanceBoard.indexOf('water-body off'));
     expect(appearanceBoard).toContain(`./candidates/${candidate}/off.png`);
+    expect(appearanceBoard).toContain('Aqueous · class 1');
+    expect(appearanceBoard).toContain('<dt>interiorScatter</dt><dd>1.25</dd>');
+    expect(appearanceBoard).toContain('MetallicRigid · class 20');
     expect(generated.regionAppearance.candidates[0].regions).toHaveLength(49);
 
     await expect(verifyVisualLabBatchPackage({

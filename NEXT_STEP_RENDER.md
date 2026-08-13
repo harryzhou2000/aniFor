@@ -7529,6 +7529,20 @@ Candidates without a presentation descriptor retain their existing flat order.
 This is current-only review ergonomics: it adds no score, threshold, baseline,
 promotion authority, or cross-revision visual pin.
 
+The grouped appearance board now also exposes the resolved six-lane class
+profile beside each body/core crop. One renderer-independent frozen catalog
+owns ordered `key`, `fill`, `pigment`, `transmission`, `roughness`, and
+`interiorScatter` values plus stable RenderOptics names/codes. Browser shader
+assembly and Node review presentation derive from that same catalog; duplicate
+phase/class rows, malformed names, and non-finite or out-of-range tuples fail
+before map projection. The legend is descriptive and collapsible, and is absent
+from topology/contact controls. It remains outside region JSON and every capture
+identity. A real shared-host SwiftShader capture at
+`/tmp/anifor-profile-legend-v2` passed all 49 regions and portable verification
+with the pre-existing result ID
+`sha256:f6fa6dbc4fa5c5a066bb5685ebb354c078962d22785fd9c5a3f58efdac7e6a91`,
+proving the extraction and legend did not rotate capture evidence.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

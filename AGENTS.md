@@ -1615,6 +1615,15 @@ pixel rectangles, capture order, result identities, fixture preparation, or
 promotion authority. Candidates without an explicit presentation descriptor
 retain their existing region order.
 
+The six class-level appearance lanes have one renderer-independent authoring
+source in `src/shared/material-appearance-profile-catalog.js`. Keep it pure,
+frozen, and free of renderer/material imports so browser shader assembly and
+Node inspection tooling can derive from the same values without a dependency
+cycle. Validate unique phase/class rows and bounded six-lane tuples before map
+projection. Resolved names/codes and values may appear as collapsible current-
+only crop legends, but never enter region evidence JSON, capture recipes,
+results, baselines, comparisons, scores, or promotion decisions.
+
 The reusable WAX/MWAX material-lighting board now carries the first retained
 optics-profile experiment. Keep `RenderOptics.Waxy` append-only and solid-WAX
 only; MWAX remains `ViscousLiquid`. Its raw value may reach only the two shared

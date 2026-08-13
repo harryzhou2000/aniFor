@@ -1,4 +1,8 @@
 import { RENDER_OPTICS_MATERIAL_LIGHTING_ATLAS_CATALOG } from '../src/shared/render-optics-material-lighting-atlas-catalog.js';
+import {
+  MATERIAL_APPEARANCE_PROFILE_LANES,
+  resolveMaterialAppearanceProfileCatalogEntry,
+} from '../src/shared/material-appearance-profile-catalog.js';
 
 const SAFE_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const PHASES = Object.freeze([
@@ -38,7 +42,23 @@ renderOpticsSections.push({
 });
 
 export const VISUAL_LAB_INSPECTION_PRESENTATIONS = deepFreeze({
-  'render-optics-material-lighting-atlas': renderOpticsSections,
+  'render-optics-material-lighting-atlas': {
+    sections: renderOpticsSections,
+    regionMetadata: Object.fromEntries(renderOpticsAtlas.descriptor.cards.flatMap((card) => {
+      const family = resolveMaterialAppearanceProfileCatalogEntry(card.phase, card.optics);
+      if (!family) throw new Error(`RenderOptics card ${card.key} has no appearance profile`);
+      const metadata = {
+        card: card.key,
+        phase: card.phase,
+        optics: family.name,
+        opticsCode: family.optics,
+        profile: Object.fromEntries(MATERIAL_APPEARANCE_PROFILE_LANES.map(
+          (lane, index) => [lane, family.profile[index]],
+        )),
+      };
+      return [[`${card.key}-body`, metadata], [`${card.key}-core`, metadata]];
+    })),
+  },
 });
 
 /** Presentation-only grouping over existing authenticated region records. */
@@ -57,7 +77,7 @@ export function resolveVisualLabInspectionPresentation(candidate, regions) {
     byName.set(region.name, region);
   }
   const consumed = new Set();
-  const sections = descriptor.map(({ key, label, regionNames }) => ({
+  const sections = descriptor.sections.map(({ key, label, regionNames }) => ({
     key,
     label,
     regions: regionNames.map((name) => {
@@ -66,7 +86,8 @@ export function resolveVisualLabInspectionPresentation(candidate, regions) {
         throw new TypeError(`${candidate} inspection presentation references an invalid region`);
       }
       consumed.add(name);
-      return region;
+      const metadata = descriptor.regionMetadata[name] ?? null;
+      return metadata === null ? region : { ...region, presentation: metadata };
     }),
   }));
   if (consumed.size !== byName.size) {

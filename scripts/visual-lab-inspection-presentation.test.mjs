@@ -36,6 +36,14 @@ describe('Visual Lab inspection presentation', () => {
       ] },
     ]);
     expect(Object.isFrozen(sections)).toBe(true);
+    expect(sections[1].regions[0].presentation).toEqual({
+      card: 'water', phase: 'liquid', optics: 'Aqueous', opticsCode: 1,
+      profile: {
+        key: 1.10, fill: 0.86, pigment: 0.82, transmission: 1.18,
+        roughness: 0.92, interiorScatter: 1.25,
+      },
+    });
+    expect(sections[4].regions[0]).not.toHaveProperty('presentation');
   });
 
   it('leaves candidates without a presentation descriptor unchanged', () => {

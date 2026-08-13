@@ -1,4 +1,5 @@
 import { RENDER_OPTICS_CLASS_COUNT, RenderOptics } from './render-optics';
+import { MATERIAL_APPEARANCE_PROFILE_CATALOG } from '../shared/material-appearance-profile-catalog.js';
 
 /**
  * Stable phase codes shared by the normal and compact material-body finish.
@@ -43,36 +44,11 @@ const PHASES: readonly { readonly name: MaterialAppearancePhase; readonly code: 
 ];
 
 /** Actionable phase/class pairs that require profile-authoring review coverage. */
-export const MATERIAL_APPEARANCE_PHASE_OPTICS = Object.freeze({
-  powder: Object.freeze([
-    RenderOptics.RoughGranular,
-    RenderOptics.CrystallineGranular,
-    RenderOptics.SootyGranular,
-    RenderOptics.MetallicGranular,
+export const MATERIAL_APPEARANCE_PHASE_OPTICS = Object.freeze(Object.fromEntries(
+  MATERIAL_APPEARANCE_PROFILE_CATALOG.phases.map(({ name, families }) => [
+    name, Object.freeze(families.map(({ optics }) => optics as RenderOptics)),
   ]),
-  liquid: Object.freeze([
-    RenderOptics.Aqueous,
-    RenderOptics.Oily,
-    RenderOptics.Corrosive,
-    RenderOptics.Molten,
-    RenderOptics.CryogenicLiquid,
-    RenderOptics.MetallicLiquid,
-    RenderOptics.ViscousLiquid,
-  ]),
-  gas: Object.freeze([
-    RenderOptics.SootyGas,
-    RenderOptics.CleanGas,
-  ]),
-  solid: Object.freeze([
-    RenderOptics.SmoothRigid,
-    RenderOptics.Organic,
-    RenderOptics.Device,
-    RenderOptics.Radioactive,
-    RenderOptics.TranslucentRigid,
-    RenderOptics.MetallicRigid,
-    RenderOptics.Waxy,
-  ]),
-} satisfies Readonly<Record<MaterialAppearancePhase, readonly RenderOptics[]>>);
+)) as Readonly<Record<MaterialAppearancePhase, readonly RenderOptics[]>>;
 
 function profile(
   key: number,
@@ -97,35 +73,16 @@ function phaseProfiles(
  * a RenderOptics class elsewhere; adding a material here is deliberately
  * impossible. The values match the pre-profile shared GLSL selector.
  */
-export const MATERIAL_APPEARANCE_PROFILES: MaterialAppearanceProfiles = Object.freeze({
-  powder: phaseProfiles(profile(0.90, 1.10, 1.08, 0.80, 1.18, 0.90), {
-    [RenderOptics.CrystallineGranular]: profile(1.24, 0.82, 1.04, 1.22, 0.76, 1.05),
-    [RenderOptics.SootyGranular]: profile(0.72, 1.30, 1.26, 0.64, 1.30, 0.72),
-    [RenderOptics.MetallicGranular]: profile(1.32, 1.08, 0.92, 0.58, 0.72, 0.58),
-  }),
-  liquid: phaseProfiles(profile(1.0, 1.0, 1.0, 1.0), {
-    [RenderOptics.Aqueous]: profile(1.10, 0.86, 0.82, 1.18, 0.92, 1.25),
-    [RenderOptics.Oily]: profile(0.94, 1.12, 1.24, 0.72, 1.14, 0.72),
-    [RenderOptics.Corrosive]: profile(1.16, 1.02, 1.16, 1.02, 0.98, 0.95),
-    [RenderOptics.Molten]: profile(0.78, 0.82, 1.30, 0.54, 0.88, 0.65),
-    [RenderOptics.CryogenicLiquid]: profile(1.26, 0.74, 0.78, 1.28, 0.76, 1.28),
-    [RenderOptics.MetallicLiquid]: profile(1.34, 1.10, 0.92, 0.58, 0.70, 0.62),
-    [RenderOptics.ViscousLiquid]: profile(0.86, 1.16, 1.22, 0.66, 1.24, 0.76),
-  }),
-  gas: phaseProfiles(profile(1.0, 1.0, 1.0, 1.0), {
-    [RenderOptics.SootyGas]: profile(0.74, 1.28, 1.12, 0.64, 1.30, 0.72),
-    [RenderOptics.CleanGas]: profile(1.16, 0.76, 0.76, 1.28, 0.94, 1.28),
-  }),
-  solid: phaseProfiles(profile(1.0, 1.0, 1.0, 1.0), {
-    [RenderOptics.SmoothRigid]: profile(1.18, 1.12, 1.06, 0.72, 0.92, 0.80),
-    [RenderOptics.Organic]: profile(0.92, 1.16, 1.12, 0.78, 1.14, 0.80),
-    [RenderOptics.Device]: profile(1.12, 1.50, 1.04, 0.50, 0.88, 0.60),
-    [RenderOptics.Radioactive]: profile(0.98, 1.24, 1.10, 0.80, 1.04, 0.82),
-    [RenderOptics.TranslucentRigid]: profile(1.34, 0.82, 0.84, 1.42, 0.76, 1.25),
-    [RenderOptics.MetallicRigid]: profile(1.42, 1.08, 1.12, 0.56, 0.62, 0.55),
-    [RenderOptics.Waxy]: profile(1.04, 1.12, 1.18, 0.90, 1.06, 1.18),
-  }),
-});
+export const MATERIAL_APPEARANCE_PROFILES: MaterialAppearanceProfiles = Object.freeze(
+  Object.fromEntries(MATERIAL_APPEARANCE_PROFILE_CATALOG.phases.map((entry) => [
+    entry.name,
+    phaseProfiles(entry.fallback, Object.fromEntries(entry.families
+      .filter(({ profile: response }) => response.some((lane, index) => (
+        lane !== entry.fallback[index]
+      )))
+      .map((family) => [family.optics, family.profile]))),
+  ])),
+) as MaterialAppearanceProfiles;
 
 const MATERIAL_APPEARANCE_IDENTITY_PROFILE = profile(1, 1, 1, 1, 1, 1);
 
