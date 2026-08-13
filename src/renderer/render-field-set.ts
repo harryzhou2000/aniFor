@@ -230,6 +230,58 @@ export class RenderFieldSet {
     return field;
   }
 
+  /**
+   * Audit-only CPU convergence for one explicit fixture-activation owner.
+   * Ordinary owner-zero rendering retains `updateNext`'s one-volume-per-frame
+   * cadence; this never consumes another owner's outstanding work.
+   */
+  drainActivationOwned(
+    owner: number,
+    materials: Uint8Array,
+    time: number,
+    walls?: Uint8Array,
+    velocities?: Int8Array,
+    temperatures?: Uint16Array,
+  ): number {
+    if (owner <= 0) return 0;
+    let lanes = 0;
+    if (this.atmosphereDirty && this.atmosphereOwner === owner) {
+      this.atmosphere.update(materials, walls, velocities);
+      this.atmosphereDirty = false;
+      this.atmosphereOwner = 0;
+      this.schedule.refreshed('atmosphere', time);
+      lanes |= RenderFieldDirtyLane.Atmosphere;
+    }
+    if (this.liquidDirty && this.liquidOwner === owner) {
+      this.liquid.update(materials);
+      this.liquidDirty = false;
+      this.liquidOwner = 0;
+      this.schedule.refreshed('liquid', time);
+      // Keep the established liquid reconstruction consequence exact: the
+      // shared suspension field becomes owned by the liquid mutation.
+      this.suspensionDirty = true;
+      this.suspensionOwner = owner;
+      lanes |= RenderFieldDirtyLane.Liquid;
+    }
+    if (this.emissionDirty && this.emissionOwner === owner) {
+      this.emission.update(materials, temperatures, walls);
+      this.emissionDirty = false;
+      this.emissionOwner = 0;
+      this.schedule.refreshed('emission', time);
+      lanes |= RenderFieldDirtyLane.Emission;
+    }
+    // Liquid may have just authored this owner, so suspension is deliberately
+    // last. Its normal cadence remains unchanged outside this explicit drain.
+    if (this.suspensionDirty && this.suspensionOwner === owner) {
+      this.updateSuspension(materials, walls);
+      this.suspensionDirty = false;
+      this.suspensionOwner = 0;
+      this.lastSuspensionRefresh = time;
+      lanes |= RenderFieldDirtyLane.Suspension;
+    }
+    return lanes;
+  }
+
   /** Rebuilds the RGB-only powder-in-liquid presentation field. */
   updateSuspension(materials: Uint8Array, walls?: Uint8Array): boolean {
     return this.suspension.update(materials, this.liquid.bytes, walls);

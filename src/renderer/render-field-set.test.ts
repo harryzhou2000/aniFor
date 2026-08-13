@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ALL_MATERIALS, LIFE_PRESETS, Material } from '../shared/materials';
 import { renderPhase, renderProfile, RenderPhase } from './render-profile';
 import {
-  createRenderLookups, RenderFieldSet, SUSPENSION_FIELD_REFRESH_INTERVAL,
+  createRenderLookups, RenderFieldDirtyLane, RenderFieldSet, SUSPENSION_FIELD_REFRESH_INTERVAL,
 } from './render-field-set';
 import { renderOptics, RenderOptics } from './render-optics';
 import { renderTraits, RenderTrait } from './render-traits';
@@ -114,6 +114,108 @@ describe('shared render field set', () => {
     fields.refreshSuspension(materials, 1);
     expect(fields.hasPendingRefreshFor(7)).toBe(false);
     expect(fields.hasPendingRefresh).toBe(true);
+  });
+
+  it('drains one activation owner to the same field bytes as the normal cadence', () => {
+    const width = 8;
+    const height = 6;
+    const materials = new Uint8Array(width * height);
+    const walls = new Uint8Array(width * height);
+    const velocities = new Int8Array(width * height * 2);
+    const temperatures = new Uint16Array(width * height).fill(2_952);
+    const staged = new RenderFieldSet(width, height, ALL_MATERIALS);
+    const drained = new RenderFieldSet(width, height, ALL_MATERIALS);
+    for (const fields of [staged, drained]) {
+      fields.enableLongRangeEmissionTransport();
+      fields.updateNext(materials, 0, walls, velocities, temperatures);
+      fields.updateNext(materials, 1, walls, velocities, temperatures);
+      fields.updateNext(materials, 2, walls, velocities, temperatures);
+      fields.refreshSuspension(materials, 3, walls);
+    }
+
+    materials[1] = Material.Smoke;
+    materials[10] = Material.Water;
+    materials[12] = Material.PHOT;
+    velocities[1 * 2] = 48;
+    for (const fields of [staged, drained]) {
+      fields.markDirty(Material.Empty, Material.Smoke, 1, 7);
+      fields.markDirty(Material.Empty, Material.Water, 10, 7);
+      fields.markDirty(Material.Empty, Material.PHOT, 12, 7);
+    }
+
+    expect(staged.updateNext(materials, 100, walls, velocities, temperatures)).toBe('atmosphere');
+    expect(staged.updateNext(materials, 101, walls, velocities, temperatures)).toBe('liquid');
+    expect(staged.updateNext(materials, 102, walls, velocities, temperatures)).toBe('emission');
+    expect(staged.refreshSuspension(materials, 170, walls)).toBeDefined();
+    expect(drained.drainActivationOwned(7, materials, 170, walls, velocities, temperatures)).toBe(
+      RenderFieldDirtyLane.Atmosphere
+        | RenderFieldDirtyLane.Liquid
+        | RenderFieldDirtyLane.Emission
+        | RenderFieldDirtyLane.Suspension,
+    );
+
+    expect(Array.from(drained.atmosphere.bytes)).toEqual(Array.from(staged.atmosphere.bytes));
+    expect(Array.from(drained.atmosphere.styleBytes)).toEqual(Array.from(staged.atmosphere.styleBytes));
+    expect(Array.from(drained.liquid.bytes)).toEqual(Array.from(staged.liquid.bytes));
+    expect(Array.from(drained.emission.bytes)).toEqual(Array.from(staged.emission.bytes));
+    expect(Array.from(drained.emission.transportBytes ?? [])).toEqual(
+      Array.from(staged.emission.transportBytes ?? []),
+    );
+    expect(Array.from(drained.suspension.bytes)).toEqual(Array.from(staged.suspension.bytes));
+    expect(drained.hasPendingRefreshFor(7)).toBe(false);
+  });
+
+  it('drains only the requested activation owner and leaves other work scheduled', () => {
+    const width = 8;
+    const height = 6;
+    const materials = new Uint8Array(width * height);
+    const fields = new RenderFieldSet(width, height, ALL_MATERIALS);
+    fields.updateNext(materials, 0);
+    fields.updateNext(materials, 1);
+    fields.updateNext(materials, 2);
+    fields.refreshSuspension(materials, 3);
+
+    materials[1] = Material.Smoke;
+    fields.markDirty(Material.Empty, Material.Smoke, 1, 9);
+    materials[10] = Material.Water;
+    fields.markDirty(Material.Empty, Material.Water, 10, 7);
+    const atmosphereBefore = Array.from(fields.atmosphere.bytes);
+
+    expect(fields.drainActivationOwned(7, materials, 100)).toBe(
+      RenderFieldDirtyLane.Liquid | RenderFieldDirtyLane.Suspension,
+    );
+    expect(Array.from(fields.atmosphere.bytes)).toEqual(atmosphereBefore);
+    expect(fields.hasPendingRefreshFor(7)).toBe(false);
+    expect(fields.hasPendingRefreshFor(9)).toBe(true);
+    expect(fields.updateNext(materials, 101)).toBe('atmosphere');
+    expect(fields.hasPendingRefreshFor(9)).toBe(false);
+  });
+
+  it('does nothing for zero or a nonmatching activation owner', () => {
+    const materials = new Uint8Array(16);
+    const fields = new RenderFieldSet(4, 4, ALL_MATERIALS);
+    fields.updateNext(materials, 0);
+    fields.updateNext(materials, 1);
+    fields.updateNext(materials, 2);
+    fields.refreshSuspension(materials, 3);
+    materials[5] = Material.Water;
+    fields.markDirty(Material.Empty, Material.Water, 5, 7);
+    const before = [
+      Array.from(fields.atmosphere.bytes),
+      Array.from(fields.liquid.bytes),
+      Array.from(fields.emission.bytes),
+      Array.from(fields.suspension.bytes),
+    ];
+
+    expect(fields.drainActivationOwned(0, materials, 100)).toBe(0);
+    expect(fields.drainActivationOwned(8, materials, 100)).toBe(0);
+    expect([
+      Array.from(fields.atmosphere.bytes),
+      Array.from(fields.liquid.bytes),
+      Array.from(fields.emission.bytes),
+      Array.from(fields.suspension.bytes),
+    ]).toEqual(before);
+    expect(fields.hasPendingRefreshFor(7)).toBe(true);
   });
 
   it('redirties only fields affected by a material transition', () => {
