@@ -60,6 +60,7 @@ import {
 import {
   createVisualLabCurrentRegionMeasurements,
 } from './visual-lab-region-measurements.mjs';
+import { resolveVisualLabInspectionPresentation } from './visual-lab-inspection-presentation.mjs';
 import {
   createVisualLabBrowserHostPlan,
   normalizeVisualLabBrowserHostPlan,
@@ -945,13 +946,19 @@ export function renderVisualLabRegionResponseBoard(response) {
     throw new TypeError('Region-response board requires current spatial evidence');
   }
   const cards = response.candidates.map((candidate) => {
-    const rows = candidate.regions.map((region) => {
+    const renderRow = (region) => {
       const delta = region.pairs.offToB.signedRgbaMeanDelta;
       return `<tr><th>${escapeHtml(region.name)}</th><td>${escapeHtml(region.role)}</td><td>${escapeHtml(`${region.x},${region.y} ${region.width}×${region.height}`)}</td><td>${escapeHtml(delta.slice(0, 3).map((value) => value.toFixed(3)).join(', '))}</td><td>${escapeHtml(delta[3].toFixed(3))}</td></tr>`;
-    }).join('');
+    };
+    const presentation = resolveVisualLabInspectionPresentation(
+      candidate.candidate, candidate.regions,
+    );
+    const rows = presentation === null
+      ? candidate.regions.map(renderRow).join('')
+      : presentation.map(({ key, label, regions }) => `<tr class="section" data-section="${escapeHtml(key)}"><th colspan="5">${escapeHtml(label)}</th></tr>${regions.map(renderRow).join('')}`).join('');
     return `<article><h2>${escapeHtml(candidate.candidate)}</h2><table><thead><tr><th>Region</th><th>Role</th><th>World rect</th><th>OFF→B signed RGB mean</th><th>Alpha</th></tr></thead><tbody>${rows}</tbody></table></article>`;
   }).join('');
-  return `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Visual Lab region response</title><style>:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#11151b;color:#eaf0f7}body{margin:0 auto;max-width:1400px;padding:24px}article{overflow:auto;background:#1b222c;border:1px solid #344252;border-radius:12px;padding:16px}table{border-collapse:collapse;width:100%}th,td{padding:7px;border-bottom:1px solid #344252;text-align:left}</style></head><body><h1>Current region response</h1><p>Spatial measurements from this batch only. Hashes authenticate package files; values provide no aesthetic score, verdict, or cross-revision visual requirement. Full data is in <a href="./region-response.json">region-response.json</a>.</p>${cards}</body></html>\n`;
+  return `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Visual Lab region response</title><style>:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#11151b;color:#eaf0f7}body{margin:0 auto;max-width:1400px;padding:24px}article{overflow:auto;background:#1b222c;border:1px solid #344252;border-radius:12px;padding:16px}table{border-collapse:collapse;width:100%}th,td{padding:7px;border-bottom:1px solid #344252;text-align:left}.section th{padding-top:18px;color:#9fd0ff;background:#151d26}</style></head><body><h1>Current region response</h1><p>Spatial measurements from this batch only. Hashes authenticate package files; values provide no aesthetic score, verdict, or cross-revision visual requirement. Full data is in <a href="./region-response.json">region-response.json</a>.</p>${cards}</body></html>\n`;
 }
 
 /** Descriptive local-structure evidence with no ranking or acceptance controls. */
@@ -961,7 +968,7 @@ export function renderVisualLabRegionAppearanceBoard(appearance) {
     throw new TypeError('Region-appearance board requires current spatial evidence');
   }
   const cards = appearance.candidates.map((candidate) => {
-    const regions = candidate.regions.map((region) => {
+    const renderRegion = (region) => {
       const delta = region.pairs.offToB;
       const rect = region.pixelRect;
       const fitScale = Math.max(1, Math.floor(Math.min(
@@ -978,11 +985,17 @@ export function renderVisualLabRegionAppearanceBoard(appearance) {
         const source = `./candidates/${candidate.candidate}/${variant}.png`;
         return `<figure><a href="${escapeHtml(source)}"><span class="crop" style="width:${rect.width * cropScale}px;height:${rect.height * cropScale}px"><img src="${escapeHtml(source)}" loading="lazy" alt="${escapeHtml(`${candidate.candidate} ${region.name} ${variant}`)}" style="left:-${rect.x * cropScale}px;top:-${rect.y * cropScale}px;transform:scale(${cropScale});transform-origin:top left"></span></a><figcaption>${escapeHtml(`${variant.toUpperCase()} · ${cropScale}×`)}</figcaption></figure>`;
       }).join('');
-      return `<section class="region"><header><h3>${escapeHtml(region.name)}</h3><p>${escapeHtml(region.role)} · world ${escapeHtml(`${region.x},${region.y} ${region.width}×${region.height}`)} · pixels ${escapeHtml(`${rect.x},${rect.y} ${rect.width}×${rect.height}`)}</p></header><div class="crops">${crops}</div><dl><div><dt>OFF→B luma</dt><dd>${escapeHtml(delta.signedLumaMeanDelta.toFixed(3))}</dd></div><div><dt>spread</dt><dd>${escapeHtml(delta.signedLumaStandardDeviationDelta.toFixed(3))}</dd></div><div><dt>neighbour contrast</dt><dd>${escapeHtml(delta.signedLumaNeighbourAbsoluteMeanDelta.toFixed(3))}</dd></div></dl></section>`;
-    }).join('');
-    return `<article><h2>${escapeHtml(candidate.candidate)}</h2><div class="regions">${regions}</div></article>`;
+      return `<section class="region"><header><h4>${escapeHtml(region.name)}</h4><p>${escapeHtml(region.role)} · world ${escapeHtml(`${region.x},${region.y} ${region.width}×${region.height}`)} · pixels ${escapeHtml(`${rect.x},${rect.y} ${rect.width}×${rect.height}`)}</p></header><div class="crops">${crops}</div><dl><div><dt>OFF→B luma</dt><dd>${escapeHtml(delta.signedLumaMeanDelta.toFixed(3))}</dd></div><div><dt>spread</dt><dd>${escapeHtml(delta.signedLumaStandardDeviationDelta.toFixed(3))}</dd></div><div><dt>neighbour contrast</dt><dd>${escapeHtml(delta.signedLumaNeighbourAbsoluteMeanDelta.toFixed(3))}</dd></div></dl></section>`;
+    };
+    const presentation = resolveVisualLabInspectionPresentation(
+      candidate.candidate, candidate.regions,
+    );
+    const sections = presentation === null
+      ? `<div class="regions">${candidate.regions.map(renderRegion).join('')}</div>`
+      : presentation.map(({ key, label, regions }) => `<section class="region-group" data-section="${escapeHtml(key)}"><h3>${escapeHtml(label)}</h3><div class="regions">${regions.map(renderRegion).join('')}</div></section>`).join('');
+    return `<article><h2>${escapeHtml(candidate.candidate)}</h2>${sections}</article>`;
   }).join('');
-  return `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Visual Lab region appearance</title><style>:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#11151b;color:#eaf0f7}body{margin:0 auto;max-width:1800px;padding:24px}article{background:#1b222c;border:1px solid #344252;border-radius:12px;padding:16px;margin:18px 0}.regions{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,560px),1fr));gap:14px}.region{min-width:0;background:#121820;border:1px solid #2d3a48;border-radius:9px;padding:12px}.region header{display:flex;justify-content:space-between;gap:10px;align-items:baseline}.region h3,.region p{margin:0}.region p{color:#aebdcd;font-size:.82rem;text-align:right}.crops{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:10px;overflow:auto}.crops figure{margin:0;min-width:0}.crop{display:block;position:relative;overflow:hidden;max-width:none;background:#080b0f;border:1px solid #344252;image-rendering:auto}.crop img{display:block;position:absolute;max-width:none}figcaption{text-align:center;color:#b8c5d2;font-size:.78rem;margin-top:3px}dl{display:flex;flex-wrap:wrap;gap:6px 14px;margin:10px 0 0}dl div{display:flex;gap:5px}dt{color:#9eb0c2}dd{margin:0;font-variant-numeric:tabular-nums}@media(max-width:700px){body{padding:12px}.region header{display:block}.region p{text-align:left;margin-top:3px}}</style></head><body><h1>Current region appearance</h1><p>OFF/A/B crops are deterministically enlarged up to 8× for inspection; local luminance measurements still use the authenticated source pixels. They expose texture, edges, and tonal variation without scoring or deciding aesthetics, and never pin visuals across revisions. Select a crop to open its authenticated full capture. Full data is in <a href="./region-appearance.json">region-appearance.json</a>.</p>${cards}</body></html>\n`;
+  return `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Visual Lab region appearance</title><style>:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#11151b;color:#eaf0f7}body{margin:0 auto;max-width:1800px;padding:24px}article{background:#1b222c;border:1px solid #344252;border-radius:12px;padding:16px;margin:18px 0}.region-group{margin-top:22px}.region-group>h3{color:#9fd0ff;border-bottom:1px solid #344252;padding-bottom:7px}.regions{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,560px),1fr));gap:14px}.region{min-width:0;background:#121820;border:1px solid #2d3a48;border-radius:9px;padding:12px}.region header{display:flex;justify-content:space-between;gap:10px;align-items:baseline}.region h4,.region p{margin:0}.region p{color:#aebdcd;font-size:.82rem;text-align:right}.crops{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:10px;overflow:auto}.crops figure{margin:0;min-width:0}.crop{display:block;position:relative;overflow:hidden;max-width:none;background:#080b0f;border:1px solid #344252;image-rendering:auto}.crop img{display:block;position:absolute;max-width:none}figcaption{text-align:center;color:#b8c5d2;font-size:.78rem;margin-top:3px}dl{display:flex;flex-wrap:wrap;gap:6px 14px;margin:10px 0 0}dl div{display:flex;gap:5px}dt{color:#9eb0c2}dd{margin:0;font-variant-numeric:tabular-nums}@media(max-width:700px){body{padding:12px}.region header{display:block}.region p{text-align:left;margin-top:3px}}</style></head><body><h1>Current region appearance</h1><p>OFF/A/B crops are deterministically enlarged up to 8× for inspection; local luminance measurements still use the authenticated source pixels. They expose texture, edges, and tonal variation without scoring or deciding aesthetics, and never pin visuals across revisions. Select a crop to open its authenticated full capture. Full data is in <a href="./region-appearance.json">region-appearance.json</a>.</p>${cards}</body></html>\n`;
 }
 
 const assertCurrentCaptureContract = (report, executionPlan, hashes) => {

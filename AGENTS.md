@@ -1607,6 +1607,14 @@ profile increase was visually inert away from emitters (less than 0.04 mean
 luma and exact cores) and was reverted. Do not repeat that value-only approach
 unless the fixture deliberately supplies relevant source transport.
 
+Keep inspection grouping separate from evidence identity. The scripts-only
+inspection presentation compiler may organize authenticated region records by
+phase for human review, but it must reference existing names exactly once and
+cover the complete candidate region set. It must not alter JSON measurements,
+pixel rectangles, capture order, result identities, fixture preparation, or
+promotion authority. Candidates without an explicit presentation descriptor
+retain their existing region order.
+
 The reusable WAX/MWAX material-lighting board now carries the first retained
 optics-profile experiment. Keep `RenderOptics.Waxy` append-only and solid-WAX
 only; MWAX remains `ViscousLiquid`. Its raw value may reach only the two shared

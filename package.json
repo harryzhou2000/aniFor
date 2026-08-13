@@ -5,7 +5,7 @@
   "license": "GPL-3.0-only",
   "type": "module",
   "scripts": {
-    "pretest": "vitest run scripts/visual-lab-region-appearance.test.mjs",
+    "pretest": "vitest run scripts/visual-lab-region-appearance.test.mjs scripts/visual-lab-inspection-presentation.test.mjs",
     "dev": "vite",
     "build": "tsc -b && vite build && bash scripts/finalize-pages-build.sh",
     "preview": "vite preview",

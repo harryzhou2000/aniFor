@@ -7518,6 +7518,17 @@ changed their broad atlas bodies by less than `0.04` mean luma and left their
 cores exact, so it was reverted instead of being mistaken for a useful visual
 improvement.
 
+The next framework increment improves inspection rather than capture. A pure
+scripts-side presentation compiler groups the existing RenderOptics board's 49
+authenticated regions into Powder, Liquid, Gas, Solid, and topology/contact
+controls on both current region HTML pages. It derives every group from the
+frozen atlas card phases and existing region names, requires exact once-only
+coverage, and leaves the region JSON, measurements, crop geometry, PNGs,
+result identities, fixture preparation, and capture lifecycle unchanged.
+Candidates without a presentation descriptor retain their existing flat order.
+This is current-only review ergonomics: it adds no score, threshold, baseline,
+promotion authority, or cross-revision visual pin.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

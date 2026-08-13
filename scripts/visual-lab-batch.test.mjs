@@ -1928,6 +1928,37 @@ describe('Visual Lab batch runner', () => {
     })).rejects.toThrow('does not match current captures');
   });
 
+  it('groups the RenderOptics inspection boards by phase without changing evidence', async () => {
+    const root = await makeTemporaryDirectory();
+    const outputDirectory = path.join(root, 'render-optics-region-batch');
+    const candidate = 'render-optics-material-lighting-atlas';
+    await writeValidCapture(path.join(outputDirectory, 'candidates', candidate), candidate);
+
+    const generated = await runVisualLabBatch({
+      candidates: [candidate], outputDir: outputDirectory, indexOnly: true,
+    });
+    const appearanceBoard = await readFile(generated.regionAppearanceBoardPath, 'utf8');
+    const responseBoard = await readFile(generated.regionResponseBoardPath, 'utf8');
+    const headings = ['Powder', 'Liquid', 'Gas', 'Solid', 'Topology and contact controls'];
+    for (const heading of headings) {
+      expect(appearanceBoard).toContain(`<h3>${heading}</h3>`);
+      expect(responseBoard).toContain(`>${heading}</th>`);
+    }
+    expect(appearanceBoard.indexOf('data-section="powder"'))
+      .toBeLessThan(appearanceBoard.indexOf('data-section="liquid"'));
+    expect(appearanceBoard.indexOf('data-section="liquid"'))
+      .toBeLessThan(appearanceBoard.indexOf('data-section="gas"'));
+    expect(appearanceBoard.indexOf('sand-body off'))
+      .toBeLessThan(appearanceBoard.indexOf('water-body off'));
+    expect(appearanceBoard).toContain(`./candidates/${candidate}/off.png`);
+    expect(generated.regionAppearance.candidates[0].regions).toHaveLength(49);
+
+    await expect(verifyVisualLabBatchPackage({
+      batchRoot: outputDirectory, requireComplete: true,
+      requireRegionResponse: true, requireRegionAppearance: true,
+    })).resolves.toMatchObject({ regionAppearance: generated.regionAppearance });
+  });
+
   it('reconstructs a present tuning sidecar even when every capture failed', async () => {
     const root = await makeTemporaryDirectory();
     const bundle = path.join(root, 'index.html');
