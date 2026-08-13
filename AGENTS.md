@@ -1844,8 +1844,12 @@ owner-zero, Canvas, and true 8x retain their prior paths and identities. The
 first real local SwiftShader Powder package preserved result
 `sha256:b3edbc669cc2c2408ef712ea6089b42e85e1ba60944d3d78b4bd0942de23f67f`,
 passed portable verification and all 16 regions with one readiness snapshot,
-one shared host, and no restart. Use the fixed ABBA cohort before claiming a
-performance improvement; visual identity preservation proves safety, not speed.
+one shared host, and no restart. The subsequent fixed local
+fresh/shared/shared/fresh cohort passed four-for-four with equal result identity,
+one readiness snapshot, and zero restarts. Readiness was 8.51–9.29s and total
+time 27.31–29.33s, versus the recorded v6 local 19.49s readiness and 39.05s
+total. Treat v7 as the locally accepted opt-in performance control, but keep the
+default unchanged until the approved hosted ABBA package also verifies.
 
 Performance comparisons use the opt-in
 `audit:visual-lab:performance-cohorts` runner. Preserve its fixed

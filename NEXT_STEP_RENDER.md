@@ -7257,9 +7257,15 @@ verification reconstructed its exact v7 plan
 all three evidence planes, one readiness snapshot, and all 16 declared regions.
 Most importantly, it retained the established Powder result ID
 `sha256:b3edbc669cc2c2408ef712ea6089b42e85e1ba60944d3d78b4bd0942de23f67f`.
-The next gate is the fixed fresh/shared/shared/fresh Powder cohort locally and
-in the approved manual workflow; compare readiness and total timing while
-requiring equal result identities, then keep v7 only if the cohort favors it.
+The fixed local fresh/shared/shared/fresh Powder cohort passed at
+`/tmp/anifor-v7-abba.bsJIIj`: all four portable packages retained the same
+result identity, used one readiness snapshot, and reported zero host restarts.
+Readiness was 9.12s, 9.20s, 8.51s, and 9.29s; total capture time was 29.24s,
+28.56s, 27.31s, and 29.33s. Against the recorded local v6 sample (19.49s
+readiness, 39.05s total), v7 cuts readiness by roughly 53–56% and total time by
+roughly 25–30%. V7 is therefore locally accepted as the next opt-in performance
+control. The remaining release gate is the approved manual hosted ABBA run;
+do not change the default proof until its downloaded package also verifies.
 
 ## Deferred long-term visual roadmap
 
