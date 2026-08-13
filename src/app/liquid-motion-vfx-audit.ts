@@ -1,5 +1,23 @@
 import { Material } from '../shared/materials';
+import { LIQUID_MOTION_VFX_ATLAS_CATALOG } from '../shared/liquid-motion-vfx-atlas-catalog.js';
+import type {
+  LiquidMotionVfxAuditSnapshot,
+  LiquidMotionVfxPoint,
+  LiquidMotionVfxPool,
+  LiquidMotionVfxRect,
+  LiquidMotionVfxWallPattern,
+} from '../shared/liquid-motion-vfx-atlas-catalog.js';
 import type { SimulationBackend } from '../simulation';
+
+export type {
+  LiquidMotionVfxAuditSnapshot,
+  LiquidMotionVfxBoundary,
+  LiquidMotionVfxPoint,
+  LiquidMotionVfxPool,
+  LiquidMotionVfxRect,
+  LiquidMotionVfxVector,
+  LiquidMotionVfxWallPattern,
+} from '../shared/liquid-motion-vfx-atlas-catalog.js';
 
 const WORLD_WIDTH = 612;
 const WORLD_HEIGHT = 384;
@@ -9,137 +27,14 @@ const WALL_BLOCK_SIZE = 4;
 /** The paused scene is topologically identical in both modes; only these bytes vary. */
 export type LiquidMotionVfxFixtureMode = 'still' | 'moving';
 
-export interface LiquidMotionVfxPoint { readonly x: number; readonly y: number }
-export interface LiquidMotionVfxRect extends LiquidMotionVfxPoint {
-  readonly width: number;
-  readonly height: number;
-}
-export interface LiquidMotionVfxVector { readonly x: number; readonly y: number }
-
-export interface LiquidMotionVfxPool {
-  readonly code: 'STILL_WATER' | 'MOVING_WATER';
-  readonly material: Material.Water;
-  readonly body: LiquidMotionVfxRect;
-  /** Exact upper row with real air directly above it. */
-  readonly airFacingSurface: LiquidMotionVfxRect;
-  readonly core: LiquidMotionVfxRect;
-  readonly authoredHole: LiquidMotionVfxRect;
-  /** Empty path connected through the top Water silhouette. */
-  readonly openChimney: LiquidMotionVfxRect;
-  readonly velocity: LiquidMotionVfxVector;
-}
-
-export interface LiquidMotionVfxWallPattern {
-  readonly kind: 'native-wall-checker';
-  readonly region: LiquidMotionVfxRect;
-  readonly blockSize: 4;
-  readonly occupiedParity: 0;
-  readonly wallProbe: LiquidMotionVfxPoint;
-  readonly clearProbe: LiquidMotionVfxPoint;
-}
-
-export interface LiquidMotionVfxBoundary {
-  readonly code: 'WATR_METL' | 'WATR_OIL';
-  readonly water: LiquidMotionVfxRect;
-  readonly other: LiquidMotionVfxRect;
-  readonly otherMaterial: Material.Metal | Material.Oil;
-  readonly waterProbe: LiquidMotionVfxPoint;
-  readonly otherProbe: LiquidMotionVfxPoint;
-}
-
-export interface LiquidMotionVfxAuditSnapshot {
-  readonly version: 1;
-  readonly world: { readonly width: 612; readonly height: 384 };
-  /** Same geometry and cutouts; only `moving` receives authored velocity. */
-  readonly pools: readonly [LiquidMotionVfxPool, LiquidMotionVfxPool];
-  readonly moving: {
-    readonly strand: LiquidMotionVfxRect & { readonly material: Material.Water; readonly velocity: LiquidMotionVfxVector };
-    readonly isolated: LiquidMotionVfxPoint & { readonly material: Material.Water; readonly velocity: LiquidMotionVfxVector };
-    readonly oil: LiquidMotionVfxRect & { readonly material: Material.Oil; readonly velocity: LiquidMotionVfxVector };
-    readonly acid: LiquidMotionVfxRect & { readonly material: Material.Acid; readonly velocity: LiquidMotionVfxVector };
-  };
-  readonly contacts: {
-    readonly waterMetal: LiquidMotionVfxBoundary;
-    readonly waterOil: LiquidMotionVfxBoundary;
-  };
-  /** Water remains the semantic owner under this independent native bmap checker. */
-  readonly wallCoexistence: LiquidMotionVfxWallPattern;
-  readonly guardedBlank: LiquidMotionVfxRect;
-  readonly conductiveWall: 1;
-  readonly expected: {
-    readonly waterCells: 53_121;
-    readonly oilCells: 7_232;
-    readonly acidCells: 4_992;
-    readonly metalCells: 2_240;
-    readonly wallCells: 1_232;
-    readonly movingVelocityCells: 34_013;
-  };
-}
-
-const pool = (
-  code: LiquidMotionVfxPool['code'], x: number, velocity: LiquidMotionVfxVector,
-): LiquidMotionVfxPool => ({
-  code, material: Material.Water,
-  body: { x, y: 32, width: 220, height: 112 },
-  airFacingSurface: { x: x + 12, y: 32, width: 120, height: 1 },
-  core: { x: x + 28, y: 96, width: 48, height: 24 },
-  authoredHole: { x: x + 88, y: 86, width: 14, height: 12 },
-  openChimney: { x: x + 162, y: 32, width: 10, height: 50 },
-  velocity,
-});
-
-const boundary = (
-  code: LiquidMotionVfxBoundary['code'], x: number,
-  otherMaterial: LiquidMotionVfxBoundary['otherMaterial'],
-): LiquidMotionVfxBoundary => ({
-  code,
-  water: { x, y: 280, width: 64, height: 40 },
-  other: { x: x + 64, y: 280, width: 56, height: 40 },
-  otherMaterial,
-  waterProbe: { x: x + 63, y: 300 },
-  otherProbe: { x: x + 64, y: 300 },
-});
-
-const wallCoexistence: LiquidMotionVfxWallPattern = {
-  kind: 'native-wall-checker',
-  // 14 x 11 complete 4x4 blocks: exactly 77 occupied blocks / 1,232 cells.
-  region: { x: 440, y: 88, width: 56, height: 44 },
-  blockSize: WALL_BLOCK_SIZE,
-  occupiedParity: 0,
-  wallProbe: { x: 441, y: 89 },
-  clearProbe: { x: 445, y: 89 },
-};
-
 /**
  * Paused E65 Water-motion fixture. The still/moving comparison changes only
  * exact owned velocity bytes, keeping matter, holes, contacts, wall, and air
  * topology byte-identical so a visual response cannot infer motion from shape.
  */
-export const LIQUID_MOTION_VFX_AUDIT: LiquidMotionVfxAuditSnapshot = {
-  version: 1,
-  world: { width: WORLD_WIDTH, height: WORLD_HEIGHT },
-  pools: [
-    pool('STILL_WATER', 24, { x: 0, y: 0 }),
-    pool('MOVING_WATER', 292, { x: 28, y: -12 }),
-  ],
-  moving: {
-    strand: { x: 532, y: 166, width: 1, height: 56, material: Material.Water, velocity: { x: 30, y: -22 } },
-    isolated: { x: 568, y: 198, material: Material.Water, velocity: { x: -34, y: 16 } },
-    oil: { x: 24, y: 206, width: 96, height: 52, material: Material.Oil, velocity: { x: -24, y: 20 } },
-    acid: { x: 144, y: 206, width: 96, height: 52, material: Material.Acid, velocity: { x: 18, y: 22 } },
-  },
-  contacts: {
-    waterMetal: boundary('WATR_METL', 24, Material.Metal),
-    waterOil: boundary('WATR_OIL', 264, Material.Oil),
-  },
-  wallCoexistence,
-  guardedBlank: { x: 16, y: 344, width: 560, height: 24 },
-  conductiveWall: CONDUCTIVE_WALL,
-  expected: {
-    waterCells: 53_121, oilCells: 7_232, acidCells: 4_992, metalCells: 2_240,
-    wallCells: 1_232, movingVelocityCells: 34_013,
-  },
-};
+export const LIQUID_MOTION_VFX_AUDIT: LiquidMotionVfxAuditSnapshot = (
+  LIQUID_MOTION_VFX_ATLAS_CATALOG.atlases[0].descriptor.fixture
+);
 
 interface LiquidMotionVfxFixtureBackend extends SimulationBackend {
   walls(): Uint8Array;

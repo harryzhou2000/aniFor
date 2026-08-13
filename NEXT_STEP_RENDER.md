@@ -6845,6 +6845,31 @@ radius no-ops until a live carrier is proven. Do not turn the four extra B-only
 cardinal reads per active fluid field into an unconditional or output-scale
 cost.
 
+The next measurement-framework increment closes the motion-fixture review gap.
+Frozen data-only Oil and Water catalogs now own the historical fixture geometry
+plus 19 and 18 response/control regions respectively; the unchanged app audit
+APIs project their preparation geometry from those catalogs. Material, native
+velocity, and wall planes remain byte-identical migration oracles. The shared
+declared-atlas manifest therefore projects 11 canonical inspection fixtures,
+and the existing portable region response/appearance path can review moving and
+stationary surfaces, cores, holes, chimneys, thin/isolated cells, unlike contacts,
+native walls, sibling liquids, and guarded blanks without another capture route.
+
+The current-only appearance board now magnifies each authenticated crop by a
+deterministic bounded 1x-8x presentation scale. It targets useful review size
+while giving very thin or single-cell regions enough cross-axis pixels to judge;
+measurements still traverse only the original decoded PNG, and full-capture
+links remain portable. No copied image, schema, score, threshold, frozen identity,
+or promotion authority is added. The real shared-host Oil+Water package passed
+completed-frame WebGL capture and portable reconstruction of all 37 new regions.
+
+A zero-read Powder experiment also tested local 3x3 support minus the existing
+broad filtered density as a packed mesoscale shoulder carrier. Against the
+immediately preceding deployed material atlas it changed only 6,340 edge pixels
+and was visually indistinguishable in full and cropped views. The code was
+removed. Treat this as a proved dead end unless a future response is visibly
+preferred on the enlarged board; numerical pixel activity alone is insufficient.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

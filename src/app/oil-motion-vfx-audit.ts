@@ -1,147 +1,32 @@
 import { Material } from '../shared/materials';
+import { OIL_MOTION_VFX_ATLAS_CATALOG } from '../shared/oil-motion-vfx-atlas-catalog.js';
+import type {
+  OilMotionVfxAuditSnapshot,
+  OilMotionVfxPoint,
+  OilMotionVfxRect,
+  OilMotionVfxVector,
+  OilMotionVfxWallRegion,
+} from '../shared/oil-motion-vfx-atlas-catalog.js';
 import type { SimulationBackend } from '../simulation';
+
+export type {
+  OilMotionVfxAuditSnapshot,
+  OilMotionVfxBoundary,
+  OilMotionVfxPoint,
+  OilMotionVfxRect,
+  OilMotionVfxTarget,
+  OilMotionVfxVector,
+  OilMotionVfxWallRegion,
+} from '../shared/oil-motion-vfx-atlas-catalog.js';
 
 const WORLD_WIDTH = 612;
 const WORLD_HEIGHT = 384;
-const CONDUCTIVE_WALL = 1;
-const WALL_BLOCK_SIZE = 4;
 
 /** Paused E69 variants share every authored plane; only exact-owner velocity changes. */
 export type OilMotionVfxFixtureMode = 'still' | 'moving' | 'reversed';
-
-export interface OilMotionVfxPoint { readonly x: number; readonly y: number }
-export interface OilMotionVfxRect extends OilMotionVfxPoint {
-  readonly width: number;
-  readonly height: number;
-}
-export interface OilMotionVfxVector { readonly x: number; readonly y: number }
-
-export interface OilMotionVfxTarget {
-  readonly material: Material.Oil;
-  readonly body: OilMotionVfxRect;
-  readonly airFacingTop: OilMotionVfxRect;
-  readonly airFacingLeft: OilMotionVfxRect;
-  readonly airFacingRight: OilMotionVfxRect;
-  readonly core: OilMotionVfxRect;
-  readonly authoredHole: OilMotionVfxRect;
-  readonly openChimney: OilMotionVfxRect;
-  readonly velocity: OilMotionVfxVector;
-}
-
-export interface OilMotionVfxBoundary {
-  readonly code: 'OIL_WATR' | 'OIL_DESL';
-  readonly oil: OilMotionVfxRect;
-  readonly other: OilMotionVfxRect;
-  readonly otherMaterial: Material.Water | Material.Diesel;
-  readonly oilProbe: OilMotionVfxPoint;
-  readonly otherProbe: OilMotionVfxPoint;
-  /** Only the Oil owner moves; the unlike neighbour remains a static contact control. */
-  readonly velocity: OilMotionVfxVector;
-}
-
-export interface OilMotionVfxWallRegion {
-  readonly region: OilMotionVfxRect;
-  readonly blockSize: 4;
-  readonly wall: 1;
-  readonly wallProbe: OilMotionVfxPoint;
-}
-
-export interface OilMotionVfxAuditSnapshot {
-  readonly version: 1;
-  readonly world: { readonly width: 612; readonly height: 384 };
-  readonly target: OilMotionVfxTarget;
-  readonly stationaryOil: OilMotionVfxRect & { readonly material: Material.Oil };
-  readonly movingSiblings: {
-    readonly water: OilMotionVfxRect & { readonly material: Material.Water; readonly velocity: OilMotionVfxVector };
-    readonly acid: OilMotionVfxRect & { readonly material: Material.Acid; readonly velocity: OilMotionVfxVector };
-    readonly diesel: OilMotionVfxRect & { readonly material: Material.Diesel; readonly velocity: OilMotionVfxVector };
-    readonly nitro: OilMotionVfxRect & { readonly material: Material.Nitro; readonly velocity: OilMotionVfxVector };
-  };
-  readonly movingOil: {
-    readonly thin: OilMotionVfxRect & { readonly material: Material.Oil; readonly velocity: OilMotionVfxVector };
-    readonly isolated: OilMotionVfxPoint & { readonly material: Material.Oil; readonly velocity: OilMotionVfxVector };
-  };
-  readonly seams: readonly [OilMotionVfxBoundary, OilMotionVfxBoundary];
-  /** Oil remains the semantic owner under this independent broad native-wall plane. */
-  readonly wallCoexistence: OilMotionVfxWallRegion;
-  readonly guardedBlank: OilMotionVfxRect;
-  readonly expected: {
-    readonly oilCells: 60_549;
-    readonly waterCells: 7_936;
-    readonly acidCells: 5_376;
-    readonly dieselCells: 7_936;
-    readonly nitroCells: 5_376;
-    readonly wallCells: 2_304;
-    readonly movingVelocityCells: 66_053;
-  };
-}
-
-const target: OilMotionVfxTarget = {
-  material: Material.Oil,
-  body: { x: 20, y: 24, width: 260, height: 150 },
-  // Kept disjoint from the wall-backed surface control at the left shoulder.
-  airFacingTop: { x: 100, y: 24, width: 108, height: 1 },
-  airFacingLeft: { x: 20, y: 64, width: 1, height: 72 },
-  airFacingRight: { x: 279, y: 64, width: 1, height: 72 },
-  core: { x: 52, y: 112, width: 40, height: 24 },
-  authoredHole: { x: 112, y: 82, width: 18, height: 16 },
-  openChimney: { x: 220, y: 24, width: 12, height: 52 },
-  velocity: { x: 30, y: -18 },
-};
-
-const boundary = (
-  code: OilMotionVfxBoundary['code'], x: number, otherMaterial: OilMotionVfxBoundary['otherMaterial'],
-  velocity: OilMotionVfxVector,
-): OilMotionVfxBoundary => ({
-  code,
-  oil: { x, y: 300, width: 80, height: 40 },
-  other: { x: x + 80, y: 300, width: 64, height: 40 },
-  otherMaterial,
-  // The top interface is simultaneously air-facing and unlike-material-facing,
-  // so it reaches E08's contact rejection with authentic Oil velocity.
-  oilProbe: { x: x + 79, y: 300 },
-  otherProbe: { x: x + 80, y: 300 },
-  velocity,
-});
-
-export const OIL_MOTION_VFX_AUDIT: OilMotionVfxAuditSnapshot = {
-  version: 1,
-  world: { width: WORLD_WIDTH, height: WORLD_HEIGHT },
-  target,
-  stationaryOil: { x: 320, y: 24, width: 160, height: 100, material: Material.Oil },
-  movingSiblings: {
-    water: { x: 20, y: 204, width: 96, height: 56, material: Material.Water, velocity: { x: -26, y: 16 } },
-    acid: { x: 132, y: 204, width: 96, height: 56, material: Material.Acid, velocity: { x: 20, y: 22 } },
-    diesel: { x: 244, y: 204, width: 96, height: 56, material: Material.Diesel, velocity: { x: 24, y: -14 } },
-    nitro: { x: 356, y: 204, width: 96, height: 56, material: Material.Nitro, velocity: { x: -18, y: -20 } },
-  },
-  movingOil: {
-    thin: { x: 494, y: 196, width: 1, height: 60, material: Material.Oil, velocity: { x: 28, y: -16 } },
-    isolated: { x: 540, y: 220, material: Material.Oil, velocity: { x: -32, y: 18 } },
-  },
-  seams: [
-    boundary('OIL_WATR', 20, Material.Water, { x: 24, y: -16 }),
-    boundary('OIL_DESL', 220, Material.Diesel, { x: -22, y: -18 }),
-  ],
-  wallCoexistence: {
-    // Begin on the exact top silhouette: the wall probe otherwise returns at
-    // E08's dense-interior guard before it can prove E69's wall exclusion.
-    region: { x: 20, y: 24, width: 72, height: 32 },
-    blockSize: WALL_BLOCK_SIZE,
-    wall: CONDUCTIVE_WALL,
-    wallProbe: { x: 21, y: 24 },
-  },
-  guardedBlank: { x: 24, y: 352, width: 548, height: 20 },
-  expected: {
-    oilCells: 60_549,
-    waterCells: 7_936,
-    acidCells: 5_376,
-    dieselCells: 7_936,
-    nitroCells: 5_376,
-    wallCells: 2_304,
-    movingVelocityCells: 66_053,
-  },
-};
+export const OIL_MOTION_VFX_AUDIT: OilMotionVfxAuditSnapshot = (
+  OIL_MOTION_VFX_ATLAS_CATALOG.atlases[0].descriptor.fixture
+);
 
 interface OilMotionVfxFixtureBackend extends SimulationBackend {
   walls(): Uint8Array;

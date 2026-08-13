@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { createHash } from 'node:crypto';
 import { Material } from '../shared/materials';
+import { OIL_MOTION_VFX_ATLAS_CATALOG } from '../shared/oil-motion-vfx-atlas-catalog.js';
 import { DeterministicBackend } from '../simulation/deterministic-backend';
 import { RenderLabBackend } from '../simulation/render-lab-backend';
 import {
@@ -24,6 +26,15 @@ function centre(rect: OilMotionVfxRect): OilMotionVfxPoint {
 }
 
 describe('Oil-motion VFX audit fixture', () => {
+  it('projects the exact historical public fixture from frozen declared authoring', () => {
+    const authoring = OIL_MOTION_VFX_ATLAS_CATALOG.atlases[0];
+    expect(OIL_MOTION_VFX_AUDIT).toBe(authoring.descriptor.fixture);
+    expect(Object.isFrozen(authoring)).toBe(true);
+    expect(Object.isFrozen(authoring.descriptor.inspectionRegions[0])).toBe(true);
+    expect(createHash('sha256').update(JSON.stringify(OIL_MOTION_VFX_AUDIT)).digest('hex'))
+      .toBe('a2749120db175bd5c8e3b02270cb4e56e3b56869ee415966197b0869221edcf1');
+  });
+
   it('authors the exact Oil target, cutouts, air surfaces, seams, and native-wall coexistence', () => {
     const simulation = prepared('moving');
     const fixture = OIL_MOTION_VFX_AUDIT;
@@ -74,6 +85,9 @@ describe('Oil-motion VFX audit fixture', () => {
     expect(count(simulation.cells(), Material.Diesel)).toBe(fixture.expected.dieselCells);
     expect(count(simulation.cells(), Material.Nitro)).toBe(fixture.expected.nitroCells);
     expect(count(simulation.walls(), fixture.wallCoexistence.wall)).toBe(fixture.expected.wallCells);
+    expect(digest(simulation.cells())).toBe('35cc09ec9720ca854f935ef9d4f5fedf619353f055be69547d7dc94758804d90');
+    expect(digest(simulation.velocity())).toBe('0cb41723b14dc2334ee3addc6ad8fed0a566252d497be2ad052370245cdc6340');
+    expect(digest(simulation.walls())).toBe('429483d20bd7656a44c42aec88bd5b316f42bb9af774446e530ada3e6f87928b');
     expectRect(simulation, fixture.stationaryOil, Material.Oil);
     expect(velocity(simulation, centre(fixture.stationaryOil))).toEqual([0, 0]);
     expect(velocity(simulation, fixture.movingOil.isolated)).toEqual([
@@ -187,4 +201,10 @@ function count(bytes: Uint8Array, value: number): number {
 
 function equalBytes(left: Uint8Array | Int8Array, right: Uint8Array | Int8Array): boolean {
   return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function digest(bytes: Uint8Array | Int8Array): string {
+  return createHash('sha256')
+    .update(new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength))
+    .digest('hex');
 }

@@ -1,6 +1,8 @@
 import { FORCE_ACTIVITY_MATERIAL_LIGHTING_ATLAS_CATALOG } from './force-activity-material-lighting-atlas-catalog.js';
 import { GAS_MATERIAL_LIGHTING_ATLAS_CATALOG } from './gas-material-lighting-atlas-catalog.js';
 import { MATERIAL_LIGHTING_ATLAS_CATALOG } from './material-lighting-atlas-catalog.js';
+import { LIQUID_MOTION_VFX_ATLAS_CATALOG } from './liquid-motion-vfx-atlas-catalog.js';
+import { OIL_MOTION_VFX_ATLAS_CATALOG } from './oil-motion-vfx-atlas-catalog.js';
 import { OPPOSED_SOURCE_MATERIAL_LIGHTING_ATLAS_CATALOG } from './opposed-source-material-lighting-atlas-catalog.js';
 import { POWDER_STYLE_ATLAS_CATALOG } from './powder-style-atlas-catalog.js';
 import { SOLID_MATERIAL_LIGHTING_ATLAS_CATALOG } from './solid-material-lighting-atlas-catalog.js';
@@ -55,4 +57,6 @@ export const VISUAL_CAPTURE_DECLARED_ATLAS_MANIFEST = normalizeVisualCaptureDecl
   { name: 'thermal-source', atlases: THERMAL_SOURCE_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases },
   { name: 'opposed-source', atlases: OPPOSED_SOURCE_MATERIAL_LIGHTING_ATLAS_CATALOG.atlases },
   { name: 'powder-style', atlases: POWDER_STYLE_ATLAS_CATALOG.atlases },
+  { name: 'liquid-motion', atlases: LIQUID_MOTION_VFX_ATLAS_CATALOG.atlases },
+  { name: 'oil-motion', atlases: OIL_MOTION_VFX_ATLAS_CATALOG.atlases },
 ]);

@@ -24,6 +24,8 @@ describe('Visual Lab inspection-region catalog', () => {
 
   it('orders the covered subset by canonical capture-recipe order', () => {
     expect(VISUAL_LAB_INSPECTION_REGIONS.fixtures.map(({ candidate }) => candidate)).toEqual([
+      'oil-motion',
+      'water-motion',
       'powder-style-atlas',
       'material-lighting-atlas',
       'gas-material-lighting-atlas',
@@ -44,6 +46,35 @@ describe('Visual Lab inspection-region catalog', () => {
     ))).toEqual(VISUAL_CAPTURE_DECLARED_ATLAS_MANIFEST);
     expect(Object.isFrozen(VISUAL_CAPTURE_DECLARED_ATLAS_MANIFEST)).toBe(true);
     expect(Object.isFrozen(VISUAL_CAPTURE_DECLARED_ATLAS_MANIFEST[0])).toBe(true);
+  });
+
+  it('projects Oil and Water motion response and ownership controls from declared fixtures', () => {
+    const oil = fixture('oil-motion');
+    const water = fixture('water-motion');
+    expect(oil.regions).toHaveLength(19);
+    expect(oil.regions.map(({ name }) => name)).toEqual([
+      'moving-oil-top', 'moving-oil-left', 'moving-oil-right', 'moving-oil-core',
+      'stationary-oil', 'moving-oil-thin', 'moving-oil-isolated',
+      'oil-water-contact', 'oil-diesel-contact', 'oil-hole', 'oil-chimney',
+      'moving-water-control', 'moving-acid-control', 'moving-diesel-control',
+      'moving-nitro-control', 'water-contact-owner', 'diesel-contact-owner',
+      'native-wall-oil', 'guarded-blank',
+    ]);
+    expect(water.regions).toHaveLength(18);
+    expect(water.regions.map(({ name }) => name)).toEqual([
+      'still-water-surface', 'still-water-core', 'moving-water-surface',
+      'moving-water-core', 'moving-water-strand', 'moving-water-isolated',
+      'water-metal-contact', 'water-oil-contact', 'still-water-hole',
+      'moving-water-hole', 'still-water-chimney', 'moving-water-chimney',
+      'moving-oil-control', 'moving-acid-control', 'metal-contact-owner',
+      'oil-contact-owner', 'native-wall-water', 'guarded-blank',
+    ]);
+    expect(oil.regions.at(-1)).toEqual({
+      name: 'guarded-blank', role: 'control', x: 24, y: 352, width: 548, height: 20,
+    });
+    expect(water.regions.at(-1)).toEqual({
+      name: 'guarded-blank', role: 'control', x: 16, y: 344, width: 560, height: 24,
+    });
   });
 
   it('rejects malformed, empty, duplicate-name, and duplicate-candidate manifest sources', () => {

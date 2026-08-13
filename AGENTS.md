@@ -23,6 +23,22 @@ Powder and Solid profiles remain explicit zero-radius no-ops. Contact AO remains
 blocked until an owner-aware stable proximity carrier exists; categorical seam
 bits are not a substitute.
 
+The current review framework also covers the existing Oil- and Water-motion
+recipes through frozen declarative fixture/inspection catalogs. Preserve their
+historical public fixture APIs and exact material, velocity, and wall planes;
+future geometry edits must update the one catalog rather than split preparation
+from review annotations again. `region-appearance.html` deterministically
+magnifies authenticated source crops by a bounded 1x-8x scale for inspection,
+while every numeric measurement continues to use the original PNG pixels. The
+magnification is presentation-only and stays outside all frozen identities.
+
+A packed Powder two-scale experiment compared the already-owned broad density
+with local 3x3 support at zero extra reads. It changed 6,340 pixels in the real
+material atlas but remained visually indistinguishable at full and crop views,
+so it was removed. Do not revive numerical activity as visual progress. The
+existing broad Powder field remains useful, but its next treatment must be
+visibly preferred on the magnified response/control board.
+
 Judge this work from current WebGL/HDR material-lighting and Powder-style boards,
 semantic/field/framebuffer health, and true-8x execution. Preserve holes, fine
 columns, internal grain, square-cell Grains reference, continuous liquid bodies,

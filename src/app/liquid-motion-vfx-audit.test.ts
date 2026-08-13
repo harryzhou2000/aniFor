@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { createHash } from 'node:crypto';
 import { Material } from '../shared/materials';
+import { LIQUID_MOTION_VFX_ATLAS_CATALOG } from '../shared/liquid-motion-vfx-atlas-catalog.js';
 import { DeterministicBackend } from '../simulation/deterministic-backend';
 import { RenderLabBackend } from '../simulation/render-lab-backend';
 import {
@@ -24,6 +26,15 @@ function centre(rect: LiquidMotionVfxRect): LiquidMotionVfxPoint {
 }
 
 describe('liquid-motion VFX audit fixture', () => {
+  it('projects the exact historical public fixture from frozen declared authoring', () => {
+    const authoring = LIQUID_MOTION_VFX_ATLAS_CATALOG.atlases[0];
+    expect(LIQUID_MOTION_VFX_AUDIT).toBe(authoring.descriptor.fixture);
+    expect(Object.isFrozen(authoring)).toBe(true);
+    expect(Object.isFrozen(authoring.descriptor.inspectionRegions[0])).toBe(true);
+    expect(createHash('sha256').update(JSON.stringify(LIQUID_MOTION_VFX_AUDIT)).digest('hex'))
+      .toBe('069b33440d26a79ea5ea7de9ce7eeb710925fa358459075b7ed4d2ee9c82166e');
+  });
+
   it('keeps topology-matched still and moving Water pools air-facing with authored voids', () => {
     const simulation = prepared('moving');
     for (const entry of LIQUID_MOTION_VFX_AUDIT.pools) {
@@ -118,6 +129,9 @@ describe('liquid-motion VFX audit fixture', () => {
     expect(count(first.cells(), Material.Acid)).toBe(fixture.expected.acidCells);
     expect(count(first.cells(), Material.Metal)).toBe(fixture.expected.metalCells);
     expect(count(first.walls(), fixture.conductiveWall)).toBe(fixture.expected.wallCells);
+    expect(digest(first.cells())).toBe('c6d2ecef9c55b39159aee0645ac6b43aac0ef0632c9829136ad12af5715fafdf');
+    expect(digest(first.velocity())).toBe('36a2b3fb0c548b326d22b7fafb09aa8633c807e4ee9fc5f31b14e8a621ac3f06');
+    expect(digest(first.walls())).toBe('b2d3f4c2392dcc8b22c7ee58525a57a2d9f10db1e22625c40c2806db3c090f8c');
     expect(equalBytes(first.cells(), second.cells())).toBe(true);
     expect(equalBytes(first.walls(), second.walls())).toBe(true);
     expect(equalBytes(first.velocity(), second.velocity())).toBe(true);
@@ -203,4 +217,10 @@ function count(bytes: Uint8Array, value: number): number {
 
 function equalBytes(left: Uint8Array | Int8Array, right: Uint8Array | Int8Array): boolean {
   return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function digest(bytes: Uint8Array | Int8Array): string {
+  return createHash('sha256')
+    .update(new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength))
+    .digest('hex');
 }
