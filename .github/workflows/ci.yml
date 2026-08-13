@@ -65,6 +65,14 @@ on:
         required: true
         default: false
         type: boolean
+      visual_lab_performance_capture_proof:
+        description: Capture proof for the non-gating Powder performance matrix
+        required: true
+        default: selection-owned-frame-receipt
+        type: choice
+        options:
+          - selection-owned-frame-receipt
+          - fixture-activation-generation
 
 permissions:
   contents: read
@@ -430,7 +438,7 @@ jobs:
             --bundle=dist/index.html \
             --output-dir="${RUNNER_TEMP}/anifortpt-visual-lab-performance" \
             --gpu=swiftshader \
-            --capture-proof=selection-owned-frame-receipt
+            --capture-proof=${{ inputs.visual_lab_performance_capture_proof }}
 
       - name: Upload bounded performance summary
         if: success()
