@@ -624,6 +624,17 @@ verification. Keep cohort, explicit recipe-set, and ad-hoc candidate selection
 mutually exclusive; never duplicate membership in the workflow or silently
 accept a stale generated snapshot.
 
+Extension candidate authoring joins through
+`src/shared/visual-capture-authoring-manifest.js`. Keep its source and candidate
+rows frozen, JSON-safe, and non-executable. A row may carry only its atlas plus
+closed domain/driver and historical diagnostic label, or explicit `null` when
+the base Visual Lab contract owns capture. Derive both extension fixture/recipe
+registration and declared inspection registration from it. Do not add callbacks,
+module paths, browser methods, argument arrays, capture lifecycle, or ordering
+expressions. Executable preparation remains an explicit exhaustive entry in
+`VISUAL_LAB_FIXTURE_PREPARERS`. Public capture/inspection migration hashes are
+structural byte oracles only; never turn them into cross-revision visual gates.
+
 This opposed-source authoring checkpoint is deployed at exact revision
 `b3fd9ec50efd888c0672e1e021d5a9416c2f7555` by workflow run `31554534234`
 (successful attempt 2). The build passed in 3m30s with all 1,524 app tests and

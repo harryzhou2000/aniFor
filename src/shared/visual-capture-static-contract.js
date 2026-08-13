@@ -1,4 +1,5 @@
 import { VISUAL_LAB_STATIC_CONTRACT } from './visual-lab-static-contract.js';
+import { VISUAL_CAPTURE_AUTHORING_MANIFEST } from './visual-capture-authoring-manifest.js';
 
 /**
  * Additive, data-only capture-driver metadata. The established Visual Lab v1
@@ -12,7 +13,7 @@ const deepFreeze = (value) => {
   return Object.freeze(value);
 };
 
-const authoredCapture = (name, domain, driver, preparationReportLabel) => ({
+const authoredCapture = (name, { domain, driver, preparationReportLabel }) => ({
   fixture: {
     name,
     scene: 'showcase',
@@ -31,27 +32,24 @@ const authoredCapture = (name, domain, driver, preparationReportLabel) => ({
   },
 });
 
-/** One authored row projects to the existing fixture and recipe public arrays. */
-const AUTHORED_CAPTURE_FIXTURES = [
-  authoredCapture('powder-style-atlas', 'powder', 'powder-render-style',
-    'preparePowderStyleAtlasFixture'),
-  authoredCapture('material-lighting-atlas', 'material-lighting', 'material-lighting-profile',
-    'prepareMaterialLightingAtlasFixture'),
-  authoredCapture('gas-material-lighting-atlas', 'material-lighting', 'material-lighting-profile',
-    'prepareGasMaterialLightingAtlasFixture'),
-  authoredCapture('solid-material-lighting-atlas', 'material-lighting', 'material-lighting-profile',
-    'prepareSolidMaterialLightingAtlasFixture'),
-  authoredCapture('multi-metal-material-lighting-atlas', 'material-lighting',
-    'material-lighting-profile', 'prepareMultiMetalMaterialLightingAtlasFixture'),
-  authoredCapture('source-target-material-lighting-atlas', 'material-lighting',
-    'material-lighting-profile', 'prepareSourceTargetGraphicsAuditFixture'),
-  authoredCapture('force-activity-material-lighting-atlas', 'material-lighting',
-    'material-lighting-profile', 'prepareForceActivityGraphicsAuditFixture'),
-  authoredCapture('thermal-source-material-lighting-atlas', 'material-lighting',
-    'material-lighting-profile', 'prepareCeramicTemperatureVfxFixture'),
-  authoredCapture('opposed-source-material-lighting-atlas', 'material-lighting',
-    'material-lighting-profile', 'preparePowderLightVfxFixture'),
-];
+const CAPTURE_AUTHORING_DRIVER_ORDER = Object.freeze([
+  'powder-render-style', 'material-lighting-profile',
+]);
+const CAPTURE_AUTHORING_ENTRIES = VISUAL_CAPTURE_AUTHORING_MANIFEST
+  .flatMap(({ entries }) => entries)
+  .filter(({ capture: metadata }) => metadata !== null);
+if (CAPTURE_AUTHORING_ENTRIES.some(({ capture: metadata }) => (
+  !CAPTURE_AUTHORING_DRIVER_ORDER.includes(metadata.driver)
+))) {
+  throw new TypeError('Visual capture authoring manifest uses an unknown extension driver');
+}
+
+/** The shared authoring rows project to the unchanged public fixture/recipe order. */
+const AUTHORED_CAPTURE_FIXTURES = CAPTURE_AUTHORING_DRIVER_ORDER.flatMap((driver) => (
+  CAPTURE_AUTHORING_ENTRIES
+    .filter(({ capture: metadata }) => metadata?.driver === driver)
+    .map(({ atlas, capture: metadata }) => authoredCapture(atlas.candidate, metadata))
+));
 
 const contract = {
   schema: 'anifor.visual-capture.static-contract/v1',

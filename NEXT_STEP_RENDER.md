@@ -6891,6 +6891,28 @@ candidate manifest projecting both capture-recipe and declared-inspection
 registration, while the app-owned typed preparer registry remains the explicit
 executable security boundary.
 
+That candidate-manifest setup is now implemented locally. One frozen, JSON-safe
+`visual-capture-authoring-manifest` owns ten inspection source groups, eleven
+atlas candidates, and the nine extension capture registrations. Each atlas row
+declares either its closed domain/driver/historical diagnostic label or an
+explicit `null` showing that the base Visual Lab contract already owns capture
+for Water/Oil. The extension static contract derives its unchanged nine fixtures
+and recipes in the established driver order; the declared-inspection manifest
+derives its unchanged ten sources and eleven candidates in source order. The
+historical label remains inert report metadata: the app's exhaustive typed
+preparer registry is still the only executable authority.
+
+The new normalizer rejects imprecise fields, empty sources, duplicate source or
+candidate names, malformed atlas geometry, incomplete source ownership, and
+malformed capture metadata. It carries no callback, module-path, browser-method,
+argument-array, lifecycle, or ordering expression. Migration-only semantic
+oracles prove byte equality for the complete public capture contract, fixture
+and recipe arrays, combined static catalog, and inspection-source catalog; they
+authenticate this structural migration and are not visual baselines. Adding a
+future extension candidate under an existing driver now touches its atlas row
+and this one data record plus, when preparation mutates state, one explicit
+typed app preparer—not both capture and inspection registration lists.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
