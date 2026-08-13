@@ -6982,6 +6982,21 @@ should target the remaining roughly 5.1–5.4s each in OFF/A/B or give authored
 visual experiments more leverage; do not spend another cycle on host launch or
 historical image pinning.
 
+Source tracing identifies the remaining capture bottleneck precisely. Each
+typed OFF/A/B selector calls the renderer and submits a full HDR presentation;
+`requestWebGLCompletedFrameReceipt()` then submits a second identical
+presentation before arming its fence. Receipt submissions advance by two per
+variant, while hosted selection/readback/screenshot/write together account for
+only about 0.3s of each 5.1–5.4s phase. The next framework experiment is an
+additive selection-owned receipt mode: arm a pending ticket, perform the closed
+typed selection, and let that exact synchronous submission claim and fence the
+ticket in one browser task. Supersession retries must repeat both operations.
+The existing full evidence snapshot, same-ticket reread, geometry proof, and
+screenshot remain mandatory. Prove Powder before/after PNG and result identity,
+monotonic tickets/submissions, and a one-submission advance per variant; then
+run the same hosted ABBA control. Keep the existing post-selection receipt modes
+as rollback controls.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

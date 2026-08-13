@@ -1800,6 +1800,22 @@ four-to-five attempts and 35.7–42.9s readback. Readiness fell from 67.5–69.7
 to 39.4–44.4s, and candidate totals from 111.6–116.2s to 56.3–67.8s. Keep v3
 as the manual performance control, not the stable default or live Water gate.
 
+The measured OFF/A/B cost has one concrete redundant owner: every typed variant
+selection submits its complete HDR frame, then the current receipt request
+submits the same frame again. Hosted receipts advancing by two submissions per
+variant confirm that duplication. The next additive tuning capability should
+be a selection-owned completed-frame receipt. Arm one pending ticket before the
+closed typed selection, require that exact selector-owned submission to claim
+and fence it, and return the ticket from the same browser task. Never attach a
+ticket retrospectively to an arbitrary latest frame. If the ticket is
+superseded before snapshot, repeat the complete arm-and-select transaction; do
+not rely on an unchanged-style setter to resubmit. Preserve two RAFs, exact
+dataset state, one full semantic/field/framebuffer snapshot, the same-ticket
+post-snapshot reread, geometry checks, and screenshot-after-proof. Keep the
+post-selection v2/v3 request path intact for rollback and comparison. A new
+tuning schema may declare the new binding, but must not rotate capture-plan,
+recipe, result, PNG, batch, baseline, or comparison identities.
+
 The renderer-owned completed-frame receipt is now a protected audit capability.
 `anifor.renderer.completed-frame-receipt/v1` binds every ticket to the exact
 presentation submission and exposes only `pending`, `completed`, `superseded`,
