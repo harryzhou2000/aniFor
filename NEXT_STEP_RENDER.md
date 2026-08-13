@@ -7951,6 +7951,19 @@ and the hosted Water receipt-v2 smoke passed in 1m41s. The next framework
 increment should remove another measured authoring/review registration burden
 or shorten proven readiness/readback work, rather than add a visual leaf.
 
+The active current-evidence lifecycle increment extends that navigation catalog
+through batch production and portable verification. Safe canonical filenames,
+JSON/HTML pair membership, historical verifier option names, requiredness, and
+public value/path projection are data-owned. One closed exhaustive dispatcher
+retains the three existing implementations while mechanically enforcing paired
+presence, authenticated-capture reconstruction, exact HTML rerendering, the
+1 MiB bounds, publication, and return projection. Region response and
+appearance still share one lazy measurement computation; contact-sheet and
+index remain the final publication markers. Complete catalog-derived cleanup
+now removes both region-appearance files and their `.tmp` stages, fixing stale
+evidence after an interrupted rerun. No evidence bytes, schemas, renderer
+resources, capture identities, browser methods, or CI requirements change.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

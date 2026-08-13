@@ -1276,10 +1276,17 @@ describe('Visual Lab batch runner', () => {
     const outputDirectory = path.join(root, 'batch');
     const indexPath = path.join(outputDirectory, 'index.json');
     const contactSheetPath = path.join(outputDirectory, 'index.html');
+    const staleAppearancePaths = [
+      path.join(outputDirectory, 'region-appearance.json'),
+      path.join(outputDirectory, 'region-appearance.html'),
+      path.join(outputDirectory, 'region-appearance.json.tmp'),
+      path.join(outputDirectory, 'region-appearance.html.tmp'),
+    ];
     await mkdir(outputDirectory, { recursive: true });
     await writeFile(bundle, '<!doctype html>');
     await writeFile(indexPath, '{"complete":true}\n');
     await writeFile(contactSheetPath, '<strong>Complete</strong>');
+    await Promise.all(staleAppearancePaths.map((file) => writeFile(file, 'stale evidence')));
     const priorFailurePath = path.join(
       outputDirectory, 'candidates', 'gas-showcase', 'failure.log',
     );
@@ -1301,6 +1308,9 @@ describe('Visual Lab batch runner', () => {
 
     await expect(readFile(indexPath, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
     await expect(readFile(contactSheetPath, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+    for (const stalePath of staleAppearancePaths) {
+      await expect(readFile(stalePath, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+    }
     expect(await readFile(priorFailurePath, 'utf8'))
       .toBe('capture-failed\nprior actionable diagnostic\n');
   });

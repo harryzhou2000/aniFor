@@ -5151,6 +5151,18 @@ RenderOptics capture and downloaded-package verification passed in 1m50s,
 Pages deployed in 8s, and exact 19-resource closure plus the hosted Water smoke
 passed in 1m41s. Its package verified 49 response and appearance regions.
 
+The current-evidence batch lifecycle is catalog-derived as well. Each JSON/HTML
+product pair owns safe canonical filenames, historical verifier requirement,
+public value/path projection, requiredness, and navigation metadata in one
+frozen scripts-only catalog. One exhaustive executable dispatcher reconstructs
+from authenticated captures, exact-rerenders HTML, enforces pair presence and
+the 1 MiB bounds, publishes, and projects results. Region response and
+appearance must share one lazy measurement promise. Invalidation must include
+all declared files and atomic `.tmp` stages; this specifically prevents stale
+region-appearance evidence surviving an interrupted rerun. Preserve the runner
+`response` versus verifier `experimentResponse` compatibility names, and keep
+contact-sheet then index publication last.
+
 Read [`docs/render-lab.md`](docs/render-lab.md) before changing reconstruction thresholds or blur radii. A TypeScript or Vite build does not compile Pixi's runtime GLSL; a browser screenshot with a clean shader console is required.
 
 The style lookup is an RGBA data texture, not display color: RGB stores phase/profile/emission and alpha stores the static `RenderTrait` mask. Keep nearest sampling and `no-premultiply-alpha`; zero-valued trait alpha must never erase the RGB metadata.

@@ -46,6 +46,11 @@ import {
 import {
   VISUAL_LAB_CAPTURE_VARIANT_NAMES as VARIANTS,
 } from './visual-lab-capture-abi.mjs';
+import {
+  resolveVisualLabCurrentReviewArtifactPaths,
+  visualLabCurrentReviewArtifactInvalidationPaths,
+  VISUAL_LAB_CURRENT_EVIDENCE_PAIRS,
+} from './visual-lab-review-artifacts.mjs';
 import { inspectVisualLabPng } from './visual-lab-png.mjs';
 import {
   createVisualLabBatchExperimentResponse,
@@ -886,6 +891,255 @@ export function renderVisualLabRegionAppearanceBoard(appearance) {
   return `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Visual Lab region appearance</title><style>:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#11151b;color:#eaf0f7}body{margin:0 auto;max-width:1800px;padding:24px}article{background:#1b222c;border:1px solid #344252;border-radius:12px;padding:16px;margin:18px 0}.profile-response-matrix{margin:18px 0 28px}.matrix-scroll{overflow:auto}.profile-response-matrix table{border-collapse:collapse;width:100%;font-size:.78rem}.profile-response-matrix th,.profile-response-matrix td{padding:7px;border-bottom:1px solid #344252;text-align:left;vertical-align:top;white-space:nowrap}.matrix-phase th{padding-top:14px;color:#9fd0ff;background:#151d26}.region-group{margin-top:22px}.region-group>h3{color:#9fd0ff;border-bottom:1px solid #344252;padding-bottom:7px}.regions{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,560px),1fr));gap:14px}.region{min-width:0;background:#121820;border:1px solid #2d3a48;border-radius:9px;padding:12px}.region header{display:flex;justify-content:space-between;gap:10px;align-items:baseline}.region h4,.region p{margin:0}.region p{color:#aebdcd;font-size:.82rem;text-align:right}.profile{margin-top:8px;color:#b8c5d2}.profile summary{cursor:pointer;color:#9fd0ff}.profile h5{color:#c8d6e5;margin:9px 0 0;font-size:.78rem}.profile dl{padding:7px 9px;background:#0c1117;border-radius:6px}.crops{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:10px;overflow:auto}.crops figure{margin:0;min-width:0}.crop{display:block;position:relative;overflow:hidden;max-width:none;background:#080b0f;border:1px solid #344252;image-rendering:auto}.crop img{display:block;position:absolute;max-width:none}figcaption{text-align:center;color:#b8c5d2;font-size:.78rem;margin-top:3px}dl{display:flex;flex-wrap:wrap;gap:6px 14px;margin:10px 0 0}dl div{display:flex;gap:5px}dt{color:#9eb0c2}dd{margin:0;font-variant-numeric:tabular-nums}@media(max-width:700px){body{padding:12px}.region header{display:block}.region p{text-align:left;margin-top:3px}}</style></head><body><h1>Current region appearance</h1><p>OFF/A/B crops are deterministically enlarged up to 8× for inspection; local luminance measurements still use the authenticated source pixels. They expose texture, edges, and tonal variation without scoring or deciding aesthetics. Resolved class and phase profiles explain renderer inputs without changing evidence. Select a crop to open its authenticated full capture. Full data is in <a href="./region-appearance.json">region-appearance.json</a>.</p>${cards}</body></html>\n`;
 }
 
+const CURRENT_EVIDENCE_IMPLEMENTATIONS = Object.freeze({
+  experimentResponse: Object.freeze({
+    evidenceLabel: 'Visual Lab experiment response',
+    boardLabel: 'Visual Lab experiment board',
+    presenceError: 'Visual Lab batch response JSON and board must be present together',
+    missingError: 'Visual Lab batch package is missing current experiment response evidence',
+    incompleteError: 'Incomplete Visual Lab batches cannot publish experiment response evidence',
+    mismatchError: 'Visual Lab experiment response does not match current captures',
+    boardMismatchError: 'Visual Lab experiment board does not match current response evidence',
+    sizeError: 'Visual Lab current experiment evidence exceeds the 1 MiB bound',
+    measurementGroup: null,
+    create: (index, readCapture) => createVisualLabBatchExperimentResponse(index, readCapture),
+    render: (index, evidence) => renderVisualLabExperimentBoard(index, evidence),
+    generationCaptureLabel: (candidate, variant) => (
+      `Visual Lab ${candidate} ${variant} capture`
+    ),
+    verificationCaptureLabel: (candidate, variant) => (
+      `Visual Lab ${candidate} ${variant} capture`
+    ),
+  }),
+  regionResponse: Object.freeze({
+    evidenceLabel: 'Visual Lab region response',
+    boardLabel: 'Visual Lab region response board',
+    presenceError: 'Visual Lab region response JSON and board must be present together',
+    missingError: 'Visual Lab batch package is missing current region response evidence',
+    incompleteError: 'Incomplete Visual Lab batches cannot publish region response evidence',
+    mismatchError: 'Visual Lab region response does not match current captures',
+    boardMismatchError: 'Visual Lab region response board does not match current evidence',
+    sizeError: 'Visual Lab current region evidence exceeds the 1 MiB bound',
+    measurementGroup: 'region',
+    create: async (_index, _readCapture, readRegionMeasurements) => (
+      (await readRegionMeasurements())?.response ?? null
+    ),
+    render: (_index, evidence) => renderVisualLabRegionResponseBoard(evidence),
+    generationCaptureLabel: (candidate, variant) => (
+      `Visual Lab ${candidate} ${variant} region measurement capture`
+    ),
+    verificationCaptureLabel: (candidate, variant) => (
+      `Visual Lab ${candidate} ${variant} region capture`
+    ),
+  }),
+  regionAppearance: Object.freeze({
+    evidenceLabel: 'Visual Lab region appearance',
+    boardLabel: 'Visual Lab region appearance board',
+    presenceError: 'Visual Lab region appearance JSON and board must be present together',
+    missingError: 'Visual Lab batch package is missing current region appearance evidence',
+    incompleteError: 'Incomplete Visual Lab batches cannot publish region appearance evidence',
+    mismatchError: 'Visual Lab region appearance does not match current captures',
+    boardMismatchError: 'Visual Lab region appearance board does not match current evidence',
+    sizeError: 'Visual Lab current region appearance exceeds the 1 MiB bound',
+    measurementGroup: 'region',
+    create: async (_index, _readCapture, readRegionMeasurements) => (
+      (await readRegionMeasurements())?.appearance ?? null
+    ),
+    render: (_index, evidence) => renderVisualLabRegionAppearanceBoard(evidence),
+    generationCaptureLabel: (candidate, variant) => (
+      `Visual Lab ${candidate} ${variant} region measurement capture`
+    ),
+    verificationCaptureLabel: (candidate, variant) => (
+      `Visual Lab ${candidate} ${variant} region capture`
+    ),
+  }),
+});
+
+const CURRENT_EVIDENCE_IMPLEMENTATION_FIELDS = Object.freeze([
+  'evidenceLabel', 'boardLabel', 'presenceError', 'missingError', 'incompleteError',
+  'mismatchError', 'boardMismatchError', 'sizeError', 'measurementGroup', 'create', 'render',
+  'generationCaptureLabel', 'verificationCaptureLabel',
+]);
+
+const createCurrentEvidenceDispatcher = (pairs, implementations) => {
+  const pairKeys = pairs.map(({ key }) => key);
+  const implementationKeys = Reflect.ownKeys(implementations);
+  if (pairKeys.length === 0
+    || implementationKeys.length !== pairKeys.length
+    || pairKeys.some((key, index) => implementationKeys[index] !== key)) {
+    throw new TypeError('Visual Lab current evidence implementation registry is not exhaustive');
+  }
+  const byKey = new Map();
+  for (const pair of pairs) {
+    const implementation = implementations[pair.key];
+    const fields = Reflect.ownKeys(implementation);
+    if (fields.length !== CURRENT_EVIDENCE_IMPLEMENTATION_FIELDS.length
+      || fields.some((field, index) => field !== CURRENT_EVIDENCE_IMPLEMENTATION_FIELDS[index])
+      || CURRENT_EVIDENCE_IMPLEMENTATION_FIELDS.slice(0, 8).some((field) => (
+        typeof implementation[field] !== 'string' || implementation[field].length === 0
+      ))
+      || (implementation.measurementGroup !== null
+        && (typeof implementation.measurementGroup !== 'string'
+          || implementation.measurementGroup.length === 0))
+      || CURRENT_EVIDENCE_IMPLEMENTATION_FIELDS.slice(9).some((field) => (
+        typeof implementation[field] !== 'function'
+      ))) {
+      throw new TypeError(`Visual Lab current evidence implementation ${pair.key} is malformed`);
+    }
+    byKey.set(pair.key, Object.freeze({ pair, implementation }));
+  }
+  return Object.freeze({
+    entries: Object.freeze([...byKey.values()]),
+    resolve(key) {
+      const entry = byKey.get(key);
+      if (!entry) throw new TypeError(`Unknown Visual Lab current evidence pair ${String(key)}`);
+      return entry;
+    },
+  });
+};
+
+const CURRENT_EVIDENCE_DISPATCHER = createCurrentEvidenceDispatcher(
+  VISUAL_LAB_CURRENT_EVIDENCE_PAIRS,
+  CURRENT_EVIDENCE_IMPLEMENTATIONS,
+);
+
+const createCurrentEvidenceCaptureReader = (root, index, label) => (
+  async (candidate, variant) => readStableRegularFile(
+    path.join(root, index.candidates.find((entry) => (
+      entry.candidate === candidate
+    )).artifacts[variant]),
+    label(candidate, variant),
+  )
+);
+
+const createCurrentRegionMeasurementReader = (index, readCapture) => {
+  let promise = null;
+  return () => {
+    promise ??= createVisualLabCurrentRegionMeasurements(index, readCapture);
+    return promise;
+  };
+};
+
+const verifyCurrentEvidencePairs = async ({
+  batchRoot, index, artifactPaths, requirements,
+}) => {
+  const values = {};
+  const returnedPaths = {};
+  const measurementReaders = new Map();
+  for (const { pair, implementation } of CURRENT_EVIDENCE_DISPATCHER.entries) {
+    const jsonPath = artifactPaths[pair.jsonPathKey];
+    const htmlPath = artifactPaths[pair.htmlPathKey];
+    const [jsonDetails, htmlDetails] = await Promise.all([
+      pathDetails(jsonPath), pathDetails(htmlPath),
+    ]);
+    if (Boolean(jsonDetails) !== Boolean(htmlDetails)) {
+      throw new TypeError(implementation.presenceError);
+    }
+    if (requirements[pair.requirementOptionKey] && !jsonDetails) {
+      throw new TypeError(implementation.missingError);
+    }
+    let value = null;
+    if (jsonDetails) {
+      if (!index.complete) throw new TypeError(implementation.incompleteError);
+      const [publishedSource, boardSource] = await Promise.all([
+        readStableRegularFile(
+          jsonPath, implementation.evidenceLabel, 'utf8', EXPERIMENT_EVIDENCE_MAX_BYTES,
+        ),
+        readStableRegularFile(
+          htmlPath, implementation.boardLabel, 'utf8', EXPERIMENT_EVIDENCE_MAX_BYTES,
+        ),
+      ]);
+      const published = parsePortableJson(publishedSource, implementation.evidenceLabel);
+      const readCapture = createCurrentEvidenceCaptureReader(
+        batchRoot, index, implementation.verificationCaptureLabel,
+      );
+      let readMeasurements;
+      if (implementation.measurementGroup !== null) {
+        readMeasurements = measurementReaders.get(implementation.measurementGroup);
+        if (readMeasurements === undefined) {
+          readMeasurements = createCurrentRegionMeasurementReader(index, readCapture);
+          measurementReaders.set(implementation.measurementGroup, readMeasurements);
+        }
+      }
+      value = await implementation.create(index, readCapture, readMeasurements);
+      if (value === null || !isDeepStrictEqual(published, value)) {
+        throw new TypeError(implementation.mismatchError);
+      }
+      if (boardSource !== implementation.render(index, value)) {
+        throw new TypeError(implementation.boardMismatchError);
+      }
+    }
+    values[pair.batchValueKey] = value;
+    returnedPaths[pair.jsonPathKey] = jsonDetails ? jsonPath : null;
+    returnedPaths[pair.htmlPathKey] = htmlDetails ? htmlPath : null;
+  }
+  return Object.freeze({ values: Object.freeze(values), paths: Object.freeze(returnedPaths) });
+};
+
+const publishCurrentEvidencePairs = async ({
+  outputDirectory, index, artifactPaths, publishFile,
+}) => {
+  const values = {};
+  const returnedPaths = {};
+  const measurementReaders = new Map();
+  for (const { pair, implementation } of CURRENT_EVIDENCE_DISPATCHER.entries) {
+    const readCapture = createCurrentEvidenceCaptureReader(
+      outputDirectory, index, implementation.generationCaptureLabel,
+    );
+    let readMeasurements;
+    if (implementation.measurementGroup !== null) {
+      readMeasurements = measurementReaders.get(implementation.measurementGroup);
+      if (readMeasurements === undefined) {
+        readMeasurements = createCurrentRegionMeasurementReader(index, readCapture);
+        measurementReaders.set(implementation.measurementGroup, readMeasurements);
+      }
+    }
+    const value = await implementation.create(index, readCapture, readMeasurements);
+    const jsonPath = artifactPaths[pair.jsonPathKey];
+    const htmlPath = artifactPaths[pair.htmlPathKey];
+    if (value !== null) {
+      const jsonSource = `${JSON.stringify(value, null, 2)}\n`;
+      const htmlSource = implementation.render(index, value);
+      if (Buffer.byteLength(jsonSource) > EXPERIMENT_EVIDENCE_MAX_BYTES
+        || Buffer.byteLength(htmlSource) > EXPERIMENT_EVIDENCE_MAX_BYTES) {
+        throw new Error(implementation.sizeError);
+      }
+      await publishFile(jsonPath, jsonSource);
+      await publishFile(htmlPath, htmlSource);
+    }
+    values[pair.batchValueKey] = value;
+    returnedPaths[pair.jsonPathKey] = value === null ? null : jsonPath;
+    returnedPaths[pair.htmlPathKey] = value === null ? null : htmlPath;
+  }
+  return Object.freeze({ values: Object.freeze(values), paths: Object.freeze(returnedPaths) });
+};
+
+const emptyCurrentEvidenceBatchResult = () => Object.freeze({
+  values: Object.freeze(Object.fromEntries(
+    CURRENT_EVIDENCE_DISPATCHER.entries.map(({ pair }) => [pair.batchValueKey, null]),
+  )),
+  paths: Object.freeze(Object.fromEntries(CURRENT_EVIDENCE_DISPATCHER.entries.flatMap(({ pair }) => [
+    [pair.jsonPathKey, null],
+    [pair.htmlPathKey, null],
+  ]))),
+});
+
+const projectCurrentEvidenceBatchReturn = (currentEvidence) => Object.fromEntries(
+  CURRENT_EVIDENCE_DISPATCHER.entries.flatMap(({ pair }) => [
+    [pair.batchValueKey, currentEvidence.values[pair.batchValueKey]],
+    [pair.jsonPathKey, currentEvidence.paths[pair.jsonPathKey]],
+    [pair.htmlPathKey, currentEvidence.paths[pair.htmlPathKey]],
+  ]),
+);
+
+const projectCurrentEvidenceVerificationReturn = (currentEvidence) => Object.fromEntries(
+  CURRENT_EVIDENCE_DISPATCHER.entries.flatMap(({ pair }) => [
+    [pair.key, currentEvidence.values[pair.batchValueKey]],
+    [pair.jsonPathKey, currentEvidence.paths[pair.jsonPathKey]],
+    [pair.htmlPathKey, currentEvidence.paths[pair.htmlPathKey]],
+  ]),
+);
+
 const assertCurrentCaptureContract = (report, executionPlan, hashes) => {
   const {
     recipe, request, domainAdapter: domain, fixtureAdapter: fixture,
@@ -1674,8 +1928,8 @@ export async function verifyVisualLabBatchPackage(options = {}) {
   const allowed = new Set([
     'batchRoot', 'requireBrowserHostPlan', 'requireExecutionTuningPlan',
     'requireCaptureGeometry', 'requireComplete', 'requireOriginAttestation', 'requireRecipeSet',
-    'recipeSetSourcePath', 'requireExperimentResponse', 'requireRegionResponse',
-    'requireRegionAppearance',
+    'recipeSetSourcePath',
+    ...VISUAL_LAB_CURRENT_EVIDENCE_PAIRS.map(({ requirementOptionKey }) => requirementOptionKey),
   ]);
   const unexpected = Reflect.ownKeys(options).filter((key) => !allowed.has(key));
   if (unexpected.length > 0) {
@@ -1690,27 +1944,37 @@ export async function verifyVisualLabBatchPackage(options = {}) {
   const requireCaptureGeometry = options.requireCaptureGeometry ?? false;
   const requireOriginAttestation = options.requireOriginAttestation ?? false;
   const requireRecipeSet = options.requireRecipeSet ?? false;
-  const requireExperimentResponse = options.requireExperimentResponse ?? false;
-  const requireRegionResponse = options.requireRegionResponse ?? false;
-  const requireRegionAppearance = options.requireRegionAppearance ?? false;
+  const currentEvidenceRequirements = Object.freeze(Object.fromEntries(
+    VISUAL_LAB_CURRENT_EVIDENCE_PAIRS.map(({ requirementOptionKey }) => (
+      [requirementOptionKey, options[requirementOptionKey] ?? false]
+    )),
+  ));
   if (typeof requireComplete !== 'boolean'
     || typeof requireBrowserHostPlan !== 'boolean'
     || typeof requireExecutionTuningPlan !== 'boolean'
     || typeof requireCaptureGeometry !== 'boolean'
     || typeof requireOriginAttestation !== 'boolean'
     || typeof requireRecipeSet !== 'boolean'
-    || typeof requireExperimentResponse !== 'boolean'
-    || typeof requireRegionResponse !== 'boolean'
-    || typeof requireRegionAppearance !== 'boolean') {
+    || Object.values(currentEvidenceRequirements).some((value) => typeof value !== 'boolean')) {
     throw new TypeError('Visual Lab batch verification requirement flags must be booleans');
   }
 
   const batchRoot = await assertExistingRealDirectory(
     options.batchRoot, 'Visual Lab batch package',
   );
+  const {
+    indexPath,
+    contactSheetPath,
+    responsePath,
+    experimentBoardPath,
+    regionResponsePath,
+    regionResponseBoardPath: regionBoardPath,
+    regionAppearancePath,
+    regionAppearanceBoardPath,
+  } = resolveVisualLabCurrentReviewArtifactPaths(batchRoot);
   const [indexSource, sheet] = await Promise.all([
-    readStableRegularFile(path.join(batchRoot, 'index.json'), 'Visual Lab batch index', 'utf8'),
-    readStableRegularFile(path.join(batchRoot, 'index.html'), 'Visual Lab contact sheet', 'utf8'),
+    readStableRegularFile(indexPath, 'Visual Lab batch index', 'utf8'),
+    readStableRegularFile(contactSheetPath, 'Visual Lab contact sheet', 'utf8'),
   ]);
   const index = parsePortableJson(indexSource, 'Visual Lab batch index');
   if (!Array.isArray(index?.candidates) || index.candidates.length === 0) {
@@ -1743,119 +2007,19 @@ export async function verifyVisualLabBatchPackage(options = {}) {
   if (requireComplete && !canonical.complete) {
     throw new TypeError('Visual Lab batch package is incomplete');
   }
-  const responsePath = path.join(batchRoot, 'experiment-response.json');
-  const experimentBoardPath = path.join(batchRoot, 'experiment-board.html');
-  const [responseDetails, boardDetails] = await Promise.all([
-    pathDetails(responsePath), pathDetails(experimentBoardPath),
-  ]);
-  if (Boolean(responseDetails) !== Boolean(boardDetails)) {
-    throw new TypeError('Visual Lab batch response JSON and board must be present together');
-  }
-  if (requireExperimentResponse && !responseDetails) {
-    throw new TypeError('Visual Lab batch package is missing current experiment response evidence');
-  }
-  let experimentResponse = null;
-  if (responseDetails) {
-    if (!canonical.complete) {
-      throw new TypeError('Incomplete Visual Lab batches cannot publish experiment response evidence');
-    }
-    const [responseSource, boardSource] = await Promise.all([
-      readStableRegularFile(
-        responsePath, 'Visual Lab experiment response', 'utf8', EXPERIMENT_EVIDENCE_MAX_BYTES,
-      ),
-      readStableRegularFile(
-        experimentBoardPath, 'Visual Lab experiment board', 'utf8',
-        EXPERIMENT_EVIDENCE_MAX_BYTES,
-      ),
-    ]);
-    const publishedResponse = parsePortableJson(responseSource, 'Visual Lab experiment response');
-    experimentResponse = await createVisualLabBatchExperimentResponse(
-      canonical,
-      async (candidate, variant) => readStableRegularFile(
-        path.join(batchRoot, canonical.candidates.find((entry) => (
-          entry.candidate === candidate
-        )).artifacts[variant]),
-        `Visual Lab ${candidate} ${variant} capture`,
-      ),
-    );
-    if (!isDeepStrictEqual(publishedResponse, experimentResponse)) {
-      throw new TypeError('Visual Lab experiment response does not match current captures');
-    }
-    if (boardSource !== renderVisualLabExperimentBoard(canonical, experimentResponse)) {
-      throw new TypeError('Visual Lab experiment board does not match current response evidence');
-    }
-  }
-  const regionResponsePath = path.join(batchRoot, 'region-response.json');
-  const regionBoardPath = path.join(batchRoot, 'region-response.html');
-  const [regionResponseDetails, regionBoardDetails] = await Promise.all([
-    pathDetails(regionResponsePath), pathDetails(regionBoardPath),
-  ]);
-  if (Boolean(regionResponseDetails) !== Boolean(regionBoardDetails)) {
-    throw new TypeError('Visual Lab region response JSON and board must be present together');
-  }
-  if (requireRegionResponse && !regionResponseDetails) {
-    throw new TypeError('Visual Lab batch package is missing current region response evidence');
-  }
-  let regionResponse = null;
-  let regionMeasurementsPromise = null;
-  const readRegionMeasurements = () => {
-    regionMeasurementsPromise ??= createVisualLabCurrentRegionMeasurements(
-      canonical,
-      async (candidate, variant) => readStableRegularFile(
-        path.join(batchRoot, canonical.candidates.find((entry) => (
-          entry.candidate === candidate
-        )).artifacts[variant]),
-        `Visual Lab ${candidate} ${variant} region capture`,
-      ),
-    );
-    return regionMeasurementsPromise;
-  };
-  if (regionResponseDetails) {
-    if (!canonical.complete) {
-      throw new TypeError('Incomplete Visual Lab batches cannot publish region response evidence');
-    }
-    const [publishedSource, boardSource] = await Promise.all([
-      readStableRegularFile(regionResponsePath, 'Visual Lab region response', 'utf8', EXPERIMENT_EVIDENCE_MAX_BYTES),
-      readStableRegularFile(regionBoardPath, 'Visual Lab region response board', 'utf8', EXPERIMENT_EVIDENCE_MAX_BYTES),
-    ]);
-    const published = parsePortableJson(publishedSource, 'Visual Lab region response');
-    regionResponse = (await readRegionMeasurements())?.response ?? null;
-    if (regionResponse === null || !isDeepStrictEqual(published, regionResponse)) {
-      throw new TypeError('Visual Lab region response does not match current captures');
-    }
-    if (boardSource !== renderVisualLabRegionResponseBoard(regionResponse)) {
-      throw new TypeError('Visual Lab region response board does not match current evidence');
-    }
-  }
-  const regionAppearancePath = path.join(batchRoot, 'region-appearance.json');
-  const regionAppearanceBoardPath = path.join(batchRoot, 'region-appearance.html');
-  const [regionAppearanceDetails, regionAppearanceBoardDetails] = await Promise.all([
-    pathDetails(regionAppearancePath), pathDetails(regionAppearanceBoardPath),
-  ]);
-  if (Boolean(regionAppearanceDetails) !== Boolean(regionAppearanceBoardDetails)) {
-    throw new TypeError('Visual Lab region appearance JSON and board must be present together');
-  }
-  if (requireRegionAppearance && !regionAppearanceDetails) {
-    throw new TypeError('Visual Lab batch package is missing current region appearance evidence');
-  }
-  let regionAppearance = null;
-  if (regionAppearanceDetails) {
-    if (!canonical.complete) {
-      throw new TypeError('Incomplete Visual Lab batches cannot publish region appearance evidence');
-    }
-    const [publishedSource, boardSource] = await Promise.all([
-      readStableRegularFile(regionAppearancePath, 'Visual Lab region appearance', 'utf8', EXPERIMENT_EVIDENCE_MAX_BYTES),
-      readStableRegularFile(regionAppearanceBoardPath, 'Visual Lab region appearance board', 'utf8', EXPERIMENT_EVIDENCE_MAX_BYTES),
-    ]);
-    const published = parsePortableJson(publishedSource, 'Visual Lab region appearance');
-    regionAppearance = (await readRegionMeasurements())?.appearance ?? null;
-    if (regionAppearance === null || !isDeepStrictEqual(published, regionAppearance)) {
-      throw new TypeError('Visual Lab region appearance does not match current captures');
-    }
-    if (boardSource !== renderVisualLabRegionAppearanceBoard(regionAppearance)) {
-      throw new TypeError('Visual Lab region appearance board does not match current evidence');
-    }
-  }
+  const currentEvidence = await verifyCurrentEvidencePairs({
+    batchRoot,
+    index: canonical,
+    artifactPaths: {
+      responsePath,
+      experimentBoardPath,
+      regionResponsePath,
+      regionResponseBoardPath: regionBoardPath,
+      regionAppearancePath,
+      regionAppearanceBoardPath,
+    },
+    requirements: currentEvidenceRequirements,
+  });
   if (requireCaptureGeometry) {
     const missing = entries.filter((entry) => (
       entry.status === 'passed' && entry.captureDiagnostic.captureGeometry === undefined
@@ -1948,15 +2112,7 @@ export async function verifyVisualLabBatchPackage(options = {}) {
     browserHostPlan,
     executionTuningPlan,
     originAttestation,
-    experimentResponse,
-    responsePath: responseDetails ? responsePath : null,
-    experimentBoardPath: boardDetails ? experimentBoardPath : null,
-    regionResponse,
-    regionResponsePath: regionResponseDetails ? regionResponsePath : null,
-    regionResponseBoardPath: regionBoardDetails ? regionBoardPath : null,
-    regionAppearance,
-    regionAppearancePath: regionAppearanceDetails ? regionAppearancePath : null,
-    regionAppearanceBoardPath: regionAppearanceBoardDetails ? regionAppearanceBoardPath : null,
+    ...projectCurrentEvidenceVerificationReturn(currentEvidence),
     captureDiagnostics: entries.flatMap((entry) => (
       entry.status === 'passed' ? [entry.captureDiagnostic] : []
     )),
@@ -2338,14 +2494,16 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   const releaseBatchLock = await acquireBatchLock(outputDirectory);
   const executeLockedBatch = async () => {
   const candidateRoot = path.join(outputDirectory, 'candidates');
-  const indexPath = path.join(outputDirectory, 'index.json');
-  const contactSheetPath = path.join(outputDirectory, 'index.html');
-  const responsePath = path.join(outputDirectory, 'experiment-response.json');
-  const experimentBoardPath = path.join(outputDirectory, 'experiment-board.html');
-  const regionResponsePath = path.join(outputDirectory, 'region-response.json');
-  const regionResponseBoardPath = path.join(outputDirectory, 'region-response.html');
-  const regionAppearancePath = path.join(outputDirectory, 'region-appearance.json');
-  const regionAppearanceBoardPath = path.join(outputDirectory, 'region-appearance.html');
+  const {
+    indexPath,
+    contactSheetPath,
+    responsePath,
+    experimentBoardPath,
+    regionResponsePath,
+    regionResponseBoardPath,
+    regionAppearancePath,
+    regionAppearanceBoardPath,
+  } = resolveVisualLabCurrentReviewArtifactPaths(outputDirectory);
   const recipeSetPath = path.join(outputDirectory, 'recipe-set.json');
   const browserHostPlanPath = path.join(outputDirectory, BROWSER_HOST_PLAN_FILE_NAME);
   const executionTuningPlanPath = path.join(
@@ -2403,11 +2561,8 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   // before new evidence can be aggregated. Remove only root files owned by
   // this tool; candidate logs remain available for diagnosis.
   await Promise.all([
-    indexPath, contactSheetPath, responsePath, experimentBoardPath,
-    regionResponsePath, regionResponseBoardPath, recipeSetPath,
-    `${indexPath}.tmp`, `${contactSheetPath}.tmp`, `${responsePath}.tmp`,
-    `${experimentBoardPath}.tmp`, `${regionResponsePath}.tmp`,
-    `${regionResponseBoardPath}.tmp`, `${recipeSetPath}.tmp`,
+    ...visualLabCurrentReviewArtifactInvalidationPaths(outputDirectory),
+    recipeSetPath, `${recipeSetPath}.tmp`,
     ...(!indexOnly ? [
       browserHostPlanPath, `${browserHostPlanPath}.tmp`,
       executionTuningPlanPath, `${executionTuningPlanPath}.tmp`,
@@ -2822,56 +2977,21 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   });
   const timingSummary = summarizeEntryTimings(entries);
   const captureSubphaseSummary = summarizeEntryCaptureSubphases(entries);
-  let experimentResponse = null;
-  let regionResponse = null;
-  let regionAppearance = null;
+  let currentEvidence = emptyCurrentEvidenceBatchResult();
   if (index.complete) {
-    experimentResponse = await createVisualLabBatchExperimentResponse(
+    currentEvidence = await publishCurrentEvidencePairs({
+      outputDirectory,
       index,
-      async (candidate, variant) => readStableRegularFile(
-        path.join(outputDirectory, index.candidates.find((entry) => (
-          entry.candidate === candidate
-        )).artifacts[variant]),
-        `Visual Lab ${candidate} ${variant} capture`,
-      ),
-    );
-    const responseSource = `${JSON.stringify(experimentResponse, null, 2)}\n`;
-    const experimentBoard = renderVisualLabExperimentBoard(index, experimentResponse);
-    if (Buffer.byteLength(responseSource) > EXPERIMENT_EVIDENCE_MAX_BYTES
-      || Buffer.byteLength(experimentBoard) > EXPERIMENT_EVIDENCE_MAX_BYTES) {
-      throw new Error('Visual Lab current experiment evidence exceeds the 1 MiB bound');
-    }
-    await publishFile(responsePath, responseSource);
-    await publishFile(experimentBoardPath, experimentBoard);
-    const regionMeasurements = await createVisualLabCurrentRegionMeasurements(
-      index,
-      async (candidate, variant) => readStableRegularFile(
-        path.join(outputDirectory, index.candidates.find((entry) => entry.candidate === candidate).artifacts[variant]),
-        `Visual Lab ${candidate} ${variant} region measurement capture`,
-      ),
-    );
-    regionResponse = regionMeasurements?.response ?? null;
-    if (regionResponse !== null) {
-      const regionSource = `${JSON.stringify(regionResponse, null, 2)}\n`;
-      const regionBoard = renderVisualLabRegionResponseBoard(regionResponse);
-      if (Buffer.byteLength(regionSource) > EXPERIMENT_EVIDENCE_MAX_BYTES
-        || Buffer.byteLength(regionBoard) > EXPERIMENT_EVIDENCE_MAX_BYTES) {
-        throw new Error('Visual Lab current region evidence exceeds the 1 MiB bound');
-      }
-      await publishFile(regionResponsePath, regionSource);
-      await publishFile(regionResponseBoardPath, regionBoard);
-    }
-    regionAppearance = regionMeasurements?.appearance ?? null;
-    if (regionAppearance !== null) {
-      const appearanceSource = `${JSON.stringify(regionAppearance, null, 2)}\n`;
-      const appearanceBoard = renderVisualLabRegionAppearanceBoard(regionAppearance);
-      if (Buffer.byteLength(appearanceSource) > EXPERIMENT_EVIDENCE_MAX_BYTES
-        || Buffer.byteLength(appearanceBoard) > EXPERIMENT_EVIDENCE_MAX_BYTES) {
-        throw new Error('Visual Lab current region appearance exceeds the 1 MiB bound');
-      }
-      await publishFile(regionAppearancePath, appearanceSource);
-      await publishFile(regionAppearanceBoardPath, appearanceBoard);
-    }
+      artifactPaths: {
+        responsePath,
+        experimentBoardPath,
+        regionResponsePath,
+        regionResponseBoardPath,
+        regionAppearancePath,
+        regionAppearanceBoardPath,
+      },
+      publishFile,
+    });
   }
   // Publish the human sheet first and the machine-readable completion marker
   // last. A crash or sheet error therefore cannot leave complete:true without
@@ -2884,15 +3004,7 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
     index,
     indexPath,
     contactSheetPath,
-    response: experimentResponse,
-    responsePath: experimentResponse === null ? null : responsePath,
-    experimentBoardPath: experimentResponse === null ? null : experimentBoardPath,
-    regionResponse,
-    regionResponsePath: regionResponse === null ? null : regionResponsePath,
-    regionResponseBoardPath: regionResponse === null ? null : regionResponseBoardPath,
-    regionAppearance,
-    regionAppearancePath: regionAppearance === null ? null : regionAppearancePath,
-    regionAppearanceBoardPath: regionAppearance === null ? null : regionAppearanceBoardPath,
+    ...projectCurrentEvidenceBatchReturn(currentEvidence),
     recipeSet,
     recipeSetPath,
     plan: executionPlan.inspection,
