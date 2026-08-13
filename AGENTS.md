@@ -1816,6 +1816,16 @@ post-selection v2/v3 request path intact for rollback and comparison. A new
 tuning schema may declare the new binding, but must not rotate capture-plan,
 recipe, result, PNG, batch, baseline, or comparison identities.
 
+The first built same-bundle Powder v3/v4 control passed. Both modes produced
+result `sha256:b3edbc669cc2c2408ef712ea6089b42e85e1ba60944d3d78b4bd0942de23f67f`
+and identical OFF/A/B PNG hashes. V3 receipt submissions were
+`13 -> 15 -> 17 -> 19`; v4 proved the exact contiguous
+`13 -> 14 -> 15 -> 16` chain. Local OFF/A/B phases fell from 3.51–3.72s to
+2.12–2.15s and total capture from 44.48s to 40.31s. Portable v4 verification
+passed and rejects a merely monotonic but gapped submission chain. Keep hosted
+ABBA evidence as the remaining decision before calling v4 the performance
+control.
+
 The renderer-owned completed-frame receipt is now a protected audit capability.
 `anifor.renderer.completed-frame-receipt/v1` binds every ticket to the exact
 presentation submission and exposes only `pending`, `completed`, `superseded`,

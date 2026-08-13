@@ -6997,6 +6997,17 @@ monotonic tickets/submissions, and a one-submission advance per variant; then
 run the same hosted ABBA control. Keep the existing post-selection receipt modes
 as rollback controls.
 
+The first built same-bundle Powder control validates that design. V3 and v4
+have the same result ID
+`sha256:b3edbc669cc2c2408ef712ea6089b42e85e1ba60944d3d78b4bd0942de23f67f`
+and identical OFF/A/B PNG hashes. V3 advanced readiness/OFF/A/B submissions as
+`13/15/17/19`; v4 advanced them as `13/14/15/16`. Local OFF/A/B phases fell
+from 3.51–3.72s to 2.12–2.15s and total candidate time from 44.48s to 40.31s.
+The downloaded-style portable verifier accepts the v4 package and rejects a
+gapped v4 submission chain. The remaining acceptance evidence is the hosted
+fresh/shared/shared/fresh Powder control; do not infer its result from this
+local measurement.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
