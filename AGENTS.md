@@ -5063,6 +5063,14 @@ authority must continue to use their existing tracked recipes/cohorts and typed
 registries. The performance orchestrator must map every advertised batch proof
 to its exact tuning schema; v8 is the independent selector receipt/PBO control,
 while v9 additionally owns typed render-field readiness.
+This checkpoint is deployed at revision
+`9d16409d067680e79934e199ba534d6abdb851a2` by workflow run `31727921696`.
+The build, tracked RenderOptics review/downloaded-package verification, Pages
+deploy, exact live closure, and Water smoke passed. The restored v8
+fresh/shared/shared/fresh RenderOptics cohort also passed all four portable
+identities with no failure diagnostic. Keep its roughly 98–102 second cohort
+durations descriptive; the important proof is that the v8 route is executable
+and distinct from v9.
 
 Read [`docs/render-lab.md`](docs/render-lab.md) before changing reconstruction thresholds or blur radii. A TypeScript or Vite build does not compile Pixi's runtime GLSL; a browser screenshot with a clean shader console is required.
 

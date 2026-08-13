@@ -7837,6 +7837,17 @@ shared proof parser accepted v8 but the orchestrator expected an undefined
 schema, so the comparative control could not run. V9 remains the combined v7
 readiness plus v8 selection proof; neither default nor frozen identity changed.
 
+The release gate passed at exact revision
+`9d16409d067680e79934e199ba534d6abdb851a2` in workflow run `31727921696`.
+The ccache-backed build completed in 3m41s, the tracked RenderOptics review and
+downloaded-package verifier passed in 1m49s, Pages deployed in 9s, and exact
+live closure plus the hosted Water smoke passed in 1m31s. The restored v8
+fresh/shared/shared/fresh RenderOptics cohort completed in 6m52s; all four
+portable identities matched, no bounded failure diagnostic was uploaded, and
+its summary carried exact execution-tuning v8. Fresh/shared/shared/fresh totals
+were approximately 101.55/98.28/101.64/100.19 seconds. These timings describe
+one loaded software-GPU run and are not a performance threshold.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
