@@ -3,12 +3,80 @@ import { describe, expect, it } from 'vitest';
 import { DeterministicBackend } from '../simulation/deterministic-backend';
 import { Material } from '../shared/materials';
 import {
+  activatePreparedVisualCaptureFixture,
   blankBrowserInputAuditRequested, browserInputAuditRequested,
   prepareContourStressAuditFixture, prepareDenseSolidAuditFixture,
   prepareSolidFieldLightingAuditFixture, toggleDenseSolidAuditProbe,
 } from './browser-input-audit';
 
 describe('browser input audit gate', () => {
+  it('activates a mutated typed fixture under one reserved presentation generation', () => {
+    const calls: string[] = [];
+    const generation = activatePreparedVisualCaptureFixture({
+      runWithNextFixtureActivationPresentationGeneration: (activate) => {
+        calls.push('reserve');
+        activate();
+        calls.push('reserved:27');
+        return 27;
+      },
+      prepareFixture: (fixture) => {
+        calls.push(`prepare:${fixture}`);
+        return true;
+      },
+      synchronizeFixtureMaterialPlane: () => calls.push('synchronize'),
+      markFixturePrepared: (fixture) => calls.push(`mark:${fixture}`),
+      setVariant: (fixture, variant) => calls.push(`select:${fixture}:${variant}`),
+      invalidateDynamicPresentation: () => calls.push('invalidate'),
+    }, 'powder-style-atlas', 2);
+
+    expect(generation).toBe(27);
+    expect(calls).toEqual([
+      'reserve',
+      'prepare:powder-style-atlas',
+      'synchronize',
+      'mark:powder-style-atlas',
+      'select:powder-style-atlas:2',
+      'invalidate',
+      'reserved:27',
+    ]);
+  });
+
+  it('invalidates no-op activation and fails before mutation for invalid input or reservation', () => {
+    const calls: string[] = [];
+    const host = {
+      runWithNextFixtureActivationPresentationGeneration: (activate: () => void) => {
+        calls.push('reserve');
+        activate();
+        return 9;
+      },
+      prepareFixture: (fixture: 'showcase') => {
+        calls.push(`prepare:${fixture}`);
+        return false;
+      },
+      synchronizeFixtureMaterialPlane: () => calls.push('unexpected-sync'),
+      markFixturePrepared: (fixture: 'showcase') => calls.push(`mark:${fixture}`),
+      setVariant: (fixture: 'showcase', variant: 0 | 1 | 2) => (
+        calls.push(`select:${fixture}:${variant}`)
+      ),
+      invalidateDynamicPresentation: () => calls.push('invalidate'),
+    };
+    expect(activatePreparedVisualCaptureFixture(host, 'showcase', 0)).toBe(9);
+    expect(calls).toEqual([
+      'reserve', 'prepare:showcase', 'mark:showcase', 'select:showcase:0', 'invalidate',
+    ]);
+
+    calls.length = 0;
+    expect(() => activatePreparedVisualCaptureFixture(host, 'showcase', 3 as never))
+      .toThrow('Invalid Visual capture control variant 3');
+    expect(calls).toEqual([]);
+
+    expect(() => activatePreparedVisualCaptureFixture({
+      ...host,
+      runWithNextFixtureActivationPresentationGeneration: () => undefined,
+    }, 'showcase', 0)).toThrow('could not reserve a presentation generation');
+    expect(calls).toEqual([]);
+  });
+
   it('uses strict teardown only behind the audit bridge', () => {
     const source = readFileSync(new URL('./game.ts', import.meta.url), 'utf8');
     expect(source).toContain(

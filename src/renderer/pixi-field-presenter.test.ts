@@ -140,6 +140,35 @@ function presenterHarness(outputScale = 2): PresenterHarness {
 }
 
 describe('Pixi presenter startup configuration', () => {
+  it('reports fixture activation settled only after every CPU presentation queue drains', () => {
+    const presenter = Object.create(PixiFieldPresenter.prototype) as unknown as {
+      semanticTextureMutationPending: boolean;
+      boundaryEvolutionPending: boolean;
+      powderSurfaceDirty: boolean;
+      solidOpticalDepthDirty: boolean;
+      fieldSet: { hasPendingRefresh: boolean };
+      fixtureActivationPresentationSettled(): boolean;
+    };
+    Object.assign(presenter, {
+      semanticTextureMutationPending: false,
+      boundaryEvolutionPending: false,
+      powderSurfaceDirty: false,
+      solidOpticalDepthDirty: false,
+      fieldSet: { hasPendingRefresh: false },
+    });
+    expect(presenter.fixtureActivationPresentationSettled()).toBe(true);
+    for (const pending of [
+      'semanticTextureMutationPending', 'boundaryEvolutionPending',
+      'powderSurfaceDirty', 'solidOpticalDepthDirty',
+    ] as const) {
+      presenter[pending] = true;
+      expect(presenter.fixtureActivationPresentationSettled()).toBe(false);
+      presenter[pending] = false;
+    }
+    presenter.fieldSet.hasPendingRefresh = true;
+    expect(presenter.fixtureActivationPresentationSettled()).toBe(false);
+  });
+
   it('can seed a retained Visual Lab choice without submitting an unhydrated frame', () => {
     const setVisualLabState = vi.fn();
     const renderApplication = vi.fn();

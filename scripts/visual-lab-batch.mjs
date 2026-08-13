@@ -70,24 +70,29 @@ import {
   visualCaptureExecutionV2CapabilitiesForCaptureOrder,
   visualCaptureExecutionV3CapabilitiesForCaptureOrder,
   visualCaptureExecutionV4CapabilitiesForCaptureOrder,
+  visualCaptureExecutionV5CapabilitiesForCaptureOrder,
 } from './visual-capture-execution-capabilities.mjs';
 import {
   createVisualLabExecutionTuningPlan,
   createVisualLabExecutionTuningPlanV2,
   createVisualLabExecutionTuningPlanV3,
   createVisualLabExecutionTuningPlanV4,
+  createVisualLabExecutionTuningPlanV5,
   normalizeVisualLabExecutionTuningPlan,
   normalizeVisualLabExecutionTuningPlanV2,
   normalizeVisualLabExecutionTuningPlanV3,
   normalizeVisualLabExecutionTuningPlanV4,
+  normalizeVisualLabExecutionTuningPlanV5,
   resolveVisualLabExecutionTuningPlanEntry,
   resolveVisualLabExecutionTuningPlanV2Entry,
   resolveVisualLabExecutionTuningPlanV3Entry,
   resolveVisualLabExecutionTuningPlanV4Entry,
+  resolveVisualLabExecutionTuningPlanV5Entry,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA,
 } from './visual-lab-execution-tuning-plan.mjs';
 import { startVisualLabChromeHost } from './visual-lab-chrome-host.mjs';
 import {
@@ -108,6 +113,7 @@ export const VISUAL_LAB_DEFAULT_CANDIDATE_TIMEOUT_MS = 300_000;
 export const VISUAL_LAB_CAPTURE_PROOF_MODES = Object.freeze([
   'stable-snapshots', 'completed-frame-receipt', 'readiness-completed-frame-receipt',
   'selection-owned-frame-receipt',
+  'fixture-activation-generation',
 ]);
 
 const MODULE_PATH = fileURLToPath(import.meta.url);
@@ -150,6 +156,9 @@ const captureProofForTuningSchema = (schema) => {
   if (schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA) {
     return 'selection-owned-frame-receipt';
   }
+  if (schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA) {
+    return 'fixture-activation-generation';
+  }
   throw new TypeError(`Unsupported Visual Lab execution-tuning schema ${String(schema)}`);
 };
 
@@ -163,11 +172,19 @@ const normalizeExecutionTuningPlan = (input, captureExecutionPlan) => {
   if (input?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA) {
     return normalizeVisualLabExecutionTuningPlanV4(input, captureExecutionPlan);
   }
+  if (input?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA) {
+    return normalizeVisualLabExecutionTuningPlanV5(input, captureExecutionPlan);
+  }
   return normalizeVisualLabExecutionTuningPlan(input, captureExecutionPlan);
 };
 
 const createExecutionTuningPlan = (captureExecutionPlan, driverOrder, captureProof) => (
-  captureProof === 'selection-owned-frame-receipt'
+  captureProof === 'fixture-activation-generation'
+    ? createVisualLabExecutionTuningPlanV5(
+      captureExecutionPlan,
+      visualCaptureExecutionV5CapabilitiesForCaptureOrder(driverOrder),
+    )
+    : captureProof === 'selection-owned-frame-receipt'
     ? createVisualLabExecutionTuningPlanV4(
       captureExecutionPlan,
       visualCaptureExecutionV4CapabilitiesForCaptureOrder(driverOrder),
@@ -206,6 +223,11 @@ const resolveExecutionTuningPlanEntry = (
       plan, entryId, expectedCaptureEntryId, captureExecutionPlan,
     );
   }
+  if (plan.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA) {
+    return resolveVisualLabExecutionTuningPlanV5Entry(
+      plan, entryId, expectedCaptureEntryId, captureExecutionPlan,
+    );
+  }
   return resolveVisualLabExecutionTuningPlanEntry(
     plan, entryId, expectedCaptureEntryId, captureExecutionPlan,
   );
@@ -224,7 +246,7 @@ Options (use --name=value):
   --chrome=/path/to/chrome               Forwarded to the generic capture runner
   --gpu=auto|swiftshader                 Forwarded to the generic capture runner
   --browser-host=fresh|shared            Opt-in sequential Chrome-host reuse (Linux only)
-  --capture-proof=stable-snapshots|completed-frame-receipt|readiness-completed-frame-receipt|selection-owned-frame-receipt
+  --capture-proof=stable-snapshots|completed-frame-receipt|readiness-completed-frame-receipt|selection-owned-frame-receipt|fixture-activation-generation
                                          Default keeps the v1 two-snapshot proof
   --candidate-timeout-ms=300000          Per-candidate timeout before TERM/KILL cleanup
   --index-only=0|1                       Aggregate existing candidate reports without capture
@@ -986,16 +1008,29 @@ const assertCurrentCaptureContract = (report, executionPlan, hashes) => {
       .filter((name) => Object.hasOwn(startup ?? {}, name))
       .map((name) => [name, startup[name]]),
   );
+  const fixtureActivationStartup = report.executionTuning?.schema
+    === VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA;
+  const startupTransportValid = fixtureActivationStartup
+    ? startup?.typedActivation === true
+      && Number.isSafeInteger(startup.ticket) && startup.ticket > 0
+      && startup.backendBeforeSelection === undefined
+      && startup.backendReasonBeforeSelection === undefined
+      && startup.stagedBeforeWebGL === undefined
+    : startup?.backendBeforeSelection === 'canvas2d'
+      && startup.backendReasonBeforeSelection === 'webgl-starting'
+      && startup.stagedBeforeWebGL === true
+      && startup.typedActivation === undefined
+      && startup.ticket === undefined;
   if (startup?.requestedVariant !== 2
     || startup.fixture !== recipe.fixture
     || startup.scene !== fixture.scene
     || startup.preparation !== expectedPreparation
     || startup.fixturePrepared !== true
-    || startup.backendBeforeSelection !== 'canvas2d'
-    || startup.backendReasonBeforeSelection !== 'webgl-starting'
-    || startup.stagedBeforeWebGL !== true
+    || !startupTransportValid
     || !isDeepStrictEqual(actualStartupDriverFields, expectedStartupDriverFields)) {
-    throw new Error('startup selection was not staged through bounded Canvas promotion');
+    throw new Error(fixtureActivationStartup
+      ? 'startup selection was not bound to the typed fixture-activation transaction'
+      : 'startup selection was not staged through bounded Canvas promotion');
   }
 
   for (let index = 0; index < VARIANTS.length; index++) {
@@ -1186,6 +1221,7 @@ const readCandidateReport = async (candidateDirectory, recipe, {
           VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
           VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
           VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA,
+          VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA,
         ].includes(proof.schema)
         || !/^sha256:[a-f0-9]{64}$/.test(proof.planId)
         || !/^sha256:[a-f0-9]{64}$/.test(proof.entryId)) {
@@ -1197,6 +1233,10 @@ const readCandidateReport = async (candidateDirectory, recipe, {
         entryId: proof.entryId,
       });
       assertCompletedFrameReceiptReportProof(report, proof.schema);
+      if (proof.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA
+        && captureSubphases?.readiness?.snapshotAttempts !== 1) {
+        throw new Error('fixture-activation generation proof must retain exactly one readiness snapshot');
+      }
     }
     if (executionTuningPlan !== undefined || executionTuningEntry !== undefined) {
       if (!executionTuningPlan || !executionTuningEntry) {
@@ -1363,9 +1403,12 @@ const assertOriginAttestationCaptureIdentity = (
 const assertCompletedFrameReceiptReportProof = (report, tuningSchema) => {
   const variantReceiptRequired = tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA
     || tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA
-    || tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA;
+    || tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA
+    || tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA;
   const readinessReceiptRequired = tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA;
-  const contiguousSubmissionsRequired = tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA;
+  const activationGenerationRequired = tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA;
+  const contiguousSubmissionsRequired = tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA
+    || tuningSchema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA;
   const readinessReceipt = report?.readinessCompletedFrameReceipt;
   if (!readinessReceiptRequired && readinessReceipt !== undefined) {
     throw new Error('non-v3 capture must not claim readiness completed-frame receipt proof');
@@ -1380,6 +1423,21 @@ const assertCompletedFrameReceiptReportProof = (report, tuningSchema) => {
       || !Number.isSafeInteger(readinessReceipt.ticket) || readinessReceipt.ticket <= 0
       || !Number.isSafeInteger(readinessReceipt.submission) || readinessReceipt.submission <= 0) {
       throw new Error('readiness completed-frame receipt proof is malformed');
+    }
+  }
+  const activation = report?.readinessFixtureActivationGeneration;
+  if (!activationGenerationRequired && activation !== undefined) {
+    throw new Error('non-v5 capture must not claim fixture-activation generation proof');
+  }
+  if (activationGenerationRequired) {
+    const fields = activation !== null && typeof activation === 'object'
+      && !Array.isArray(activation) ? Reflect.ownKeys(activation) : [];
+    if (fields.length !== 3
+      || !['ticket', 'generation', 'state'].every((field) => fields.includes(field))
+      || activation.state !== 'completed'
+      || !Number.isSafeInteger(activation.ticket) || activation.ticket <= 0
+      || !Number.isSafeInteger(activation.generation) || activation.generation <= 0) {
+      throw new Error('fixture-activation generation proof is malformed');
     }
   }
   let previousTicket = readinessReceiptRequired ? readinessReceipt.ticket : 0;
@@ -2189,7 +2247,7 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   }
   if (!VISUAL_LAB_CAPTURE_PROOF_MODES.includes(captureProof)) {
     throw new Error(
-      'Visual Lab batch captureProof must be stable-snapshots, completed-frame-receipt, readiness-completed-frame-receipt, or selection-owned-frame-receipt',
+      'Visual Lab batch captureProof must be stable-snapshots, completed-frame-receipt, readiness-completed-frame-receipt, selection-owned-frame-receipt, or fixture-activation-generation',
     );
   }
   if (browserHost === 'shared' && process.platform !== 'linux') {
@@ -2913,7 +2971,7 @@ export function parseVisualLabBatchArguments(argv) {
   }
   const captureProof = values.get('capture-proof') ?? 'stable-snapshots';
   if (!VISUAL_LAB_CAPTURE_PROOF_MODES.includes(captureProof)) {
-    throw new Error('--capture-proof must be stable-snapshots, completed-frame-receipt, readiness-completed-frame-receipt, or selection-owned-frame-receipt');
+    throw new Error('--capture-proof must be stable-snapshots, completed-frame-receipt, readiness-completed-frame-receipt, selection-owned-frame-receipt, or fixture-activation-generation');
   }
   const candidateTimeoutMs = Number(
     values.get('candidate-timeout-ms') ?? VISUAL_LAB_DEFAULT_CANDIDATE_TIMEOUT_MS,

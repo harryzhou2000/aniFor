@@ -14738,6 +14738,15 @@ export class PixiFieldPresenter {
         && time - this.lastSolidOpticalDepthRefresh >= POWDER_SURFACE_REFRESH_INTERVAL);
   }
 
+  /** True only after all CPU-owned presentation work caused by an activation settled. */
+  fixtureActivationPresentationSettled(): boolean {
+    return !this.semanticTextureMutationPending
+      && !this.boundaryEvolutionPending
+      && !this.powderSurfaceDirty
+      && !this.solidOpticalDepthDirty
+      && !this.fieldSet.hasPendingRefresh;
+  }
+
   update(
     materials: Uint8Array,
     walls: Uint8Array | undefined,

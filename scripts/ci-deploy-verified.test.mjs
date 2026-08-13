@@ -69,6 +69,7 @@ describe('deploy-verified CI workflow contract', () => {
     expect(choices).toEqual([
       'stable-snapshots', 'completed-frame-receipt', 'readiness-completed-frame-receipt',
       'selection-owned-frame-receipt',
+      'fixture-activation-generation',
     ]);
 
     const inputReferences = workflow.match(

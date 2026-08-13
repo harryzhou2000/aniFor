@@ -5,18 +5,22 @@ import {
   createVisualLabExecutionTuningPlanV2,
   createVisualLabExecutionTuningPlanV3,
   createVisualLabExecutionTuningPlanV4,
+  createVisualLabExecutionTuningPlanV5,
   normalizeVisualLabExecutionTuningPlan,
   normalizeVisualLabExecutionTuningPlanV2,
   normalizeVisualLabExecutionTuningPlanV3,
   normalizeVisualLabExecutionTuningPlanV4,
+  normalizeVisualLabExecutionTuningPlanV5,
   resolveVisualLabExecutionTuningPlanEntry,
   resolveVisualLabExecutionTuningPlanV2Entry,
   resolveVisualLabExecutionTuningPlanV3Entry,
   resolveVisualLabExecutionTuningPlanV4Entry,
+  resolveVisualLabExecutionTuningPlanV5Entry,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA,
 } from './visual-lab-execution-tuning-plan.mjs';
 import {
   createVisualLabExecutionPlan,
@@ -103,6 +107,27 @@ const v4Profile = () => {
 const v4ProfilesFor = (capturePlan) => Object.fromEntries(
   [...new Set(capturePlan.inspection.entries.map(({ driver }) => driver.name))]
     .map((driver) => [driver, v4Profile()]),
+);
+const v5Profile = () => {
+  const result = v4Profile();
+  return {
+    startup: result.startup,
+    readiness: result.readiness,
+    readinessActivation: {
+      capability: 'renderer-fixture-activation-generation/v1',
+      requiredState: 'completed',
+      bind: 'typed-fixture-activation',
+      snapshotAfterCompletion: true,
+    },
+    selection: result.selection,
+    stability: result.stability,
+    completion: result.completion,
+    screenshot: result.screenshot,
+  };
+};
+const v5ProfilesFor = (capturePlan) => Object.fromEntries(
+  [...new Set(capturePlan.inspection.entries.map(({ driver }) => driver.name))]
+    .map((driver) => [driver, v5Profile()]),
 );
 
 describe('Visual Lab execution tuning plan', () => {
@@ -263,6 +288,27 @@ describe('Visual Lab execution tuning plan', () => {
     v4BindInV3.entries[0].profile.completion.bind = 'selection-owned-presentation';
     expect(() => normalizeVisualLabExecutionTuningPlanV3(v4BindInV3, capturePlan))
       .toThrow('exact completed-frame receipt proof');
+  });
+
+  it('creates and resolves additive fixture-activation generation v5 plans', () => {
+    const capturePlan = createVisualLabExecutionPlan({
+      candidates: ['powder-style-atlas'], baseUrl: 'file:///bundle/index.html', outputDir: '/review',
+      gpu: 'swiftshader',
+    });
+    const created = createVisualLabExecutionTuningPlanV5(capturePlan, v5ProfilesFor(capturePlan));
+    expect(created.schema).toBe(VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA);
+    expect(created.capturePlan.id).toBe(capturePlan.inspection.id);
+    expect(created.entries[0].profile).toEqual(v5Profile());
+    expect(normalizeVisualLabExecutionTuningPlanV5(structuredClone(created), capturePlan))
+      .toEqual(created);
+    expect(resolveVisualLabExecutionTuningPlanV5Entry(
+      created, created.entries[0].id, capturePlan.inspection.entries[0].id, capturePlan,
+    )).toEqual(created.entries[0]);
+
+    const tampered = structuredClone(created);
+    tampered.entries[0].profile.readinessActivation.bind = 'refreshed-presentation';
+    expect(() => normalizeVisualLabExecutionTuningPlanV5(tampered, capturePlan))
+      .toThrow('typed fixture-activation generation proof');
   });
 
   it('rejects malformed/tampered data, profile drift, unsafe names, and capture-plan mismatch', () => {

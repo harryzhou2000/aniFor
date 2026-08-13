@@ -58,9 +58,11 @@ import {
   resolveVisualLabExecutionTuningPlanV2Entry,
   resolveVisualLabExecutionTuningPlanV3Entry,
   resolveVisualLabExecutionTuningPlanV4Entry,
+  resolveVisualLabExecutionTuningPlanV5Entry,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V2_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V3_SCHEMA,
   VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA,
+  VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA,
 } from './visual-lab-execution-tuning-plan.mjs';
 import {
   createVisualCaptureGeometryProof,
@@ -90,6 +92,12 @@ const READINESS_COMPLETED_FRAME_RECEIPT_DESCRIPTOR = Object.freeze({
 const SELECTION_OWNED_COMPLETED_FRAME_RECEIPT_DESCRIPTOR = Object.freeze({
   ...COMPLETED_FRAME_RECEIPT_DESCRIPTOR,
   bind: 'selection-owned-presentation',
+});
+const FIXTURE_ACTIVATION_READINESS_DESCRIPTOR = Object.freeze({
+  capability: 'renderer-fixture-activation-generation/v1',
+  requiredState: 'completed',
+  bind: 'typed-fixture-activation',
+  snapshotAfterCompletion: true,
 });
 
 /**
@@ -129,6 +137,9 @@ const resolveExecutionTuningPlanEntry = (
   }
   if (plan?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V4_SCHEMA) {
     return resolveVisualLabExecutionTuningPlanV4Entry(plan, entryId, expectedCaptureEntryId);
+  }
+  if (plan?.schema === VISUAL_LAB_EXECUTION_TUNING_PLAN_V5_SCHEMA) {
+    return resolveVisualLabExecutionTuningPlanV5Entry(plan, entryId, expectedCaptureEntryId);
   }
   if (plan?.schema === 'anifor.visual-lab.execution-tuning-plan/v1') {
     return resolveVisualLabExecutionTuningPlanEntry(plan, entryId, expectedCaptureEntryId);
@@ -524,7 +535,13 @@ async function captureVisualLabCandidateEvidence({
     executionTuning: executionTuningEntry,
   });
   const cdp = pageCdp;
+  let startupFixtureActivationTicket;
   const startupSelection = await measure('startup', async () => {
+    if (hasFixtureActivationReadinessDescriptor(options.executionTuning.profile)) {
+      const activation = await activateFixtureDuringStartup(cdp, options);
+      startupFixtureActivationTicket = activation.ticket;
+      return activation;
+    }
     // file:// keeps its historical direct launch. HTTP(S) has already begun
     // its bounded staged navigation after protocol setup; do not wait for its
     // acknowledgement before polling this short Canvas/WebGL handoff.
@@ -545,6 +562,7 @@ async function captureVisualLabCandidateEvidence({
     return selection;
   });
 
+  let readinessFixtureActivationGeneration;
   const readinessCompletedFrameReceipt = await measure('readiness', async () => {
     const { profile, effectiveTimeouts } = options.executionTuning;
     // A readiness snapshot performs the same complete semantic, authoritative-
@@ -555,6 +573,38 @@ async function captureVisualLabCandidateEvidence({
       CDP_COMMAND_TIMEOUT_MS,
       effectiveTimeouts.readinessMs,
     );
+    if (hasFixtureActivationReadinessDescriptor(profile)) {
+      assert(Number.isSafeInteger(startupFixtureActivationTicket)
+        && startupFixtureActivationTicket > 0,
+      'fixture activation readiness is missing its startup ticket');
+      const { generation, snapshot } = await captureSubphases.measureReadiness(
+        'datasetWaitMs', () => proveFixtureActivationReadiness({
+          ticket: startupFixtureActivationTicket,
+          timeoutMs: effectiveTimeouts.readinessMs,
+          pollIntervalMs: profile.readiness.pollIntervalMs,
+          readGeneration: (ticket) => readFixtureActivationPresentationGeneration(
+            cdp, 'readiness', ticket,
+          ),
+          takeSnapshot: () => captureSubphases.measureSnapshot(
+            'readiness', () => snapshotState(
+              cdp, options.executionPlan, snapshotCommandTimeoutMs,
+            ),
+          ),
+        }),
+      );
+      // V5 folds refresh into the atomic activation transaction. Retain the
+      // additive timing field explicitly rather than inventing a second action.
+      await captureSubphases.measureReadiness('refreshMs', async () => undefined);
+      assert(snapshot.semantic.occupied > 0
+        && snapshot.fieldAlpha.nonzero > 0
+        && snapshot.framebufferAlpha.nonzero > 0,
+      `fixture activation completed without populated ${options.fixture} presentation fields`);
+      const startupVariant = VARIANTS.find(({ name }) => name === profile.startup.variant);
+      assert(startupVariant !== undefined, 'readiness profile names an unknown startup variant');
+      assertVariantState(snapshot, options, startupVariant);
+      readinessFixtureActivationGeneration = generation;
+      return undefined;
+    }
     await captureSubphases.measureReadiness(
       'datasetWaitMs',
       () => waitForPage(
@@ -737,6 +787,8 @@ async function captureVisualLabCandidateEvidence({
       ...(executionTuningProof === undefined ? {} : { executionTuning: executionTuningProof }),
       ...(readinessCompletedFrameReceipt === undefined
         ? {} : { readinessCompletedFrameReceipt }),
+      ...(readinessFixtureActivationGeneration === undefined
+        ? {} : { readinessFixtureActivationGeneration }),
       captureSubphases: captureSubphases.finish(),
       startupSelection,
       backend: reference.backend.backend,
@@ -1219,6 +1271,90 @@ async function stageVariantDuringStartup(cdp, options) {
   );
 }
 
+async function activateFixtureDuringStartup(cdp, options) {
+  const { profile, effectiveTimeouts } = options.executionTuning;
+  const startupVariant = VARIANTS.find(({ name }) => name === profile.startup.variant);
+  assert(startupVariant !== undefined, 'fixture activation profile names an unknown startup variant');
+  await waitFor(
+    () => evaluate(cdp, `(() => {
+      const audit = window.__ANIFOR_INPUT_AUDIT__;
+      const canvas = document.querySelector('.semantic-field-canvas');
+      const root = document.querySelector('[data-scene]');
+      if (!audit || !canvas || !root
+        || typeof audit.activatePreparedVisualCaptureFixture !== 'function'
+        || typeof audit.fixtureActivationPresentationGeneration !== 'function'
+        || root.dataset.scene !== ${JSON.stringify(options.fixtureAdapter.scene)}) return false;
+      const backend = audit.backend();
+      const dataset = canvas.dataset;
+      return backend.backend === ${JSON.stringify(options.domainAdapter.executionProfile.backend)}
+        && backend.outputScale === ${options.renderScale}
+        && dataset.renderer === ${JSON.stringify(VISUAL_LAB_CAPTURE_PROTOCOL.datasetRequirements.renderer)}
+        && dataset.hdrPipeline === ${JSON.stringify(VISUAL_LAB_CAPTURE_PROTOCOL.datasetRequirements.hdrPipeline)};
+    })()`),
+    effectiveTimeouts.readinessMs,
+    `${options.fixture} typed activation audit bridge`,
+    profile.readiness.pollIntervalMs,
+  );
+  const ticket = await requestTypedFixtureActivationGeneration(
+    (fixture, variant) => evaluate(cdp, `(() => (
+      window.__ANIFOR_INPUT_AUDIT__.activatePreparedVisualCaptureFixture(
+        ${JSON.stringify(fixture)}, ${variant}
+      )
+    ))()`),
+    options.fixture,
+    startupVariant.value,
+  );
+  const startupDriverFields = options.executionPlan.compiled.startupFields;
+  return Object.freeze({
+    requestedVariant: startupVariant.value,
+    fixture: options.fixture,
+    scene: options.fixtureAdapter.scene,
+    preparation: options.executionPlan.inspection.fixture.preparation.reportLabel,
+    fixturePrepared: true,
+    typedActivation: true,
+    ticket,
+    ...startupDriverFields,
+  });
+}
+
+/** Calls the typed fixture activation API exactly once and validates its ticket. */
+export async function requestTypedFixtureActivationGeneration(activate, fixture, variant) {
+  if (typeof activate !== 'function') {
+    throw new TypeError('Typed fixture activation must be a function');
+  }
+  const ticket = await activate(fixture, variant);
+  assert(Number.isSafeInteger(ticket) && ticket > 0,
+    'typed fixture activation returned an invalid presentation generation ticket');
+  return ticket;
+}
+
+/** Waits for one activation generation, snapshots once, then verifies the same generation. */
+export async function proveFixtureActivationReadiness({
+  ticket,
+  timeoutMs,
+  pollIntervalMs,
+  readGeneration,
+  takeSnapshot,
+}) {
+  if (typeof readGeneration !== 'function' || typeof takeSnapshot !== 'function') {
+    throw new TypeError('Fixture activation readiness requires generation and snapshot readers');
+  }
+  const completed = await waitFor(async () => {
+    const generation = await readGeneration(ticket);
+    if (generation.state === 'pending') return false;
+    return generation;
+  }, timeoutMs, `fixture activation presentation generation ${ticket}`, pollIntervalMs);
+  assert(completed.state === 'completed',
+    `fixture activation presentation generation ${ticket} is ${String(completed.state)}`);
+  const snapshot = await takeSnapshot();
+  const verified = await readGeneration(ticket);
+  assert(verified.state === 'completed'
+    && verified.ticket === completed.ticket
+    && verified.generation === completed.generation,
+  'fixture activation presentation generation changed after its snapshot');
+  return Object.freeze({ generation: verified, snapshot });
+}
+
 async function waitForPage(
   cdp,
   options,
@@ -1658,6 +1794,33 @@ function hasSelectionOwnedCompletedFrameReceiptDescriptor(profile) {
   const keys = Object.keys(completion);
   return keys.length === Object.keys(expected).length
     && Object.keys(expected).every((name) => completion[name] === expected[name]);
+}
+
+function hasFixtureActivationReadinessDescriptor(profile) {
+  const activation = profile?.readinessActivation;
+  if (activation === null || typeof activation !== 'object' || Array.isArray(activation)) {
+    return false;
+  }
+  const expected = FIXTURE_ACTIVATION_READINESS_DESCRIPTOR;
+  const keys = Object.keys(activation);
+  return keys.length === Object.keys(expected).length
+    && Object.keys(expected).every((name) => activation[name] === expected[name]);
+}
+
+async function readFixtureActivationPresentationGeneration(cdp, label, ticket) {
+  const generation = await evaluate(cdp, `(() => (
+    window.__ANIFOR_INPUT_AUDIT__?.fixtureActivationPresentationGeneration?.(${ticket})
+  ))()`);
+  assert(generation !== null && typeof generation === 'object' && !Array.isArray(generation),
+    `${label} fixture activation presentation generation ${ticket} is unavailable`);
+  const keys = Object.keys(generation);
+  assert(keys.length === 3
+    && keys[0] === 'ticket' && keys[1] === 'generation' && keys[2] === 'state'
+    && generation.ticket === ticket
+    && Number.isSafeInteger(generation.generation) && generation.generation > 0
+    && ['pending', 'completed', 'failed'].includes(generation.state),
+  `${label} fixture activation presentation generation ${ticket} is malformed`);
+  return generation;
 }
 
 /**

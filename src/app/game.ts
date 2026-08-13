@@ -18,6 +18,7 @@ import {
 import { WorldInputController } from '../ui/world-input';
 import { drawToolPoint, drawToolSegment, finishToolStroke } from './tool-dispatch';
 import {
+  activatePreparedVisualCaptureFixture,
   blankBrowserInputAuditRequested, browserInputAuditRequested,
   prepareContourStressAuditFixture, prepareDenseSolidAuditFixture,
   prepareSolidFieldLightingAuditFixture, prepareSolidOpticalDepthAuditFixture,
@@ -942,6 +943,29 @@ export class Game {
         if (didMutate) this.renderer.synchronizeFixtureMaterialPlane();
         visualCaptureControls.markFixturePrepared(fixture);
       },
+      activatePreparedVisualCaptureFixture: (fixture, variant) => (
+        activatePreparedVisualCaptureFixture({
+          runWithNextFixtureActivationPresentationGeneration: (activate) => (
+            this.renderer.runWithNextFixtureActivationPresentationGeneration(activate)
+          ),
+          prepareFixture: (selectedFixture) => (
+            prepareVisualLabFixture(this.simulation, selectedFixture)
+          ),
+          synchronizeFixtureMaterialPlane: () => (
+            this.renderer.synchronizeFixtureMaterialPlane()
+          ),
+          markFixturePrepared: (selectedFixture) => (
+            visualCaptureControls.markFixturePrepared(selectedFixture)
+          ),
+          setVariant: (selectedFixture, selectedVariant) => (
+            visualCaptureControls.setVariant(selectedFixture, selectedVariant)
+          ),
+          invalidateDynamicPresentation: () => this.renderer.invalidateDynamicPresentation(),
+        }, fixture, variant)
+      ),
+      fixtureActivationPresentationGeneration: (ticket) => (
+        this.renderer.getFixtureActivationPresentationGeneration(ticket)
+      ),
       setPreparedVisualCaptureVariant: (fixture, variant) => {
         visualCaptureControls.setVariant(fixture, variant);
       },

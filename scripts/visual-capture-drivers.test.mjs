@@ -381,6 +381,8 @@ describe('typed visual capture drivers', () => {
     expect(typeof audit.digestVisualLabFramebufferAlpha).toBe('function');
     expect(typeof audit.beginStagedVisualLabNavigation).toBe('function');
     expect(typeof audit.assertContiguousSelectionOwnedReceiptSubmissions).toBe('function');
+    expect(typeof audit.requestTypedFixtureActivationGeneration).toBe('function');
+    expect(typeof audit.proveFixtureActivationReadiness).toBe('function');
     const source = readFileSync(new URL('./visual-lab-audit.mjs', import.meta.url), 'utf8');
     expect(source).toContain('entry: options.executionPlan');
     expect(source).toContain('createVisualLabCaptureSubphaseTimingRecorder');
@@ -403,6 +405,67 @@ describe('typed visual capture drivers', () => {
       .toBeLessThan(source.lastIndexOf('captureVisualLabCandidateEvidence({'));
     expect(source).toContain('realpathSync(process.argv[1]) === realpathSync(MODULE_PATH)');
     expect(source).not.toMatch(/export async function captureVisualLabCandidatePage\(cdp, options/);
+  });
+
+  it('activates v5 startup once and proves readiness with one snapshot and one reread', async () => {
+    const {
+      proveFixtureActivationReadiness,
+      requestTypedFixtureActivationGeneration,
+    } = await import('./visual-lab-audit.mjs');
+    const activationCalls = [];
+    const ticket = await requestTypedFixtureActivationGeneration((fixture, variant) => {
+      activationCalls.push([fixture, variant]);
+      return 17;
+    }, 'powder-style-atlas', 2);
+    expect(ticket).toBe(17);
+    expect(activationCalls).toEqual([['powder-style-atlas', 2]]);
+
+    const reads = [
+      { ticket: 17, generation: 31, state: 'pending' },
+      { ticket: 17, generation: 31, state: 'completed' },
+      { ticket: 17, generation: 31, state: 'completed' },
+    ];
+    let snapshots = 0;
+    const proof = await proveFixtureActivationReadiness({
+      ticket,
+      timeoutMs: 20,
+      pollIntervalMs: 1,
+      readGeneration: () => reads.shift(),
+      takeSnapshot: () => {
+        snapshots++;
+        return { semantic: 'one-full-snapshot' };
+      },
+    });
+    expect(proof).toEqual({
+      generation: { ticket: 17, generation: 31, state: 'completed' },
+      snapshot: { semantic: 'one-full-snapshot' },
+    });
+    expect(reads).toEqual([]);
+    expect(snapshots).toBe(1);
+
+    await expect(requestTypedFixtureActivationGeneration(() => 0, 'showcase', 2))
+      .rejects.toThrow('invalid presentation generation ticket');
+    await expect(proveFixtureActivationReadiness({
+      ticket: 17,
+      timeoutMs: 1_000,
+      pollIntervalMs: 1,
+      readGeneration: () => ({ ticket: 17, generation: 32, state: 'failed' }),
+      takeSnapshot: () => {
+        throw new Error('snapshot must not run');
+      },
+    })).rejects.toThrow('generation 17 is failed');
+
+    const changed = [
+      { ticket: 17, generation: 31, state: 'completed' },
+      { ticket: 17, generation: 32, state: 'completed' },
+    ];
+    await expect(proveFixtureActivationReadiness({
+      ticket: 17,
+      timeoutMs: 20,
+      pollIntervalMs: 1,
+      readGeneration: () => changed.shift(),
+      takeSnapshot: () => ({ semantic: 'single-snapshot-before-reread' }),
+    })).rejects.toThrow('changed after its snapshot');
   });
 
   it('fails closed when selection-owned OFF/A/B receipt submissions are not contiguous', async () => {

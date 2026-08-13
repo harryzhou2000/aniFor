@@ -172,6 +172,24 @@ export interface PresentationRefreshAudit {
   readonly dynamicSequence: number;
 }
 
+export type FixtureActivationPresentationGenerationState =
+  'pending' | 'completed' | 'failed';
+
+/** Audit-only proof that one post-activation FieldRenderer presentation ran. */
+export interface FixtureActivationPresentationGeneration {
+  readonly ticket: number;
+  readonly generation: number;
+  readonly state: FixtureActivationPresentationGenerationState;
+}
+
+interface MutableFixtureActivationPresentationGeneration {
+  ticket: number;
+  generation: number;
+  state: FixtureActivationPresentationGenerationState;
+}
+
+const FIXTURE_ACTIVATION_PRESENTATION_HISTORY = 4;
+
 /** Exact CPU evidence for the field that owns reconstructed gas support. */
 export interface AtmosphereSupportAudit {
   readonly nonzero: number;
@@ -397,6 +415,10 @@ export class MaterialRenderer {
   private webGLPresentationTimingEnabled = false;
   private presentationRefreshAuditEnabled = false;
   private presentationRefreshAudit?: PresentationRefreshAudit;
+  private fixtureActivationTicketSequence = 0;
+  private fixtureActivationPresentationGeneration = 0;
+  private fixtureActivationPresentation?: MutableFixtureActivationPresentationGeneration;
+  private fixtureActivationPresentations?: Map<number, MutableFixtureActivationPresentationGeneration>;
   /** Latest same-page A/B choice, retained across asynchronous WebGL startup. */
   private desiredVisualLabVariant?: VisualLabVariant;
   /** Latest shared material-lighting choice, retained across WebGL startup. */
@@ -472,6 +494,7 @@ export class MaterialRenderer {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.failFixtureActivationPresentationGeneration();
     this.clearResizeSources();
     const presenter = this.presenter;
     this.presenter = undefined;
@@ -497,6 +520,7 @@ export class MaterialRenderer {
   async disposeForAudit(): Promise<void> {
     if (this.disposed) throw new Error('Renderer was already disposed before strict audit teardown');
     this.disposed = true;
+    this.failFixtureActivationPresentationGeneration();
     this.clearResizeSources();
     const presenter = this.presenter;
     this.presenter = undefined;
@@ -633,7 +657,15 @@ export class MaterialRenderer {
         dynamicSequence: (previous?.dynamicSequence ?? 0) + Number(refreshDynamicFields),
       };
     }
-    this.drawField(time, visualTime, refreshDynamicFields);
+    try {
+      this.drawField(time, visualTime, refreshDynamicFields);
+      if (this.fixtureActivationPresentationSettled()) {
+        this.completeFixtureActivationPresentationGeneration();
+      }
+    } catch (error) {
+      this.failFixtureActivationPresentationGeneration();
+      throw error;
+    }
   }
 
   getViewState(): ViewState { return this.view.snapshot(); }
@@ -652,6 +684,91 @@ export class MaterialRenderer {
   /** Queues one semantic snapshot for a native mutation that retained material IDs. */
   invalidateDynamicPresentation(): void {
     this.dynamicPresentationInvalidated = true;
+  }
+
+  /**
+   * Reserves one audit-only generation before a typed fixture activation.
+   * Completion belongs only to the next successful FieldRenderer draw; this
+   * never fences the GPU or changes production scheduling when unused.
+   */
+  runWithNextFixtureActivationPresentationGeneration(
+    activate: () => void,
+  ): number | undefined {
+    if (typeof activate !== 'function') {
+      throw new TypeError('Fixture activation must be a function');
+    }
+    if (this.disposed || this.presenter?.isContextLost()) return undefined;
+    if (this.fixtureActivationPresentation?.state === 'pending') return undefined;
+    if (!Number.isSafeInteger(this.fixtureActivationTicketSequence)
+      || this.fixtureActivationTicketSequence >= Number.MAX_SAFE_INTEGER
+      || !Number.isSafeInteger(this.fixtureActivationPresentationGeneration)
+      || this.fixtureActivationPresentationGeneration >= Number.MAX_SAFE_INTEGER) {
+      return undefined;
+    }
+    const ticket = this.fixtureActivationTicketSequence + 1;
+    const presentation: MutableFixtureActivationPresentationGeneration = {
+      ticket,
+      generation: this.fixtureActivationPresentationGeneration + 1,
+      state: 'pending',
+    };
+    this.fixtureActivationTicketSequence = ticket;
+    this.fixtureActivationPresentation = presentation;
+    const history = this.fixtureActivationPresentations ??= new Map();
+    history.set(ticket, presentation);
+    while (history.size > FIXTURE_ACTIVATION_PRESENTATION_HISTORY) {
+      const oldest = history.keys().next().value as number | undefined;
+      if (oldest === undefined) break;
+      history.delete(oldest);
+    }
+    try {
+      activate();
+    } catch (error) {
+      this.failFixtureActivationPresentationGeneration();
+      throw error;
+    }
+    // Synchronous rendering from an activation callback is outside this closed
+    // transaction; it cannot be accepted retrospectively as the requested
+    // next presentation.
+    if (presentation.state !== 'pending') {
+      presentation.state = 'failed';
+      return undefined;
+    }
+    this.dynamicPresentationInvalidated = true;
+    this.changed = true;
+    return ticket;
+  }
+
+  getFixtureActivationPresentationGeneration(
+    ticket: number,
+  ): FixtureActivationPresentationGeneration | undefined {
+    if (!Number.isSafeInteger(ticket) || ticket <= 0) return undefined;
+    const presentation = this.fixtureActivationPresentations?.get(ticket);
+    if (!presentation) return undefined;
+    return Object.freeze({
+      ticket: presentation.ticket,
+      generation: presentation.generation,
+      state: presentation.state,
+    });
+  }
+
+  private completeFixtureActivationPresentationGeneration(): void {
+    const presentation = this.fixtureActivationPresentation;
+    if (!presentation || presentation.state !== 'pending') return;
+    this.fixtureActivationPresentationGeneration = presentation.generation;
+    presentation.state = 'completed';
+  }
+
+  private fixtureActivationPresentationSettled(): boolean {
+    if (this.presenter) return this.presenter.fixtureActivationPresentationSettled();
+    return !this.boundaryEvolutionPending
+      && !this.powderSurfaceDirty
+      && !this.solidOpticalDepthDirty
+      && !(this.fallbackFields?.hasPendingRefresh ?? false);
+  }
+
+  private failFixtureActivationPresentationGeneration(): void {
+    const presentation = this.fixtureActivationPresentation;
+    if (presentation?.state === 'pending') presentation.state = 'failed';
   }
 
   /**
@@ -1783,6 +1900,7 @@ export class MaterialRenderer {
     reason: 'webgl-context-lost' | 'webgl-timeout',
   ): void {
     if (this.presenter !== presenter) return;
+    this.failFixtureActivationPresentationGeneration();
     this.presenter = undefined;
     try { presenter.destroy(); }
     catch { /* the browser has already invalidated the presenter */ }

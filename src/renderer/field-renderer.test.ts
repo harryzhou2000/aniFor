@@ -1,7 +1,154 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createAnimationFrameCoalescer, MaterialRenderer } from './field-renderer';
+import { readFileSync } from 'node:fs';
 
 describe('field renderer layout scheduling', () => {
+  it('reserves a frozen fixture-activation generation before queuing its next draw', () => {
+    const renderer = Object.create(MaterialRenderer.prototype) as {
+      disposed: boolean;
+      presenter?: { isContextLost(): boolean };
+      fixtureActivationTicketSequence: number;
+      fixtureActivationPresentationGeneration: number;
+      fixtureActivationPresentation?: { ticket: number; generation: number; state: string };
+      fixtureActivationPresentations?: Map<number, { ticket: number; generation: number; state: string }>;
+      dynamicPresentationInvalidated: boolean;
+      changed: boolean;
+      runWithNextFixtureActivationPresentationGeneration(action: () => void): number | undefined;
+      getFixtureActivationPresentationGeneration(ticket: number): {
+        ticket: number; generation: number; state: string;
+      } | undefined;
+    };
+    Object.assign(renderer, {
+      disposed: false,
+      fixtureActivationTicketSequence: 0,
+      fixtureActivationPresentationGeneration: 0,
+      dynamicPresentationInvalidated: false,
+      changed: false,
+    });
+    let reservedBeforeActivation = false;
+
+    const ticket = renderer.runWithNextFixtureActivationPresentationGeneration(() => {
+      reservedBeforeActivation = renderer.fixtureActivationPresentation?.state === 'pending';
+    });
+
+    expect(ticket).toBe(1);
+    expect(reservedBeforeActivation).toBe(true);
+    expect(renderer.dynamicPresentationInvalidated).toBe(true);
+    expect(renderer.changed).toBe(true);
+    const pending = renderer.getFixtureActivationPresentationGeneration(1);
+    expect(pending).toEqual({ ticket: 1, generation: 1, state: 'pending' });
+    expect(Object.isFrozen(pending)).toBe(true);
+  });
+
+  it('completes only after the draw hook and retains bounded generations', () => {
+    const renderer = Object.create(MaterialRenderer.prototype) as {
+      disposed: boolean;
+      fixtureActivationTicketSequence: number;
+      fixtureActivationPresentationGeneration: number;
+      fixtureActivationPresentation?: { ticket: number; generation: number; state: string };
+      fixtureActivationPresentations?: Map<number, { ticket: number; generation: number; state: string }>;
+      dynamicPresentationInvalidated: boolean;
+      changed: boolean;
+      runWithNextFixtureActivationPresentationGeneration(action: () => void): number | undefined;
+      getFixtureActivationPresentationGeneration(ticket: number): {
+        ticket: number; generation: number; state: string;
+      } | undefined;
+      completeFixtureActivationPresentationGeneration(): void;
+    };
+    Object.assign(renderer, {
+      disposed: false,
+      fixtureActivationTicketSequence: 0,
+      fixtureActivationPresentationGeneration: 0,
+      dynamicPresentationInvalidated: false,
+      changed: false,
+    });
+
+    for (let expected = 1; expected <= 6; expected++) {
+      const ticket = renderer.runWithNextFixtureActivationPresentationGeneration(() => {});
+      expect(ticket).toBe(expected);
+      expect(renderer.getFixtureActivationPresentationGeneration(expected)?.state).toBe('pending');
+      renderer.completeFixtureActivationPresentationGeneration();
+      expect(renderer.getFixtureActivationPresentationGeneration(expected)).toEqual({
+        ticket: expected, generation: expected, state: 'completed',
+      });
+    }
+    expect(renderer.getFixtureActivationPresentationGeneration(1)).toBeUndefined();
+    expect(renderer.getFixtureActivationPresentationGeneration(2)).toBeUndefined();
+    expect(renderer.fixtureActivationPresentations?.size).toBe(4);
+
+    const source = readFileSync(new URL('./field-renderer.ts', import.meta.url), 'utf8');
+    expect(source).toMatch(
+      /this\.drawField\(time, visualTime, refreshDynamicFields\);\s*if \(this\.fixtureActivationPresentationSettled\(\)\) \{\s*this\.completeFixtureActivationPresentationGeneration\(\);/,
+    );
+  });
+
+  it('keeps an activation pending until renderer-owned auxiliary presentation work settles', () => {
+    const settled = vi.fn(() => false);
+    const renderer = Object.create(MaterialRenderer.prototype) as {
+      presenter?: { fixtureActivationPresentationSettled(): boolean };
+      boundaryEvolutionPending: boolean;
+      powderSurfaceDirty: boolean;
+      solidOpticalDepthDirty: boolean;
+      fallbackFields?: { hasPendingRefresh: boolean };
+      fixtureActivationPresentationSettled(): boolean;
+    };
+    renderer.presenter = { fixtureActivationPresentationSettled: settled };
+
+    expect(renderer.fixtureActivationPresentationSettled()).toBe(false);
+    settled.mockReturnValue(true);
+    expect(renderer.fixtureActivationPresentationSettled()).toBe(true);
+    expect(settled).toHaveBeenCalledTimes(2);
+
+    renderer.presenter = undefined;
+    Object.assign(renderer, {
+      boundaryEvolutionPending: false,
+      powderSurfaceDirty: false,
+      solidOpticalDepthDirty: false,
+      fallbackFields: { hasPendingRefresh: true },
+    });
+    expect(renderer.fixtureActivationPresentationSettled()).toBe(false);
+    renderer.fallbackFields = { hasPendingRefresh: false };
+    expect(renderer.fixtureActivationPresentationSettled()).toBe(true);
+  });
+
+  it('fails fixture-activation generations on callback failure and rejects overlap or disposal', () => {
+    const renderer = Object.create(MaterialRenderer.prototype) as {
+      disposed: boolean;
+      presenter?: { isContextLost(): boolean };
+      fixtureActivationTicketSequence: number;
+      fixtureActivationPresentationGeneration: number;
+      fixtureActivationPresentations?: Map<number, { ticket: number; generation: number; state: string }>;
+      dynamicPresentationInvalidated: boolean;
+      changed: boolean;
+      runWithNextFixtureActivationPresentationGeneration(action: () => void): number | undefined;
+      getFixtureActivationPresentationGeneration(ticket: number): {
+        ticket: number; generation: number; state: string;
+      } | undefined;
+      dispose(): void;
+    };
+    Object.assign(renderer, {
+      disposed: false,
+      fixtureActivationTicketSequence: 0,
+      fixtureActivationPresentationGeneration: 0,
+      dynamicPresentationInvalidated: false,
+      changed: false,
+    });
+
+    expect(() => renderer.runWithNextFixtureActivationPresentationGeneration(() => {
+      throw new Error('activation failed');
+    })).toThrow('activation failed');
+    expect(renderer.getFixtureActivationPresentationGeneration(1)?.state).toBe('failed');
+
+    expect(renderer.runWithNextFixtureActivationPresentationGeneration(() => {})).toBe(2);
+    const overlapping = vi.fn();
+    expect(renderer.runWithNextFixtureActivationPresentationGeneration(overlapping)).toBeUndefined();
+    expect(overlapping).not.toHaveBeenCalled();
+
+    renderer.dispose();
+    expect(renderer.getFixtureActivationPresentationGeneration(2)?.state).toBe('failed');
+    expect(renderer.runWithNextFixtureActivationPresentationGeneration(vi.fn())).toBeUndefined();
+  });
+
   it('reads and hashes the exact fallback suspension field without reallocating it', () => {
     const bytes = new Uint8Array([
       215, 170, 104, 9,

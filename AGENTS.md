@@ -1832,9 +1832,38 @@ and the established OFF/A/B hashes. It used stable readiness with four complete
 snapshot attempts, no readiness receipt, then selection-owned submissions
 `9 -> 10 -> 11`. OFF/A/B phases were 2.06–2.14s and total capture was 31.88s.
 The downloaded-style portable verifier passed and both audit and verifier reject
-a missing, reordered, or gapped capture chain. Keep a fresh hosted ABBA run as
-the remaining decision before calling v4 the performance control; durations are
-diagnostic and visual/result identity parity is the correctness requirement.
+a missing, reordered, or gapped capture chain.
+
+The corrected hosted v4 ABBA control passed at exact revision
+`f2060151b5604ab24353b4975fcc76037439ce8c` in workflow run `31666518585`.
+All four fresh/shared/shared/fresh legs preserved portable identity with no host
+recycle. Stable readiness took five snapshots and 50.17–50.63s, including about
+29.6–29.9s of complete readback. OFF/A/B remained 5.21–5.69s each while their
+selection calls took only 31–66ms and each retained one full snapshot. Candidate
+totals were 68.96–74.88s. V4 is therefore the manual Powder performance control:
+it robustly removes the duplicate selection presentation, but readiness is again
+the dominant cost. Durations remain diagnostic; do not turn them into thresholds.
+
+The next opt-in readiness seam is implemented locally as execution-tuning-plan/v5.
+One typed browser call reserves a renderer activation generation before performing
+prepare, conditional semantic synchronization, fixture activation, startup-B
+selection, and dynamic invalidation. The generation is CPU scheduling evidence,
+not a GPU fence: it becomes completed only after a successful presentation and
+all renderer-owned semantic, boundary, powder, solid-depth, volume, and suspension
+work triggered by activation is quiescent. The first real attempt completed after
+the initial draw and exposed a successor-frame race through a failed retained
+framebuffer readback; never regress to that first-draw meaning. The audit waits
+for the exact generation, takes one full semantic/field/framebuffer snapshot,
+then rereads the same completed generation. V5 retains v4 selection-owned OFF/A/B.
+
+The corrected local SwiftShader Powder v5 package passed with the established
+result `sha256:b3edbc669cc2c2408ef712ea6089b42e85e1ba60944d3d78b4bd0942de23f67f`
+and all three established PNG hashes. Activation generation `1` completed,
+readiness used exactly one snapshot, OFF/A/B submissions were `13 -> 14 -> 15`,
+and the portable verifier reconstructed execution-tuning-plan/v5. Local startup,
+readiness, and total were 12.56s, 19.67s, and 38.93s respectively. Keep v5
+manual/opt-in until hosted ABBA evidence passes; v1 stays default, Water stays v2,
+and v4 remains the proven hosted performance control.
 
 The renderer-owned completed-frame receipt is now a protected audit capability.
 `anifor.renderer.completed-frame-receipt/v1` binds every ticket to the exact

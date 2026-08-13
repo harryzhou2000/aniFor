@@ -3,8 +3,10 @@ import {
   createVisualCaptureExecutionCapabilityRegistry,
   createVisualCaptureExecutionV2CapabilityRegistry,
   createVisualCaptureExecutionV4CapabilityRegistry,
+  createVisualCaptureExecutionV5CapabilityRegistry,
   resolveVisualCaptureExecutionV3Capabilities,
   resolveVisualCaptureExecutionV4Capabilities,
+  resolveVisualCaptureExecutionV5Capabilities,
   resolveVisualCaptureExecutionCapabilities,
   resolveVisualCaptureExecutionV2Capabilities,
   VISUAL_CAPTURE_EXECUTION_CAPABILITIES,
@@ -15,10 +17,13 @@ import {
   VISUAL_CAPTURE_EXECUTION_V3_CAPABILITY_NAMES,
   VISUAL_CAPTURE_EXECUTION_V4_CAPABILITIES,
   VISUAL_CAPTURE_EXECUTION_V4_CAPABILITY_NAMES,
+  VISUAL_CAPTURE_EXECUTION_V5_CAPABILITIES,
+  VISUAL_CAPTURE_EXECUTION_V5_CAPABILITY_NAMES,
   visualCaptureExecutionCapabilitiesForCaptureOrder,
   visualCaptureExecutionV2CapabilitiesForCaptureOrder,
   visualCaptureExecutionV3CapabilitiesForCaptureOrder,
   visualCaptureExecutionV4CapabilitiesForCaptureOrder,
+  visualCaptureExecutionV5CapabilitiesForCaptureOrder,
 } from './visual-capture-execution-capabilities.mjs';
 import { VISUAL_CAPTURE_DRIVER_NAMES } from './visual-capture-drivers.mjs';
 import { VISUAL_CAPTURE_STATIC_CONTRACT } from '../src/shared/visual-capture-static-contract.js';
@@ -94,11 +99,29 @@ const v4Capability = () => {
     screenshot: profile.screenshot,
   };
 };
+const v5Capability = () => {
+  const profile = v4Capability();
+  return {
+    startup: profile.startup,
+    readiness: profile.readiness,
+    readinessActivation: {
+      capability: 'renderer-fixture-activation-generation/v1',
+      requiredState: 'completed',
+      bind: 'typed-fixture-activation',
+      snapshotAfterCompletion: true,
+    },
+    selection: profile.selection,
+    stability: profile.stability,
+    completion: profile.completion,
+    screenshot: profile.screenshot,
+  };
+};
 
 const syntheticDrivers = Object.freeze([Object.freeze({ name: 'first' }), Object.freeze({ name: 'second' })]);
 const syntheticProfiles = () => ({ first: capability(), second: capability() });
 const syntheticV2Profiles = () => ({ first: v2Capability(), second: v2Capability() });
 const syntheticV4Profiles = () => ({ first: v4Capability(), second: v4Capability() });
+const syntheticV5Profiles = () => ({ first: v5Capability(), second: v5Capability() });
 
 describe('visual capture execution capabilities', () => {
   it('is exhaustive and ordered exactly like the typed static capture drivers', () => {
@@ -162,6 +185,23 @@ describe('visual capture execution capabilities', () => {
       .toBe(VISUAL_CAPTURE_EXECUTION_V4_CAPABILITIES['normal-hdr']);
     expect(visualCaptureExecutionV4CapabilitiesForCaptureOrder(['normal-hdr'])['normal-hdr'])
       .toBe(VISUAL_CAPTURE_EXECUTION_V4_CAPABILITIES['normal-hdr']);
+  });
+
+  it('adds typed fixture-activation readiness only through v5', () => {
+    expect(VISUAL_CAPTURE_EXECUTION_V5_CAPABILITY_NAMES)
+      .toEqual(VISUAL_CAPTURE_EXECUTION_CAPABILITY_NAMES);
+    for (const name of VISUAL_CAPTURE_EXECUTION_V5_CAPABILITY_NAMES) {
+      expect(VISUAL_CAPTURE_EXECUTION_V5_CAPABILITIES[name]).toEqual(v5Capability());
+    }
+    expect(resolveVisualCaptureExecutionV5Capabilities('normal-hdr'))
+      .toBe(VISUAL_CAPTURE_EXECUTION_V5_CAPABILITIES['normal-hdr']);
+    expect(visualCaptureExecutionV5CapabilitiesForCaptureOrder(['normal-hdr'])['normal-hdr'])
+      .toBe(VISUAL_CAPTURE_EXECUTION_V5_CAPABILITIES['normal-hdr']);
+
+    const invalid = syntheticV5Profiles();
+    invalid.first.readinessActivation.requiredState = 'pending';
+    expect(() => createVisualCaptureExecutionV5CapabilityRegistry(syntheticDrivers, invalid))
+      .toThrow('readinessActivation is not supported');
   });
 
   it('is recursively frozen and JSON-safe', () => {

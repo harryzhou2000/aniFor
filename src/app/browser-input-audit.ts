@@ -1,6 +1,6 @@
 import type {
-  AtmosphereSupportAudit, CanvasPresentationTiming, PresentationRefreshAudit, RendererBackendInfo,
-  SuspensionSupportAudit,
+  AtmosphereSupportAudit, CanvasPresentationTiming, FixtureActivationPresentationGeneration,
+  PresentationRefreshAudit, RendererBackendInfo, SuspensionSupportAudit,
 } from '../renderer/field-renderer';
 import type {
   WebGLCompletedFrameReceipt, WebGLFramebufferAlphaReadback, WebGLPresentationTiming,
@@ -124,6 +124,41 @@ import type { VisualLabFixtureId } from './visual-lab-fixture-preparation';
 import type {
   MaterialCandidateSurveyAuditSnapshot, MaterialShowcaseAuditSnapshot,
 } from '../renderer/render-lab-scene';
+
+export interface PreparedVisualCaptureActivationHost {
+  runWithNextFixtureActivationPresentationGeneration(activate: () => void): number | undefined;
+  prepareFixture(fixture: VisualLabFixtureId): boolean;
+  synchronizeFixtureMaterialPlane(): void;
+  markFixturePrepared(fixture: VisualLabFixtureId): void;
+  setVariant(fixture: VisualLabFixtureId, variant: VisualCaptureControlVariant): void;
+  invalidateDynamicPresentation(): void;
+}
+
+/**
+ * Performs the complete typed fixture activation under one renderer-owned
+ * next-presentation reservation. Runtime validation happens before authored
+ * fixture mutation, and no-op fixtures still invalidate one presentation.
+ */
+export function activatePreparedVisualCaptureFixture(
+  host: PreparedVisualCaptureActivationHost,
+  fixture: VisualLabFixtureId,
+  variant: VisualCaptureControlVariant,
+): number {
+  if (variant !== 0 && variant !== 1 && variant !== 2) {
+    throw new Error(`Invalid Visual capture control variant ${JSON.stringify(variant)}`);
+  }
+  const generation = host.runWithNextFixtureActivationPresentationGeneration(() => {
+    const didMutate = host.prepareFixture(fixture);
+    if (didMutate) host.synchronizeFixtureMaterialPlane();
+    host.markFixturePrepared(fixture);
+    host.setVariant(fixture, variant);
+    host.invalidateDynamicPresentation();
+  });
+  if (generation === undefined || !Number.isSafeInteger(generation) || generation <= 0) {
+    throw new Error('Visual capture fixture activation could not reserve a presentation generation');
+  }
+  return generation;
+}
 
 export interface BrowserInputAuditApi {
   readonly version: 1;
@@ -304,6 +339,14 @@ export interface BrowserInputAuditApi {
   prepareOilMotionVfxFixture(mode: OilMotionVfxFixtureMode): void;
   /** Generic, closed preparation boundary used by every authored Visual Lab fixture. */
   prepareVisualLabFixture(fixture: VisualLabFixtureId): void;
+  /** One typed prepare/select transaction bound to its next renderer presentation. */
+  activatePreparedVisualCaptureFixture(
+    fixture: VisualLabFixtureId, variant: VisualCaptureControlVariant,
+  ): number;
+  /** Reads the renderer-owned state of a fixture activation generation. */
+  fixtureActivationPresentationGeneration(
+    ticket: number,
+  ): FixtureActivationPresentationGeneration | undefined;
   /** Generic, fixture-owned same-page capture control; no browser method names cross the ABI. */
   setPreparedVisualCaptureVariant(
     fixture: VisualLabFixtureId, variant: VisualCaptureControlVariant,

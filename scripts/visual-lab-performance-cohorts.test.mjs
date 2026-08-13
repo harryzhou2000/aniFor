@@ -204,6 +204,32 @@ describe('Visual Lab performance cohort orchestration', () => {
     });
   });
 
+  it('forwards fixture-activation generation proof and requires tuning v5', async () => {
+    const root = await temporaryRoot();
+    const batchCalls = [];
+    const result = await runVisualLabPerformanceCohorts({
+      recipeSetPath: 'set.json', outputDir: root,
+      captureProof: 'fixture-activation-generation',
+    }, {
+      assertTrackedRecipeSet: async () => {},
+      readRecipeSet: async () => recipeSet(),
+      runBatch: async (options) => {
+        batchCalls.push(options);
+        return completeBatch(options.browserHost);
+      },
+      verifyBatch: async (options) => verifiedBatch(options, {
+        executionTuningPlan: tuningPlan('anifor.visual-lab.execution-tuning-plan/v5'),
+      }),
+    });
+    expect(batchCalls.map(({ captureProof }) => captureProof))
+      .toEqual(Array(4).fill('fixture-activation-generation'));
+    expect(result.summary.captureProof).toEqual({
+      mode: 'fixture-activation-generation',
+      tuningSchema: 'anifor.visual-lab.execution-tuning-plan/v5',
+      receiptSchema: 'anifor.renderer.completed-frame-receipt/v1',
+    });
+  });
+
   it('rejects mismatched portable tuning schemas before publishing', async () => {
     const stableRoot = await temporaryRoot();
     await expect(runVisualLabPerformanceCohorts({ recipeSetPath: 'set.json', outputDir: stableRoot }, {

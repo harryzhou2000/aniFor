@@ -158,6 +158,11 @@ export class RenderFieldSet {
         && time - this.lastSuspensionRefresh >= SUSPENSION_FIELD_REFRESH_INTERVAL);
   }
 
+  /** Audit scheduling state, independent of each field's bounded cadence. */
+  get hasPendingRefresh(): boolean {
+    return this.atmosphereDirty || this.liquidDirty || this.emissionDirty || this.suspensionDirty;
+  }
+
   updateNext(
     materials: Uint8Array, time: number, walls?: Uint8Array, velocities?: Int8Array,
     temperatures?: Uint16Array,

@@ -7013,9 +7013,45 @@ and established OFF/A/B PNG hashes. Stable readiness took four snapshot
 attempts and emitted no readiness receipt; OFF/A/B then claimed submissions
 `9/10/11`, used one full snapshot each, completed in 2.06–2.14s per phase, and
 finished the candidate in 31.88s. Downloaded-style portable verification passed.
-The remaining acceptance evidence is a fresh hosted
-fresh/shared/shared/fresh Powder control; do not infer its result from local
-timing, and do not promote v4 over the proven v3 control unless that run passes.
+The hosted fresh/shared/shared/fresh Powder control passed at exact revision
+`f2060151b5604ab24353b4975fcc76037439ce8c` in workflow run `31666518585`.
+All four packages reconstructed the same portable identity and no host recycled.
+Readiness used five full snapshots and 50.17–50.63s, including 29.6–29.9s of
+readback; OFF/A/B used one snapshot each and completed in 5.21–5.69s. Total
+candidate time was 68.96–74.88s. V4 is accepted as the manual performance
+control: it removes the duplicated selector presentation robustly, while the
+hosted evidence moves the dominant bottleneck back to readiness.
+
+The next opt-in framework experiment should replace scripts-owned startup
+sequencing with one typed app-owned fixture activation transaction. Reserve a
+renderer presentation generation before mutation, perform prepare, conditional
+semantic synchronization, fixture activation, startup variant selection, and
+dynamic invalidation under that transaction, then mark the generation complete
+only after the next successful FieldRenderer presentation incorporates the
+state. This is scheduling evidence, not a GPU fence or framebuffer substitute:
+the audit must still take one complete semantic/field/framebuffer readiness
+snapshot and reread the same completed generation afterward. Preserve v1–v4,
+all frozen visual identities, and the v4 OFF/A/B selection-owned receipts.
+
+That v5 framework experiment is now complete locally. Execution-tuning-plan/v5
+adds an exact `readinessActivation` descriptor and one typed browser activation
+transaction. The renderer keeps a bounded generation record and completes it
+only after a successful presentation plus quiescence of every CPU-owned semantic,
+boundary, powder, solid-depth, volume, and suspension queue caused by activation.
+This quiescence clause is essential: the first implementation completed after
+the first draw, and the retained framebuffer readback correctly failed when a
+successor auxiliary presentation followed. No GPU fence or readback was added
+to the generation; the audit still performs exactly one complete readiness
+snapshot and verifies the same completed generation afterward.
+
+The corrected real local Powder v5 package preserves result
+`sha256:b3edbc669cc2c2408ef712ea6089b42e85e1ba60944d3d78b4bd0942de23f67f`
+and the established OFF/A/B PNG hashes. Activation generation `1` completed;
+readiness used one snapshot; OFF/A/B receipt submissions were contiguous at
+`13/14/15`; portable reconstruction passed. Startup was 12.56s, readiness was
+19.67s, and total was 38.93s. These are diagnostic observations. The next gate
+is the same hosted ABBA Powder control; keep v4 as the accepted hosted control
+until v5 proves portable parity and robustness there.
 
 ## Deferred long-term visual roadmap
 
