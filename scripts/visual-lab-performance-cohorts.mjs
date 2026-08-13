@@ -26,6 +26,8 @@ export const VISUAL_LAB_PERFORMANCE_COHORT_SCHEMA = 'anifor.visual-lab.performan
 export const VISUAL_LAB_PERFORMANCE_COHORT_RECEIPT_SCHEMA = 'anifor.visual-lab.performance-cohorts/v2';
 export const VISUAL_LAB_PERFORMANCE_IDENTITY_FAILURE_SCHEMA =
   'anifor.visual-lab.cohort-identity-mismatch/v1';
+export const VISUAL_LAB_PERFORMANCE_IDENTITY_FAILURE_V2_SCHEMA =
+  'anifor.visual-lab.cohort-identity-mismatch/v2';
 export const VISUAL_LAB_PERFORMANCE_COHORT_ORDER = Object.freeze([
   'fresh', 'shared', 'shared', 'fresh',
 ]);
@@ -358,7 +360,7 @@ const cohortResultIdentity = (ordinal, expectedCandidateOrder, index) => {
   }));
 };
 
-const identityFailureRecord = (ordinal, mode, accepted, observed) => {
+const identityFailureObservation = (ordinal, mode, accepted, observed) => {
   const changes = observed.flatMap((entry, index) => {
     const reference = accepted[index];
     const variants = CAPTURE_VARIANTS.filter((variant) => (
@@ -376,15 +378,41 @@ const identityFailureRecord = (ordinal, mode, accepted, observed) => {
     throw new TypeError('Visual Lab performance identity failure has no changed candidate');
   }
   const changedCandidateCount = changes.length;
-  const retained = changes.slice(0, MAX_IDENTITY_FAILURE_CHANGES);
-  const createRecord = () => ({
-    schema: VISUAL_LAB_PERFORMANCE_IDENTITY_FAILURE_SCHEMA,
-    referenceOrdinal: 1,
+  return {
     observedOrdinal: ordinal,
     observedMode: mode,
     changedCandidateCount,
-    changes: retained,
-    omittedChangedCandidateCount: changedCandidateCount - retained.length,
+    changes,
+  };
+};
+
+const identityFailureRecord = (observations) => {
+  if (!Array.isArray(observations) || observations.length === 0) {
+    throw new TypeError('Visual Lab performance identity failure has no observations');
+  }
+  const retained = [];
+  for (const observation of observations) {
+    const remaining = Math.max(0, MAX_IDENTITY_FAILURE_CHANGES - retained.length);
+    retained.push(...observation.changes.slice(0, remaining).map((change) => ({
+      observedOrdinal: observation.observedOrdinal, ...change,
+    })));
+  }
+  const createRecord = () => ({
+    schema: VISUAL_LAB_PERFORMANCE_IDENTITY_FAILURE_V2_SCHEMA,
+    referenceOrdinal: 1,
+    observations: observations.map((observation) => {
+      const available = retained.filter((change) => change.observedOrdinal === observation.observedOrdinal);
+      return {
+        observedOrdinal: observation.observedOrdinal,
+        observedMode: observation.observedMode,
+        changedCandidateCount: observation.changedCandidateCount,
+        changes: available.map(({ observedOrdinal: _ordinal, ...change }) => change),
+        omittedChangedCandidateCount: observation.changedCandidateCount - available.length,
+      };
+    }),
+    omittedChangedCandidateCount: observations.reduce(
+      (total, observation) => total + observation.changedCandidateCount, 0,
+    ) - retained.length,
   });
   while (retained.length > 1 && Buffer.byteLength(
     `${JSON.stringify(createRecord())}\n`,
@@ -469,6 +497,7 @@ export async function runVisualLabPerformanceCohorts(options = {}, dependencies 
 
   const cohorts = [];
   let acceptedResultIdentity;
+  const identityFailures = [];
   for (const [index, mode] of VISUAL_LAB_PERFORMANCE_COHORT_ORDER.entries()) {
     const ordinal = index + 1;
     const cohortDirectory = path.join(requested.outputDir, `cohort-${String(ordinal).padStart(2, '0')}-${mode}`);
@@ -510,16 +539,19 @@ export async function runVisualLabPerformanceCohorts(options = {}, dependencies 
     );
     acceptedResultIdentity ??= resultIdentity;
     if (!isDeepStrictEqual(resultIdentity, acceptedResultIdentity)) {
-      await writeIdentityFailure(requested.outputDir, identityFailureRecord(
+      identityFailures.push(identityFailureObservation(
         ordinal, mode, acceptedResultIdentity, resultIdentity,
       ));
-      throw new VisualLabPerformanceIdentityMismatchError();
     }
     cohorts.push(summarizeCohort(ordinal, mode, {
       ...batch,
       timings: verified.timings,
       captureSubphases: verified.captureSubphases,
     }));
+  }
+  if (identityFailures.length > 0) {
+    await writeIdentityFailure(requested.outputDir, identityFailureRecord(identityFailures));
+    throw new VisualLabPerformanceIdentityMismatchError();
   }
   const captureProof = summaryCaptureProof(requested.captureProof);
   const summary = deepFreeze({

@@ -7651,6 +7651,24 @@ and exact 19-resource closure. The release proof should deliberately select a
 non-default cohort so the new route is exercised rather than merely confirming
 the unchanged Powder default.
 
+That non-default exercise exposed a useful diagnostic limit. Workflow
+`31713512813` safely resolved `render-optics-families` in both jobs; the ordinary
+review passed all 49 regions and deployed exact revision `9e17e86`, but the
+performance runner stopped at shared leg 3 after an A-only encoded-output drift.
+Its 266-byte v1 diagnostic was correct and redacted, yet the missing final fresh
+leg could not show whether the outlier returned to reference.
+
+The additive `anifor.visual-lab.cohort-identity-mismatch/v2` record closes that
+gap without weakening failure. After each leg independently passes complete
+capture, portable reconstruction, tuning/host-plan checks, and structural
+result/hash consistency, ordinary cross-leg drift is accumulated and the fixed
+fresh/shared/shared/fresh order continues. Only after leg 4 does the runner
+atomically publish an ordered observation list and fail; no performance summary
+is written. All observations share the existing global 64-change and 8 KiB
+bounds and contain only ordinal, fresh/shared mode, candidate name, and fixed
+OFF/A/B variant names. V1 remains historical. Any structural mismatch or
+capture/verification failure still aborts immediately with no mismatch record.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

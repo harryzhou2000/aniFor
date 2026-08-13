@@ -12,6 +12,7 @@ import {
   VISUAL_LAB_PERFORMANCE_COHORT_RECEIPT_SCHEMA,
   VISUAL_LAB_PERFORMANCE_COHORT_SCHEMA,
   VISUAL_LAB_PERFORMANCE_IDENTITY_FAILURE_SCHEMA,
+  VISUAL_LAB_PERFORMANCE_IDENTITY_FAILURE_V2_SCHEMA,
 } from './visual-lab-performance-cohorts.mjs';
 
 const roots = [];
@@ -415,11 +416,16 @@ describe('Visual Lab performance cohort orchestration', () => {
     })).rejects.toThrow('mismatched portable host plan');
   });
 
-  it('rejects cross-cohort capture-identity drift without serializing identities', async () => {
+  it('finishes the fixed order before rejecting capture-identity drift without serializing identities', async () => {
     const root = await temporaryRoot();
     let verifications = 0;
     const changedResultId = `sha256:${'c'.repeat(64)}`;
-    const changedCaptureSha256 = { ...captureSha256, b: '1'.repeat(64) };
+    const changedCaptures = [
+      captureSha256,
+      { ...captureSha256, b: '1'.repeat(64) },
+      { ...captureSha256, a: '2'.repeat(64) },
+      captureSha256,
+    ];
     await expect(runVisualLabPerformanceCohorts({
       recipeSetPath: 'set.json', outputDir: root,
     }, {
@@ -430,8 +436,8 @@ describe('Visual Lab performance cohort orchestration', () => {
         verifications += 1;
         return verifiedBatch(options, {
           index: batchIndex(
-            verifications === 2 ? changedResultId : resultId,
-            verifications === 2 ? changedCaptureSha256 : captureSha256,
+            verifications === 2 || verifications === 3 ? changedResultId : resultId,
+            changedCaptures[verifications - 1],
           ),
         });
       },
@@ -439,7 +445,7 @@ describe('Visual Lab performance cohort orchestration', () => {
       name: 'VisualLabPerformanceIdentityMismatchError',
       message: 'Visual Lab performance cohorts changed accepted capture identity',
     }));
-    expect(verifications).toBe(2);
+    expect(verifications).toBe(4);
     await expect(readFile(path.join(root, 'performance-summary.json'), 'utf8'))
       .rejects.toMatchObject({ code: 'ENOENT' });
     const diagnosticBytes = await readFile(
@@ -447,15 +453,24 @@ describe('Visual Lab performance cohort orchestration', () => {
     );
     expect(Buffer.byteLength(diagnosticBytes)).toBeLessThanOrEqual(8_192);
     expect(JSON.parse(diagnosticBytes)).toEqual({
-      schema: VISUAL_LAB_PERFORMANCE_IDENTITY_FAILURE_SCHEMA,
+      schema: VISUAL_LAB_PERFORMANCE_IDENTITY_FAILURE_V2_SCHEMA,
       referenceOrdinal: 1,
-      observedOrdinal: 2,
-      observedMode: 'shared',
-      changedCandidateCount: 1,
-      changes: [{
-        candidate: 'gas-showcase',
-        variants: ['b'],
-      }],
+      observations: [
+        {
+          observedOrdinal: 2,
+          observedMode: 'shared',
+          changedCandidateCount: 1,
+          changes: [{ candidate: 'gas-showcase', variants: ['b'] }],
+          omittedChangedCandidateCount: 0,
+        },
+        {
+          observedOrdinal: 3,
+          observedMode: 'shared',
+          changedCandidateCount: 1,
+          changes: [{ candidate: 'gas-showcase', variants: ['a'] }],
+          omittedChangedCandidateCount: 0,
+        },
+      ],
       omittedChangedCandidateCount: 0,
     });
     expect(JSON.stringify(JSON.parse(diagnosticBytes)))
@@ -537,18 +552,21 @@ describe('Visual Lab performance cohort orchestration', () => {
     const bytes = await readFile(path.join(root, 'performance-identity-failure.json'), 'utf8');
     const diagnostic = JSON.parse(bytes);
     expect(Buffer.byteLength(bytes)).toBeLessThanOrEqual(8_192);
-    expect(diagnostic.changes).toHaveLength(64);
+    expect(diagnostic.observations[0].changes).toHaveLength(64);
     expect(diagnostic).toMatchObject({
-      schema: VISUAL_LAB_PERFORMANCE_IDENTITY_FAILURE_SCHEMA,
+      schema: VISUAL_LAB_PERFORMANCE_IDENTITY_FAILURE_V2_SCHEMA,
       referenceOrdinal: 1,
-      observedOrdinal: 2,
-      observedMode: 'shared',
-      changedCandidateCount: 65,
+      observations: [{
+        observedOrdinal: 2,
+        observedMode: 'shared',
+        changedCandidateCount: 65,
+        omittedChangedCandidateCount: 1,
+      }],
       omittedChangedCandidateCount: 1,
     });
-    expect(diagnostic.changes[0].candidate).toBe('candidate-00');
-    expect(diagnostic.changes[63].candidate).toBe('candidate-63');
-    expect(diagnostic.changes[0].variants).toEqual(['off', 'a', 'b']);
+    expect(diagnostic.observations[0].changes[0].candidate).toBe('candidate-00');
+    expect(diagnostic.observations[0].changes[63].candidate).toBe('candidate-63');
+    expect(diagnostic.observations[0].changes[0].variants).toEqual(['off', 'a', 'b']);
     expect(JSON.stringify(diagnostic)).not.toMatch(/sha256|[0-9a-f]{64}/i);
     await expect(readFile(path.join(root, 'performance-summary.json'), 'utf8'))
       .rejects.toMatchObject({ code: 'ENOENT' });

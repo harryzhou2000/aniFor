@@ -2091,6 +2091,20 @@ result-ID/variant drift is a structural failure with no diagnostic. CI may
 upload only this JSON on failure; keep raw cohorts runner-local and keep the
 success summary publish-last and unchanged.
 
+New runs use the additive
+`anifor.visual-lab.cohort-identity-mismatch/v2` failure record. Once a leg has
+passed its complete batch, portable verification, tuning/host-plan checks, and
+structural result/hash consistency, ordinary identity drift is retained in
+memory and the fixed fresh/shared/shared/fresh order continues. After all four
+legs, write one ordered `observations` array under the same global 64-change and
+8 KiB bounds, then fail with no performance summary. This distinguishes a
+transient middle-leg outlier from a final fresh return or repeat without
+retaining raw packages. V1 remains a readable historical artifact. Structural
+corruption, capture failure, or portable-verification failure still aborts
+immediately and must not emit a misleading mismatch record. Never add hashes,
+result IDs, timings, paths, timestamps, browser/host metadata, PNGs, or scoring
+to either schema.
+
 The current authoring checkpoint removes repeated metadata and ordering while
 preserving explicit executable boundaries. Authoring sources may use one
 default capture descriptor plus bounded per-candidate overrides, but
