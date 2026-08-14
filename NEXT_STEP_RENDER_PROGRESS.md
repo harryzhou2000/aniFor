@@ -547,3 +547,54 @@ Status: visually favoured normal-WebGL material-class checkpoint.
    translucent rigid materials that still read as flat tinted solids.
 3. Add a cheaper matching crown/pocket vocabulary to true 8× once the remaining
    normal-path material families are visually settled.
+
+## 2026-08-14 — translucent-rigid shell-to-core prism volume
+
+Status: visually accepted normal-WebGL material-class increment.
+
+### What changed
+
+- The final translucent-body compositor now gives supported deep
+  `TranslucentRigid` matter a broad shell-to-core optical fold. A cool
+  source-facing crest, a quieter absorbing pocket, and a restrained cyan/warm
+  channel split survive HDR tonemapping and make Ice read as a volume rather
+  than a uniformly tinted plate.
+- The treatment is class-owned rather than an Ice-only texture. Existing
+  pigment, optical depth, body support, and low-frequency world-space form
+  determine the result; holes, thin structures, silhouettes, contacts, alpha,
+  and simulation state are untouched.
+- Deep Glass receives only a small share of the new fold because its accepted
+  selective absorption, wall transmission, and E21 volume grammar already own
+  the stronger body response. This keeps the Glass tank coherent while the
+  previously flatter translucent materials gain visible depth.
+
+### Visual decision
+
+- Keep the v10 cyan/warm split. Earlier profile-helper and shallow-depth
+  versions were rejected because later translucent composition and a timid
+  depth gate made them effectively invisible at fit view.
+- The accepted placement is after the material-specific translucent lens
+  grammar, where the displayed Ice/Glass body is final. At ordinary view the
+  Ice card now carries a restrained iridescent depth drift; enlarged inspection
+  shows a continuous curved fold rather than a repeated tile or hard band.
+- The checkerboard inside the moving-Water fixture remains its authored native
+  wall-coexistence control, not foam geometry. Future foam work should be judged
+  from the open surface and detached Water regions instead of that control.
+
+### Lightweight checks used
+
+- `npm run build` completes and closes all 19 production resources.
+- The retained accepted class board is
+  `/tmp/anifor-translucent-prism-v10/b.png`; its ordinary 2× WebGL/HDR capture
+  completed without browser errors.
+- The retained before/after Ice inspection is
+  `/tmp/anifor-prism-ice-v10-comparison-3x.png`.
+
+### Next visual work
+
+1. Add stable, broad ambient/contact grounding for heap valleys and rigid-body
+   mass without drawing categorical separator lines.
+2. Give organic and waxy bodies a softer transmitted-light signature distinct
+   from the new crystalline prism and metallic crown.
+3. Translate the established crown/pocket/volume vocabulary into a cheaper
+   true-8× grammar while retaining Smooth/Local/Grains style separation.

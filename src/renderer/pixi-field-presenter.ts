@@ -9928,6 +9928,62 @@ void main() {
           }
         }
       }
+      // The final translucent compositor owns the actual Ice/Glass body, so
+      // place the shared shell-to-core prism here after the material-specific
+      // lens grammar. A broad source-facing cyan crest and an opposing
+      // pigment-aware absorption pocket give every TranslucentRigid owner a
+      // readable optical volume at ordinary fit scale. Deep Glass already has
+      // the stronger E21 fold and therefore receives a reduced shared lobe;
+      // Ice and the remaining translucent family keep the full response. This
+      // is B-only RGB arithmetic over existing depth/support and changes no
+      // sample, alpha, silhouette, contact, topology, or physics decision.
+      if (uMaterialLightingVariant > 1.5 && !materialEmissive
+        && traits < 0.5 && surfaceOnly < 0.5 && halo < 0.5
+        && wallOnly < 0.5 && emissionOnly < 0.5
+        && solidInterior > 0.001 && solidOpticalDepth > 6.0 / 255.0
+        && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5) {
+        float translucentPrismDepth = solidInterior
+          * smoothstep(6.0 / 255.0, 18.0 / 255.0, solidOpticalDepth);
+        float translucentPrismCore = smoothstep(0.16, 0.88, solidDepth);
+        float translucentPrismBand = translucentPrismDepth
+          * smoothstep(0.08, 0.62, translucentPrismCore);
+        float translucentPrismFold = sin(
+          fieldPosition.x * 0.024 + fieldPosition.y * 0.043
+            + sin(fieldPosition.y * 0.018 - fieldPosition.x * 0.027 + 1.1) * 1.25
+        ) * sin(
+          fieldPosition.x * -0.015 + fieldPosition.y * 0.031 + 2.2
+        );
+        float translucentPrismFacing = clamp(
+          (solidKey - 0.54) * 0.82 + translucentPrismFold * 0.74,
+          -1.0, 1.0
+        );
+        float translucentPrismShare = mix(1.0, 0.15, glassBodyWeight);
+        float translucentPrismCrest = translucentPrismBand
+          * translucentPrismShare
+          * (0.135 + max(translucentPrismFacing, 0.0) * 0.520
+            + smoothstep(0.018, 0.18, solidFresnel) * 0.110);
+        float translucentPrismPocket = translucentPrismBand
+          * translucentPrismShare
+          * (0.070 + max(-translucentPrismFacing, 0.0) * 0.310);
+        vec3 translucentPrismIdentity = vividColor(base, 1.10);
+        vec3 translucentPrismCrestTint = mix(
+          translucentPrismIdentity, vec3(0.34, 0.94, 1.24), 0.68
+        );
+        vec3 translucentPrismPocketTint = mix(
+          vec3(0.18, 0.30, 0.54), translucentPrismIdentity, 0.18
+        );
+        color += (vec3(1.16) - clamp(color, 0.0, 1.16))
+          * translucentPrismCrestTint * translucentPrismCrest;
+        color *= vec3(1.0)
+          - translucentPrismPocketTint * translucentPrismPocket;
+        // A small near-luminance-neutral channel split keeps the fold visible
+        // after HDR tonemapping: source-facing ice shifts toward cyan while
+        // the opposing pocket retains a faint warmer mineral body. Glass gets
+        // only the reduced shared weight above, so E21 remains authoritative.
+        color += vec3(-0.085, 0.018, 0.100)
+          * translucentPrismBand * translucentPrismShare
+          * translucentPrismFacing;
+      }
       // E10: a real broad Glass/Ice body carries a shallow transmitted-light
       // band just inside its semantic edge. The existing exact-species r8
       // optical-depth byte rejects the exposed surface, first interior layer,
