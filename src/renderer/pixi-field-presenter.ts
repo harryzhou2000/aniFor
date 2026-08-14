@@ -12914,6 +12914,38 @@ void main() {
       float shaftKey = shaftBody * shaftSourceEnergy
         * mix(shaftBaseKey, shaftSheetKey, shaftOverhaul);
       color += shaftHeadroom * sourceSpectrum * shaftKey;
+      // A source-facing low/mid-density shoulder makes the illuminated cloud
+      // turn as a volume at fit scale. This is deliberately a broad interior
+      // crescent, not a contour rim: atmosphere density admits it away from
+      // the sparse fringe, the transported incidence chooses one side, and
+      // the already-advected shaft lobe breaks up the shoulder through motion.
+      float forwardScatterBand = smoothstep(
+        0.025, 0.34, atmosphereState.a
+      ) * mix(1.0, 0.72, shaftOptical);
+      vec2 forwardScatterProbe = shaftAxis * uAtmosphereTexel * 18.0;
+      float forwardScatterTowardDensity = texture(
+        uAtmosphereTexture, fieldUv + forwardScatterProbe
+      ).a;
+      float forwardScatterInwardDensity = texture(
+        uAtmosphereTexture, fieldUv - forwardScatterProbe
+      ).a;
+      float forwardScatterFacing = smoothstep(
+        0.018, 0.30,
+        forwardScatterInwardDensity - forwardScatterTowardDensity
+      );
+      float forwardScatterShape = 0.72 + shaftLobe * 0.22
+        + max(shaftSignedFold, 0.0) * 0.14;
+      float forwardScatterShoulder = shaftBody
+        * forwardScatterBand * forwardScatterFacing
+        * shaftSourceEnergy * forwardScatterShape * shaftOverhaul;
+      vec3 forwardScatterHeadroom = max(
+        vec3(0.0), vec3(1.22) - clamp(color, vec3(0.0), vec3(1.22))
+      );
+      vec3 forwardScatterSpectrum = mix(
+        vec3(1.0), sourceSpectrum, 0.74
+      );
+      color += forwardScatterHeadroom * forwardScatterSpectrum
+        * forwardScatterShoulder * 0.68;
       float baseRearExtinction = shaftBody * (
         max(-longRangeIncidence, 0.0)
           * (0.050 + (1.0 - shaftBaseLobe) * 0.120)

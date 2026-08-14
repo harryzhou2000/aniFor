@@ -1226,3 +1226,51 @@ Status: retained normal-WebGL translucent-solid refinement.
    rectangular atlas body.
 3. Continue material-scale response for translucent crystals, Wax, and mixed
    liquid/solid contacts.
+
+## 2026-08-15 — broad source-facing participating-gas shoulder
+
+Status: retained normal-WebGL volumetric-gas refinement.
+
+### What changed
+
+- Source-lit participating gas now compares atmosphere density across an
+  18-cell span along the measured light-transport direction. That wide slope
+  turns a meaningful portion of the cloud toward the source instead of tracing
+  the local one-cell contour.
+- The forward-scattering shoulder shares the existing transported source
+  spectrum and advected low-frequency shaft lobe. Smoke receives a warm broad
+  shoulder from the Fire side, while FOG reverses the turn toward its green
+  source; the opposite side retains the established rear extinction.
+- The atmosphere and exact scene remain the only support and alpha owners.
+  Holes, open channels, contacts, walls, protected gases, and sparse controls
+  receive no new silhouette or coverage.
+
+### Visual decision
+
+- Keep v4. It is the first version that reads as a broad lit volume at fit
+  scale rather than an outline. Both cards preserve a darker middle and rear,
+  and their existing internal billow remains visible through the new turn.
+- Earlier local-normal versions were rejected after a false-colour diagnostic
+  showed that they could only occupy the rim. The retained wide-density probe
+  produces a real interior crescent without flattening the full card.
+- An independent visual pass returned KEEP and advised against increasing the
+  strength further, particularly for the already-open FOG shoulder.
+
+### Lightweight checks used
+
+- `npm run build` completes and closes all 19 production resources.
+- `/tmp/anifor-gas-forward-scatter-b-compare-v4.png` shows the inactive
+  contribution on the left and retained v4 on the right; both use the real
+  Volumetric/B selector. The moving-gas context is retained at
+  `/tmp/anifor-gas-forward-scatter-motion-v4.png`.
+- The rejected carrier diagnostic is
+  `/tmp/anifor-gas-forward-scatter-debug.png`; it is not present in source.
+  No exact image hash or historical baseline decided the result.
+
+### Next visual work
+
+1. Give Ice, Quartz, and related translucent crystals their own broad optical
+   body response rather than merely inheriting smooth-solid lighting.
+2. Strengthen Wax subsurface depth and edge transmission at material scale.
+3. Improve mixed liquid/solid contact light and naturally irregular gas-plume
+   staging before returning to isolated element decoration.
