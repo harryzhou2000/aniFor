@@ -956,3 +956,48 @@ Status: retained Smooth-powder bulk-depth refinement.
    organic tissue—using broad material-scale light before exact elements.
 3. Revisit moving-water crest reflection with the retained sparse-island
    vocabulary instead of a universal white or cyan edge.
+
+## 2026-08-15 — fired Ceramic volume and Water receiver caustics
+
+Status: retained normal-WebGL material-lighting overhaul.
+
+### What changed
+
+- Hot Ceramic now concentrates blackbody response in a depth-weighted fired
+  core, while the existing pocket remains a cooler rim. Cool Ceramic retains
+  its chalky matte body instead of inheriting a universal glossy lift.
+- Exact Water now projects a short, broken cyan light field onto dense matter
+  immediately downstream of the pool. Three Water-owned samples define the
+  receiving depth; the shared smooth volume carrier breaks the projection into
+  connected optical patches. Receiver alpha and silhouette remain unchanged.
+- A proposed PLNT canopy macro grade was visually rejected and removed: it
+  preserved texture but read mainly as a green brightness shift, not a real
+  improvement in canopy volume.
+
+### Visual decision
+
+- Keep the Ceramic core/rim exchange. Increasing temperature now reads as
+  internal fired heat rather than a sequence of flat orange slabs.
+- Keep the softened Water receiver projection. In the Water-over-Metal scene,
+  the light resolves as cool refracted patches inside the Metal instead of
+  foam, a hard contact outline, or a body-wide cyan wash.
+
+### Lightweight checks used
+
+- `npm run build` completes and closes all 19 production resources.
+- The Ceramic comparison is
+  `/tmp/anifor-ceramic-thermal-compare.png` (before left, retained right).
+- The receiver comparison is
+  `/tmp/anifor-water-receiver-caustics-v4-zoom-compare.png` (before left,
+  retained right), with the full retained scene at
+  `/tmp/anifor-water-receiver-caustics-after-v4.png`.
+- Two independent visual passes returned KEEP. No project-owned Chrome process
+  remained after capture.
+
+### Next visual work
+
+1. Exercise receiver caustics in irregular water-over-powder and sloped-solid
+   scenes, then tune direction and reach without turning contacts into rims.
+2. Give PLNT a genuinely directional broad canopy turn; do not revive the
+   rejected macro-brightness grade.
+3. Integrate source light and flow-aligned billows in an irregular gas plume.

@@ -12112,8 +12112,12 @@ void main() {
           vec3 ceramicBlackbody = blackbodyColor(ceramicTemperatureByte);
           float ceramicRadiance = blackbodyHdrRadiance(ceramicTemperatureByte)
             * ceramicThermalBody;
+          float ceramicCore = ceramicThermalBody
+            * smoothstep(0.20, 0.72, ceramicDepth)
+            * (0.55 + 0.45 * max(ceramicFace, 0.0));
           float ceramicThermalGain = min(
-            0.070, ceramicRadiance * (0.040 + ceramicCrown * 0.60)
+            0.135, ceramicRadiance
+              * (0.035 + ceramicCore * 0.78 + ceramicCrown * 0.22)
           );
           color += (vec3(1.35) - clamp(color, 0.0, 1.35))
             * mix(ceramicBlackbody, vec3(1.0, 0.78, 0.44), 0.18)

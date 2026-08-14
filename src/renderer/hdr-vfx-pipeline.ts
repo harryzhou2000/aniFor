@@ -666,6 +666,64 @@ vec3 liquidSurfaceTransport(
   return result;
 }
 
+/**
+ * Project a short, broken Water light field onto dense matter immediately
+ * downstream of the pool. This is deliberately a presentation effect: the
+ * semantic Water samples own admission, scene alpha keeps the receiver's
+ * silhouette, and the smooth shared volume tile supplies the optical breakup.
+ */
+vec3 waterReceiverCaustic(
+  vec3 sourceRadiance, float receiverMaterial, float receiverAlpha
+) {
+  if (receiverAlpha < 0.70 || receiverMaterial < 0.5
+    || receiverMaterial == MATERIAL_WATER
+    || receiverMaterial == MATERIAL_OIL
+    || receiverMaterial == MATERIAL_ACID) {
+    return sourceRadiance;
+  }
+
+  vec2 incident = normalize(vec2(0.46, 0.888));
+  vec2 nearUv = boundedUv(vUv - incident * uWorldTexel * 1.55);
+  vec2 middleUv = boundedUv(vUv - incident * uWorldTexel * 5.60);
+  vec2 farUv = boundedUv(vUv - incident * uWorldTexel * 11.80);
+  float nearWater = exactMaterial(semanticMaterial(nearUv), MATERIAL_WATER)
+    * smoothstep(0.50, 0.88, texture(uLiquidTexture, nearUv).a);
+  float middleWater = exactMaterial(semanticMaterial(middleUv), MATERIAL_WATER)
+    * smoothstep(0.50, 0.88, texture(uLiquidTexture, middleUv).a);
+  float farWater = exactMaterial(semanticMaterial(farUv), MATERIAL_WATER)
+    * smoothstep(0.50, 0.88, texture(uLiquidTexture, farUv).a);
+  float waterPath = max(
+    nearWater * 0.55, max(middleWater * 0.78, farWater * 0.46)
+  );
+  if (waterPath < 0.02) return sourceRadiance;
+
+  float waterDepth = max(
+    texture(uLiquidDepthTexture, nearUv).r,
+    max(
+      texture(uLiquidDepthTexture, middleUv).r,
+      texture(uLiquidDepthTexture, farUv).r
+    )
+  );
+  vec2 waterVelocity = velocityFromSemantic(semanticState(middleUv));
+  vec2 worldPosition = vUv / uWorldTexel;
+  vec3 volume = texture(
+    uMaterialVolumeTexture,
+    worldPosition / vec2(50.0, 34.0) + waterVelocity * 0.028
+  ).rgb;
+  float fold = volume.r - volume.g * 0.72 + volume.b * 0.20;
+  float causticRidge = 1.0 - smoothstep(0.040, 0.190, abs(fold - 0.18));
+  float causticPool = smoothstep(0.58, 0.82, volume.b)
+    * smoothstep(0.34, 0.72, volume.r);
+  float focus = smoothstep(12.0 / 255.0, 96.0 / 255.0, waterDepth);
+  float receiverLight = waterPath * mix(0.10, 0.26, focus)
+    * (0.025 + causticRidge * 0.58 + causticPool * 0.12);
+  vec3 headroom = max(
+    vec3(0.0), vec3(1.16) - clamp(sourceRadiance, 0.0, 1.16)
+  );
+  return sourceRadiance
+    + headroom * vec3(0.32, 0.70, 0.94) * receiverLight;
+}
+
 vec3 acesFilm(vec3 value) {
   const float a = 2.51;
   const float b = 0.03;
@@ -688,6 +746,8 @@ void main() {
     if (material == MATERIAL_WATER || material == MATERIAL_OIL || material == MATERIAL_ACID) {
       radiance = liquidInteriorTransport(radiance, material, semanticCentre);
       radiance = liquidSurfaceTransport(radiance, material, semanticCentre);
+    } else {
+      radiance = waterReceiverCaustic(radiance, material, scene.a);
     }
   }
   ${visualLabEnabled ? 'radiance = applyHdrVolumeLab(radiance, vUv);' : ''}
