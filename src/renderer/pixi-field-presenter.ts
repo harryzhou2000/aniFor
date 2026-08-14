@@ -9934,6 +9934,23 @@ void main() {
         && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5
         ? smoothstep(30.0 / 255.0, 78.0 / 255.0, solidOpticalDepth) * solidInterior
         : 0.0;
+      // Thick translucent crystals need a body-scale response distinct from
+      // Glass's smooth lens. Keep the exact solid owners closed here: powder
+      // Quartz is material 29 and therefore never enters this path. The
+      // shallow hand-off preserves single cells, fine branches, rims, and the
+      // established material-specific shell below.
+      float crystallineFacetBodyWeight = uMaterialLightingVariant > 1.5
+        && uSolidOpticalDepth > 0.5
+        && (material == 12.0 || material == 68.0 || material == 74.0
+          || material == 76.0 || material == 77.0)
+        && family == 0.0 && optics == 12.0 && traits < 0.5
+        && !materialEmissive && surfaceOnly < 0.5 && halo < 0.5
+        && wallOnly < 0.5 && emissionOnly < 0.5
+        && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5
+        && solidInterior > 0.001 && solidOpticalDepth > 18.0 / 255.0
+        ? smoothstep(18.0 / 255.0, 66.0 / 255.0, solidOpticalDepth)
+          * solidInterior
+        : 0.0;
       // Optical depth advances in six-byte steps, so fade both carriers with
       // one continuous weight instead of dropping the old shell at byte 36.
       // Folding the exact-owner predicate into that weight also avoids carrying
@@ -10101,7 +10118,8 @@ void main() {
           (solidKey - 0.54) * 0.82 + translucentPrismFold * 0.74,
           -1.0, 1.0
         );
-        float translucentPrismShare = mix(1.0, 0.15, glassBodyWeight);
+        float translucentPrismShare = mix(1.0, 0.15, glassBodyWeight)
+          * mix(1.0, 0.18, crystallineFacetBodyWeight);
         float translucentPrismCrest = translucentPrismBand
           * translucentPrismShare
           * (0.135 + max(translucentPrismFacing, 0.0) * 0.520
@@ -10127,6 +10145,106 @@ void main() {
         color += vec3(-0.085, 0.018, 0.100)
           * translucentPrismBand * translucentPrismShare
           * translucentPrismFacing;
+      }
+      // Broad buried facets replace the family-wide decorative wave inside
+      // thick Ice/QRTZ/DRIC/NICE/RIME bodies. Four oblique probes of the
+      // existing exact-species Manhattan depth field recover coherent crystal
+      // planes from the material's own geometry. A probe that crosses a hole,
+      // unlike seam, wall, or world edge falls back to the centre depth, so a
+      // neighbour cannot paint through the owner. This changes RGB only: no
+      // alpha, support, contour, topology, field, pass, or physics decision.
+      if (crystallineFacetBodyWeight > 0.0) {
+        vec2 crystallineFacetOffsetA = uTexel * vec2(12.0, 7.0);
+        vec2 crystallineFacetOffsetB = uTexel * vec2(-8.0, 13.0);
+        vec2 crystallineFacetUvAP = fieldUv + crystallineFacetOffsetA;
+        vec2 crystallineFacetUvAM = fieldUv - crystallineFacetOffsetA;
+        vec2 crystallineFacetUvBP = fieldUv + crystallineFacetOffsetB;
+        vec2 crystallineFacetUvBM = fieldUv - crystallineFacetOffsetB;
+        float crystallineFacetDepthAP = mix(
+          solidOpticalDepth, boundaryStabilityAt(crystallineFacetUvAP),
+          sameMaterial(crystallineFacetUvAP, material)
+        );
+        float crystallineFacetDepthAM = mix(
+          solidOpticalDepth, boundaryStabilityAt(crystallineFacetUvAM),
+          sameMaterial(crystallineFacetUvAM, material)
+        );
+        float crystallineFacetDepthBP = mix(
+          solidOpticalDepth, boundaryStabilityAt(crystallineFacetUvBP),
+          sameMaterial(crystallineFacetUvBP, material)
+        );
+        float crystallineFacetDepthBM = mix(
+          solidOpticalDepth, boundaryStabilityAt(crystallineFacetUvBM),
+          sameMaterial(crystallineFacetUvBM, material)
+        );
+        float crystallineFacetSlopeA = clamp(
+          (crystallineFacetDepthAP - crystallineFacetDepthAM) * 3.25,
+          -1.0, 1.0
+        );
+        float crystallineFacetSlopeB = clamp(
+          (crystallineFacetDepthBP - crystallineFacetDepthBM) * 3.25,
+          -1.0, 1.0
+        );
+        // The two signed turns remain continuous across the distance field but
+        // meet as large planar regions at its medial axes. Existing key/fill
+        // light biases the planes without introducing a world-space stripe or
+        // a painted periodic grid.
+        float crystallineFacetTurnA = clamp(
+          crystallineFacetSlopeA * 0.82
+            - crystallineFacetSlopeB * 0.18 + (solidKey - 0.58) * 0.30,
+          -1.0, 1.0
+        );
+        float crystallineFacetTurnB = clamp(
+          crystallineFacetSlopeB * 0.78
+            + crystallineFacetSlopeA * 0.16 + (solidFill - 0.54) * 0.22,
+          -1.0, 1.0
+        );
+        float crystallineFacetKeyA = max(crystallineFacetTurnA, 0.0);
+        float crystallineFacetKeyB = max(crystallineFacetTurnB, 0.0);
+        float crystallineFacetPocketA = max(-crystallineFacetTurnA, 0.0);
+        float crystallineFacetPocketB = max(-crystallineFacetTurnB, 0.0);
+        float crystallineQuartz = material == 76.0 ? 1.0 : 0.0;
+        float crystallineClearIce = (material == 12.0 || material == 74.0)
+          ? 1.0 : 0.0;
+        float crystallineFrost = 1.0 - max(crystallineQuartz, crystallineClearIce);
+        vec3 crystallineFacetKeyTintA = crystallineQuartz > 0.5
+          ? vec3(0.30, 0.84, 1.12)
+          : (crystallineClearIce > 0.5
+            ? vec3(0.50, 0.94, 1.16) : vec3(0.72, 0.94, 1.06));
+        vec3 crystallineFacetKeyTintB = crystallineQuartz > 0.5
+          ? vec3(1.04, 0.50, 0.88)
+          : (crystallineClearIce > 0.5
+            ? vec3(0.88, 1.04, 1.12) : vec3(0.58, 0.82, 1.00));
+        vec3 crystallineFacetPocketTint = crystallineQuartz > 0.5
+          ? vec3(0.22, 0.18, 0.36)
+          : (crystallineClearIce > 0.5
+            ? vec3(0.14, 0.30, 0.50) : vec3(0.26, 0.31, 0.40));
+        float crystallineFacetGain = (crystallineQuartz > 0.5
+          ? 0.245 : (crystallineClearIce > 0.5 ? 0.190 : 0.135))
+          * crystallineFacetBodyWeight;
+        float crystallineFacetKey = crystallineFacetKeyA
+          + crystallineFacetKeyB * mix(0.58, 0.76, crystallineQuartz);
+        float crystallineFacetPocket = crystallineFacetPocketA * 0.66
+          + crystallineFacetPocketB * 0.78;
+        color += (vec3(1.16) - clamp(color, 0.0, 1.16))
+          * crystallineFacetKeyTintA * crystallineFacetKeyA
+          * crystallineFacetGain;
+        color += (vec3(1.16) - clamp(color, 0.0, 1.16))
+          * crystallineFacetKeyTintB * crystallineFacetKeyB
+          * crystallineFacetGain * mix(0.72, 0.92, crystallineQuartz);
+        // Quartz turns the opposing B-plane into restrained rose transmission
+        // instead of treating every rear plane as neutral shadow. This makes
+        // its crossed mineral cleavage legible without borrowing Ice's milky
+        // scatter or Glass's smooth blue lens.
+        color += (vec3(1.16) - clamp(color, 0.0, 1.16))
+          * vec3(1.06, 0.46, 0.90) * crystallineFacetPocketB
+          * crystallineFacetGain * crystallineQuartz * 0.72;
+        color *= vec3(1.0) - crystallineFacetPocketTint
+          * crystallineFacetPocket * crystallineFacetGain
+          * mix(0.72, 1.0, crystallineClearIce);
+        // A restrained core absorption keeps the lit planes embedded in a
+        // volume rather than pasted over an evenly exposed panel.
+        color *= vec3(1.0) - crystallineFacetPocketTint
+          * crystallineFacetBodyWeight * mix(0.010, 0.020, crystallineFacetKey);
       }
       // E10: a real broad Glass/Ice body carries a shallow transmitted-light
       // band just inside its semantic edge. The existing exact-species r8

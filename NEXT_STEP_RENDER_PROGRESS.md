@@ -1324,3 +1324,55 @@ Status: retained normal-WebGL solid-WAX subsurface refinement.
    staging.
 3. Continue source, radioactive, plant-growth, and energy-material VFX once
    these material-scale optical families are visually distinct.
+
+## 2026-08-15 — buried translucent-crystal facets
+
+Status: retained normal-WebGL crystalline body overhaul.
+
+### What changed
+
+- Thick Ice, QRTZ, DRIC, NICE, and RIME bodies now derive two broad buried
+  planes from four oblique probes of their existing exact-species solid-depth
+  field. The planes follow the material geometry rather than a repeating
+  screen-space stripe or painted tile.
+- Ice/NICE receive cold translucent shelves and blue rear depth; DRIC/RIME use
+  a quieter milky treatment; solid QRTZ receives crossed cyan and restrained
+  rose transmission. The older shared sinusoidal prism is faded only where the
+  new deep-body response is present.
+- Glass remains on its smooth lens/refraction grammar and powder Quartz remains
+  outside the exact material set. The change is RGB-only: contours, alpha,
+  holes, notches, seams, thin structures, isolated cells, contacts, support,
+  and physics are unchanged.
+
+### Visual decision
+
+- Keep the third tuning. At fit scale the large crystal bodies now carry
+  coherent diagonal/medial planes instead of reading solely as flat textured
+  cards. The companion Ice/Glass scene clearly separates faceted frozen mass
+  from the smooth dark Glass lens.
+- The first tuning established the non-periodic geometry but was too quiet;
+  the second increased the body turn; the retained third tuning restores a
+  brighter transmitted core and adds a restrained opposing rose plane to QRTZ
+  without washing out its native green/cyan identity.
+- Large cavities and open notches remain black, and the one-cell/fine controls
+  retain their previous shell treatment rather than acquiring a fake broad
+  facet.
+
+### Lightweight checks used
+
+- `npm run build` completes and closes all 19 production resources.
+- `/tmp/anifor-crystalline-buried-facets-before.png` and
+  `/tmp/anifor-crystalline-buried-facets-v3.png` are the direct 2x WebGL
+  before/after views. `/tmp/anifor-translucent-edge-crystal-v1.png` is the
+  Ice-versus-Glass companion view used to check material separation.
+- The decision used direct image inspection and one independent aesthetic pass;
+  no exact visual hash, baseline, profiler, or broad test gate was added.
+
+### Next visual work
+
+1. Recompose molten Lava after thermal/emission lighting so broad convection,
+   bright fissures, and cooled pockets survive the final HDR grade.
+2. Improve mixed liquid/solid contact light and naturally irregular plume
+   staging.
+3. Continue high-payoff source, radioactive, plant-growth, and energy-material
+   VFX after the major phase families read distinctly at fit scale.
