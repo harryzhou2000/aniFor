@@ -178,6 +178,7 @@ uniform float uSaturation;
 const float MATERIAL_WATER = 2.0;
 const float MATERIAL_OIL = 8.0;
 const float MATERIAL_ACID = 13.0;
+const float MATERIAL_GLASS = 24.0;
 
 vec2 boundedUv(vec2 uv) {
   return clamp(uv, uWorldTexel * 0.5, vec2(1.0) - uWorldTexel * 0.5);
@@ -692,6 +693,123 @@ vec3 liquidSurfaceTransport(
 }
 
 /**
+ * Turns a connected exact-Glass body into a curved lens over the private
+ * non-Glass optical layer. The semantic centre owns every affected fragment;
+ * the cardinal and wide owner probes only shape refraction and cannot create
+ * support. The caller always preserves the original scene alpha.
+ */
+vec3 glassBackdropTransport(vec3 sourceRadiance, vec4 semanticCentre) {
+  if (exactMaterial(materialFromSemantic(semanticCentre), MATERIAL_GLASS) < 0.5) {
+    return sourceRadiance;
+  }
+  float wallBacked = step(
+    0.5, floor(texture(uWallTexture, vUv).r * 255.0 + 0.5)
+  );
+  if (wallBacked > 0.5) return sourceRadiance;
+
+  vec2 leftUv = boundedUv(vUv - vec2(uWorldTexel.x, 0.0));
+  vec2 rightUv = boundedUv(vUv + vec2(uWorldTexel.x, 0.0));
+  vec2 topUv = boundedUv(vUv - vec2(0.0, uWorldTexel.y));
+  vec2 bottomUv = boundedUv(vUv + vec2(0.0, uWorldTexel.y));
+  float sameLeft = exactMaterial(semanticMaterial(leftUv), MATERIAL_GLASS);
+  float sameRight = exactMaterial(semanticMaterial(rightUv), MATERIAL_GLASS);
+  float sameTop = exactMaterial(semanticMaterial(topUv), MATERIAL_GLASS);
+  float sameBottom = exactMaterial(semanticMaterial(bottomUv), MATERIAL_GLASS);
+  float sameCount = sameLeft + sameRight + sameTop + sameBottom;
+  float emptyCount = emptyMaterial(semanticMaterial(leftUv))
+    + emptyMaterial(semanticMaterial(rightUv))
+    + emptyMaterial(semanticMaterial(topUv))
+    + emptyMaterial(semanticMaterial(bottomUv));
+  float foreignCount = 4.0 - sameCount - emptyCount;
+
+  // Six-cell shoulders serve two purposes: both axes must cross a real Glass
+  // body, and a nearby unlike owner keeps the authored contact native.
+  vec2 wideX = vec2(uWorldTexel.x * 6.0, 0.0);
+  vec2 wideY = vec2(0.0, uWorldTexel.y * 6.0);
+  float wideLeftMaterial = semanticMaterial(boundedUv(vUv - wideX));
+  float wideRightMaterial = semanticMaterial(boundedUv(vUv + wideX));
+  float wideTopMaterial = semanticMaterial(boundedUv(vUv - wideY));
+  float wideBottomMaterial = semanticMaterial(boundedUv(vUv + wideY));
+  float wideLeft = exactMaterial(wideLeftMaterial, MATERIAL_GLASS);
+  float wideRight = exactMaterial(wideRightMaterial, MATERIAL_GLASS);
+  float wideTop = exactMaterial(wideTopMaterial, MATERIAL_GLASS);
+  float wideBottom = exactMaterial(wideBottomMaterial, MATERIAL_GLASS);
+  float wideCount = wideLeft + wideRight + wideTop + wideBottom;
+  float wideEmptyCount = emptyMaterial(wideLeftMaterial)
+    + emptyMaterial(wideRightMaterial)
+    + emptyMaterial(wideTopMaterial)
+    + emptyMaterial(wideBottomMaterial);
+  float wideForeignCount = 4.0 - wideCount - wideEmptyCount;
+  float localAxisSupport = step(0.5, sameLeft + sameRight)
+    * step(0.5, sameTop + sameBottom);
+  float wideAxisSupport = step(0.5, wideLeft + wideRight)
+    * step(0.5, wideTop + wideBottom);
+  float connectedBody = localAxisSupport * wideAxisSupport
+    * (1.0 - step(0.5, max(foreignCount, wideForeignCount)));
+  if (connectedBody < 0.5) return sourceRadiance;
+
+  vec2 outwardSignal = vec2(
+    sameLeft - sameRight, sameTop - sameBottom
+  );
+  float edgeMagnitude = length(outwardSignal);
+  vec2 outward = edgeMagnitude > 0.001
+    ? outwardSignal / edgeMagnitude : vec2(0.0);
+  vec2 tangent = vec2(-outward.y, outward.x);
+  float shell = smoothstep(0.12, 0.92, edgeMagnitude) * connectedBody;
+
+  // The same shoulders distinguish a broad optical middle from its shell
+  // without requiring a depth texture or altering exact Glass topology.
+  float deepBody = smoothstep(1.60, 3.75, wideCount) * connectedBody;
+
+  vec2 worldPosition = vUv / uWorldTexel;
+  vec3 volume = texture(
+    uMaterialVolumeTexture,
+    worldPosition / vec2(104.0, 78.0) + vec2(0.37, 0.19)
+  ).rgb;
+  float fold = clamp(volume.r * 0.56 + volume.g * 0.29 + volume.b * 0.15, 0.0, 1.0);
+  float signedFold = clamp((fold - 0.5) * 2.15, -1.0, 1.0);
+  vec2 volumeWarp = (volume.rg - vec2(0.5)) * uWorldTexel
+    * mix(4.2, 8.6, deepBody);
+  vec2 contourWarp = outward * uWorldTexel * shell
+    * (2.2 + fold * 3.2);
+  contourWarp += tangent * uWorldTexel * shell * signedFold * 2.4;
+  vec2 refractedUv = boundedUv(vUv + volumeWarp + contourWarp);
+  vec2 dispersedUv = boundedUv(
+    refractedUv - volumeWarp * 0.24
+      + tangent * uWorldTexel * shell * 0.90
+  );
+  vec3 refracted = straightRadiance(texture(uBehindTexture, refractedUv));
+  vec3 dispersed = straightRadiance(texture(uBehindTexture, dispersedUv));
+  vec3 refractedGlass = vec3(
+    refracted.r,
+    mix(refracted.g, dispersed.g, 0.32),
+    dispersed.b
+  ) * vec3(0.86, 1.02, 1.10);
+
+  // Broad connected Glass exposes the displaced environment; the shell keeps
+  // more native pigment and receives a cool Fresnel crown. This is deliberately
+  // a strong visual read at fit scale while remaining below a mirror-like edge.
+  float backdropShare = connectedBody * mix(0.34, 0.66, deepBody)
+    * mix(1.0, 0.72, shell);
+  vec3 result = mix(sourceRadiance, refractedGlass, backdropShare);
+  float fresnelCrown = shell * (0.085 + (1.0 - deepBody) * 0.075)
+    * (0.72 + max(signedFold, 0.0) * 0.28);
+  result += max(vec3(0.0), vec3(1.16) - clamp(result, 0.0, 1.16))
+    * vec3(0.54, 0.88, 1.10) * fresnelCrown;
+  // Make the low-frequency displacement readable even over a quiet portion
+  // of the private backdrop: its positive face admits a cool internal crown,
+  // while the opposite face accumulates a shallow wavelength-selective pocket.
+  // Both terms remain inside the already-proven broad Glass body.
+  float interiorCrown = deepBody * smoothstep(0.06, 0.72, signedFold);
+  float interiorPocket = deepBody * smoothstep(0.06, 0.72, -signedFold);
+  result += max(vec3(0.0), vec3(1.12) - clamp(result, 0.0, 1.12))
+    * vec3(0.34, 0.72, 1.02) * interiorCrown * 0.095;
+  result *= exp(-vec3(0.090, 0.040, 0.016) * interiorPocket);
+  result *= exp(-vec3(0.018, 0.008, 0.003) * deepBody);
+  return max(result, vec3(0.0));
+}
+
+/**
  * Project a short, broken Water light field onto dense matter immediately
  * downstream of the pool. This is deliberately a presentation effect: the
  * semantic Water samples own admission, scene alpha keeps the receiver's
@@ -771,6 +889,8 @@ void main() {
     if (material == MATERIAL_WATER || material == MATERIAL_OIL || material == MATERIAL_ACID) {
       radiance = liquidInteriorTransport(radiance, material, semanticCentre);
       radiance = liquidSurfaceTransport(radiance, material, semanticCentre);
+    } else if (material == MATERIAL_GLASS) {
+      radiance = glassBackdropTransport(radiance, semanticCentre);
     } else {
       radiance = waterReceiverCaustic(radiance, material, scene.a);
     }

@@ -6182,7 +6182,9 @@ void main() {
   // matter but leaves exact and reconstructed liquid transparent. It never
   // reaches the screen directly; the HDR compositor samples it only through
   // an already-supported liquid body.
-  if (uOpticalLayer > 0.5 && (liquidOnly > 0.5 || family == 2.0)) discard;
+  if (uOpticalLayer > 0.5
+    && (liquidOnly > 0.5 || family == 2.0
+      || (material == 24.0 && wall < 0.5))) discard;
   // The appended Waxy class is profile authority only. Historical normal-HDR
   // branches retain SmoothRigid behaviour in Off/A and outside shared B
   // profile selection, while the two selectors below receive profileOptics.

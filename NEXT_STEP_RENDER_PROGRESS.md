@@ -1182,3 +1182,47 @@ Status: retained normal-WebGL botanical volume refinement.
    moving plume rather than a rectangular atlas body.
 3. Continue material-scale response for translucent crystals, Wax, and mixed
    liquid/solid contacts before returning to isolated element decoration.
+
+## 2026-08-15 — curved backdrop lens for broad Glass
+
+Status: retained normal-WebGL translucent-solid refinement.
+
+### What changed
+
+- Broad exact-Glass bodies now expose and bend the existing private optical
+  backdrop. Low-frequency material volume produces an internal displacement,
+  a second sample adds restrained colour dispersion, and the real Glass
+  contour receives a cool Fresnel crown rather than another opaque highlight.
+- The lens requires local and six-cell Glass support on both axes. Thin lines,
+  isolated particles, nearby unlike-material contacts, and wall-backed Glass
+  therefore retain their native presentation instead of becoming small lenses.
+- The private optical layer omits only air-backed exact Glass. Co-located wall
+  pixels remain available, so the wall checker survives behind the Glass while
+  the composed scene keeps its original support and alpha.
+
+### Visual decision
+
+- Keep the contained lens. The material changes from pale cyan acrylic into a
+  dark transparent pane with a displaced interior and layered cool edge, and
+  remains clearly different from reflective Metal, soft Wax, and Ceramic.
+- The dedicated scene retains both large panes, their hole and open notch, the
+  one-cell line and isolated control, mixed-material contacts, and the visible
+  wall-backed checker.
+
+### Lightweight checks used
+
+- `npm run build` completes and closes all 19 production resources.
+- The decisive scene is `/tmp/anifor-glass-body-lens-contained.png`; the
+  before/after material crop is `/tmp/anifor-glass-lens-v2-compare.png`, and
+  `/tmp/anifor-render-optics-glass-lens-v2.png` retains the full family board.
+- The selection used WebGL at 2× and direct visual inspection. No historical
+  image hash or exact visual baseline was used as an acceptance condition.
+
+### Next visual work
+
+1. Add a broad source-facing scattering shoulder to participating gas while
+   retaining a deep core and rear-side extinction.
+2. Exercise that light turn in a naturally irregular moving plume, not only a
+   rectangular atlas body.
+3. Continue material-scale response for translucent crystals, Wax, and mixed
+   liquid/solid contacts.
