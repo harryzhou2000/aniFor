@@ -1927,6 +1927,21 @@ vec3 applySurfaceContourEightX(
   }
   return color;
 }
+// Compact true 8x keeps its own, B-independent broad body grounding. The
+// caller has already proved a quiet, deep interior from live density/depth and
+// ownership signals, so this RGB-only attenuation cannot create support or
+// turn contacts into separator lines.
+vec3 applyEightXInteriorGrounding(
+  vec3 color, float density, float depth, vec2 slope, float eligibility
+) {
+  float mass = eligibility
+    * smoothstep(0.68, 0.90, density)
+    * smoothstep(0.52, 0.88, clamp(depth, 0.0, 1.0))
+    * (1.0 - smoothstep(0.028, 0.14, length(slope)));
+  float peak = max(max(color.r, color.g), max(color.b, 0.12));
+  vec3 pigment = clamp(color / peak, 0.0, 1.0);
+  return color * (vec3(1.0) - pigment * mass * (5.5 / 255.0));
+}
 void main() {
   vec2 uv = vFieldCoord;
   vec4 semantic = texture(uFieldTexture, clamp(uv, uTexel * 0.5, vec2(1.0) - uTexel * 0.5));
@@ -2449,6 +2464,9 @@ void main() {
     if (uPowderStyle > 1.5 && traits < 0.5 && !materialEmissive) {
       float powderFinishEligibility = step(0.001, powderFieldBlend)
         * smoothstep(0.70, 0.96, depth);
+      color = applyEightXInteriorGrounding(
+        color, density, depth, powderFieldSlope, powderFinishEligibility
+      );
       MaterialBodyFinishResponse powderFinishProfile = materialBodyFinishParameters(
         0.0, optics, uMaterialBodyFinish
       );
@@ -2541,6 +2559,13 @@ void main() {
         * (optics == 11.0 ? 4.0 / 255.0 : 14.0 / 255.0)
         - bodyShadow * max(0.0, -bodyResponse)
           * (optics == 11.0 ? 16.0 / 255.0 : 10.0 / 255.0);
+      vec2 solidBodySlope = vec2(
+        mix(q10 - q00, q11 - q01, blend.y),
+        mix(q01 - q00, q11 - q10, blend.x)
+      );
+      color = applyEightXInteriorGrounding(
+        color, density, depthT, solidBodySlope, 1.0
+      );
       // Exact structural metals get a broad rolled reflection only once the
       // existing thickness byte and four-owner proof establish a real body.
       // Keep it under the established construction-style switch and leave
@@ -12696,7 +12721,18 @@ void main() {
         0.0, 1.0
       );
       float shaftSignedFold = clamp((shaftFold - 0.5) * 2.15, -1.0, 1.0);
-      float shaftLobe = smoothstep(0.34, 0.72, shaftFold);
+      float shaftBaseLobe = smoothstep(0.34, 0.72, shaftFold);
+      // Two overlapping low-frequency channels read as broad illuminated
+      // sheets instead of exposing the texture itself. Their union is still
+      // evaluated inside the atmosphere-owned body, so the window cannot fill
+      // an authored hole or turn an isolated gas carrier into a cloud.
+      float shaftSheetA = smoothstep(
+        0.36, 0.76, shaftVolume.r * 0.72 + shaftVolume.g * 0.28
+      );
+      float shaftSheetB = smoothstep(
+        0.46, 0.82, shaftVolume.b * 0.66 + shaftVolume.g * 0.34
+      );
+      float shaftLobe = clamp(max(shaftSheetA, shaftSheetB * 0.82), 0.0, 1.0);
       float shaftMiddle = 4.0 * shaftFold * (1.0 - shaftFold);
       float shaftDirectionSupport = mix(
         longRangeTransportConfidence,
@@ -12721,24 +12757,44 @@ void main() {
       vec3 sourceSpectrum = vividColor(
         sourceRadiance / max(sourcePeak, 0.001), 1.08
       );
-      vec3 shaftHeadroom = max(
-        vec3(0.0), vec3(1.18) - clamp(color, 0.0, 1.18)
+      float shaftScatterAdmission = smoothstep(
+        0.56, 0.76, profileIrradianceProfile.interiorScatter
       );
       // The transported field already proves the source, direction and gas
       // body. Let that proof survive fit-view composition as participating
       // media: a broad source-coloured middle, brighter aligned folds and
-      // complementary absorptive pockets. The previous two-byte shoulder was
-      // technically present but visually read as a uniformly matte gas card.
-      float shaftKey = shaftBody * sourceEnergy
-        * (0.075 + max(shaftSignedFold, 0.0) * 0.260
-          + shaftMiddle * 0.060);
+      // complementary absorptive pockets. The scattering-profile gate keeps
+      // weakly participating carrier classes on their existing treatment.
+      float shaftOverhaul = uGasLightVfx * shaftScatterAdmission;
+      vec3 shaftTarget = mix(vec3(1.18), vec3(1.28), shaftOverhaul);
+      vec3 shaftHeadroom = max(
+        vec3(0.0), shaftTarget - clamp(color, vec3(0.0), shaftTarget)
+      );
+      float shaftBaseKey = 0.075 + max(shaftSignedFold, 0.0) * 0.260
+        + shaftMiddle * 0.060;
+      float shaftSheetKey = 0.500 + shaftLobe * 0.220
+        + max(shaftSignedFold, 0.0) * 0.060
+        + shaftMiddle * 0.120;
+      float shaftSourceEnergy = mix(
+        sourceEnergy, sqrt(sourceEnergy), shaftOverhaul * 0.65
+      );
+      float shaftKey = shaftBody * shaftSourceEnergy
+        * mix(shaftBaseKey, shaftSheetKey, shaftOverhaul);
       color += shaftHeadroom * sourceSpectrum * shaftKey;
-      float rearExtinction = shaftBody * (
+      float baseRearExtinction = shaftBody * (
         max(-longRangeIncidence, 0.0)
-          * (0.050 + (1.0 - shaftLobe) * 0.120)
+          * (0.050 + (1.0 - shaftBaseLobe) * 0.120)
         + max(-shaftSignedFold, 0.0) * sourceEnergy * 0.100
       );
-      color *= 1.0 - rearExtinction;
+      float sheetRearExtinction = shaftBody * (
+        max(-longRangeIncidence, 0.0)
+          * (0.065 + (1.0 - shaftLobe) * 0.135)
+        + max(-shaftSignedFold, 0.0) * sourceEnergy * 0.120
+      );
+      float rearExtinction = mix(
+        baseRearExtinction, min(sheetRearExtinction, 0.085), shaftOverhaul
+      );
+      color *= 1.0 - min(rearExtinction, 0.085);
     }
   }
   // Give stable Smooth powder a final broad-volume grade after grain identity

@@ -31,6 +31,7 @@ describe('WebGL capability probe', () => {
       maxViewportWidth: 8192,
       maxViewportHeight: 4096,
       maxTextureSize: 4096,
+      softwareRenderer: false,
     });
     expect(loseContext).toHaveBeenCalledOnce();
   });

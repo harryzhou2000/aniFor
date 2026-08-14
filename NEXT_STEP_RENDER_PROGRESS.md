@@ -696,3 +696,60 @@ Status: visually accepted normal-WebGL liquid-surface increment.
    visual vocabulary into a compact, stable true 8× shader grammar.
 3. Continue material-family work from shared optics before returning to
    isolated element-by-element motifs.
+
+## 2026-08-14 — participating gas light and resilient high-resolution WebGL
+
+Status: visually accepted gas-volume checkpoint; compact 8× parity and ordinary
+software-renderer resilience improved.
+
+### What changed
+
+- Source-lit connected gas now forms a broad, soft, source-coloured window
+  through its volume. Two low-frequency material-volume channels shape the
+  window, while a profile gate and the existing transported-light direction
+  keep the effect tied to genuinely scattering, illuminated gas.
+- The retained treatment deliberately moved away from the earlier nested-band
+  experiment. A stronger broad carrier now owns most of the lift, with only
+  gentle internal modulation and a restrained far-side extinction pocket.
+  Atmosphere fields still own support, holes, sparse gaps, alpha, and species
+  mixture.
+- Compact true 8× Smooth powder and deep solid interiors now receive a small
+  shared pigment-aware grounding term. Local and square Grains remain exact on
+  their prior paths; exposed shells, slopes, contacts, fine structures, and
+  holes do not enter the deep-interior response.
+- Ordinary 8× requests detected on SwiftShader/llvmpipe-style software
+  rasterizers now remain on canonical WebGL at an effective 4× instead of
+  timing out and dropping to Canvas. The request is retained for the UI's
+  `4× (8× capped)` diagnostic. Explicit true-8× audit routes and hardware with
+  adequate throughput retain the compact 8× path.
+
+### Visual decision
+
+- Keep gas V6. At fit view the lit side is now clearly visible in Smoke/FOG
+  cards, but reads as soft participating media rather than V4's posterized
+  contour bands. An independent visual pass also selected V6.
+- Keep compact interior grounding. It closes the most obvious depth-vocabulary
+  gap between normal Smooth rendering and the compact direct shader without
+  changing powder style semantics.
+- Treat the adaptive software cap as a robustness policy, not a replacement for
+  true 8× rendering. True 8× remains available where it can complete reliably.
+
+### Lightweight checks used
+
+- `npm run build` completes and closes all 19 production resources.
+- The focused WebGL capability test remains green (5 tests).
+- The retained gas before/after frames are
+  `/tmp/anifor-gas-participating-v6-e13-gas-light-2x-off.png` and
+  `/tmp/anifor-gas-participating-v6-e13-gas-light-2x-on.png`.
+- The loose visual capture reported WebGL at 2× with zero browser errors; no
+  historical visual hash or calibrated response envelope was used to decide
+  the aesthetic result.
+
+### Next visual work
+
+1. Extend the softer source-window vocabulary to moving, irregular gas plumes
+   so the effect is not judged only on paused cards.
+2. Give grounded powder/solid bulk a restrained lower-hemisphere colour bounce
+   rather than neutral darkening alone.
+3. Continue compact 8× parity for liquid and gas with cheap broad lobes, while
+   keeping the full normal shader as the primary visual path.

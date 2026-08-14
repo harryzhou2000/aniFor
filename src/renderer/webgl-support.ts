@@ -4,6 +4,8 @@ export interface WebGLCapabilities {
   readonly maxViewportWidth: number;
   readonly maxViewportHeight: number;
   readonly maxTextureSize: number;
+  /** True for software rasterizers whose 15M-fragment 8x frame is not interactive. */
+  readonly softwareRenderer: boolean;
 }
 
 const UNSUPPORTED_WEBGL: WebGLCapabilities = {
@@ -12,9 +14,10 @@ const UNSUPPORTED_WEBGL: WebGLCapabilities = {
   maxViewportWidth: 0,
   maxViewportHeight: 0,
   maxTextureSize: 0,
+  softwareRenderer: false,
 };
 
-const CAPABILITIES_SESSION_KEY = 'anifor-webgl-capabilities-v1';
+const CAPABILITIES_SESSION_KEY = 'anifor-webgl-capabilities-v2';
 
 function cachedWebGLCapabilities(): WebGLCapabilities | undefined {
   try {
@@ -25,7 +28,7 @@ function cachedWebGLCapabilities(): WebGLCapabilities | undefined {
       parsed.maxRenderbufferSize, parsed.maxViewportWidth,
       parsed.maxViewportHeight, parsed.maxTextureSize,
     ];
-    if (parsed.supported !== true
+    if (parsed.supported !== true || typeof parsed.softwareRenderer !== 'boolean'
       || !values.every((value) => typeof value === 'number'
         && Number.isInteger(value) && value >= 1)) return undefined;
     return {
@@ -34,6 +37,7 @@ function cachedWebGLCapabilities(): WebGLCapabilities | undefined {
       maxViewportWidth: parsed.maxViewportWidth!,
       maxViewportHeight: parsed.maxViewportHeight!,
       maxTextureSize: parsed.maxTextureSize!,
+      softwareRenderer: parsed.softwareRenderer,
     };
   } catch {
     // Private browsing and non-browser tests may not expose session storage.
@@ -71,12 +75,20 @@ export function probeWebGLCapabilities(): WebGLCapabilities {
     const maxViewportHeight = Number(viewport?.[1]);
     if (![maxRenderbufferSize, maxViewportWidth, maxViewportHeight, maxTextureSize]
       .every((value) => Number.isFinite(value) && value >= 1)) return UNSUPPORTED_WEBGL;
+    const rendererInfo = context.getExtension('WEBGL_debug_renderer_info');
+    let renderer = '';
+    try {
+      if (rendererInfo && Number.isInteger(rendererInfo.UNMASKED_RENDERER_WEBGL)) {
+        renderer = String(context.getParameter(rendererInfo.UNMASKED_RENDERER_WEBGL) ?? '');
+      }
+    } catch { /* privacy-restricted debug metadata means unknown hardware */ }
     const capabilities = {
       supported: true,
       maxRenderbufferSize: Math.floor(maxRenderbufferSize),
       maxViewportWidth: Math.floor(maxViewportWidth),
       maxViewportHeight: Math.floor(maxViewportHeight),
       maxTextureSize: Math.floor(maxTextureSize),
+      softwareRenderer: /swiftshader|llvmpipe|software(?:\s+rasterizer|\s+renderer)?/i.test(renderer),
     };
     cacheWebGLCapabilities(capabilities);
     return capabilities;

@@ -458,9 +458,20 @@ export class MaterialRenderer {
     const forcedCanvas = forceCanvas2D();
     const webGLCapabilities = forcedCanvas ? undefined : probeWebGLCapabilities();
     this.webGLAvailable = webGLCapabilities?.supported === true;
+    // A software rasterizer can expose enough dimensions for a true 8x target
+    // while taking longer than the bounded promotion window to shade its 15M
+    // fragments. Keep canonical WebGL visuals at 4x in ordinary play instead
+    // of falling all the way back to 2x Canvas. Audit pages retain explicit
+    // true-8x authority so the compact path remains exercisable in isolation.
+    const renderParameters = new URLSearchParams(globalThis.location?.search ?? '');
+    const trueEightAudit = renderParameters.get('inputAudit') === '1'
+      && renderParameters.has('auditStage');
+    const deviceRequestedScale = this.requestedOutputScale === 8
+      && webGLCapabilities?.softwareRenderer === true && !trueEightAudit
+      ? 4 : this.requestedOutputScale;
     this.webGLOutputScale = webGLCapabilities?.supported
       ? safeDeviceWebGLOutputScale(
-        simulation.width, simulation.height, this.requestedOutputScale, webGLCapabilities,
+        simulation.width, simulation.height, deviceRequestedScale, webGLCapabilities,
       )
       : 1;
     // A true 8x WebGL target already approaches 60 MiB. Keep its temporary
@@ -1932,7 +1943,10 @@ export class MaterialRenderer {
 
   private async promoteLatePresenter(pending: Promise<PixiFieldPresenter>): Promise<void> {
     let presenter: PixiFieldPresenter | undefined;
-    const promotionTimeout = webGLPromotionTimeout(this.webGLOutputScale);
+    // An ordinary 8x request may be adaptively capped on a software renderer;
+    // retain the request's longer cold-start allowance for that 4x WebGL
+    // candidate instead of applying the unrelated normal 4x ten-second gate.
+    const promotionTimeout = webGLPromotionTimeout(this.requestedOutputScale);
     const promotionDeadline = performance.now() + promotionTimeout;
     try {
       presenter = await settleWithin(pending, promotionTimeout);
