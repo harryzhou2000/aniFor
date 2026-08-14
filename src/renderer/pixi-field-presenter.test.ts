@@ -6577,7 +6577,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(helpers).toContain('0.14 + 0.025 * smoothstep(0.42, 0.86, columnDepth)');
     expect(source).toContain('liquidOpticalDepth = boundaryStabilityAt(fieldUv)');
     expect(source).toMatch(/writeVerticalOpticalDepth\(\s*materials, this\.boundaryStabilityBytes, walls,\s*\)/);
-    expect(source).toContain('if (boundaryTextureDirty) this.boundaryStabilitySource.update()');
+    expect(source).toMatch(
+      /if \(boundaryTextureDirty\) \{\s*textureUpdate\('otherMs', \(\) => this\.boundaryStabilitySource\.update\(\)\);\s*\}/,
+    );
     expect(source.match(/boundaryStabilitySource\.update\(\)/g)).toHaveLength(1);
     expect(`${helpers}${block}`).not.toContain('texture(');
     expect(`${helpers}${block}`).not.toMatch(/\balpha\s*[+*]?=/);
