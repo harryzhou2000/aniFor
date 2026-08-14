@@ -359,12 +359,11 @@ vec3 liquidSurfaceTransport(
     result *= vec3(1.0) - vec3(0.15, 0.25, 0.65) * oilPocket;
   }
   // E66: sample the existing species-aware liquid plane at two mesoscopic
-  // tangent shoulders around the already-proven Water/air interface. A flat
+  // tangent shoulders around the already-proven liquid/air interface. A flat
   // shore sees equal density at both shoulders; a convex crest recedes from
   // them, while a concave pocket wraps around them. This is a single guarded
   // curvature-flow-inspired optical step, not a new field or support rule.
-  if (uWaterCurvatureVfx > 0.5
-    && exactMaterial(material, MATERIAL_WATER) > 0.5 && wallBacked < 0.5) {
+  if (uWaterCurvatureVfx > 0.5 && wallBacked < 0.5) {
     float outwardWeight = max(0.0001, abs(outward.x) + abs(outward.y));
     float outwardDensity = (
       max(outward.x, 0.0) * liquidRight.a
@@ -397,10 +396,41 @@ vec3 liquidSurfaceTransport(
     float curvatureKey = 0.72 + 0.28 * max(
       0.0, dot(outward, normalize(vec2(-0.58, -0.815)))
     );
+    vec3 curvatureCrown = material == MATERIAL_WATER
+      ? vec3(0.30, 0.82, 1.08)
+      : (material == MATERIAL_OIL
+        ? vec3(1.08, 0.69, 0.22)
+        : vec3(0.62, 1.00, 0.54));
+    vec3 curvatureAbsorption = material == MATERIAL_WATER
+      ? vec3(0.160, 0.070, 0.035)
+      : (material == MATERIAL_OIL
+        ? vec3(0.055, 0.120, 0.280)
+        : vec3(0.110, 0.045, 0.130));
+    vec3 curvatureTransmissionTint = material == MATERIAL_WATER
+      ? vec3(0.92, 1.03, 1.10)
+      : (material == MATERIAL_OIL
+        ? vec3(1.08, 0.98, 0.78)
+        : vec3(0.96, 1.08, 0.92));
+    float crownGain = material == MATERIAL_WATER ? 0.28
+      : (material == MATERIAL_OIL ? 0.22 : 0.25);
+    float pocketGain = material == MATERIAL_WATER ? 1.00
+      : (material == MATERIAL_OIL ? 1.18 : 0.92);
     result += (vec3(1.16) - clamp(result, 0.0, 1.16))
-      * vec3(0.30, 0.82, 1.08) * convexCrest * curvatureKey * 0.28;
-    result *= vec3(1.0) - vec3(0.050, 0.070, 0.100)
-      * concavePocket * (0.74 + curvatureKey * 0.26);
+      * curvatureCrown * convexCrest * curvatureKey * crownGain;
+    // A convex shoulder is optically thinner: admit a restrained amount of
+    // the already-sampled transmission and bias it toward the material's clear
+    // wavelength. Concave pockets receive the opposite Beer-Lambert-like
+    // extinction. Together these cues make curved liquid read as thickness,
+    // not an opaque colour band, without touching support or scene alpha.
+    vec3 shoulderTransmission = max(
+      transmitted * curvatureTransmissionTint,
+      result * mix(vec3(1.0), curvatureTransmissionTint, 0.22)
+    );
+    float shoulderWindow = convexCrest * (0.08 + curvatureKey * 0.10);
+    result = mix(result, shoulderTransmission, shoulderWindow);
+    float pocketOpticalDepth = concavePocket
+      * (0.74 + curvatureKey * 0.26) * pocketGain;
+    result *= exp(-curvatureAbsorption * pocketOpticalDepth);
   }
   ${visualLabEnabled ? `result = applyHdrLiquidSurfaceLab(
     result, material, surface, ripple, outward, transmitted, reflected,

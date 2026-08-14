@@ -1072,9 +1072,18 @@ describe('Pixi presenter startup configuration', () => {
     expect(gas).toContain('gasForwardScatter');
     expect(gasVfxStart).toBeGreaterThanOrEqual(0);
     expect(gasVfxEnd).toBeGreaterThan(gasVfxStart);
-    expect(gasVfx).toContain('sin(dot(fieldPosition');
+    expect(gasVfx).toContain('sin(dot(gasBillowPosition');
+    expect(gasVfx).toContain('gasBillowPosition = fieldPosition - gasMotionDirection * uTime');
+    expect(gasVfx).toContain('12.0 * gasMotionStrength * gasMaterialVolumeB');
+    expect(gasVfx).toContain('gasVfxNoiseMacro = botanicalBodyNoise(');
+    expect(gasVfx).toContain('gasVfxNoiseMeso = botanicalBodyNoise(');
+    expect(gasVfx).toContain('if (gasMaterialVolumeB > 0.5 && uGasVolumeNoiseDetail > 0.5)');
+    expect(gasVfx).toContain('gasVfxWaveBasis * 0.38 + gasVfxFbm * 0.92');
     expect(gasVfx).toContain('gasVfxBodySupport');
     expect(normal).toContain('gasStyleState = texture(uAtmosphereStyleTexture, fieldUv)');
+    expect(source).toContain('uGasVolumeNoiseDetail: { value: outputScale <= 2 ? 1 : 0');
+    expect(normal).toContain('uniform float uGasVolumeNoiseDetail;');
+    expect(eight).not.toContain('uGasVolumeNoiseDetail');
     expect(normal.match(/texture\(uAtmosphereStyleTexture/g)).toHaveLength(1);
     expect(normal).toContain('if (uGasIdentityStyling > 0.5 || uGasMotionVfx > 0.5\n      || uMaterialBodyFinish > 0.5)');
     expect(gasVfx).toContain('if (uGasMotionVfx > 0.5)');
@@ -1082,6 +1091,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(gasVfx).toContain('smoothstep(0.45, 0.75, gasStyleState.a)');
     expect(gasVfx).toContain('gasMotionOutward = -volumeSlope');
     expect(gasVfx).toContain('gasMotionBillowGradient');
+    expect(gasVfx).toContain('cos(dot(gasBillowPosition');
     expect(gasVfx).toContain('gasMotionInteriorTone + gasMotionEdgeTone');
     expect(gasVfx).toContain('* max(gasMotionTone, 0.0) * (32.0 / 255.0)');
     expect(gasVfx).toContain('* vec3(-64.0, 28.0, 52.0) / 255.0');
@@ -1124,9 +1134,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(gasCoreDepthVfx).toContain('cloudNeighbourMean');
     expect(gasCoreDepthVfx).toContain('atmosphereState.a');
     expect(gasCoreDepthVfx).toContain('gasVfxBillow');
-    expect(gas).toContain('sin(dot(fieldPosition, vec2(0.055, 0.031)) + 0.80)');
-    expect(gas).toContain('sin(dot(fieldPosition, vec2(-0.029, 0.081)) + 2.15)');
-    expect(gas).toContain('sin(dot(fieldPosition, vec2(0.097, -0.043)) + 4.05)');
+    expect(gas).toContain('sin(dot(gasBillowPosition, vec2(0.055, 0.031)) + 0.80)');
+    expect(gas).toContain('sin(dot(gasBillowPosition, vec2(-0.029, 0.081)) + 2.15)');
+    expect(gas).toContain('sin(dot(gasBillowPosition, vec2(0.097, -0.043)) + 4.05)');
     expect(gas).toContain('gasVfxWaveA * 0.50 + gasVfxWaveB * 0.31 + gasVfxWaveC * 0.19');
     expect(gasCoreDepthVfx).toContain('opticalDepth');
     expect(gasCoreDepthVfx).not.toContain('texture(');
@@ -5093,7 +5103,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight).not.toContain('uOilMotionVfx');
   });
 
-  it('routes E66 Water curvature through E08 liquid density without an 8x branch', () => {
+  it('routes E66 liquid-family curvature through E08 liquid density without an 8x branch', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const hdrSource = readFileSync(new URL('./hdr-vfx-pipeline.ts', import.meta.url), 'utf8');
     const eightStart = source.indexOf('const FIELD_EIGHT_X_FRAGMENT = `');

@@ -3688,6 +3688,7 @@ uniform float uHighQuality;
 uniform float uAnalyticLightingQuality;
 uniform float uGasFieldLighting;
 uniform float uGasVolumeChroma;
+uniform float uGasVolumeNoiseDetail;
 uniform float uGasIdentityStyling;
 uniform float uEmissionVolumeChroma;
 uniform float uLiquidFieldLighting;
@@ -6868,8 +6869,10 @@ void main() {
     // E04: turn the existing field normal and curvature into a readable
     // connected billow without inventing particle-scale noise. The shared
     // atmosphere remains the sole owner of mass, colour mixture, support, and
-    // alpha. This normal-detail experiment adds only bounded RGB arithmetic:
-    // no sample, field, target, pass, clock, or output-scale resource.
+    // alpha. Coherent E07 flow advects the established broad pattern in the
+    // enhanced material look, so a moving cloud reads as living media instead
+    // of a painted static shape. This remains bounded RGB arithmetic: no new
+    // sample, field, target, pass, or output-scale resource.
     if (uGasBodyVfx > 0.5) {
       float gasVfxSupport = smoothstep(0.002, 0.050, gasShadeDensity)
         * mix(0.60, 1.0, gasInterior);
@@ -6877,18 +6880,54 @@ void main() {
       float gasVfxCrown = gasVfxShoulder
         * smoothstep(0.003, 0.040, gasShadeDensity)
         * smoothstep(0.68, 1.02, diffuse);
-      // Three long, incommensurate world-space waves form a stable macro/meso
-      // billow basis. It is deliberately independent of uTime and is admitted
-      // only after the atmosphere field proves connected body ownership, so it
-      // cannot turn semantic carriers into moving dots or animate an authored
-      // gap. Wavelengths remain tens of cells at every output scale.
-      float gasVfxWaveA = sin(dot(fieldPosition, vec2(0.055, 0.031)) + 0.80);
-      float gasVfxWaveB = sin(dot(fieldPosition, vec2(-0.029, 0.081)) + 2.15);
-      float gasVfxWaveC = sin(dot(fieldPosition, vec2(0.097, -0.043)) + 4.05);
-      float gasVfxBillow = clamp(
+      float gasMaterialVolumeB = step(1.5, uMaterialLightingVariant);
+      vec2 gasMotionDirection = vec2(0.0);
+      float gasMotionStrength = 0.0;
+      if (uGasMotionVfx > 0.5) {
+        vec2 gasMotionBytes = floor(gasStyleState.gb * 255.0 + vec2(0.5))
+          - vec2(128.0);
+        float gasMotionSpeedBytes = length(gasMotionBytes);
+        float gasMotionCoherence = smoothstep(0.45, 0.75, gasStyleState.a);
+        if (gasMotionSpeedBytes > 0.5 && gasMotionCoherence > 0.001) {
+          gasMotionDirection = gasMotionBytes / gasMotionSpeedBytes;
+          gasMotionStrength = smoothstep(6.0, 30.0, gasMotionSpeedBytes)
+            * gasMotionCoherence;
+        }
+      }
+      // Three long, incommensurate world-space waves form a cheap directional
+      // warp. Enhanced coherent gas carries the resulting volume pattern along
+      // its real field velocity. Still gas and the Balanced look retain the
+      // established position exactly; field-owned support prevents the moving
+      // pattern from filling holes or exposing semantic carriers.
+      vec2 gasBillowPosition = fieldPosition - gasMotionDirection * uTime
+        * (12.0 * gasMotionStrength * gasMaterialVolumeB);
+      float gasVfxWaveA = sin(dot(gasBillowPosition, vec2(0.055, 0.031)) + 0.80);
+      float gasVfxWaveB = sin(dot(gasBillowPosition, vec2(-0.029, 0.081)) + 2.15);
+      float gasVfxWaveC = sin(dot(gasBillowPosition, vec2(0.097, -0.043)) + 4.05);
+      float gasVfxWaveBasis = clamp(
         gasVfxWaveA * 0.50 + gasVfxWaveB * 0.31 + gasVfxWaveC * 0.19,
         -1.0, 1.0
       );
+      // Two smooth world-space noise octaves break the wave basis into broad,
+      // nested lobes. The sine pair warps their coordinates so the result reads
+      // as rolling participating media rather than a repeated surface texture.
+      // This is enhanced-look RGB detail only: the atmosphere field continues
+      // to own density, silhouette, gaps, species, and alpha.
+      vec2 gasVfxWarp = vec2(gasVfxWaveB, gasVfxWaveC) * 7.5;
+      float gasVfxBillow = gasVfxWaveBasis;
+      if (gasMaterialVolumeB > 0.5 && uGasVolumeNoiseDetail > 0.5) {
+        float gasVfxNoiseMacro = botanicalBodyNoise(
+          (gasBillowPosition + gasVfxWarp) * 0.040 + vec2(17.3, 5.1)
+        );
+        float gasVfxNoiseMeso = botanicalBodyNoise(
+          (gasBillowPosition - gasVfxWarp * 0.45) * 0.085 + vec2(3.7, 23.9)
+        );
+        float gasVfxFbm = ((gasVfxNoiseMacro - 0.5) * 0.68
+          + (gasVfxNoiseMeso - 0.5) * 0.32) * 2.0;
+        gasVfxBillow = clamp(
+          gasVfxWaveBasis * 0.38 + gasVfxFbm * 0.92, -1.0, 1.0
+        );
+      }
       float gasVfxBodySupport = smoothstep(0.090, 0.32, gasShadeDensity)
         * gasInterior * (1.0 - opticalDepth * 0.35);
       // The shared material-lighting B look turns this already-established
@@ -6896,7 +6935,6 @@ void main() {
       // the strength of RGB key/pocket modulation after atmosphere support is
       // proven; OFF/A, alpha, silhouette, sparse gaps, and compact true-8x
       // remain on their existing paths.
-      float gasMaterialVolumeB = step(1.5, uMaterialLightingVariant);
       float gasInteriorContrast = materialCompositionParameters(2.0).interiorContrast;
       float gasBillowKeyScale = mix(
         1.0, 4.20 * gasInteriorContrast, gasMaterialVolumeB
@@ -7402,14 +7440,7 @@ void main() {
       // cloud fragments inherit the coherent direction of their body. R stays
       // the exact identity byte; G/B are signed flow and A is coherence.
       if (uGasMotionVfx > 0.5) {
-        vec2 gasMotionBytes = floor(gasStyleState.gb * 255.0 + vec2(0.5))
-          - vec2(128.0);
-        float gasMotionSpeedBytes = length(gasMotionBytes);
-        float gasMotionCoherence = smoothstep(0.45, 0.75, gasStyleState.a);
-        if (gasMotionSpeedBytes > 0.5 && gasMotionCoherence > 0.001) {
-          vec2 gasMotionDirection = gasMotionBytes / gasMotionSpeedBytes;
-          float gasMotionStrength = smoothstep(6.0, 30.0, gasMotionSpeedBytes)
-            * gasMotionCoherence;
+        if (gasMotionStrength > 0.001) {
           float gasMotionSlopeLength = length(volumeSlope);
           vec2 gasMotionOutward = -volumeSlope
             / max(gasMotionSlopeLength, 0.000001);
@@ -7419,13 +7450,14 @@ void main() {
           // Differentiate E04's three established macro waves analytically in
           // the coherent flow direction. This produces one broad bipolar body
           // response that reverses with momentum; it is not the old speed-only
-          // static billow grade and cannot expose carrier-sized cells.
+          // static billow grade and cannot expose carrier-sized cells. Evaluate
+          // the derivative at the same advected position as the visible body.
           vec2 gasMotionBillowGradient =
-            cos(dot(fieldPosition, vec2(0.055, 0.031)) + 0.80)
+            cos(dot(gasBillowPosition, vec2(0.055, 0.031)) + 0.80)
               * vec2(0.055, 0.031) * 0.50
-            + cos(dot(fieldPosition, vec2(-0.029, 0.081)) + 2.15)
+            + cos(dot(gasBillowPosition, vec2(-0.029, 0.081)) + 2.15)
               * vec2(-0.029, 0.081) * 0.31
-            + cos(dot(fieldPosition, vec2(0.097, -0.043)) + 4.05)
+            + cos(dot(gasBillowPosition, vec2(0.097, -0.043)) + 4.05)
               * vec2(0.097, -0.043) * 0.19;
           float gasMotionInteriorTone = dot(
             gasMotionBillowGradient, gasMotionDirection
@@ -13058,6 +13090,9 @@ export class PixiFieldPresenter {
       },
       uGasFieldLighting: { value: 1, type: 'f32' },
       uGasVolumeChroma: { value: 1, type: 'f32' },
+      // 4x already shades four times the backing area. Retain its established
+      // broad wave volume and reserve procedural volume noise for 1x/2x.
+      uGasVolumeNoiseDetail: { value: outputScale <= 2 ? 1 : 0, type: 'f32' },
       uGasIdentityStyling: { value: 1, type: 'f32' },
       uEmissionVolumeChroma: { value: 1, type: 'f32' },
       uLiquidFieldLighting: { value: 1, type: 'f32' },

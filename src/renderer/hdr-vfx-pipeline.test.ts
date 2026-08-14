@@ -303,9 +303,9 @@ describe('HDR composition contract', () => {
     expect(HDR_TONEMAP_FRAGMENT).not.toContain('uTime');
   });
 
-  it('derives E66 Water curvature from guarded tangent probes on the existing liquid plane', () => {
+  it('derives E66 family curvature from guarded tangent probes on the existing liquid plane', () => {
     expect(HDR_TONEMAP_FRAGMENT).toMatch(
-      /if \(uWaterCurvatureVfx > 0\.5[\s\S]*?exactMaterial\(material, MATERIAL_WATER\) > 0\.5[\s\S]*?wallBacked < 0\.5\)/,
+      /if \(uWaterCurvatureVfx > 0\.5 && wallBacked < 0\.5\)/,
     );
     expect(HDR_TONEMAP_FRAGMENT).toContain('vec4 curvaturePlus = texture(');
     expect(HDR_TONEMAP_FRAGMENT).toContain('vec4 curvatureMinus = texture(');
@@ -313,6 +313,13 @@ describe('HDR composition contract', () => {
     expect(HDR_TONEMAP_FRAGMENT).toContain('float curvatureResidual = edgeDensity');
     expect(HDR_TONEMAP_FRAGMENT).toContain('convexCrest');
     expect(HDR_TONEMAP_FRAGMENT).toContain('concavePocket');
+    expect(HDR_TONEMAP_FRAGMENT).toContain('curvatureCrown');
+    expect(HDR_TONEMAP_FRAGMENT).toContain('curvatureAbsorption');
+    expect(HDR_TONEMAP_FRAGMENT).toContain('curvatureTransmissionTint');
+    expect(HDR_TONEMAP_FRAGMENT).toContain('shoulderTransmission');
+    expect(HDR_TONEMAP_FRAGMENT).toContain('pocketOpticalDepth');
+    expect(HDR_TONEMAP_FRAGMENT).toContain('material == MATERIAL_OIL');
+    expect(HDR_TONEMAP_FRAGMENT).toContain('MATERIAL_ACID');
     expect(HDR_TONEMAP_FRAGMENT).not.toContain('uCurvatureTexture');
     expect(HDR_TONEMAP_FRAGMENT).not.toContain('uWaterSurfaceTexture');
     expect(HDR_TONEMAP_FRAGMENT).not.toContain('uTime');
