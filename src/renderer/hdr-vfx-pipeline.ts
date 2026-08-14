@@ -37,6 +37,8 @@ export interface HDRCompositionResources {
   readonly semanticTexture: TextureSource;
   readonly wallTexture: TextureSource;
   readonly liquidTexture: TextureSource;
+  readonly liquidDepthTexture: TextureSource;
+  readonly materialVolumeTexture: TextureSource;
   readonly atmosphereTexture: TextureSource;
   readonly atmosphereStyleTexture: TextureSource;
   readonly emissionTexture: TextureSource;
@@ -119,6 +121,8 @@ uniform sampler2D uBloomTexture;
 uniform sampler2D uSemanticTexture;
 uniform sampler2D uWallTexture;
 uniform sampler2D uLiquidTexture;
+uniform sampler2D uLiquidDepthTexture;
+uniform sampler2D uMaterialVolumeTexture;
 ${visualLabEnabled ? `
 uniform sampler2D uAtmosphereTexture;
 uniform sampler2D uAtmosphereStyleTexture;
@@ -173,6 +177,91 @@ vec3 straightRadiance(vec4 sampleValue) {
 }
 
 ${visualLabEnabled ? HDR_VOLUME_LAB_GLSL : ''}
+
+/**
+ * Carries a broad incident-light lobe through dense liquid before the sharper
+ * air-facing surface response is applied. The existing vertical optical depth
+ * controls reach, while the shared smooth volume tile breaks the projection
+ * into wide caustic folds. Every displaced read is exact-owner guarded, so the
+ * effect changes only RGB inside an already-supported Water/Oil/Acid body.
+ */
+vec3 liquidInteriorTransport(
+  vec3 sourceRadiance, float material, vec4 semanticCentre
+) {
+  vec4 liquidCentre = texture(uLiquidTexture, vUv);
+  float opticalDepth = texture(uLiquidDepthTexture, vUv).r;
+  float denseBody = smoothstep(0.58, 0.92, liquidCentre.a);
+  float deepBody = smoothstep(18.0 / 255.0, 108.0 / 255.0, opticalDepth);
+  float body = denseBody * mix(0.28, 1.0, deepBody);
+  if (body < 0.015) return sourceRadiance;
+
+  vec2 velocity = velocityFromSemantic(semanticCentre);
+  vec2 worldPosition = vUv / uWorldTexel;
+  // Light travels down and right from a soft upper-left studio source. The
+  // native semantic velocity bends that path without introducing a new clock.
+  vec2 incident = normalize(vec2(0.46, 0.888));
+  float travelCells = mix(1.8, 7.2, deepBody);
+  vec2 upstreamUv = boundedUv(
+    vUv - incident * uWorldTexel * travelCells
+      - velocity * uWorldTexel * (0.55 + deepBody * 1.65)
+  );
+  float ownerSupport = exactMaterial(semanticMaterial(upstreamUv), material);
+  float wallBlock = step(
+    0.5, floor(texture(uWallTexture, upstreamUv).r * 255.0 + 0.5)
+  );
+  float projectionSupport = ownerSupport * (1.0 - wallBlock);
+  if (projectionSupport < 0.5) return sourceRadiance;
+
+  vec3 upstreamRadiance = straightRadiance(texture(uHdrTexture, upstreamUv));
+  vec2 dispersionAxis = vec2(-incident.y, incident.x);
+  vec2 dispersionUv = boundedUv(
+    upstreamUv + dispersionAxis * uWorldTexel * mix(0.55, 1.65, deepBody)
+  );
+  vec3 dispersedRadiance = straightRadiance(texture(uHdrTexture, dispersionUv));
+  vec3 refractedRadiance = vec3(
+    upstreamRadiance.r,
+    mix(upstreamRadiance.g, dispersedRadiance.g, 0.42),
+    dispersedRadiance.b
+  );
+  vec3 upstreamBloom = texture(uBloomTexture, upstreamUv).rgb;
+  vec2 volumeUv = worldPosition / vec2(108.0, 76.0)
+    + velocity * 0.022
+    + vec2(material * 0.031, material * -0.019);
+  vec3 volume = texture(uMaterialVolumeTexture, volumeUv).rgb;
+  float fold = clamp(volume.r * 0.54 + volume.g * 0.31 + volume.b * 0.15, 0.0, 1.0);
+  float causticCrown = smoothstep(0.50, 0.78, fold);
+  float causticPocket = 1.0 - smoothstep(0.20, 0.58, fold);
+
+  vec3 transmissionTint = material == MATERIAL_WATER
+    ? vec3(0.84, 1.01, 1.12)
+    : (material == MATERIAL_OIL
+      ? vec3(1.13, 0.91, 0.56)
+      : vec3(0.82, 1.10, 0.72));
+  vec3 absorption = material == MATERIAL_WATER
+    ? vec3(0.055, 0.022, 0.010)
+    : (material == MATERIAL_OIL
+      ? vec3(0.020, 0.075, 0.190)
+      : vec3(0.085, 0.022, 0.075));
+  float refractionShare = projectionSupport * body * mix(0.105, 0.245, deepBody);
+  vec3 result = mix(
+    sourceRadiance, refractedRadiance * transmissionTint, refractionShare
+  );
+
+  // A real emissive lobe is preferred when present; a restrained broad studio
+  // key keeps ordinary water readable as volume rather than a flat cyan fill.
+  vec3 causticTint = material == MATERIAL_WATER
+    ? vec3(0.42, 0.88, 1.12)
+    : (material == MATERIAL_OIL
+      ? vec3(1.12, 0.67, 0.22)
+      : vec3(0.48, 1.02, 0.40));
+  vec3 projectedLight = upstreamBloom * 0.68 + causticTint * 0.38;
+  vec3 headroom = max(vec3(0.0), vec3(1.18) - clamp(result, 0.0, 1.18));
+  float caustic = projectionSupport * body * causticCrown
+    * mix(0.075, 0.25, deepBody);
+  result += headroom * projectedLight * caustic;
+  result *= exp(-absorption * body * deepBody * (0.42 + causticPocket * 0.85));
+  return result;
+}
 
 /**
  * E08 transports only colour already present in the completed HDR scene. The
@@ -460,6 +549,7 @@ void main() {
     vec4 semanticCentre = semanticState(vUv);
     float material = materialFromSemantic(semanticCentre);
     if (material == MATERIAL_WATER || material == MATERIAL_OIL || material == MATERIAL_ACID) {
+      radiance = liquidInteriorTransport(radiance, material, semanticCentre);
       radiance = liquidSurfaceTransport(radiance, material, semanticCentre);
     }
   }
@@ -663,6 +753,10 @@ export class HDRVfxPipeline {
           uWallSampler: composition.wallTexture.style,
           uLiquidTexture: composition.liquidTexture,
           uLiquidSampler: composition.liquidTexture.style,
+          uLiquidDepthTexture: composition.liquidDepthTexture,
+          uLiquidDepthSampler: composition.liquidDepthTexture.style,
+          uMaterialVolumeTexture: composition.materialVolumeTexture,
+          uMaterialVolumeSampler: composition.materialVolumeTexture.style,
           ...(visualLabEnabled ? {
             uAtmosphereTexture: composition.atmosphereTexture,
             uAtmosphereSampler: composition.atmosphereTexture.style,

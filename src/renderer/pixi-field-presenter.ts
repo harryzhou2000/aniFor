@@ -12100,7 +12100,10 @@ void main() {
     ? 0.0
     : (materialEmissive ? 0.48 + heat * 1.05 : (material == 11.0 ? 0.28 + heat * 0.62 : 0.0));
   color += mix(base, vec3(1.0, 0.52, 0.20), heat) * emission;
-  if (energyCore < 0.5 && emissionOnly < 0.5 && emissionState.a > 0.002) {
+  float profileIrradianceB = step(1.5, uMaterialLightingVariant);
+  float transportedGasLight = gasVolume * profileIrradianceB * uHighQuality;
+  if (energyCore < 0.5 && emissionOnly < 0.5
+    && (emissionState.a > 0.002 || transportedGasLight > 0.5)) {
     float lightReach = smoothstep(0.002, 0.42, emissionState.a);
     float contour = 1.0 - smoothstep(0.54, 0.96, density);
     float relief = clamp((diffuse - 0.72) / 0.42 + specular * 0.18, 0.0, 1.0);
@@ -12162,7 +12165,6 @@ void main() {
     // composed shader: the centre emission sample, body/phase proofs, normal,
     // and appearance profile. Off/Balanced retain their existing bytes, while
     // compact true 8x passes literal Off and compiles this response inactive.
-    float profileIrradianceB = step(1.5, uMaterialLightingVariant);
     float profileIrradiancePhase = gasVolume > 0.5 ? 2.0
       : (liquidVolume > 0.5 ? 1.0 : (family == 4.0 ? 0.0 : 3.0));
     float profileIrradianceEligibility = gasVolume > 0.5 ? gasInterior
@@ -12195,10 +12197,14 @@ void main() {
     }
     vec4 profileIrradianceEmission = emissionState;
     float longRangeIncidence = 0.0;
+    vec2 longRangeTransportDirection = vec2(0.0);
+    float longRangeTransportConfidence = 0.0;
+    vec4 longRangeTransportEmission = vec4(0.0);
     if (profileIrradianceB > 0.5 && uHighQuality > 0.5
       && profileIrradianceEligibility > 0.001
-      && profileIrradianceNormalLength > 0.0001) {
+      && (profileIrradianceNormalLength > 0.0001 || gasVolume > 0.5)) {
       vec4 longRangeEmission = texture(uLongRangeEmissionTexture, fieldUv);
+      longRangeTransportEmission = longRangeEmission;
       profileIrradianceEmission = mix(
         emissionState, longRangeEmission,
         smoothstep(0.002, 0.035, longRangeEmission.a)
@@ -12229,11 +12235,15 @@ void main() {
       vec2 transportDirection = transportGradient
         / max(transportGradientMagnitude, 0.0001);
       vec2 profileIrradianceOutward = normal.xy / profileIrradianceNormalLength;
-      float transportConfidence = smoothstep(
-        0.002, 0.05, transportGradientMagnitude
-      );
-      longRangeIncidence = dot(profileIrradianceOutward, transportDirection)
-        * transportConfidence;
+      float transportConfidence = gasVolume > 0.5
+        ? smoothstep(0.0005, 0.025, transportGradientMagnitude)
+        : smoothstep(0.002, 0.05, transportGradientMagnitude);
+      longRangeTransportDirection = transportDirection;
+      longRangeTransportConfidence = transportConfidence;
+      if (profileIrradianceNormalLength > 0.0001) {
+        longRangeIncidence = dot(profileIrradianceOutward, transportDirection)
+          * transportConfidence;
+      }
     }
     if (profileIrradianceB > 0.5 && uHighQuality > 0.5
       && profileIrradianceEligibility > 0.001
@@ -12286,6 +12296,54 @@ void main() {
         profileIrradianceIncidence,
         uMaterialBodyFinish, uMaterialLightingVariant
       );
+    }
+    // Stretch one shared low-frequency volume lookup along the measured
+    // transported-light direction. This produces broad shafts through dense
+    // participating gas instead of another local halo around the emitter. The
+    // atmosphere remains the sole owner of support and alpha; the shaft adds a
+    // source-coloured RGB lobe and a restrained rear-side extinction only in
+    // the canonical high-quality Volumetric look.
+    if (gasVolume > 0.5 && uGasBodyVfx > 0.5
+      && profileIrradianceB > 0.5 && uHighQuality > 0.5
+      && gasInterior > 0.001 && longRangeTransportConfidence > 0.001
+      && longRangeTransportEmission.a > 0.0005) {
+      vec2 shaftAxis = longRangeTransportDirection;
+      vec2 shaftAcross = vec2(-shaftAxis.y, shaftAxis.x);
+      vec2 shaftUv = vec2(
+        dot(fieldPosition, shaftAxis) / 264.0,
+        dot(fieldPosition, shaftAcross) / 120.0
+      ) + vec2(0.21, 0.37);
+      vec3 shaftVolume = texture(uMaterialVolumeTexture, shaftUv).rgb;
+      float shaftFold = clamp(
+        shaftVolume.r * 0.60 + shaftVolume.g * 0.29
+          + shaftVolume.b * 0.11,
+        0.0, 1.0
+      );
+      float shaftLobe = smoothstep(0.40, 0.74, shaftFold);
+      float shaftBody = gasInterior
+        * smoothstep(0.045, 0.34, atmosphereState.a)
+        * longRangeTransportConfidence;
+      float shaftOptical = smoothstep(
+        0.035, 0.62, mix(density, atmosphereState.a, gasInterior)
+      );
+      shaftBody *= mix(1.0, 0.72, shaftOptical);
+      float sourceEnergy = smoothstep(
+        0.0005, 0.035, longRangeTransportEmission.a
+      );
+      vec3 sourceRadiance = max(longRangeTransportEmission.rgb, vec3(0.0));
+      float sourcePeak = max(sourceRadiance.r, max(sourceRadiance.g, sourceRadiance.b));
+      vec3 sourceSpectrum = vividColor(
+        sourceRadiance / max(sourcePeak, 0.001), 1.08
+      );
+      vec3 shaftHeadroom = max(
+        vec3(0.0), vec3(1.18) - clamp(color, 0.0, 1.18)
+      );
+      float shaftKey = shaftBody * sourceEnergy
+        * (0.035 + shaftLobe * 0.180);
+      color += shaftHeadroom * sourceSpectrum * shaftKey;
+      float rearExtinction = shaftBody * max(-longRangeIncidence, 0.0)
+        * (0.035 + (1.0 - shaftLobe) * 0.065);
+      color *= 1.0 - rearExtinction;
     }
   }
   if (uSparkStateStyling > 0.5 && material == 148.0) {
@@ -13473,6 +13531,8 @@ export class PixiFieldPresenter {
         semanticTexture: this.fieldSource,
         wallTexture: this.wallSource,
         liquidTexture: this.liquidSource,
+        liquidDepthTexture: this.boundaryStabilitySource,
+        materialVolumeTexture: materialVolumeSource ?? this.liquidSource,
         atmosphereTexture: this.atmosphereSource,
         atmosphereStyleTexture: this.atmosphereStyleSource,
         emissionTexture: this.emissionSource,

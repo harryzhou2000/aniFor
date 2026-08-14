@@ -158,11 +158,13 @@ describe('HDR VFX capability gate', () => {
 });
 
 describe('HDR composition contract', () => {
-  it('keeps the default compositor on its established five inputs', () => {
+  it('keeps the default compositor on its established seven inputs', () => {
     expect(uniformSamplers(HDR_TONEMAP_FRAGMENT)).toEqual([
       'uBloomTexture',
       'uHdrTexture',
+      'uLiquidDepthTexture',
       'uLiquidTexture',
+      'uMaterialVolumeTexture',
       'uSemanticTexture',
       'uWallTexture',
     ]);
@@ -172,7 +174,7 @@ describe('HDR composition contract', () => {
     expect(HDR_TONEMAP_FRAGMENT).toMatch(/uniform\s+vec2\s+uWorldTexel\s*;/);
 
     for (const sampler of ['uHdrTexture', 'uBloomTexture', 'uSemanticTexture',
-      'uWallTexture', 'uLiquidTexture']) {
+      'uWallTexture', 'uLiquidTexture', 'uLiquidDepthTexture', 'uMaterialVolumeTexture']) {
       expect(occurrences(HDR_TONEMAP_FRAGMENT, sampler)).toBeGreaterThan(1);
     }
     expect(occurrences(HDR_TONEMAP_FRAGMENT, 'uWorldTexel')).toBeGreaterThan(1);
@@ -181,14 +183,16 @@ describe('HDR composition contract', () => {
     expect(HDR_TONEMAP_FRAGMENT).not.toContain('applyHdrVolumeLab');
   });
 
-  it('adds the reusable visual lab only to the explicit eight-input compositor', () => {
+  it('adds the reusable visual lab only to the explicit ten-input compositor', () => {
     expect(uniformSamplers(HDR_VISUAL_LAB_TONEMAP_FRAGMENT)).toEqual([
       'uAtmosphereStyleTexture',
       'uAtmosphereTexture',
       'uBloomTexture',
       'uEmissionTexture',
       'uHdrTexture',
+      'uLiquidDepthTexture',
       'uLiquidTexture',
+      'uMaterialVolumeTexture',
       'uSemanticTexture',
       'uWallTexture',
     ]);

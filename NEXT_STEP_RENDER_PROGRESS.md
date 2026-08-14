@@ -184,3 +184,65 @@ Status: visually favoured; ready for a visual checkpoint and deployment.
    drawing separator lines or suppressing the retained grain layer.
 4. Prototype the same material-volume vocabulary in the true-8× compositor or
    a bounded half-resolution auxiliary pass, keeping automatic fallback intact.
+
+## 2026-08-14 — liquid transport and source-directed gas shafts
+
+Status: visually favoured; ready for checkpoint and deployment.
+
+### What changed
+
+- The normal-scale HDR compositor now receives the existing phase-exclusive
+  liquid optical-depth plane and shared material-volume texture. Dense exact
+  Water/Oil/Acid bodies carry a guarded screen-space upstream sample, restrained
+  chromatic separation, broad caustic crowns, and wavelength-selective deep
+  absorption before the sharper air-facing surface response.
+- Refraction reach grows with real vertical optical depth and bends with native
+  liquid velocity. Displaced samples fail closed at unlike material or wall
+  contact; the established scene alpha and material silhouette remain the only
+  support authority.
+- High-quality Volumetric gas reconstructs the direction toward transported
+  emission even inside a locally flat cloud core. One shared low-frequency
+  volume sample is stretched along that direction to form stationary warm/cool
+  light shafts, while optical thickness damps the core and a signed far-side
+  response provides restrained extinction.
+- The gas shaft consumes the existing long-range emission carrier directly for
+  reach and colour. It adds no texture, field, render target, or simulation
+  state, and remains outside the compact true-8× shader.
+
+### Visual decision
+
+- Keep the stronger liquid transport. Compared directly with the previous 2×
+  and 4× showcase images, the large Water tank now has visible cyan depth
+  variation, refracted internal folds, bright caustic windows, and darker
+  optical pockets instead of a nearly uniform fill.
+- Keep the source-directed gas pass. In the emitter-bearing Smoke/FOG scene,
+  the earlier result changed only the source-facing rim; the retained version
+  carries broad, source-coloured folds into the connected cloud body without
+  filling holes or animating stationary gas like a conveyor belt.
+- Keep the effects at the current strength. They are visible at normal viewing
+  size but remain secondary to material colour, body shape, and retained powder
+  grain detail.
+
+### Lightweight checks used
+
+- The production bundle builds and closes all 19 runtime resources.
+- A real production 2× WebGL/HDR showcase completed with zero browser errors;
+  direct previous/current inspection favoured the new liquid image.
+- The focused 2× gas/light scene completed, rendered the new interior shafts,
+  and retained true-8× isolation. The current HDR and presenter contract suites
+  pass 13/13 and 266/266 respectively.
+- A real 4× WebGL showcase rendered the intended liquid and gas result. Its old
+  exact-consecutive-frame settle wait expired under software rendering, but the
+  captured WebGL image itself was complete and visually preferred; this is not
+  treated as a visual rejection gate.
+
+### Next visual work
+
+1. Add broad contact shadows and shared bounce between unlike settled bulk
+   materials without separator lines or loss of the grain/facet layer.
+2. Evaluate a bounded scene/background separation for genuine through-liquid
+   refraction and caustic projection onto neighbouring matter.
+3. Bring a cheaper version of the shared material-volume vocabulary to true 8×
+   without duplicating the normal HDR pipeline or risking browser timeouts.
+4. Continue direct material-family scene tuning, with visual comparison ahead
+   of historical response envelopes and exact-output evidence.
