@@ -8166,6 +8166,81 @@ void main() {
       color += (vec3(1.0) - clamp(color, 0.0, 1.0))
         * vec3(1.00, 0.34, 0.055)
         * (moltenRidge * 0.058 + moltenTopShoulder) * moltenBodySupport;
+      // Volumetric/B turns the same proven dense Lava body into convecting
+      // mantle rather than relying on the small ridge above. One filtered read
+      // from the existing normal-scale material-volume tile supplies broad,
+      // independent macro/meso lanes. Native velocity advects the lookup
+      // slowly; a bent zero crossing becomes a sparse incandescent fissure,
+      // with darker cooled plate pockets on the opposing fold. The generic
+      // blackbody/emission grade runs later, so these deliberately broad
+      // contrasts are sized to survive it without whitening the whole body.
+      // Support and alpha remain entirely owned by the liquid compositor; the
+      // sampler-free compact 8x program keeps its independent Lava treatment.
+      if (uMaterialLightingVariant > 1.5) {
+        float moltenSpeed = length(velocity);
+        vec2 moltenFlowDirection = moltenSpeed > 0.025
+          ? velocity / moltenSpeed : normalize(vec2(0.24, -0.97));
+        vec2 moltenAcross = vec2(-moltenFlowDirection.y, moltenFlowDirection.x);
+        vec2 moltenVolumePosition = fieldPosition - moltenFlowDirection * uTime
+          * (1.8 + smoothstep(0.04, 0.55, moltenSpeed) * 4.2);
+        vec2 moltenVolumeUv = vec2(
+          dot(moltenVolumePosition, moltenFlowDirection) / 108.0,
+          dot(moltenVolumePosition, moltenAcross) / 82.0
+        ) + vec2(uTime * -0.0018, uTime * 0.0011) + vec2(0.13, 0.47);
+        vec3 moltenVolumeNoise = texture(
+          uMaterialVolumeTexture, moltenVolumeUv
+        ).rgb;
+        float moltenMacroFold = clamp(
+          (moltenVolumeNoise.r - 0.5) * 1.38
+            + (moltenVolumeNoise.g - 0.5) * 0.72
+            + (moltenVolumeNoise.b - 0.5) * 0.30
+            + (broadSheen - 0.5) * 0.26,
+          -1.0, 1.0
+        );
+        float moltenMesoFold = clamp(
+          (moltenVolumeNoise.g - 0.5) * 1.28
+            - (moltenVolumeNoise.b - 0.5) * 0.74
+            + (causticWave - 0.5) * 0.34,
+          -1.0, 1.0
+        );
+        float moltenBodyInterior = moltenBodySupport
+          * (1.0 - liquidFresnelContour * 0.58);
+        float moltenHotMantle = smoothstep(0.18, 0.68, moltenMacroFold)
+          * moltenBodyInterior;
+        float moltenCoolCrust = smoothstep(0.04, 0.58, -moltenMacroFold)
+          * moltenBodyInterior;
+        float moltenFissureDistance = abs(
+          moltenMacroFold + moltenMesoFold * 0.36
+        );
+        float moltenFissureGate = smoothstep(
+          0.50, 0.78, moltenVolumeNoise.b
+        );
+        float moltenFissure = (
+          1.0 - smoothstep(0.018, 0.080, moltenFissureDistance)
+        ) * moltenFissureGate
+          * moltenBodyInterior;
+        float moltenFissureShoulder = max(
+          0.0,
+          (1.0 - smoothstep(0.095, 0.235, moltenFissureDistance))
+            * moltenFissureGate * moltenBodyInterior - moltenFissure
+        );
+        float moltenHeatBody = mix(0.78, 1.0, clamp(heat, 0.0, 1.0));
+        color *= vec3(1.0) - vec3(0.58, 0.46, 0.28)
+          * moltenCoolCrust;
+        color *= vec3(1.0) - vec3(0.28, 0.20, 0.10)
+          * moltenFissureShoulder;
+        color += (vec3(1.16) - clamp(color, 0.0, 1.16))
+          * vec3(1.04, 0.20, 0.025) * moltenHotMantle
+          * 0.065 * moltenHeatBody;
+        color += (vec3(1.24) - clamp(color, 0.0, 1.24))
+          * vec3(1.20, 0.94, 0.40) * moltenFissure
+          * (0.55 + moltenHotMantle * 0.10) * moltenHeatBody;
+        float moltenFoldShoulder = max(
+          0.0, moltenMacroFold * 0.66 - moltenMesoFold * 0.24
+        ) * moltenBodyInterior;
+        color += (vec3(1.10) - clamp(color, 0.0, 1.10))
+          * vividColor(base, 1.08) * moltenFoldShoulder * 0.030;
+      }
     }
     // Family-coloured chroma and vertical optical depth share exact cohesive
     // liquid eligibility, but remain independently switchable. All inputs are

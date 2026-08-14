@@ -1376,3 +1376,57 @@ Status: retained normal-WebGL crystalline body overhaul.
    staging.
 3. Continue high-payoff source, radioactive, plant-growth, and energy-material
    VFX after the major phase families read distinctly at fit scale.
+
+## 2026-08-15 — convecting molten Lava body
+
+Status: retained normal-WebGL Lava visual overhaul.
+
+### What changed
+
+- Dense exact Lava now uses one filtered sample from the existing material-
+  volume tile to form slowly advected mantle cells, sparse incandescent
+  fissures, and broad burgundy cooled pockets. Native velocity orients and
+  carries the pattern while the existing liquid field remains the sole owner
+  of mass, silhouette, surface lip, and alpha.
+- The bright zero-crossing channel is deliberately narrow and paired with a
+  soft dark shoulder. Broad positive folds receive only a restrained red-orange
+  lift, while negative folds remove enough radiance to keep a thick recessed
+  mass visible after the later blackbody/emission grade.
+- Lava ancestry colour remains underneath the common convection. Authored
+  holes/notches, thin lines, isolated particles, Water/Sand/cooled controls,
+  walls, contacts, and physics are unchanged. The sampler-free compact 8x path
+  remains independent and was not made heavier by this normal-scale pass.
+
+### Visual decision
+
+- Keep v4. The original fixture rendered six almost uniform orange slabs; the
+  retained view reads as molten bodies with sparse hot channels embedded in a
+  deeper red/brown mantle. It no longer has v2's broad mustard camouflage.
+- v3 narrowed the hot carrier and added cooled shoulders; v4 further removed
+  broad yellow lift, made the fissures hotter but less common, and deepened the
+  complementary pockets. An independent visual pass returned KEEP and advised
+  against increasing either the fissures or crust darkness further.
+- The first post-emission experiment referenced liquid-local shader values
+  outside their scope and produced a blank frame. It was discarded completely;
+  the retained implementation lives inside the established Lava branch and
+  compiled/rendered successfully at both 2x and 4x.
+
+### Lightweight checks used
+
+- `npm run build` completes and closes all 19 production resources.
+- `/tmp/anifor-lava-body-before.png` and `/tmp/anifor-lava-body-v4.png` are the
+  direct 2x WebGL before/after views; `/tmp/anifor-lava-body-v4-4x.png` confirms
+  the same retained look on the normal 4x WebGL path.
+- The 4x screenshot completed before a bounded headless teardown query timed
+  out; a process scan immediately afterward found no remaining Chrome process.
+  No profiler, exact image hash, historical baseline, or broad test gate was
+  added.
+
+### Next visual work
+
+1. Improve mixed liquid/solid contact light and meniscus depth without making
+   boundaries flicker as particles move.
+2. Give source/radioactive/energy families equally broad material-scale VFX
+   where their current presentation remains icon-like or flat.
+3. Revisit compact 8x style parity only through its existing lightweight path,
+   without importing the normal shader's volume sampler.
