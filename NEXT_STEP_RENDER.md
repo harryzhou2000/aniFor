@@ -8356,6 +8356,34 @@ next optimization target is therefore reusable activation-owned volume-field
 convergence, followed by powder/solid derivation. Do not optimize texture
 invalidation based on this evidence.
 
+The v2 profiler implementation is checkpointed at `2fff502`; the mechanical
+CI repair that keeps the boundary-stability texture invalidation dirty-gated,
+single-owned, and attributed to the timed texture lane is `3ad2cd1`. Canonical
+build-and-deploy run `31759489005` is the release gate for that exact revision.
+
+The first measurement-led volume-field experiment replaces emission's nested
+radius-12 long-range transport loops with a bounded bidirectional exponential
+recurrence. The existing integer kernel was already the rounded sequence
+`1024 * exp(-0.2 * distance)`, so two directional sweeps plus delayed-tail
+subtraction preserve the finite support, centre normalization, source-side
+soft attenuation, and hard-wall reset semantics without another field or
+allocation. The ordinary emission carrier and OFF/A paths remain untouched.
+
+On the production-shaped 612x384 quick profile, long-range emission refresh
+fell from roughly 42 ms to 33-34 ms while ordinary emission remained about
+12 ms. Focused evidence covers deterministic repeat updates, clearing, exact
+radius cutoff, directional symmetry, hard-wall blocking from both directions,
+soft phase ordering, and unchanged legacy bytes. A fresh production-bundle
+SwiftShader RenderOptics review at
+`.artifacts/visual-lab-reviews/render-optics-87633a02-43f1-4b3a-be66-1fdf942f0315`
+passed WebGL/HDR capture, all current regions, portable verification, and clean
+teardown. Human/agent inspection favored the result; compared with the prior
+local B capture only three encoded pixels changed, while OFF and A remained
+byte-identical. These hashes are diagnostic within the local packages, not a
+cross-revision requirement. Keep the recurrence as the current checkpoint
+candidate and next profile the remaining activation-owned volume-field work
+rather than tightening visual hashes.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

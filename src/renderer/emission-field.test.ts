@@ -39,6 +39,14 @@ function transportAlphaAt(field: EmissionField, x: number, y: number): number {
   return field.transportBytes?.[(y * field.width + x) * 4 + 3] ?? 0;
 }
 
+function fillFieldCell(
+  materials: Uint8Array, worldWidth: number, fieldX: number, fieldY: number, material: number,
+): void {
+  for (let offsetY = 0; offsetY < 3; offsetY++) for (let offsetX = 0; offsetX < 3; offsetX++) {
+    materials[(fieldY * 3 + offsetY) * worldWidth + fieldX * 3 + offsetX] = material;
+  }
+}
+
 describe('emission field', () => {
   it('matches the HDR thermal-core and ordinary-matter eligibility set', () => {
     const { field } = fixture();
@@ -112,6 +120,41 @@ describe('emission field', () => {
     walls[10 * 81 + 21] = 1;
     field.update(materials, undefined, walls);
     expect(transportAlphaAt(field, 8, 3)).toBeLessThan(open);
+  });
+
+  it('keeps bounded transport symmetric, deterministic, and clearable', () => {
+    const worldWidth = 105;
+    const { field, materials } = fixture(worldWidth, 21);
+    fillFieldCell(materials, worldWidth, 17, 3, Material.PHOT);
+    field.enableLongRangeTransport();
+    field.update(materials);
+    const first = field.transportBytes!.slice();
+
+    expect(transportAlphaAt(field, 5, 3)).toBeGreaterThan(0);
+    expect(transportAlphaAt(field, 29, 3)).toBe(transportAlphaAt(field, 5, 3));
+    expect(transportAlphaAt(field, 4, 3)).toBe(0);
+    expect(transportAlphaAt(field, 30, 3)).toBe(0);
+
+    field.update(materials);
+    expect(field.transportBytes).toEqual(first);
+    materials.fill(Material.Empty);
+    field.update(materials);
+    expect(field.transportBytes!.every((value) => value === 0)).toBe(true);
+  });
+
+  it('does not carry transport through a hard wall in either direction', () => {
+    const worldWidth = 93;
+    for (const [sourceX, probeX] of [[10, 20], [20, 10]] as const) {
+      const { field, materials } = fixture(worldWidth, 21);
+      const walls = new Uint8Array(materials.length);
+      fillFieldCell(materials, worldWidth, sourceX, 3, Material.PHOT);
+      for (let y = 0; y < 21; y++) for (let x = 45; x < 48; x++) {
+        walls[y * worldWidth + x] = 1;
+      }
+      field.enableLongRangeTransport();
+      field.update(materials, undefined, walls);
+      expect(transportAlphaAt(field, probeX, 3)).toBe(0);
+    }
   });
 
   it('attenuates bulk phases without changing legacy emission bytes', () => {

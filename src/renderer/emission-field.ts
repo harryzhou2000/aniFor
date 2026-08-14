@@ -12,12 +12,11 @@ const KERNEL = [1, 8, 28, 56, 70, 56, 28, 8, 1] as const;
 const KERNEL_RADIUS = 4;
 // A second, B-only carrier reaches eighteen world cells while preserving the
 // established emission bytes used by ordinary lighting and OFF/A captures.
-const TRANSPORT_KERNEL = [
-  93, 113, 139, 169, 207, 253, 308, 377, 460, 562, 686, 838, 1024,
-  838, 686, 562, 460, 377, 308, 253, 207, 169, 139, 113, 93,
-] as const;
 const TRANSPORT_KERNEL_RADIUS = 12;
 const TRANSPORT_KERNEL_SUM = 9_434;
+const TRANSPORT_CENTRE_WEIGHT = 1024 / TRANSPORT_KERNEL_SUM;
+const TRANSPORT_DECAY = 0.8187307530779818; // exp(-0.2), source kernel rounded to integers.
+const TRANSPORT_TAIL_DECAY = TRANSPORT_DECAY ** (TRANSPORT_KERNEL_RADIUS + 1);
 const TRANSPORT_GAIN = 64;
 const GLOW_GAIN = 8;
 const BLACKBODY_LUT_STRIDE = 4;
@@ -346,75 +345,129 @@ export class EmissionField {
   }
 
   private transportHorizontal(): void {
-    const transmittance = this.transmittance;
-    if (!transmittance) return;
+    if (!this.transmittance) return;
     this.horizontal.fill(0);
-    for (let y = 0; y < this.height; y++) for (let x = 0; x < this.width; x++) {
-      const target = (y * this.width + x) * 4;
-      this.accumulateTransportSample(this.seed, this.horizontal, target, target,
-        TRANSPORT_KERNEL[TRANSPORT_KERNEL_RADIUS] / TRANSPORT_KERNEL_SUM);
-      let path = 1;
-      for (let delta = 1; delta <= TRANSPORT_KERNEL_RADIUS; delta++) {
-        const sourceX = x + delta;
-        if (sourceX >= this.width) break;
-        path *= transmittance[y * this.width + sourceX] / 255;
-        if (path <= 1e-5) break;
-        const source = (y * this.width + sourceX) * 4;
-        this.accumulateTransportSample(this.seed, this.horizontal, target, source,
-          TRANSPORT_KERNEL[delta + TRANSPORT_KERNEL_RADIUS] / TRANSPORT_KERNEL_SUM * path);
-      }
-      path = 1;
-      for (let delta = 1; delta <= TRANSPORT_KERNEL_RADIUS; delta++) {
-        const sourceX = x - delta;
-        if (sourceX < 0) break;
-        path *= transmittance[y * this.width + sourceX] / 255;
-        if (path <= 1e-5) break;
-        const source = (y * this.width + sourceX) * 4;
-        this.accumulateTransportSample(this.seed, this.horizontal, target, source,
-          TRANSPORT_KERNEL[TRANSPORT_KERNEL_RADIUS - delta] / TRANSPORT_KERNEL_SUM * path);
-      }
-    }
+    this.transportAxis(this.seed, this.horizontal, this.height, this.width, this.width, 1);
   }
 
   private transportVertical(): void {
-    const transmittance = this.transmittance;
-    if (!transmittance) return;
+    if (!this.transmittance) return;
     this.blurred.fill(0);
-    for (let y = 0; y < this.height; y++) for (let x = 0; x < this.width; x++) {
-      const target = (y * this.width + x) * 4;
-      this.accumulateTransportSample(this.horizontal, this.blurred, target, target,
-        TRANSPORT_KERNEL[TRANSPORT_KERNEL_RADIUS] / TRANSPORT_KERNEL_SUM);
-      let path = 1;
-      for (let delta = 1; delta <= TRANSPORT_KERNEL_RADIUS; delta++) {
-        const sourceY = y + delta;
-        if (sourceY >= this.height) break;
-        path *= transmittance[sourceY * this.width + x] / 255;
-        if (path <= 1e-5) break;
-        const source = (sourceY * this.width + x) * 4;
-        this.accumulateTransportSample(this.horizontal, this.blurred, target, source,
-          TRANSPORT_KERNEL[delta + TRANSPORT_KERNEL_RADIUS] / TRANSPORT_KERNEL_SUM * path);
-      }
-      path = 1;
-      for (let delta = 1; delta <= TRANSPORT_KERNEL_RADIUS; delta++) {
-        const sourceY = y - delta;
-        if (sourceY < 0) break;
-        path *= transmittance[sourceY * this.width + x] / 255;
-        if (path <= 1e-5) break;
-        const source = (sourceY * this.width + x) * 4;
-        this.accumulateTransportSample(this.horizontal, this.blurred, target, source,
-          TRANSPORT_KERNEL[TRANSPORT_KERNEL_RADIUS - delta] / TRANSPORT_KERNEL_SUM * path);
-      }
-    }
+    this.transportAxis(this.horizontal, this.blurred, this.width, this.height, 1, this.width);
   }
 
-  private accumulateTransportSample(
-    sourcePlane: Float32Array, targetPlane: Float32Array,
-    target: number, source: number, weight: number,
+  /**
+   * Applies one finite, separable exponential carrier along each line. The
+   * delayed tail subtraction retains the established radius-12 support while
+   * replacing a neighbour loop per target with two linear directional sweeps.
+   */
+  private transportAxis(
+    sourcePlane: Float32Array,
+    targetPlane: Float32Array,
+    lineCount: number,
+    lineLength: number,
+    lineStride: number,
+    cellStride: number,
   ): void {
-    targetPlane[target] += sourcePlane[source] * weight;
-    targetPlane[target + 1] += sourcePlane[source + 1] * weight;
-    targetPlane[target + 2] += sourcePlane[source + 2] * weight;
-    targetPlane[target + 3] += sourcePlane[source + 3] * weight;
+    const transmittance = this.transmittance!;
+    for (let line = 0; line < lineCount; line++) {
+      const lineStart = line * lineStride;
+      let red = 0;
+      let green = 0;
+      let blue = 0;
+      let density = 0;
+      let windowProduct = 1;
+      let windowBlockers = 0;
+      for (let position = 0; position < lineLength; position++) {
+        if (position > 0) {
+          const incomingCell = lineStart + (position - 1) * cellStride;
+          const incomingTransmittance = transmittance[incomingCell] / 255;
+          if (incomingTransmittance === 0) windowBlockers++;
+          else windowProduct *= incomingTransmittance;
+          const decay = TRANSPORT_DECAY * incomingTransmittance;
+          red *= decay;
+          green *= decay;
+          blue *= decay;
+          density *= decay;
+        }
+        const expiredPosition = position - TRANSPORT_KERNEL_RADIUS - 2;
+        if (expiredPosition >= 0) {
+          const expiredCell = lineStart + expiredPosition * cellStride;
+          const expiredTransmittance = transmittance[expiredCell] / 255;
+          if (expiredTransmittance === 0) windowBlockers--;
+          else windowProduct /= expiredTransmittance;
+        }
+        const cell = lineStart + position * cellStride;
+        const target = cell * 4;
+        red += sourcePlane[target];
+        green += sourcePlane[target + 1];
+        blue += sourcePlane[target + 2];
+        density += sourcePlane[target + 3];
+        const tailPosition = position - TRANSPORT_KERNEL_RADIUS - 1;
+        if (tailPosition >= 0 && windowBlockers === 0) {
+          const tail = (lineStart + tailPosition * cellStride) * 4;
+          const tailWeight = TRANSPORT_TAIL_DECAY * windowProduct;
+          red = Math.max(0, red - sourcePlane[tail] * tailWeight);
+          green = Math.max(0, green - sourcePlane[tail + 1] * tailWeight);
+          blue = Math.max(0, blue - sourcePlane[tail + 2] * tailWeight);
+          density = Math.max(0, density - sourcePlane[tail + 3] * tailWeight);
+        }
+        targetPlane[target] = red;
+        targetPlane[target + 1] = green;
+        targetPlane[target + 2] = blue;
+        targetPlane[target + 3] = density;
+      }
+
+      red = 0;
+      green = 0;
+      blue = 0;
+      density = 0;
+      windowProduct = 1;
+      windowBlockers = 0;
+      for (let position = lineLength - 1; position >= 0; position--) {
+        if (position + 1 < lineLength) {
+          const incomingCell = lineStart + (position + 1) * cellStride;
+          const incomingTransmittance = transmittance[incomingCell] / 255;
+          if (incomingTransmittance === 0) windowBlockers++;
+          else windowProduct *= incomingTransmittance;
+          const decay = TRANSPORT_DECAY * incomingTransmittance;
+          red *= decay;
+          green *= decay;
+          blue *= decay;
+          density *= decay;
+        }
+        const expiredPosition = position + TRANSPORT_KERNEL_RADIUS + 2;
+        if (expiredPosition < lineLength) {
+          const expiredCell = lineStart + expiredPosition * cellStride;
+          const expiredTransmittance = transmittance[expiredCell] / 255;
+          if (expiredTransmittance === 0) windowBlockers--;
+          else windowProduct /= expiredTransmittance;
+        }
+        const cell = lineStart + position * cellStride;
+        const target = cell * 4;
+        red += sourcePlane[target];
+        green += sourcePlane[target + 1];
+        blue += sourcePlane[target + 2];
+        density += sourcePlane[target + 3];
+        const tailPosition = position + TRANSPORT_KERNEL_RADIUS + 1;
+        if (tailPosition < lineLength && windowBlockers === 0) {
+          const tail = (lineStart + tailPosition * cellStride) * 4;
+          const tailWeight = TRANSPORT_TAIL_DECAY * windowProduct;
+          red = Math.max(0, red - sourcePlane[tail] * tailWeight);
+          green = Math.max(0, green - sourcePlane[tail + 1] * tailWeight);
+          blue = Math.max(0, blue - sourcePlane[tail + 2] * tailWeight);
+          density = Math.max(0, density - sourcePlane[tail + 3] * tailWeight);
+        }
+        targetPlane[target] = (targetPlane[target] + red - sourcePlane[target])
+          * TRANSPORT_CENTRE_WEIGHT;
+        targetPlane[target + 1] = (targetPlane[target + 1] + green - sourcePlane[target + 1])
+          * TRANSPORT_CENTRE_WEIGHT;
+        targetPlane[target + 2] = (targetPlane[target + 2] + blue - sourcePlane[target + 2])
+          * TRANSPORT_CENTRE_WEIGHT;
+        targetPlane[target + 3] = (targetPlane[target + 3] + density - sourcePlane[target + 3])
+          * TRANSPORT_CENTRE_WEIGHT;
+      }
+    }
   }
 
   private packTransportBytes(): void {
