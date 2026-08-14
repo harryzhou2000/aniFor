@@ -12876,6 +12876,18 @@ void main() {
       * (0.075 + powderCrown * 0.320) * mix(1.0, 0.74, powderLightBodyDepth);
     float powderPocketGain = powderBulk
       * (0.045 + powderPocket * 0.250 + powderLightBodyDepth * 0.060);
+    // Put a broad shoulder above a quieter compacted core so a settled heap
+    // reads as mass at fit view, not only as uniformly textured pigment. The
+    // existing cinematic-body gate keeps this depth split out of sparse,
+    // moving, narrow, contacted, Local, and Grains powder presentations.
+    float powderDepthShoulder = powderStableBody
+      * smoothstep(0.08, 0.42, powderLightBodyDepth)
+      * (1.0 - smoothstep(0.50, 0.92, powderLightBodyDepth));
+    float powderDepthCore = powderStableBody
+      * smoothstep(0.46, 0.90, powderLightBodyDepth);
+    powderCrownGain += powderDepthShoulder
+      * (0.090 + max(powderLightBodySlope, 0.0) * 0.050);
+    powderPocketGain += powderDepthCore * 0.125;
     color *= vec3(1.0) + powderKeyTint * powderCrownGain;
     color *= vec3(1.0) - powderShadowTint * powderPocketGain;
     color += (vec3(1.16) - clamp(color, 0.0, 1.16))

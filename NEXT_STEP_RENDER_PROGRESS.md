@@ -910,3 +910,49 @@ Status: retained normal-WebGL Water surface overhaul.
    smaller droplets without creating a universal white rim.
 3. Continue translucent, metallic, organic, and granular family optics before
    isolated exact-element decoration.
+
+## 2026-08-15 — settled-powder shoulder and compacted core
+
+Status: retained Smooth-powder bulk-depth refinement.
+
+### What changed
+
+- Settled Smooth powder now receives a broad upper/middle shoulder and a quiet
+  compacted-core shadow derived from the already-resolved powder body depth.
+  This adds a heap-scale light transition after mineral grain and shared
+  material lighting have been composed.
+- The established cinematic-body proof remains the owner. Local and square
+  Grains references, moving or sparse powder, holes, narrow columns, walls,
+  contacts, reconstructed support, alpha, and simulation state do not receive
+  the new grade.
+- The retained tuning is about 1.5× stronger than the first experiment. The
+  first version was natural but barely legible at full-atlas scale; the final
+  one separates shoulder and core without turning either into a visible band.
+
+### Visual decision
+
+- Keep the strengthened version. Large Sand and Clay bodies now carry a more
+  credible deeper lower mass while retaining their granular colour variation,
+  sharp fine features, and existing curved silhouette.
+- An independent powder-focused pass confirmed that grain remains fully
+  legible and the depth transition is smooth and unbanded.
+
+### Lightweight checks used
+
+- `npm run build` completes and closes all 19 production resources.
+- A fresh 2× Powder style atlas completed on WebGL with HDR active and zero
+  browser errors. Smooth is `/tmp/anifor-powder-depth-shoulder-v2/off.png`;
+  the magnified old/new comparison is
+  `/tmp/anifor-powder-depth-shoulder-v2-compare.png` (old above, retained
+  below).
+- Local and Grains captures were unchanged while only Smooth rotated, matching
+  the intended visual scope. No Chrome process remained after capture.
+
+### Next visual work
+
+1. Extend bulk depth to irregular settled powder scenes and check it while a
+   pile is forming, without letting the grade flicker on moving fragments.
+2. Improve solid and translucent family response—glass, ceramic, metal, and
+   organic tissue—using broad material-scale light before exact elements.
+3. Revisit moving-water crest reflection with the retained sparse-island
+   vocabulary instead of a universal white or cyan edge.
