@@ -798,3 +798,66 @@ Status: retained normal-WebGL powder/solid material-class increment.
 2. Add cheap liquid/gas broad-lobe parity to compact true 8×.
 3. Continue family-level optics and material variation before isolated exact-
    element decoration.
+
+## 2026-08-15 — flow-aligned gas billows and full compact fluid optics
+
+Status: retained moving-gas overhaul and true 8× liquid/gas parity checkpoint.
+
+### What changed
+
+- Coherent atmosphere velocity now rotates and stretches the existing seamless
+  material-volume lookup into a flow-aligned internal frame. Horizontal Smoke
+  and FOG form long rolling billows, vertical CFLM forms an upward volume, and
+  reversed flow selects a visibly different opposing fold. The same atmosphere
+  field still owns the boundary, holes, sparse gaps, support, and alpha.
+- The existing leading/trailing gas cue now reaches through the connected body
+  instead of living almost entirely on a thin density shoulder. Positive flow
+  receives a pigment-aware soft key and the opposing fold retains a restrained
+  absorptive pocket. Stationary or incoherent gas keeps the established
+  isotropic volume exactly.
+- The compact direct true 8× compositor now selects the shared full B
+  liquid/gas material-volume profile at all four compact fluid call sites.
+  This adds the canonical reflected crown, transmitted middle, and core
+  absorption vocabulary without adding a sampler, texture, render target,
+  field, support decision, or alpha change.
+
+### Visual decision
+
+- Keep the flow-aligned gas frame. Directed and reversed captures read as
+  soft moving volumes rather than a static card with an edge tint; the still
+  capture remains quiet. An independent visual pass also judged the retained
+  result billowy rather than stripe-like at fit view.
+- Keep compact B rather than compact A. In a true 4896×3072 Water/Diesel
+  comparison, B gives a modest but readable top rim and surface-to-core split
+  with no visible halo, banding, or contact spill. A was safe but remained too
+  flat. A second visual pass independently preferred B.
+- Keep the treatment visual-first. Historical calibrated RGB envelopes were
+  not used to choose the moving-gas look; direct OFF/directed/reversed/still
+  frames were the decision surface.
+
+### Lightweight checks used
+
+- `npm run build` completes and closes all 19 production resources.
+- A true 8× Distilled Water/Diesel frame completed on WebGL at 4896×3072 with
+  zero browser errors. A is
+  `/tmp/anifor-compact-liquid-a-distilled-diesel-liquid-8x.png`; retained B is
+  `/tmp/anifor-compact-liquid-b-distilled-diesel-liquid-8x.png`.
+- The retained 17-gas true 8× atlas is
+  `/tmp/anifor-compact-gas-b-gas-identity-webgl-styled.png`; all 17 connected
+  cloud bodies rendered and the loose visual capture reported zero browser
+  errors.
+- Moving-gas reference frames are
+  `/tmp/anifor-gas-motion-ribbon-gas-motion-2x-directedOff.png`,
+  `/tmp/anifor-gas-motion-ribbon-gas-motion-2x-directedOn.png`,
+  `/tmp/anifor-gas-motion-ribbon-gas-motion-2x-reversedOn.png`, and
+  `/tmp/anifor-gas-motion-ribbon-gas-motion-2x-stillOn.png`.
+- No project-owned Chrome process remained after the captures.
+
+### Next visual work
+
+1. Carry the same flow frame into irregular source-lit plume scenes so broad
+   transported-light windows and moving billows read as one effect.
+2. Improve free liquid surfaces beyond block fixtures: clearer crest breakup,
+   transparent shallow zones, restrained reflection, and deeper colour falloff.
+3. Continue family-level translucent, metallic, organic, and granular optics
+   before returning to exact element-specific decoration.

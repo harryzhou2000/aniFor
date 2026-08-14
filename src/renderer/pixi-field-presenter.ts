@@ -2040,7 +2040,7 @@ void main() {
           liquidNeighbourMean,
           clamp((liquid.a - liquidNeighbourMean) * 5.5, -1.0, 1.0),
           liquidFinishDepth, liquidFinishSlope, 0.0,
-          liquidFinishEligibility, uMaterialBodyFinish, 0.0
+          liquidFinishEligibility, uMaterialBodyFinish, 1.5
         );
       }
       foreground = vec4(reconstructedLiquid * liquid.a, liquid.a);
@@ -2082,7 +2082,7 @@ void main() {
           clamp((atmosphere.a - gasNeighbourMean) * 8.0, -1.0, 1.0),
           gasFinishDepth, gasFinishSlope,
           gasCompactMacroRelief(uv * uFieldSize - 0.5),
-          smoothstep(0.020, 0.12, atmosphere.a), uMaterialBodyFinish, 0.0
+          smoothstep(0.020, 0.12, atmosphere.a), uMaterialBodyFinish, 1.5
         );
       }
       if (uGasIdentityStyling > 0.5) {
@@ -2234,7 +2234,7 @@ void main() {
         clamp((atmosphere.a - gasNeighbourMean) * 8.0, -1.0, 1.0),
         smoothstep(0.035, 0.62, gasDensity), gasFinishSlope,
         gasCompactMacroRelief(grid),
-        smoothstep(0.020, 0.12, atmosphere.a), uMaterialBodyFinish, 0.0
+        smoothstep(0.020, 0.12, atmosphere.a), uMaterialBodyFinish, 1.5
       );
     }
     if (uGasIdentityStyling > 0.5) {
@@ -3155,7 +3155,7 @@ void main() {
         liquidFinishProfile.interiorScatter, density, liquidFinishNeighbourMean,
         clamp((liquid.a - liquidFinishNeighbourMean) * 5.5, -1.0, 1.0),
         liquidFinishDepth, liquidSlope, 0.0,
-        liquidFinishEligibility, uMaterialBodyFinish, 0.0
+        liquidFinishEligibility, uMaterialBodyFinish, 1.5
       );
     }
   }
@@ -7018,8 +7018,27 @@ void main() {
       float gasVfxBillow = gasVfxWaveBasis;
       vec3 gasVfxNoise = vec3(0.5);
       if (gasMaterialVolumeB > 0.5) {
-        vec2 gasVfxNoiseUv = (gasBillowPosition + gasVfxWarp * 0.85)
-          / 160.0 + vec2(0.17, 0.31);
+        vec2 gasVfxNoisePosition = gasBillowPosition + gasVfxWarp * 0.85;
+        vec2 gasVfxNoiseUv = gasVfxNoisePosition / 160.0
+          + vec2(0.17, 0.31);
+        // Coherent atmosphere momentum turns the same seamless volume tile
+        // into a long, flow-aligned ribbon. This reshapes only internal RGB
+        // relief: the field still owns the cloud boundary, holes, gaps, and
+        // alpha. A stationary or incoherent body keeps the established
+        // isotropic lookup exactly.
+        float gasFlowFrame = gasMotionStrength * gasMaterialVolumeB;
+        if (gasFlowFrame > 0.001) {
+          vec2 gasMotionAcross = vec2(
+            -gasMotionDirection.y, gasMotionDirection.x
+          );
+          vec2 gasFlowVolumeUv = vec2(
+            dot(gasVfxNoisePosition, gasMotionDirection) / 232.0,
+            dot(gasVfxNoisePosition, gasMotionAcross) / 112.0
+          ) + vec2(0.17, 0.31);
+          gasVfxNoiseUv = mix(
+            gasVfxNoiseUv, gasFlowVolumeUv, gasFlowFrame * 0.86
+          );
+        }
         gasVfxNoise = texture(uMaterialVolumeTexture, gasVfxNoiseUv).rgb;
         float gasVfxFbm = ((gasVfxNoise.r - 0.5) * 0.58
           + (gasVfxNoise.g - 0.5) * 0.29
@@ -7616,21 +7635,28 @@ void main() {
           ) * 12.0 * gasVfxBodySupport;
           float gasMotionEdgeTone = gasMotionLeading * gasMotionShoulder
             * gasVfxSupport * 1.20;
+          // Carry the leading/trailing read beyond the thin density shoulder.
+          // The atmosphere-owned body gates this broad fold, so coherent
+          // Smoke, FOG, and CFLM read as one moving volume without widening
+          // support or painting motion onto isolated semantic carriers.
+          float gasMotionThroughBody = gasMotionLeading
+            * gasVfxSupport * gasVfxBodySupport * 0.34;
           float gasMotionTone = clamp(
-            gasMotionInteriorTone + gasMotionEdgeTone, -1.0, 1.0
+            gasMotionInteriorTone + gasMotionEdgeTone + gasMotionThroughBody,
+            -1.0, 1.0
           );
           gasMotionTone *= gasMotionStrength;
           vec3 gasMotionTint = clamp(mix(
             vec3(0.48, 0.70, 1.00), vividColor(gasBase, 1.08), 0.70
           ), vec3(0.0), vec3(1.0));
           color += (vec3(1.12) - clamp(color, 0.0, 1.12))
-            * gasMotionTint * max(gasMotionTone, 0.0) * (32.0 / 255.0);
+            * gasMotionTint * max(gasMotionTone, 0.0) * (40.0 / 255.0);
           // CFLM's emissive body already consumes most positive HDR headroom.
           // A small bipolar cyan/amber shift therefore carries direction more
           // legibly than another highlight; reversal negates it exactly.
           if (material == 87.0) color += gasMotionTone
             * vec3(-64.0, 28.0, 52.0) / 255.0;
-          float gasMotionShadowBytes = material == 87.0 ? 40.0 : 32.0;
+          float gasMotionShadowBytes = material == 87.0 ? 42.0 : 36.0;
           color -= clamp(color, 0.0, 1.0)
             * max(-gasMotionTone, 0.0) * (gasMotionShadowBytes / 255.0);
 

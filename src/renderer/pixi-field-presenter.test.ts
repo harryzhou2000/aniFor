@@ -819,7 +819,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(eight.match(/applyMaterialVolumeLobe\(/g)).toHaveLength(4);
     expect(normal.match(/uMaterialBodyFinish,\s*uMaterialLightingVariant\s*\)/g))
       .toHaveLength(16);
-    expect(eight.match(/uMaterialBodyFinish,\s*0\.0\s*\)/g)).toHaveLength(9);
+    expect(eight.match(/uMaterialBodyFinish,\s*0\.0\s*\)/g)).toHaveLength(5);
+    expect(eight.match(/uMaterialBodyFinish,\s*1\.5\s*\)/g)).toHaveLength(4);
     expect(normal.match(/applyMaterialEnvironmentTransport\(/g)).toHaveLength(4);
     expect(eight).not.toContain('applyMaterialEnvironmentTransport(');
     expect(MATERIAL_BODY_FINISH_GLSL).toContain(
@@ -1076,6 +1077,8 @@ describe('Pixi presenter startup configuration', () => {
     expect(gasVfx).toContain('gasBillowPosition = fieldPosition - gasMotionDirection * uTime');
     expect(gasVfx).toContain('12.0 * gasMotionStrength * gasMaterialVolumeB');
     expect(gasVfx).toContain('if (gasMaterialVolumeB > 0.5)');
+    expect(gasVfx).toContain('vec2 gasFlowVolumeUv = vec2(');
+    expect(gasVfx).toContain('gasVfxNoiseUv = mix(');
     expect(gasVfx).toContain('texture(uMaterialVolumeTexture, gasVfxNoiseUv).rgb');
     expect(gasVfx).toContain('gasVfxWaveBasis * 0.32 + gasVfxFbm * 1.08');
     expect(gasVfx).toContain('gasVfxBodySupport');
@@ -1091,10 +1094,12 @@ describe('Pixi presenter startup configuration', () => {
     expect(gasVfx).toContain('gasMotionOutward = -volumeSlope');
     expect(gasVfx).toContain('gasMotionBillowGradient');
     expect(gasVfx).toContain('cos(dot(gasBillowPosition');
-    expect(gasVfx).toContain('gasMotionInteriorTone + gasMotionEdgeTone');
-    expect(gasVfx).toContain('* max(gasMotionTone, 0.0) * (32.0 / 255.0)');
+    expect(gasVfx).toContain(
+      'gasMotionInteriorTone + gasMotionEdgeTone + gasMotionThroughBody',
+    );
+    expect(gasVfx).toContain('* max(gasMotionTone, 0.0) * (40.0 / 255.0)');
     expect(gasVfx).toContain('* vec3(-64.0, 28.0, 52.0) / 255.0');
-    expect(gasVfx).toContain('gasMotionShadowBytes = material == 87.0 ? 40.0 : 32.0');
+    expect(gasVfx).toContain('gasMotionShadowBytes = material == 87.0 ? 42.0 : 36.0');
 
     // E13 consumes the existing propagated identity and already-derived scene
     // light values. It must never widen the style/emission sample conditions or

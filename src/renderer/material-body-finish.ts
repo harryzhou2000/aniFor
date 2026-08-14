@@ -687,7 +687,8 @@ float gasCompactMacroRelief(vec2 position) {
 // this deliberately adds no texture read, target, field, or scale-dependent
 // allocation. The response is RGB-only and therefore cannot grow support or
 // blur a species/contact boundary. Normal powder joins only through its
-// caller-owned settled Smooth-body gate; compact true-8x remains literal Off.
+// caller-owned settled Smooth-body gate. Compact true-8x selects the full B
+// liquid/gas profile so its surface/core vocabulary matches normal WebGL.
 vec3 applyMaterialVolumeLobe(
   vec3 color,
   float phase,
@@ -764,8 +765,9 @@ vec3 applyMaterialVolumeLobe(
     * (1.0 - core * 0.22);
   // Reuse the existing material-lighting OFF/A/B control to compare a shared
   // optical transport response. These are phase coefficients over already-live
-  // body proofs, never new support or material selectors. Compact true-8x passes
-  // literal Off, keeping its established fifteen-million-fragment path exact.
+  // body proofs, never new support or material selectors. Compact true-8x may
+  // pass literal B: it pays the same arithmetic profile while retaining the
+  // direct path's sampler, target, support, and alpha budget.
   float opticalExperiment = step(0.5, materialLightingVariant);
   float opticalExperimentB = step(1.5, materialLightingVariant);
   MaterialCompositionResponse composition = materialCompositionParameters(phase);
