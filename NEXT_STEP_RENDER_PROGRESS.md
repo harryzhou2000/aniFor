@@ -753,3 +753,48 @@ software-renderer resilience improved.
    rather than neutral darkening alone.
 3. Continue compact 8× parity for liquid and gas with cheap broad lobes, while
    keeping the full normal shader as the primary visual path.
+
+## 2026-08-14 — chromatic lower-hemisphere bounce
+
+Status: retained normal-WebGL powder/solid material-class increment.
+
+### What changed
+
+- Dense, optically deep, locally quiet Smooth powder and supported solids now
+  receive a warm lower-hemisphere bounce after the shared sky/environment
+  transport. The bounce remains strongly biased toward each material's live
+  pigment instead of applying one beige overlay.
+- The final bounce scalar is capped, so even the deepest broad body cannot turn
+  into a flat emissive patch. Existing powder and solid call gates keep the
+  response away from Local/Grains, moving or sparse powder, contacts, authored
+  holes, fine columns, thin shells, native walls, and unsupported fragments.
+- Liquid, gas, compact true 8×, Canvas, support, alpha, and simulation state are
+  unchanged by this layer.
+
+### Visual decision
+
+- Retain the capped stronger version. Earlier strengths were effectively
+  invisible at fit view; the retained pass gives large Sand/Clay masses and
+  solid cards a restrained warm lower-core carry while preserving their local
+  texture and identity.
+- This is intentionally a supporting material layer rather than a standalone
+  motif. The source-lit gas window remains the larger visible change in this
+  checkpoint.
+
+### Lightweight checks used
+
+- `npm run build` completes and closes all 19 production resources.
+- Fresh 2× SwiftShader captures of both affected fixtures completed on WebGL
+  with zero browser errors.
+- Powder reference: `/tmp/anifor-powder-grounding-v2/off.png`; retained frame:
+  `/tmp/anifor-powder-ground-bounce-v2/off.png`.
+- Solid reference: `/tmp/anifor-solid-grounding-v2/b.png`; retained frame:
+  `/tmp/anifor-solid-ground-bounce-v3/b.png`.
+
+### Next visual work
+
+1. Apply the accepted gas-light vocabulary to irregular, moving plumes where
+   directional volume is easier to perceive than in paused cards.
+2. Add cheap liquid/gas broad-lobe parity to compact true 8×.
+3. Continue family-level optics and material variation before isolated exact-
+   element decoration.

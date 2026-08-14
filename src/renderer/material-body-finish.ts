@@ -484,6 +484,7 @@ vec3 applyMaterialEnvironmentTransport(
   if (enabled < 0.5 || materialLightingVariant < 1.5
     || eligibility <= 0.0001) return color;
 
+  float powder = 1.0 - step(0.5, phase);
   float gas = step(1.5, phase) * (1.0 - step(2.5, phase));
   float solid = step(2.5, phase);
   MaterialCompositionResponse composition = materialCompositionParameters(phase);
@@ -538,6 +539,24 @@ vec3 applyMaterialEnvironmentTransport(
   vec3 transportTint = mix(environmentTint, identityTint, 0.28 + roughness * 0.18);
   color += (vec3(1.10) - clamp(color, 0.0, 1.10))
     * transportTint * transport;
+  // Dense lower powder/solid interiors receive a small chromatic bounce after
+  // the cool-sky transport. Existing caller gates and the deep, quiet body
+  // proof keep it away from grains, fine structures, contacts, holes and
+  // silhouettes; liquid and gas remain exact no-ops.
+  float denseLowerBody = max(powder, solid) * body
+    * smoothstep(0.62, 0.90, density)
+    * smoothstep(0.42, 0.82, bodyDepth)
+    * (1.0 - smoothstep(0.025, 0.16, slopeLength));
+  float lowerHemisphere = mix(0.46, 1.0, groundFacing);
+  float lowerBounce = min(
+    10.0 / 255.0,
+    denseLowerBody * lowerHemisphere
+      * mix(0.048, 0.120, roughness)
+      * mix(0.65, 1.0, transmission)
+  );
+  vec3 lowerBounceTint = mix(vec3(0.62, 0.30, 0.11), identityTint, 0.68);
+  color += (vec3(1.10) - clamp(color, 0.0, 1.10))
+    * lowerBounceTint * lowerBounce;
   return max(color, vec3(0.0));
 }
 
