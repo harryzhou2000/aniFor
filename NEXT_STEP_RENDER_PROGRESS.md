@@ -1430,3 +1430,66 @@ Status: retained normal-WebGL Lava visual overhaul.
    where their current presentation remains icon-like or flat.
 3. Revisit compact 8x style parity only through its existing lightweight path,
    without importing the normal shader's volume sampler.
+
+## 2026-08-15 — capillary contacts, magnetic Plasma, and configured-source apertures
+
+Status: retained normal-WebGL visual-overhaul checkpoint.
+
+### What changed
+
+- Liquid/solid contacts now share one continuous Hermite-derived capillary
+  carrier through the base meniscus and nested Water/Metal response. The old
+  2x/4x categorical floors, including the unconditional E78 floor, no longer
+  repaint a smooth contact as a rigid cyan strip. Density separates a quiet
+  outer lip, inset reflective shoulder, and submerged absorption apron.
+- Dense Plasma now samples the existing material-volume tile to bend two slow
+  magnetic sheets through broad indigo pockets. Cyan and magenta folds meet in
+  sparse white-hot crossings, while the authored hole and sparse carriers keep
+  their established topology and generic Energy appearance.
+- Volumetric/B configured sources now render a recessed target-coloured
+  aperture fed by a dark segmented conduit. Powered sources add warm bus rails
+  and CRAY gains a short output rail, so CLNE/BCLN/PCLN/PBCN/CONV/CRAY read as
+  target-configured devices rather than flat bodies with a tiny badge.
+
+### Visual decision
+
+- Keep the narrowed Plasma v2. The original was an almost uniform lavender
+  slab; the retained body has visible depth and magnetic structure at fit view.
+  A broader first tuning was rejected because its pale network read as marble
+  or painted lightning rather than contained luminous matter.
+- Keep source-aperture v2. Target colour is now legible across the complete
+  source/target board, and the dark well gives the ring physical depth without
+  changing the source silhouette. Dark brown owners remain deliberately more
+  subdued than yellow and green bodies.
+- Keep the capillary-carrier cleanup as a restrained contact refinement. It is
+  not intended to create a glowing separator; its main visible benefit is a
+  less cyan, less categorical high-resolution seam.
+- A common radiogenic lobe for PLUT/POLO/SING/URAN/WARP was visually rejected
+  and removed. It looked like the same spotlight stamped onto unrelated
+  materials, especially over SING. Radioactive owners need distinct structures
+  rather than another shared family wash.
+
+### Lightweight checks used
+
+- `npm run build` completes and closes all 19 production resources.
+- Plasma: `/tmp/anifor-plasma-before.png`,
+  `/tmp/anifor-plasma-folds-v2.png`, and
+  `/tmp/anifor-plasma-folds-v2-4x.png`.
+- Configured sources: `/tmp/anifor-source-target-before.png`,
+  `/tmp/anifor-source-target-device-v2.png`, and
+  `/tmp/anifor-source-target-device-v2-4x.png`.
+- Liquid contact: `/tmp/anifor-meniscus-before.png` and
+  `/tmp/anifor-meniscus-capillary-v2.png`.
+- Selection used direct WebGL inspection and independent aesthetic passes; no
+  profiler, exact visual hash, baseline promotion, or broad unit-test gate was
+  used.
+
+### Next visual work
+
+1. Give radioactive owners distinct material grammar: ore plates and veins for
+   PLUT/POLO/URAN, inward distortion and a cold rim for SING, and phase shear
+   for WARP. Do not reuse one common bright lobe.
+2. Extend the energy overhaul from Plasma to NEUT/PHOT/ELEC/PROT/BRAY with
+   translucent cores, coherent rails, and motion-aligned filaments.
+3. Deepen meniscus geometry through a real curvature/depth treatment instead
+   of increasing contact-line brightness.

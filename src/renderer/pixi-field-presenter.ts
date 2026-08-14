@@ -5531,7 +5531,47 @@ vec3 sourceTargetDelta(float material, vec2 stateBytes, vec2 position) {
     : vec3(20.0, 6.0, 17.0)))));
   float tone = mod(floor(target / 6.0), 5.0) - 2.0;
   key += vec3(tone * 0.55, tone * 0.45, tone * 0.60);
-  return key * shape / 255.0;
+  vec3 legacyBadge = key * shape / 255.0;
+  if (uMaterialLightingVariant < 1.5) return legacyBadge;
+
+  // Volumetric/B turns the small target badge into a readable source device:
+  // a dark intake conduit feeds a target-coloured aperture, while powered
+  // clones expose warm bus rails and CRAY carries a short output beam. The
+  // grammar stays inside the authoritative source body and changes RGB only.
+  vec3 targetKey = key / max(max(key.r, key.g), max(key.b, 1.0));
+  float poweredSource = step(157.5, material);
+  float raySource = 1.0 - step(0.5, abs(material - 137.0));
+  float sourceSpan = step(-9.5, centred.x) * (1.0 - step(7.8, centred.x));
+  float sourceConduit = sourceSpan
+    * (1.0 - smoothstep(1.25, 2.15, abs(centred.y)));
+  float sourcePulsePhase = mod(
+    floor(centred.x + 10.0 + phase7), 5.0
+  );
+  float sourcePulse = sourceConduit * (1.0 - step(1.55, sourcePulsePhase));
+  float sourceApertureDistance = length(centred - vec2(5.2, 0.0));
+  float sourceAperture = 1.0 - smoothstep(
+    0.42, 1.12, abs(sourceApertureDistance - 3.35)
+  );
+  float sourceApertureWell = 1.0 - smoothstep(
+    2.10, 3.05, sourceApertureDistance
+  );
+  float sourceApertureCore = 1.0 - smoothstep(
+    0.30, 1.18, sourceApertureDistance
+  );
+  float sourceBus = poweredSource * sourceSpan
+    * (1.0 - smoothstep(0.42, 0.92, abs(abs(centred.y) - 6.0)));
+  float sourceRay = raySource * step(7.0, centred.x)
+    * (1.0 - smoothstep(0.55, 1.35, abs(centred.y)));
+  vec3 deviceDelta = legacyBadge * 0.18;
+  deviceDelta -= vec3(0.070, 0.062, 0.050)
+    * sourceConduit * (0.72 + poweredSource * 0.18);
+  deviceDelta -= vec3(0.088, 0.080, 0.066) * sourceApertureWell;
+  deviceDelta += targetKey * (
+    sourceAperture * 0.168 + sourceApertureCore * 0.132
+      + sourcePulse * 0.070 + sourceRay * 0.102
+  );
+  deviceDelta += vec3(0.96, 0.58, 0.18) * sourceBus * 0.066;
+  return deviceDelta;
 }
 vec4 contactSample(vec2 uv, float material, float family) {
   float candidate = materialAt(uv);
@@ -6710,31 +6750,62 @@ void main() {
       color += (vec3(1.28) - clamp(color, 0.0, 1.28))
         * vec3(1.00, 0.88, 0.38) * fireEmberThread * 0.90;
     }
-    // E16: a broad exact Plasma body should read as contained luminous matter,
-    // not a uniformly violet marker. The already-sampled emission alpha proves
-    // a cohesive body; two static world-anchored macro lobes then form a broad
-    // signed magnetic key/pocket inside that support. This deliberately follows
-    // the animated Energy composition so it reads as body depth rather than
-    // another flashing carrier motif. The semantic edge receives a restrained
-    // absorptive shell, making the luminous interior feel contained without
-    // changing its silhouette. It is RGB-only and sample-free; sparse Plasma,
-    // authored voids, foreign contacts, walls, reconstructed support, and every
-    // non-Plasma owner are exact no-ops. Compact true 8x declares neither this
-    // selector nor branch.
+    // E16: connected Plasma is a slowly convecting magnetic volume rather than
+    // a flat violet marker. One existing material-volume lookup bends two broad
+    // field sheets through indigo pockets; their cyan/magenta folds meet in
+    // sparse white-hot knots. Sparse carriers retain the generic Energy look.
     if (uPlasmaCoreVfx > 0.5 && material == 20.0
       && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
       && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5) {
       float plasmaBodySupport = smoothstep(0.56, 0.76, emissionState.a)
-        * smoothstep(0.72, 0.96, core) * cohesiveEnergy;
-      float plasmaMacroA = sin(dot(fieldPosition, vec2(0.052, 0.031)) + 4.60);
-      float plasmaMacroB = sin(dot(fieldPosition, vec2(-0.028, 0.074)) + 4.67);
-      float plasmaMacroDepth = clamp(
-        plasmaMacroA * 0.62 + plasmaMacroB * 0.38, -1.0, 1.0
+        * smoothstep(0.72, 0.96, core) * cohesiveEnergy
+        * smoothstep(2.5, 3.5, shape.w);
+      vec2 plasmaVolumePosition = fieldPosition + vec2(
+        uTime * (4.2 + velocity.x * 5.0),
+        uTime * (-2.6 + velocity.y * 4.0)
       );
-      float plasmaShellPocket = edge * smoothstep(0.42, 0.82, cohesiveEnergy) * 0.020;
-      float plasmaContainment = plasmaMacroDepth * plasmaBodySupport * 0.040
-        - plasmaShellPocket;
-      color = max(color * (1.0 + plasmaContainment), vec3(0.0));
+      vec3 plasmaVolumeNoise = texture(
+        uMaterialVolumeTexture,
+        plasmaVolumePosition / vec2(118.0, 92.0) + vec2(0.37, 0.11)
+      ).rgb;
+      float plasmaWarp = (plasmaVolumeNoise.r - 0.5) * 2.2
+        + (plasmaVolumeNoise.g - 0.5) * 1.1;
+      float plasmaMacroA = sin(
+        dot(fieldPosition, vec2(0.031, 0.047))
+          + uTime * 0.42 + plasmaWarp * 1.55 + 1.70
+      );
+      float plasmaMacroB = sin(
+        dot(fieldPosition, vec2(-0.043, 0.026))
+          - uTime * 0.31 + plasmaWarp * 1.15 + 4.25
+      );
+      float plasmaMacroDepth = clamp(
+        plasmaMacroA * 0.50 + plasmaMacroB * 0.32
+          + (plasmaVolumeNoise.b - 0.5) * 0.72,
+        -1.0, 1.0
+      );
+      float plasmaCyanSheet = plasmaBodySupport
+        * (1.0 - smoothstep(0.055, 0.190, abs(plasmaMacroA)))
+        * smoothstep(-0.72, 0.52, plasmaMacroB);
+      float plasmaMagentaSheet = plasmaBodySupport
+        * (1.0 - smoothstep(0.045, 0.170, abs(plasmaMacroB)))
+        * smoothstep(-0.64, 0.58, -plasmaMacroA);
+      float plasmaPocket = plasmaBodySupport
+        * smoothstep(0.06, 0.88, -plasmaMacroDepth)
+        * (0.58 + plasmaVolumeNoise.b * 0.42);
+      float plasmaCrossing = plasmaCyanSheet * plasmaMagentaSheet
+        * smoothstep(0.36, 0.78, plasmaVolumeNoise.r);
+      color *= vec3(1.0) - vec3(0.38, 0.52, 0.13)
+        * plasmaPocket * 0.72;
+      color *= 1.0 + plasmaBodySupport * max(plasmaMacroDepth, 0.0) * 0.085;
+      color += (vec3(1.24) - clamp(color, 0.0, 1.24))
+        * vec3(0.10, 0.82, 1.00) * plasmaCyanSheet * 0.45;
+      color += (vec3(1.24) - clamp(color, 0.0, 1.24))
+        * vec3(1.00, 0.16, 0.86) * plasmaMagentaSheet * 0.40;
+      color += (vec3(1.42) - clamp(color, 0.0, 1.42))
+        * vec3(0.88, 0.96, 1.00) * plasmaCrossing * 1.18;
+      float plasmaShellPocket = edge
+        * smoothstep(0.42, 0.82, cohesiveEnergy) * 0.16;
+      color *= vec3(1.0) - vec3(0.34, 0.44, 0.10) * plasmaShellPocket;
     }
   } else if (gasVolume > 0.5) {
     float billow = 0.92 + atmosphere * 0.08 * (1.0 - gasInterior * 0.50);
@@ -8720,6 +8791,9 @@ void main() {
       );
       float wetContactBand = smoothstep(0.025, 0.34, wetContactShape)
         * wetContactBody;
+      float wetContactCarrier = max(
+        wetContactBand, wetContactFallback * 0.16
+      );
       float wetContactFacing = clamp(wetContactSigned * 1.55, -1.0, 1.0);
       float wetContactCrown = max(wetContactFacing, 0.0);
       float wetContactPocket = max(-wetContactFacing, 0.0);
@@ -8731,12 +8805,22 @@ void main() {
         : vec3(0.78, 0.18, 0.62));
       float wetContactFamilyGain = material == 2.0 ? 2.40
         : (material == 8.0 ? 2.20 : 0.90);
-      float wetContactKeyGain = wetContactBand * wetContactFamilyGain * (
-        0.009 + wetContactCrown * 0.075 + liquidFresnelContour * 0.012
+      // Shape the contact as a capillary shoulder rather than a categorical
+      // outline: a restrained outer lip, a brighter inset ridge, and a darker
+      // submerged apron. The existing reconstructed density keeps the result
+      // curved and stable at 2x/4x without widening the material boundary.
+      float wetContactKeyGain = wetContactCarrier * wetContactFamilyGain * (
+        (1.0 - smoothstep(0.56, 0.74, liquidSurfaceDensity))
+          * (0.002 + wetContactCrown * 0.010)
+        + smoothstep(0.50, 0.70, liquidSurfaceDensity)
+          * (1.0 - smoothstep(0.80, 1.04, liquidSurfaceDensity))
+          * (0.72 + liquidFresnelInnerContour * 0.28)
+          * (0.018 + wetContactCrown * 0.060)
       );
-      float wetContactAbsorptionGain = wetContactBand * wetContactFamilyGain * (
-        0.028 + wetContactPocket * 0.092
-      );
+      float wetContactAbsorptionGain = wetContactCarrier
+        * wetContactFamilyGain
+        * smoothstep(0.68, 0.90, liquidSurfaceDensity)
+        * (0.008 + wetContactPocket * 0.046);
       color += (vec3(1.16) - clamp(color, 0.0, 1.16))
         * wetContactKey * wetContactKeyGain;
       color *= vec3(1.0) - wetContactAbsorption * wetContactAbsorptionGain;
@@ -8755,19 +8839,19 @@ void main() {
         && foreignMatterContact > 2.5) {
         color += (vec3(1.12) - clamp(color, 0.0, 1.12))
           * vec3(0.18, 0.86, 1.00)
-          * max(wetContactBand, crossPhaseContact.x * 0.16)
+          * wetContactCarrier
           * (0.068 + wetContactCrown * 0.160);
         color *= vec3(1.0) - vec3(0.20, 0.46, 0.72)
-          * max(wetContactBand, crossPhaseContact.x * 0.16)
+          * wetContactCarrier
           * (0.042 + wetContactPocket * 0.170);
         // Two-to-three low-saturation source bytes of rear occlusion make the
         // submerged ordering legible at fit view without widening or
         // intensifying the complementary contact rim.
         color *= vec3(1.0) - vec3(0.52, 0.58, 0.64)
-          * max(wetContactBand, crossPhaseContact.x * 0.16)
+          * wetContactCarrier
           * wetContactPocket * 0.060;
         color += vec3(0.032, 0.012, -0.028)
-          * max(wetContactBand, crossPhaseContact.x * 0.16)
+          * wetContactCarrier
           * (0.45 + wetContactPocket * 0.55);
         // E76: at fit view the accepted E37/E56 interface can still collapse
         // into one low-chroma cyan/grey band. Reuse exactly the same Water-side
@@ -8778,10 +8862,10 @@ void main() {
         if (uWaterMetalSeparationVfx > 0.5) {
           color += (vec3(1.12) - clamp(color, 0.0, 1.12))
             * vec3(0.10, 0.76, 1.00)
-            * max(wetContactBand, crossPhaseContact.x * 0.16)
+            * wetContactCarrier
             * (0.032 + wetContactCrown * 0.120);
           color *= vec3(1.0) - vec3(0.62, 0.22, 0.04)
-            * max(wetContactBand, crossPhaseContact.x * 0.16)
+            * wetContactCarrier
             * (0.022 + wetContactPocket * 0.092);
           // E78: rotate only E76's already-proven Water/Metal contour toward
           // a cooler Fresnel spectrum without adding luminance or another
@@ -8794,7 +8878,7 @@ void main() {
           // silhouette, topology, ownership, state, or physics decision.
           if (uWaterMetalFresnelSpectrumVfx > 0.5) {
             color += vec3(-0.34, -0.05, 1.50)
-              * max(max(wetContactBand, crossPhaseContact.x * 0.16), 0.28)
+              * wetContactCarrier
               * (0.25 + wetContactCrown * 0.34 + liquidFresnelContour * 0.28)
               * (1.0 - wetContactPocket * 0.45) * 0.032;
           }
