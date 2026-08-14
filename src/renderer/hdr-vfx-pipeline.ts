@@ -39,6 +39,7 @@ export interface HDRCompositionResources {
   readonly liquidTexture: TextureSource;
   readonly liquidDepthTexture: TextureSource;
   readonly materialVolumeTexture: TextureSource;
+  readonly sourceUniforms: UniformGroup;
   readonly atmosphereTexture: TextureSource;
   readonly atmosphereStyleTexture: TextureSource;
   readonly emissionTexture: TextureSource;
@@ -113,6 +114,39 @@ void main() {
 }
 `;
 
+/** Low-frequency environment visible only through the private liquid optical layer. */
+const LIQUID_BACKPLATE_FRAGMENT = `
+in vec2 vUv;
+out vec4 finalColor;
+uniform sampler2D uMaterialVolumeTexture;
+
+void main() {
+  vec3 volume = texture(
+    uMaterialVolumeTexture, vUv * vec2(3.10, 2.25) + vec2(0.17, 0.31)
+  ).rgb;
+  float broadFold = (volume.r - 0.5) * 0.60
+    + (volume.g - 0.5) * 0.28
+    + (volume.b - 0.5) * 0.12;
+  float depth = smoothstep(0.08, 0.94, vUv.y);
+  float floorBand = smoothstep(0.60, 0.98, vUv.y);
+  float windowBand = 1.0 - smoothstep(
+    0.10, 0.34, abs(vUv.x + vUv.y * 0.18 - 0.38)
+  );
+  windowBand *= 1.0 - smoothstep(0.38, 0.92, vUv.y);
+  float horizonBand = 1.0 - smoothstep(0.035, 0.18, abs(vUv.y - 0.58));
+  vec3 environment = mix(
+    vec3(0.032, 0.072, 0.108), vec3(0.018, 0.034, 0.050), depth
+  );
+  environment = mix(environment, vec3(0.072, 0.052, 0.034), floorBand * 0.52);
+  environment += broadFold * vec3(0.032, 0.040, 0.046);
+  environment += windowBand * vec3(0.070, 0.100, 0.132);
+  environment += horizonBand * vec3(0.018, 0.014, 0.010);
+  float vignette = smoothstep(0.98, 0.22, length(vUv - vec2(0.48, 0.42)));
+  environment *= mix(0.72, 1.0, vignette);
+  finalColor = vec4(max(environment, vec3(0.0)), 1.0);
+}
+`;
+
 const createHDRTonemapFragment = (visualLabEnabled: boolean): string => `
 in vec2 vUv;
 out vec4 finalColor;
@@ -123,6 +157,7 @@ uniform sampler2D uWallTexture;
 uniform sampler2D uLiquidTexture;
 uniform sampler2D uLiquidDepthTexture;
 uniform sampler2D uMaterialVolumeTexture;
+uniform sampler2D uBehindTexture;
 ${visualLabEnabled ? `
 uniform sampler2D uAtmosphereTexture;
 uniform sampler2D uAtmosphereStyleTexture;
@@ -212,6 +247,11 @@ vec3 liquidInteriorTransport(
   float projectionSupport = ownerSupport * (1.0 - wallBlock);
   if (projectionSupport < 0.5) return sourceRadiance;
 
+  vec2 volumeUv = worldPosition / vec2(108.0, 76.0)
+    + velocity * 0.022
+    + vec2(material * 0.031, material * -0.019);
+  vec3 volume = texture(uMaterialVolumeTexture, volumeUv).rgb;
+  float fold = clamp(volume.r * 0.54 + volume.g * 0.31 + volume.b * 0.15, 0.0, 1.0);
   vec3 upstreamRadiance = straightRadiance(texture(uHdrTexture, upstreamUv));
   vec2 dispersionAxis = vec2(-incident.y, incident.x);
   vec2 dispersionUv = boundedUv(
@@ -223,12 +263,28 @@ vec3 liquidInteriorTransport(
     mix(upstreamRadiance.g, dispersedRadiance.g, 0.42),
     dispersedRadiance.b
   );
+  // The private optical layer receives a coherent, low-frequency lens warp.
+  // It makes broad water bodies visibly bend the studio environment without
+  // blurring the foreground material boundary or changing scene alpha.
+  vec2 opticalWarp = (volume.rg - vec2(0.5)) * uWorldTexel
+    * mix(1.35, 3.60, deepBody);
+  opticalWarp += dispersionAxis * uWorldTexel * (fold - 0.5)
+    * mix(0.80, 2.20, deepBody);
+  vec2 behindUv = boundedUv(upstreamUv + opticalWarp);
+  vec2 behindDispersionUv = boundedUv(dispersionUv - opticalWarp * 0.52);
+  vec3 behindRadiance = straightRadiance(texture(uBehindTexture, behindUv));
+  vec3 behindDispersion = straightRadiance(texture(uBehindTexture, behindDispersionUv));
+  vec3 refractedBackground = vec3(
+    behindRadiance.r,
+    mix(behindRadiance.g, behindDispersion.g, 0.42),
+    behindDispersion.b
+  );
+  // Shallow liquid admits more of the private non-liquid/environment layer;
+  // deeper columns retain their material-authored body before absorption.
+  refractedRadiance = mix(
+    refractedRadiance, refractedBackground, mix(0.70, 0.46, deepBody)
+  );
   vec3 upstreamBloom = texture(uBloomTexture, upstreamUv).rgb;
-  vec2 volumeUv = worldPosition / vec2(108.0, 76.0)
-    + velocity * 0.022
-    + vec2(material * 0.031, material * -0.019);
-  vec3 volume = texture(uMaterialVolumeTexture, volumeUv).rgb;
-  float fold = clamp(volume.r * 0.54 + volume.g * 0.31 + volume.b * 0.15, 0.0, 1.0);
   float causticCrown = smoothstep(0.50, 0.78, fold);
   float causticPocket = 1.0 - smoothstep(0.20, 0.58, fold);
 
@@ -242,7 +298,7 @@ vec3 liquidInteriorTransport(
     : (material == MATERIAL_OIL
       ? vec3(0.020, 0.075, 0.190)
       : vec3(0.085, 0.022, 0.075));
-  float refractionShare = projectionSupport * body * mix(0.105, 0.245, deepBody);
+  float refractionShare = projectionSupport * body * mix(0.20, 0.38, deepBody);
   vec3 result = mix(
     sourceRadiance, refractedRadiance * transmissionTint, refractionShare
   );
@@ -254,7 +310,8 @@ vec3 liquidInteriorTransport(
     : (material == MATERIAL_OIL
       ? vec3(1.12, 0.67, 0.22)
       : vec3(0.48, 1.02, 0.40));
-  vec3 projectedLight = upstreamBloom * 0.68 + causticTint * 0.38;
+  vec3 projectedLight = upstreamBloom * 0.68 + causticTint * 0.38
+    + refractedBackground * 0.22;
   vec3 headroom = max(vec3(0.0), vec3(1.18) - clamp(result, 0.0, 1.18));
   float caustic = projectionSupport * body * causticCrown
     * mix(0.075, 0.25, deepBody);
@@ -642,12 +699,15 @@ export function probeHDRPipelineSupport(
 export class HDRVfxPipeline {
   readonly info: HDRPipelineInfo;
   private readonly hdrTarget: RenderTexture;
+  private readonly behindTarget: RenderTexture;
   private readonly bloomA: RenderTexture;
   private readonly bloomB: RenderTexture;
+  private readonly behindScene = new Container();
   private readonly extractScene = new Container();
   private readonly blurScene = new Container();
   private readonly compositeScene = new Container();
   private compositeUniforms?: UniformGroup;
+  private readonly sourceUniforms: UniformGroup;
 
   private constructor(
     private readonly renderer: RenderPassRenderer,
@@ -658,15 +718,21 @@ export class HDRVfxPipeline {
     look: Exclude<RenderLook, 'classic'>,
     composition: HDRCompositionResources,
   ) {
+    this.sourceUniforms = composition.sourceUniforms;
     const bloomWidth = Math.max(1, Math.ceil(width / 2));
     const bloomHeight = Math.max(1, Math.ceil(height / 2));
     let hdrTarget: RenderTexture | undefined;
+    let behindTarget: RenderTexture | undefined;
     let bloomA: RenderTexture | undefined;
     let bloomB: RenderTexture | undefined;
     try {
       hdrTarget = RenderTexture.create({
         width, height, resolution: outputScale, format: 'rgba16float',
         alphaMode: 'premultiplied-alpha', scaleMode: 'nearest', antialias: false,
+      });
+      behindTarget = RenderTexture.create({
+        width, height, resolution: Math.min(outputScale, 2), format: 'rgba16float',
+        alphaMode: 'premultiplied-alpha', scaleMode: 'linear', antialias: false,
       });
       bloomA = RenderTexture.create({
         width: bloomWidth, height: bloomHeight, resolution: outputScale, format: 'rgba16float',
@@ -676,6 +742,15 @@ export class HDRVfxPipeline {
         width: bloomWidth, height: bloomHeight, resolution: outputScale, format: 'rgba16float',
         alphaMode: 'premultiplied-alpha', scaleMode: 'linear', antialias: false,
       });
+
+      this.behindScene.addChild(createPassMesh(
+        width, height, LIQUID_BACKPLATE_FRAGMENT,
+        {
+          uMaterialVolumeTexture: composition.materialVolumeTexture,
+          uMaterialVolumeSampler: composition.materialVolumeTexture.style,
+        },
+        'hdr-liquid-backplate',
+      ));
 
       this.extractScene.addChild(createPassMesh(
         bloomWidth, bloomHeight, BLOOM_EXTRACT_FRAGMENT,
@@ -757,6 +832,8 @@ export class HDRVfxPipeline {
           uLiquidDepthSampler: composition.liquidDepthTexture.style,
           uMaterialVolumeTexture: composition.materialVolumeTexture,
           uMaterialVolumeSampler: composition.materialVolumeTexture.style,
+          uBehindTexture: behindTarget.source,
+          uBehindSampler: behindTarget.source.style,
           ...(visualLabEnabled ? {
             uAtmosphereTexture: composition.atmosphereTexture,
             uAtmosphereSampler: composition.atmosphereTexture.style,
@@ -770,6 +847,7 @@ export class HDRVfxPipeline {
       ));
       this.compositeUniforms = compositeUniforms;
       this.hdrTarget = hdrTarget;
+      this.behindTarget = behindTarget;
       this.bloomA = bloomA;
       this.bloomB = bloomB;
       this.info = {
@@ -785,7 +863,9 @@ export class HDRVfxPipeline {
       try { this.extractScene.destroy({ children: true }); } catch { /* best effort */ }
       try { this.blurScene.destroy({ children: true }); } catch { /* best effort */ }
       try { this.compositeScene.destroy({ children: true }); } catch { /* best effort */ }
+      try { this.behindScene.destroy({ children: true }); } catch { /* best effort */ }
       try { hdrTarget?.destroy(true); } catch { /* best effort */ }
+      try { behindTarget?.destroy(true); } catch { /* best effort */ }
       try { bloomA?.destroy(true); } catch { /* best effort */ }
       try { bloomB?.destroy(true); } catch { /* best effort */ }
       throw error;
@@ -820,6 +900,15 @@ export class HDRVfxPipeline {
   }
 
   render(): void {
+    this.renderer.render({ container: this.behindScene, target: this.behindTarget, clear: true });
+    try {
+      this.sourceUniforms.uniforms.uOpticalLayer = 1;
+      this.renderer.render({
+        container: this.sourceScene, target: this.behindTarget, clear: false,
+      });
+    } finally {
+      this.sourceUniforms.uniforms.uOpticalLayer = 0;
+    }
     this.renderer.render({ container: this.sourceScene, target: this.hdrTarget, clear: true });
     // Both bloom meshes disable blending, exactly cover their matching target,
     // and unconditionally write RGBA. Clearing those private targets first is
@@ -840,10 +929,12 @@ export class HDRVfxPipeline {
   }
 
   destroy(): void {
+    this.behindScene.destroy({ children: true });
     this.extractScene.destroy({ children: true });
     this.blurScene.destroy({ children: true });
     this.compositeScene.destroy({ children: true });
     this.hdrTarget.destroy(true);
+    this.behindTarget.destroy(true);
     this.bloomA.destroy(true);
     this.bloomB.destroy(true);
   }

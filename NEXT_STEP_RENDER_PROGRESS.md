@@ -246,3 +246,66 @@ Status: visually favoured; ready for checkpoint and deployment.
    without duplicating the normal HDR pipeline or risking browser timeouts.
 4. Continue direct material-family scene tuning, with visual comparison ahead
    of historical response envelopes and exact-output evidence.
+
+## 2026-08-14 — liquid optical background and cinematic powder body
+
+Status: visually favoured at 2× and 4×; ready for checkpoint.
+
+### What changed
+
+- Normal WebGL/HDR now owns a capped-resolution optical background target. It
+  renders a low-frequency studio environment plus non-liquid scene matter, then
+  the liquid compositor samples that private layer through exact Water/Oil/Acid
+  bodies with depth-varying lens warp, restrained chromatic displacement, and
+  caustic carry. Foreground liquid support and alpha remain unchanged.
+- The background target is capped at 2× even when the main field is 4×, keeping
+  the through-liquid image naturally softer without doubling the full 4× HDR
+  allocation. Canvas2D and the compact true-8× route remain independent.
+- Settled Smooth powder receives a late, broad-volume grade after material
+  identity and scene light are composed. Wide density/support exclude sparse
+  grains, holes, narrow structures, suspension, Local, and Grains; a static
+  material-volume fold adds a coherent crown, shoulder, and compacted pocket.
+- The powder grade uses multiplicative colour response so Sand/Clay/Concrete
+  pigment variation survives. A second, higher-frequency organic sample restores
+  bounded internal variation at 4× without the regular diagonal stripes exposed
+  by the rejected mesostrata-retention trial.
+- Source-aware powder irradiance now uses the same broad settled-pile slope as
+  the body finish instead of restarting its direction from local grain normals.
+- `--loose-visual-capture` provides a deliberately non-gating review path: it
+  waits for a valid prepared WebGL scene and captures one compositor-visible
+  frame without requiring byte-identical consecutive PNGs.
+
+### Visual decision
+
+- Keep the optical background. The Water tank remains crisp at its rim and
+  obstacles but gains deeper internal cyan variation and visible background
+  separation instead of reading as a flat translucent fill.
+- Keep the powder grade. The showcase pile now has a readable bright shoulder,
+  slower broad mineral folds, and a grounded lower mass while retaining the
+  grain-colour layer. Single-particle reference rendering is untouched because
+  Local and Grains never enter this branch.
+- Keep the organic 4× retention and reject the earlier mesostrata reapplication.
+  The latter made Concrete resolve as artificial diagonal bands; the retained
+  material-volume texture restores variation without a checker or stripe motif.
+
+### Lightweight checks used
+
+- The production bundle builds and closes all 19 runtime resources.
+- Real 2× and 4× production WebGL/HDR showcase captures completed with zero
+  browser errors and active HDR backings. The retained images are
+  `/tmp/anifor-fluid-powder-overhaul-v3-2x.png` and
+  `/tmp/anifor-fluid-powder-overhaul-v4-4x.png`.
+- Focused compositor and presenter contracts pass 279/279. No exact image hash,
+  historical response envelope, or consecutive-frame equality was used as an
+  aesthetic acceptance gate.
+
+### Next visual work
+
+1. Put more authored scene structure into the optical background so liquid can
+   visibly refract nearby matter and project a soft caustic onto receiving solids.
+2. Give gas a dedicated low-resolution transmittance/light buffer for thicker,
+   softer clouds and longer source-shaped shafts without point-like interiors.
+3. Extend the broad powder treatment by appearance profile so snow, crystals,
+   soot, and reactive powders retain distinct roughness and scatter character.
+4. Prototype a bounded compact true-8× version of the retained material-volume
+   vocabulary, with visual viability and browser responsiveness as the criteria.

@@ -289,6 +289,10 @@ if (concreteMesostrataRetentionVfxOnly && (modes.length !== 1 || modes[0] !== 'w
 // E06 reuses the accepted E02/E05 baseline and changes only dry settled
 // Smooth-powder light transport in the normal-detail HDR presenter.
 const powderLightVfxOnly = process.argv.includes('--powder-light-vfx-only');
+// Visual iteration may deliberately bypass exact consecutive PNG equality.
+// This still waits for the authored fixture and renderer setup, then captures
+// one compositor-visible frame for human/agent aesthetic review.
+const looseVisualCapture = process.argv.includes('--loose-visual-capture');
 if (powderLightVfxOnly && (modes.length !== 1 || modes[0] !== 'webgl')) {
   throw new Error('--powder-light-vfx-only requires --webgl-only');
 }
@@ -55623,6 +55627,21 @@ async function captureWorldCanvasComposite(cdp, label, regions, timeoutMs = 45_0
 }
 
 async function waitForStablePageCaptures(cdp, label, timeoutMs = 8_000, requiredStableSamples = 2) {
+  if (looseVisualCapture) {
+    await sleep(350);
+    await evaluate(cdp, `new Promise((resolve) => requestAnimationFrame(
+      () => requestAnimationFrame(resolve)
+    ))`);
+    const capture = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+    const canvasRect = await evaluate(cdp, `(() => {
+      const canvas = document.querySelector('.world-canvas');
+      if (!(canvas instanceof HTMLCanvasElement)) return undefined;
+      const rect = canvas.getBoundingClientRect();
+      return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+    })()`);
+    assert(canvasRect, `${label}: loose visual capture canvas was unavailable`);
+    return { capture, reference: capture, canvasRect, referenceCanvasRect: canvasRect };
+  }
   let previous;
   let stableSamples = 0;
   return waitFor(async () => {

@@ -892,11 +892,11 @@ vec3 applyMaterialVolumeLobe(
   float powderOpenProfile = clamp(
     (finishInteriorScatter - 0.50) / 1.0, 0.0, 1.0
   );
-  float powderCrownScale = mix(0.090, 0.142, powderOpenProfile);
-  float powderCoreScale = mix(0.104, 0.070, powderOpenProfile);
+  float powderCrownScale = mix(0.118, 0.178, powderOpenProfile);
+  float powderCoreScale = mix(0.132, 0.086, powderOpenProfile);
   key += powderVolume * (
     powderMid * powderCrownScale
-      + max(facing, 0.0) * shoulder * (0.046 + powderOpenProfile * 0.016)
+      + max(facing, 0.0) * shoulder * (0.064 + powderOpenProfile * 0.022)
   ) * finishResponse.x * profileMiddleScatter;
   key *= finishResponse.x;
   // Transmission is a separate optical lane: applying it after reflection
@@ -918,7 +918,7 @@ vec3 applyMaterialVolumeLobe(
       + gasDeepAbsorption * 0.014);
   shade += powderVolume * (
     core * core * powderCoreScale
-      + max(-facing, 0.0) * shoulder * (0.026 + (1.0 - powderOpenProfile) * 0.012)
+      + max(-facing, 0.0) * shoulder * (0.038 + (1.0 - powderOpenProfile) * 0.016)
   ) * profileCoreExtinction;
   shade *= finishResponse.y;
   shade *= mix(1.0, 0.82, sootyGasCharacter * core);

@@ -3610,6 +3610,7 @@ uniform vec2 uFieldSize;
 uniform vec2 uAtmosphereTexel;
 uniform vec2 uEmissionTexel;
 uniform float uTime;
+uniform float uOpticalLayer;
 uniform float uHDRVfx;
 uniform float uVolumeVfx;
 uniform float uMaterialBodyFinish;
@@ -6152,6 +6153,11 @@ void main() {
   bool materialEmissive = materialStyle.b > 0.5;
   float traits = floor(materialStyle.a * 255.0 + 0.5);
   float profileOptics = floor(paletteSample.a * 255.0 + 0.5);
+  // The private capped-resolution optical layer keeps all non-liquid scene
+  // matter but leaves exact and reconstructed liquid transparent. It never
+  // reaches the screen directly; the HDR compositor samples it only through
+  // an already-supported liquid body.
+  if (uOpticalLayer > 0.5 && (liquidOnly > 0.5 || family == 2.0)) discard;
   // The appended Waxy class is profile authority only. Historical normal-HDR
   // branches retain SmoothRigid behaviour in Off/A and outside shared B
   // profile selection, while the two selectors below receive profileOptics.
@@ -12182,12 +12188,24 @@ void main() {
     // side sample: a genuine external source has positive outward contrast,
     // while symmetric/internal emission no longer lights both sides of a void.
     // Compact true 8x never enters this normal-HDR shader branch.
-    float profileIrradianceNormalLength = length(normal.xy);
+    // A settled Smooth powder body already owns a broad, stable shape slope.
+    // Reuse it for source transport so a whole pile receives one coherent key
+    // and countershade instead of restarting the light direction per grain.
+    // Local, Grains, loose powder, and every other phase retain their existing
+    // normals and slope response.
+    vec2 profileIrradianceNormal = normal.xy;
+    vec2 profileIrradianceSlope = semanticSlope + volumeSlope;
+    if (family == 4.0 && powderLightBodyGate > 0.001) {
+      profileIrradianceNormal = widePowderShape.yz;
+      profileIrradianceSlope = widePowderShape.yz;
+    }
+    float profileIrradianceNormalLength = length(profileIrradianceNormal);
     if (profileIrradianceB > 0.5 && uHighQuality > 0.5
       && profileIrradianceEligibility > 0.001
       && profileIrradianceProbeResolved < 0.5
       && profileIrradianceNormalLength > 0.0001) {
-      vec2 profileIrradianceOutward = normal.xy / profileIrradianceNormalLength;
+      vec2 profileIrradianceOutward = profileIrradianceNormal
+        / profileIrradianceNormalLength;
       vec4 outwardIrradiance = texture(
         uEmissionTexture,
         fieldUv + profileIrradianceOutward * uEmissionTexel * 2.0
@@ -12234,7 +12252,8 @@ void main() {
       float transportGradientMagnitude = length(transportGradient);
       vec2 transportDirection = transportGradient
         / max(transportGradientMagnitude, 0.0001);
-      vec2 profileIrradianceOutward = normal.xy / profileIrradianceNormalLength;
+      vec2 profileIrradianceOutward = profileIrradianceNormal
+        / profileIrradianceNormalLength;
       float transportConfidence = gasVolume > 0.5
         ? smoothstep(0.0005, 0.025, transportGradientMagnitude)
         : smoothstep(0.002, 0.05, transportGradientMagnitude);
@@ -12250,7 +12269,8 @@ void main() {
       && profileIrradianceProbeResolved > 0.5
       && max(emissionState.a, profileIrradianceOutwardEmission.a) > 0.002
       && profileIrradianceNormalLength > 0.0001) {
-      vec2 profileIrradianceOutward = normal.xy / profileIrradianceNormalLength;
+      vec2 profileIrradianceOutward = profileIrradianceNormal
+        / profileIrradianceNormalLength;
       vec4 inwardIrradiance = texture(
         uEmissionTexture,
         fieldUv - profileIrradianceOutward * uEmissionTexel * 2.0
@@ -12291,7 +12311,7 @@ void main() {
         color, profileIrradiancePhase, profileIrradianceResponse,
         profileIrradianceProfile.interiorScatter,
         gasVolume > 0.5 ? atmosphereState.a : density,
-        profileIrradianceDepth, semanticSlope + volumeSlope,
+        profileIrradianceDepth, profileIrradianceSlope,
         profileIrradianceEligibility, profileIrradianceEmission,
         profileIrradianceIncidence,
         uMaterialBodyFinish, uMaterialLightingVariant
@@ -12345,6 +12365,82 @@ void main() {
         * (0.035 + (1.0 - shaftLobe) * 0.065);
       color *= 1.0 - rearExtinction;
     }
+  }
+  // Give stable Smooth powder a final broad-volume grade after grain identity
+  // and shared material lighting have been composed. A low-frequency static
+  // fold creates one readable crown, shoulder, and compacted pocket across a
+  // pile while multiplicative lighting preserves its internal grain colours.
+  // The wide settled-body proof excludes Local, Grains, loose particles,
+  // holes, narrow columns, suspension, walls, and reconstructed support.
+  float powderCinematicBody = smoothstep(0.30, 0.68, widePowderShape.x)
+    * smoothstep(1.0, 4.0, widePowderShape.w)
+    * (1.0 - step(0.5, halo))
+    * (1.0 - step(0.05, suspensionState.a));
+  if (family == 4.0 && uPowderStyle > 1.5 && uHDRVfx > 0.5
+    && powderCinematicBody > 0.001 && wallOnly < 0.5
+    && emissionOnly < 0.5 && traits < 0.5 && !materialEmissive) {
+    vec2 powderVolumeUv = fieldPosition / vec2(132.0, 96.0)
+      + vec2(material * 0.017, material * -0.011);
+    vec3 powderVolumeFold = texture(uMaterialVolumeTexture, powderVolumeUv).rgb;
+    float powderBroadFold = clamp(
+      powderVolumeFold.r * 0.58 + powderVolumeFold.g * 0.29
+        + powderVolumeFold.b * 0.13,
+      0.0, 1.0
+    );
+    float powderFacet = clamp(
+      powderLightBodySlope * 1.02
+        + (powderBroadFold - 0.5) * 2.10
+        + (0.48 - powderLightBodyDepth) * 0.32,
+      -1.0, 1.0
+    );
+    float powderCrown = smoothstep(0.02, 0.78, powderFacet);
+    float powderPocket = smoothstep(0.02, 0.78, -powderFacet);
+    // The carrier is already a strict eligibility proof; remap its compact
+    // numeric range before using it as an artistic opacity so the broad form
+    // remains visible after fit-view downsampling.
+    float powderStableBody = smoothstep(0.02, 0.65, powderCinematicBody);
+    float powderBulk = powderStableBody
+      * mix(0.52, 1.0, powderLightBodyDepth);
+    float powderShoulder = powderStableBody
+      * (1.0 - powderLightBodyDepth)
+      * smoothstep(0.015, 0.16, length(widePowderShape.yz));
+    vec3 powderKeyTint = mix(
+      vividColor(base, 1.10), vec3(1.0, 0.76, 0.46), 0.22
+    );
+    vec3 powderShadowTint = mix(
+      vec3(0.62, 0.72, 0.86), vividColor(base, 1.04), 0.14
+    );
+    float powderCrownGain = powderBulk
+      * (0.075 + powderCrown * 0.320) * mix(1.0, 0.74, powderLightBodyDepth);
+    float powderPocketGain = powderBulk
+      * (0.045 + powderPocket * 0.250 + powderLightBodyDepth * 0.060);
+    color *= vec3(1.0) + powderKeyTint * powderCrownGain;
+    color *= vec3(1.0) - powderShadowTint * powderPocketGain;
+    color += (vec3(1.16) - clamp(color, 0.0, 1.16))
+      * powderKeyTint * powderShoulder * 0.110;
+    // Reintroduce a bounded share of the existing mineral vocabulary after
+    // the broad grade. This keeps 4x fit-view from averaging Clay/Concrete/Sand
+    // into a flat fill while leaving the curved body and coarse lighting intact.
+    float powderDetailEstimate = min(
+      (gl_FragCoord.x + 0.5) / max(fieldPosition.x, 0.5),
+      (gl_FragCoord.y + 0.5) / max(fieldPosition.y, 0.5)
+    );
+    float powderHighDetailRetention = smoothstep(2.75, 4.0, powderDetailEstimate);
+    vec3 powderGrainSample = texture(
+      uMaterialVolumeTexture,
+      fieldPosition / vec2(10.0, 8.0) + vec2(material * 0.037, material * -0.023)
+    ).rgb;
+    float powderGrainLuma = dot(powderGrainSample, vec3(0.50, 0.34, 0.16)) - 0.5;
+    vec3 powderGrainChromatic = powderGrainSample
+      - vec3(dot(powderGrainSample, vec3(0.2126, 0.7152, 0.0722)));
+    vec3 retainedPowderGrain = vividColor(base, 1.10) * powderGrainLuma
+        * mix(0.040, 0.090, powderHighDetailRetention)
+      + powderGrainChromatic * mix(0.010, 0.026, powderHighDetailRetention);
+    color = clamp(
+      color + retainedPowderGrain * powderStableBody
+        * mix(0.72, 1.0, powderHighDetailRetention),
+      0.0, 1.35
+    );
   }
   if (uSparkStateStyling > 0.5 && material == 148.0) {
     color += sparkStateDelta(material, wallState.ba, fieldPosition, color);
@@ -13210,6 +13306,7 @@ export class PixiFieldPresenter {
       uAtmosphereTexel: { value: new Float32Array([1 / this.fieldSet.atmosphere.width, 1 / this.fieldSet.atmosphere.height]), type: 'vec2<f32>' },
       uEmissionTexel: { value: new Float32Array([1 / this.fieldSet.emission.width, 1 / this.fieldSet.emission.height]), type: 'vec2<f32>' },
       uTime: { value: 0, type: 'f32' },
+      uOpticalLayer: { value: 0, type: 'f32' },
       uHDRVfx: {
         value: renderLook === 'classic' ? 0 : renderLook === 'neon-lab' ? 2 : 1,
         type: 'f32',
@@ -13533,6 +13630,7 @@ export class PixiFieldPresenter {
         liquidTexture: this.liquidSource,
         liquidDepthTexture: this.boundaryStabilitySource,
         materialVolumeTexture: materialVolumeSource ?? this.liquidSource,
+        sourceUniforms: this.uniforms,
         atmosphereTexture: this.atmosphereSource,
         atmosphereStyleTexture: this.atmosphereStyleSource,
         emissionTexture: this.emissionSource,
