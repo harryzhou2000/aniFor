@@ -3,7 +3,8 @@ import type {
   PresentationRefreshAudit, RendererBackendInfo, SuspensionSupportAudit,
 } from '../renderer/field-renderer';
 import type {
-  WebGLCompletedFrameReceipt, WebGLCompletedFrameReceiptAndFramebufferAlphaReadback,
+  FixtureActivationPresentationTiming, WebGLCompletedFrameReceipt,
+  WebGLCompletedFrameReceiptAndFramebufferAlphaReadback,
   WebGLFramebufferAlphaReadback, WebGLPresentationTiming,
 } from '../renderer/pixi-field-presenter';
 import type { PowderRenderStyle } from '../renderer/powder-render-style';
@@ -396,6 +397,9 @@ export interface BrowserInputAuditApi {
   fixtureActivationPresentationGeneration(
     ticket: number,
   ): FixtureActivationPresentationGeneration | undefined;
+  fixtureActivationPresentationTiming(
+    ticket: number,
+  ): FixtureActivationPresentationTiming | undefined;
   /** Generic, fixture-owned same-page capture control; no browser method names cross the ABI. */
   setPreparedVisualCaptureVariant(
     fixture: VisualLabFixtureId, variant: VisualCaptureControlVariant,

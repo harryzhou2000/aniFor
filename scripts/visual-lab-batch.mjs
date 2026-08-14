@@ -1357,6 +1357,7 @@ const readCandidateReport = async (candidateDirectory, recipe, {
   let expected;
   let timings = null;
   let captureSubphases = null;
+  let fixtureActivationPresentationTiming = null;
   let executionProof;
   let executionTuningProof = null;
   let captureExecutionPlan;
@@ -1391,6 +1392,28 @@ const readCandidateReport = async (candidateDirectory, recipe, {
       captureSubphases = normalizeVisualLabCaptureSubphaseTimings(
         report.captureSubphases,
       );
+    }
+    if (report.readinessFixtureActivationPresentationTiming !== undefined) {
+      const timing = report.readinessFixtureActivationPresentationTiming;
+      const fields = timing !== null && typeof timing === 'object' && !Array.isArray(timing)
+        ? Reflect.ownKeys(timing) : [];
+      if (!isDeepStrictEqual(fields, [
+        'schema', 'ticket', 'submission', 'fieldPreparationMs', 'renderSubmissionMs',
+      ])
+        || timing.schema !== 'anifor.renderer.fixture-activation-presentation-timing/v1'
+        || !Number.isSafeInteger(timing.ticket) || timing.ticket <= 0
+        || !Number.isSafeInteger(timing.submission) || timing.submission <= 0
+        || !Number.isFinite(timing.fieldPreparationMs) || timing.fieldPreparationMs < 0
+        || !Number.isFinite(timing.renderSubmissionMs) || timing.renderSubmissionMs < 0) {
+        throw new Error('fixture-activation presentation timing is malformed');
+      }
+      fixtureActivationPresentationTiming = Object.freeze({
+        schema: timing.schema,
+        ticket: timing.ticket,
+        submission: timing.submission,
+        fieldPreparationMs: timing.fieldPreparationMs,
+        renderSubmissionMs: timing.renderSubmissionMs,
+      });
     }
     if (typeof report.url !== 'string') throw new Error('capture URL must be a string');
     let reportBaseUrl;
@@ -1447,6 +1470,12 @@ const readCandidateReport = async (candidateDirectory, recipe, {
         && captureSubphases?.readiness?.snapshotAttempts !== 1) {
         throw new Error('fixture-activation generation proof must retain exactly one readiness snapshot');
       }
+    }
+    if (report.executionTuning === undefined
+      && fixtureActivationPresentationTiming !== null) {
+      throw new Error(
+        'capture without execution tuning must not claim fixture-activation presentation timing',
+      );
     }
     if (executionTuningPlan !== undefined || executionTuningEntry !== undefined) {
       if (!executionTuningPlan || !executionTuningEntry) {
@@ -1522,6 +1551,8 @@ const readCandidateReport = async (candidateDirectory, recipe, {
     captureDiagnostic,
     ...(timings === null ? {} : { timings }),
     ...(captureSubphases === null ? {} : { captureSubphases }),
+    ...(fixtureActivationPresentationTiming === null
+      ? {} : { fixtureActivationPresentationTiming }),
   };
 };
 
@@ -1539,6 +1570,15 @@ const summarizeEntryCaptureSubphases = (entries) => (
       captureSubphases: entry.captureSubphases,
     }]),
   )
+);
+
+const collectFixtureActivationPresentationTimings = (entries) => Object.freeze(
+  entries.flatMap((entry) => entry.fixtureActivationPresentationTiming === undefined ? [] : [
+    Object.freeze({
+      candidate: entry.candidate,
+      ...entry.fixtureActivationPresentationTiming,
+    }),
+  ]),
 );
 
 const readPortableFailureEntry = async (candidateDirectory, recipe) => {
@@ -1694,6 +1734,17 @@ const assertCompletedFrameReceiptReportProof = (report, tuningSchema) => {
       throw new Error('fixture-activation render-field generation proof is malformed');
     }
   }
+  const activationTiming = report?.readinessFixtureActivationPresentationTiming;
+  if (!activationRenderFieldGenerationRequired && activationTiming !== undefined) {
+    throw new Error('non-v7 capture must not claim fixture-activation presentation timing');
+  }
+  if (activationRenderFieldGenerationRequired && activationTiming !== undefined) {
+    if (activationTiming.ticket !== activationRenderField.ticket) {
+      throw new Error(
+        'fixture-activation presentation timing must bind the render-field generation ticket',
+      );
+    }
+  }
   let previousTicket = readinessReceiptRequired ? readinessReceipt.ticket : 0;
   let previousSubmission = readinessReceiptRequired ? readinessReceipt.submission : 0;
   let firstCaptureReceipt = true;
@@ -1723,6 +1774,15 @@ const assertCompletedFrameReceiptReportProof = (report, tuningSchema) => {
     previousTicket = receipt.ticket;
     previousSubmission = receipt.submission;
     firstCaptureReceipt = false;
+  }
+  if (activationTiming !== undefined) {
+    const firstSubmission = report?.captures?.[VARIANTS[0]]?.completedFrameReceipt?.submission;
+    if (!Number.isSafeInteger(firstSubmission)
+      || activationTiming.submission !== firstSubmission - 1) {
+      throw new Error(
+        'fixture-activation presentation timing must precede the first capture submission',
+      );
+    }
   }
 };
 
@@ -2118,6 +2178,7 @@ export async function verifyVisualLabBatchPackage(options = {}) {
     )),
     timings: summarizeEntryTimings(entries),
     captureSubphases: summarizeEntryCaptureSubphases(entries),
+    fixtureActivationPresentationTimings: collectFixtureActivationPresentationTimings(entries),
   });
 }
 
@@ -2977,6 +3038,7 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
   });
   const timingSummary = summarizeEntryTimings(entries);
   const captureSubphaseSummary = summarizeEntryCaptureSubphases(entries);
+  const fixtureActivationPresentationTimings = collectFixtureActivationPresentationTimings(entries);
   let currentEvidence = emptyCurrentEvidenceBatchResult();
   if (index.complete) {
     currentEvidence = await publishCurrentEvidencePairs({
@@ -3021,6 +3083,7 @@ export async function runVisualLabBatch(options = {}, dependencies = {}) {
     }),
     timings: timingSummary,
     captureSubphases: captureSubphaseSummary,
+    fixtureActivationPresentationTimings,
   });
   };
   return executeLockedBatch().finally(releaseBatchLock);
@@ -3248,6 +3311,7 @@ const main = async () => {
       contactSheet: result.contactSheetPath,
       timings: result.timings,
       captureSubphases: result.captureSubphases,
+      fixtureActivationPresentationTimings: result.fixtureActivationPresentationTimings,
     };
     process.stdout.write(`${JSON.stringify(output)}\n`);
     if (!result.planOnly && !result.ok) await emitCliFailureDiagnostics(result);

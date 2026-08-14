@@ -130,6 +130,7 @@ interface PresenterViewport { readonly width: number; readonly height: number }
 
 /** Owner handoff, bounded 0 -> 255 evolution, then one confirming stable pass. */
 const FIXTURE_ACTIVATION_BOUNDARY_MAX_PASSES = 2 + Math.ceil(255 / BOUNDARY_STABILITY_STEP);
+const FIXTURE_ACTIVATION_PRESENTATION_TIMING_HISTORY = 4;
 
 /** Audit-only digest of the field that owns reconstructed gas support. */
 export interface AtmosphereSupportAudit {
@@ -159,6 +160,18 @@ export interface WebGLPresentationTiming {
   readonly medianMs: number;
   readonly p90Ms: number;
   readonly maximumMs: number;
+}
+
+export const FIXTURE_ACTIVATION_PRESENTATION_TIMING_SCHEMA =
+  'anifor.renderer.fixture-activation-presentation-timing/v1' as const;
+
+/** Diagnostic-only CPU split for one activation-owned populated submission. */
+export interface FixtureActivationPresentationTiming {
+  readonly schema: typeof FIXTURE_ACTIVATION_PRESENTATION_TIMING_SCHEMA;
+  readonly ticket: number;
+  readonly submission: number;
+  readonly fieldPreparationMs: number;
+  readonly renderSubmissionMs: number;
 }
 
 export const WEBGL_COMPLETED_FRAME_RECEIPT_SCHEMA =
@@ -12359,6 +12372,7 @@ export class PixiFieldPresenter {
   private fixtureActivationFullWallRepackOwner = 0;
   private fixtureActivationFramebufferAlphaReadbackOwner = 0;
   private fixtureActivationFramebufferAlphaReadback?: FixtureActivationFramebufferAlphaReadback;
+  private fixtureActivationPresentationTimings?: Map<number, FixtureActivationPresentationTiming>;
   private solidOpticalDepthDirty = true;
   private photonStateActive = false;
   private photonStateHydrated = false;
@@ -14998,6 +15012,13 @@ export class PixiFieldPresenter {
       && !this.fieldSet.hasPendingRefresh;
   }
 
+  getFixtureActivationPresentationTiming(
+    ticket: number,
+  ): FixtureActivationPresentationTiming | undefined {
+    if (!Number.isSafeInteger(ticket) || ticket <= 0) return undefined;
+    return this.fixtureActivationPresentationTimings?.get(ticket);
+  }
+
   update(
     materials: Uint8Array,
     walls: Uint8Array | undefined,
@@ -15010,6 +15031,7 @@ export class PixiFieldPresenter {
     refreshDynamicFields: boolean,
   ): void {
     const activationOwner = this.fixtureActivationSubmissionOwner;
+    const activationTimingStartedAt = activationOwner > 0 ? performance.now() : 0;
     const dynamicOwner = refreshDynamicFields
       && this.fixtureActivationDynamicOwner === activationOwner ? activationOwner : 0;
     if (refreshDynamicFields) {
@@ -15195,7 +15217,27 @@ export class PixiFieldPresenter {
     // retain their visible temporal settling cadence.
     if (this.outputScale === 8 && this.boundaryEvolutionPending
       && !hasExternalPresentationMutation) return;
+    const renderSubmissionStartedAt = activationOwner > 0 ? performance.now() : 0;
     this.renderApplication();
+    const timings = this.fixtureActivationPresentationTimings;
+    if (activationOwner > 0
+      && !timings?.has(activationOwner)
+      && this.fixtureActivationPresentationSettled(activationOwner)) {
+      const timing = Object.freeze({
+        schema: FIXTURE_ACTIVATION_PRESENTATION_TIMING_SCHEMA,
+        ticket: activationOwner,
+        submission: this.presentationSubmission,
+        fieldPreparationMs: Math.max(0, renderSubmissionStartedAt - activationTimingStartedAt),
+        renderSubmissionMs: Math.max(0, performance.now() - renderSubmissionStartedAt),
+      });
+      const history = this.fixtureActivationPresentationTimings ??= new Map();
+      history.set(activationOwner, timing);
+      while (history.size > FIXTURE_ACTIVATION_PRESENTATION_TIMING_HISTORY) {
+        const oldest = history.keys().next().value as number | undefined;
+        if (oldest === undefined) break;
+        history.delete(oldest);
+      }
+    }
   }
 
   /** V7-only field convergence and exact texture uploads before the sole final submission. */

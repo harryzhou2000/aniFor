@@ -562,6 +562,7 @@ async function captureVisualLabCandidateEvidence({
   let readinessFixtureActivationGeneration;
   let readinessFixtureActivationWorkGeneration;
   let readinessFixtureActivationRenderFieldGeneration;
+  let readinessFixtureActivationPresentationTiming;
   const readinessCompletedFrameReceipt = await measure('readiness', async () => {
     const { profile, effectiveTimeouts } = options.executionTuning;
     // A readiness snapshot performs the same complete semantic, authoritative-
@@ -615,12 +616,17 @@ async function captureVisualLabCandidateEvidence({
       const verifiedReceipt = await readCompletedFrameReceipt(
         cdp, 'readiness', readinessReceiptTicket,
       );
+      const verifiedReadback = readinessReadbackTicket === null ? null
+        : await readFramebufferAlphaReadback(cdp, readinessReadbackTicket);
       assert(verifiedGeneration.state === 'completed'
         && verifiedGeneration.ticket === generation.ticket
         && verifiedGeneration.generation === generation.generation,
       'fixture activation presentation generation changed after its snapshot');
       assert(verifiedReceipt.state === 'completed',
         'fixture activation completed-frame receipt changed after its snapshot');
+      assert(verifiedReadback?.state === 'completed'
+        && verifiedReadback.submission === verifiedReceipt.submission,
+      'fixture activation framebuffer readback does not bind the completed presentation');
       assert(snapshot.semantic.occupied > 0
         && snapshot.fieldAlpha.nonzero > 0
         && snapshot.framebufferAlpha.nonzero > 0,
@@ -629,6 +635,12 @@ async function captureVisualLabCandidateEvidence({
       assert(startupVariant !== undefined, 'readiness profile names an unknown startup variant');
       assertVariantState(snapshot, options, startupVariant);
       if (hasFixtureActivationRenderFieldReadinessDescriptor(profile)) {
+        readinessFixtureActivationPresentationTiming = await readFixtureActivationPresentationTiming(
+          cdp, 'readiness', startupFixtureActivationTicket,
+        );
+        assert(readinessFixtureActivationPresentationTiming.submission
+          === verifiedReceipt.submission,
+        'fixture activation presentation timing does not bind the completed presentation');
         readinessFixtureActivationRenderFieldGeneration = verifiedGeneration;
       } else if (hasFixtureActivationWorkReadinessDescriptor(profile)) {
         readinessFixtureActivationWorkGeneration = verifiedGeneration;
@@ -825,6 +837,8 @@ async function captureVisualLabCandidateEvidence({
         ? {} : { readinessFixtureActivationWorkGeneration }),
       ...(readinessFixtureActivationRenderFieldGeneration === undefined
         ? {} : { readinessFixtureActivationRenderFieldGeneration }),
+      ...(readinessFixtureActivationPresentationTiming === undefined
+        ? {} : { readinessFixtureActivationPresentationTiming }),
       captureSubphases: captureSubphases.finish(),
       startupSelection,
       backend: reference.backend.backend,
@@ -1981,6 +1995,25 @@ async function readFixtureActivationPresentationGeneration(cdp, label, ticket) {
     && ['pending', 'completed', 'failed'].includes(generation.state),
   `${label} fixture activation presentation generation ${ticket} is malformed`);
   return generation;
+}
+
+async function readFixtureActivationPresentationTiming(cdp, label, ticket) {
+  const timing = await evaluate(cdp, `(() => (
+    window.__ANIFOR_INPUT_AUDIT__?.fixtureActivationPresentationTiming?.(${ticket})
+  ))()`);
+  assert(timing !== null && typeof timing === 'object' && !Array.isArray(timing),
+    `${label} fixture activation presentation timing ${ticket} is unavailable`);
+  const keys = Object.keys(timing);
+  assert(keys.length === 5
+    && keys[0] === 'schema' && keys[1] === 'ticket' && keys[2] === 'submission'
+    && keys[3] === 'fieldPreparationMs' && keys[4] === 'renderSubmissionMs'
+    && timing.schema === 'anifor.renderer.fixture-activation-presentation-timing/v1'
+    && timing.ticket === ticket
+    && Number.isSafeInteger(timing.submission) && timing.submission > 0
+    && Number.isFinite(timing.fieldPreparationMs) && timing.fieldPreparationMs >= 0
+    && Number.isFinite(timing.renderSubmissionMs) && timing.renderSubmissionMs >= 0,
+  `${label} fixture activation presentation timing ${ticket} is malformed`);
+  return timing;
 }
 
 /**

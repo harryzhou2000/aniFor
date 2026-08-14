@@ -223,6 +223,14 @@ const fixtureActivationCaptureSubphaseRecord = () => {
   return record;
 };
 
+const fixtureActivationPresentationTimingRecord = () => ({
+  schema: 'anifor.renderer.fixture-activation-presentation-timing/v1',
+  ticket: 1,
+  submission: 9,
+  fieldPreparationMs: 12.5,
+  renderSubmissionMs: 345.25,
+});
+
 const crc32 = (bytes) => {
   let value = 0xFFFFFFFF;
   for (const byte of bytes) {
@@ -499,6 +507,10 @@ const writeValidCapture = async (directory, candidate, options = {}) => {
     ...(options.timings === undefined ? {} : { timings: options.timings }),
     ...(options.captureSubphases === undefined
       ? {} : { captureSubphases: options.captureSubphases }),
+    ...(options.fixtureActivationPresentationTiming === undefined ? {} : {
+      readinessFixtureActivationPresentationTiming:
+        options.fixtureActivationPresentationTiming,
+    }),
   };
   if (options.mutateReport) options.mutateReport(report);
   await writeFile(
@@ -1579,19 +1591,33 @@ describe('Visual Lab batch runner', () => {
       runCandidate: async (call) => {
         await writeValidCapture(call.candidateDirectory, call.recipe.name, {
           timings: timingRecord(), captureSubphases: fixtureActivationCaptureSubphaseRecord(),
+          fixtureActivationPresentationTiming: fixtureActivationPresentationTimingRecord(),
         });
         return { code: 0, signal: null, timedOut: false };
       },
     });
     expect(captured.executionTuningPlan.schema).toBe(VISUAL_LAB_EXECUTION_TUNING_PLAN_V9_SCHEMA);
-    await expect(verifyVisualLabBatchPackage({
+    const verified = await verifyVisualLabBatchPackage({
       batchRoot: outputDirectory, requireExecutionTuningPlan: true, requireComplete: true,
-    })).resolves.toMatchObject({ executionTuningPlan: captured.executionTuningPlan });
+    });
+    expect(verified).toMatchObject({ executionTuningPlan: captured.executionTuningPlan });
+    expect(verified.fixtureActivationPresentationTimings).toEqual([{
+      candidate: 'powder-style-atlas',
+      ...fixtureActivationPresentationTimingRecord(),
+    }]);
+    expect(JSON.stringify(verified.index)).not.toContain('fieldPreparationMs');
 
     const reportPath = path.join(
       outputDirectory, 'candidates', 'powder-style-atlas', 'report.json',
     );
     const report = JSON.parse(await readFile(reportPath, 'utf8'));
+    report.readinessFixtureActivationPresentationTiming.submission = 8;
+    await writeFile(reportPath, `${JSON.stringify(report)}\n`);
+    await expect(verifyVisualLabBatchPackage({
+      batchRoot: outputDirectory, requireExecutionTuningPlan: true,
+    })).rejects.toThrow('must precede the first capture submission');
+    report.readinessFixtureActivationPresentationTiming =
+      fixtureActivationPresentationTimingRecord();
     report.readinessFixtureActivationRenderFieldGeneration.state = 'pending';
     await writeFile(reportPath, `${JSON.stringify(report)}\n`);
     await expect(verifyVisualLabBatchPackage({

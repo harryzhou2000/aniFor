@@ -1011,6 +1011,9 @@ export class Game {
       fixtureActivationPresentationGeneration: (ticket) => (
         this.renderer.getFixtureActivationPresentationGeneration(ticket)
       ),
+      fixtureActivationPresentationTiming: (ticket) => (
+        this.renderer.getFixtureActivationPresentationTiming(ticket)
+      ),
       setPreparedVisualCaptureVariant: (fixture, variant) => {
         visualCaptureControls.setVariant(fixture, variant);
       },

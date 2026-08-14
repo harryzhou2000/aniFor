@@ -5,7 +5,7 @@ import type { SimulationBackend } from '../simulation';
 import { clientToViewport, ViewTransform, type Point, type ViewState } from './view-transform';
 import { clientToVisualViewport, contentBoxFromBounds, viewportToClient } from './client-coordinate-map';
 import type {
-  PixiFieldPresenter, WebGLCompletedFrameReceipt,
+  FixtureActivationPresentationTiming, PixiFieldPresenter, WebGLCompletedFrameReceipt,
   WebGLCompletedFrameReceiptAndFramebufferAlphaReadback, WebGLFramebufferAlphaReadback,
   WebGLPresentationTiming,
 } from './pixi-field-presenter';
@@ -826,6 +826,12 @@ export class MaterialRenderer {
       generation: presentation.generation,
       state: presentation.state,
     });
+  }
+
+  getFixtureActivationPresentationTiming(
+    ticket: number,
+  ): FixtureActivationPresentationTiming | undefined {
+    return this.presenter?.getFixtureActivationPresentationTiming(ticket);
   }
 
   private completeFixtureActivationPresentationGeneration(): void {

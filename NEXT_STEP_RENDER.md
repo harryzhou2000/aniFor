@@ -8289,6 +8289,33 @@ change under the current current-only visual policy. It is neither a deployment
 failure nor an accepted-baseline rotation. The active next work is first-use
 shader/allocation and CPU field-convergence profiling, not more proof reduction.
 
+The first-use profiling increment now measures the exact activation-owned
+populated presentation inside the renderer. The additive diagnostic record
+`anifor.renderer.fixture-activation-presentation-timing/v1` separates CPU field
+preparation from the synchronous `renderApplication()` call and binds both to
+the same ticket/submission already proven by the completed-frame receipt and
+framebuffer-alpha transfer. It is recorded once, retains at most four tickets,
+is accepted only by v7/v9 render-field readiness, and remains outside result,
+batch, baseline, comparison, recipe-set, execution/tuning, and review
+identities. Portable verification validates and exposes the ordered records
+without adding them to the batch index or contact sheet.
+
+A fresh SwiftShader RenderOptics review at
+`.artifacts/visual-lab-reviews/render-optics-afdf7446-ac38-469e-8379-df3c88c87ad8`
+passed WebGL/HDR capture, all current response and appearance regions, portable
+verification, and strict teardown. It retained exact result
+`sha256:4891db2c82bb89cb4bce5a63a2927360fbc20e634a0a91b9d17a490deb630581`
+and all three established local PNG hashes. The activation's exact submission
+4 measured approximately 431.4 ms of CPU field preparation and only 1.4 ms in
+the synchronous HDR render call; its already-separated GPU completion/transfer
+interval was about 2.08 seconds. This rules out JavaScript-blocking first-use
+shader compilation or draw submission as the dominant populated-frame CPU
+cost. The next framework increment should split the 431 ms preparation among
+semantic/boundary convergence, derived powder/solid fields, volume-field
+drains, and texture uploads, then optimize the largest reusable component.
+Do not reduce receipt, framebuffer, semantic, authoritative-field, or screenshot
+proof to hide the independent loaded-software-GPU completion interval.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
