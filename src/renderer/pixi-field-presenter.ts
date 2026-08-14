@@ -12962,6 +12962,43 @@ void main() {
       color *= 1.0 - min(rearExtinction, 0.085);
     }
   }
+  // Solid WAX carries the long-range source through its middle layers like
+  // candle wax. The single existing transport sample supplies a broad source-
+  // shaped field even when the emitter is beyond the local two-cell lighting
+  // window; optical depth keeps the surface creamy and the deepest core intact.
+  if (profileIrradianceB > 0.5 && uHighQuality > 0.5
+    && material == 27.0 && profileOptics == 21.0
+    && family == 0.0 && !materialEmissive && traits < 0.5
+    && solidInterior > 0.001 && surfaceOnly < 0.5 && halo < 0.5
+    && wallOnly < 0.5 && emissionOnly < 0.5
+    && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5) {
+    vec4 waxTransport = texture(uLongRangeEmissionTexture, fieldUv);
+    float waxSubsurfaceDepth = smoothstep(
+      0.08, 0.34, solidOpticalDepth
+    ) * (1.0 - smoothstep(0.72, 0.96, solidOpticalDepth))
+      * solidInterior;
+    float waxSourceReach = smoothstep(0.00035, 0.022, waxTransport.a);
+    vec3 waxSourceRadiance = max(waxTransport.rgb, vec3(0.0));
+    float waxSourcePeak = max(
+      waxSourceRadiance.r,
+      max(waxSourceRadiance.g, waxSourceRadiance.b)
+    );
+    vec3 waxSourceSpectrum = vividColor(
+      waxSourceRadiance / max(waxSourcePeak, 0.001), 1.06
+    );
+    vec3 waxTransmissionTint = mix(
+      vec3(1.08, 0.68, 0.24), waxSourceSpectrum, 0.48
+    );
+    float waxSubsurfaceKey = waxSubsurfaceDepth * waxSourceReach
+      * (0.145 + sqrt(waxSourceReach) * 0.260);
+    color += max(
+      vec3(0.0), vec3(1.22) - clamp(color, vec3(0.0), vec3(1.22))
+    ) * waxTransmissionTint * waxSubsurfaceKey;
+    float waxSubsurfacePocket = waxSubsurfaceDepth
+      * waxSourceReach * (1.0 - waxSourceReach) * 0.145;
+    color *= vec3(1.0) - vec3(0.025, 0.070, 0.155)
+      * waxSubsurfacePocket;
+  }
   // Give stable Smooth powder a final broad-volume grade after grain identity
   // and shared material lighting have been composed. A low-frequency static
   // fold creates one readable crown, shoulder, and compacted pocket across a

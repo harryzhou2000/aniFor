@@ -1274,3 +1274,53 @@ Status: retained normal-WebGL volumetric-gas refinement.
 2. Strengthen Wax subsurface depth and edge transmission at material scale.
 3. Improve mixed liquid/solid contact light and naturally irregular gas-plume
    staging before returning to isolated element decoration.
+
+## 2026-08-15 — source-shaped candle-wax transmission
+
+Status: retained normal-WebGL solid-WAX subsurface refinement.
+
+### What changed
+
+- Exact solid WAX now samples the existing long-range emission carrier and
+  transmits its source colour through a bounded middle-depth band. Near a Fire
+  source, the body gains a broad amber/ivory lobe instead of only receiving an
+  opaque surface tint.
+- Optical depth preserves the creamy surface and deepest pigment core. The
+  established crystalline blooms and cooling lamellae remain visible through
+  the transmitted band, while the transition region receives a restrained
+  wavelength-selective pocket.
+- MWAX stays on its liquid grammar. Walls, cavities, chimneys, isolated cells,
+  contacts, support, alpha, physics, and the Canvas presentation are unchanged.
+
+### Visual decision
+
+- Keep the source-localized treatment. With Fire placed beside WAX, the lit
+  shoulder carries well into the body and fades into its native creamy mass;
+  the opposite half remains deeper and the material does not read as globally
+  emissive or uniformly yellow plastic.
+- The existing authored review emitters are deliberately remote and produce no
+  transported field at the large WAX pane, so a temporary adjacent Fire strip
+  was used only for the visual comparison and removed before checkpointing.
+- An independent visual pass returned KEEP. It judged the broad transmission,
+  retained lamellae, unchanged MWAX, and clean controls more valuable than the
+  slightly abrupt inner falloff; the current strength should not be increased.
+
+### Lightweight checks used
+
+- `npm run build` completes after removing the temporary scene change and
+  closes all 19 production resources.
+- `/tmp/anifor-wax-adjacent-source-compare.png` shows the same temporary scene
+  with the new contribution disabled on the left and active on the right.
+  `/tmp/anifor-wax-subsurface-debug.png` was a rejected carrier diagnostic and
+  is not present in the retained renderer.
+- The decision used WebGL at 2× and direct visual inspection, not exact visual
+  hashes or a historical baseline.
+
+### Next visual work
+
+1. Add buried broad crystallographic planes for Ice, QRTZ, DRIC, NICE, and
+   RIME while keeping Glass smooth and powder Quartz untouched.
+2. Improve mixed liquid/solid contact light and naturally irregular gas-plume
+   staging.
+3. Continue source, radioactive, plant-growth, and energy-material VFX once
+   these material-scale optical families are visually distinct.
