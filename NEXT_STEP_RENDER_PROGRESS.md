@@ -1133,3 +1133,52 @@ Status: retained normal-WebGL MetallicRigid environment roll.
 2. Explore true Glass backdrop transmission in the HDR compositor, using the
    render-optics atlas to distinguish it from Metal, Wax, and Ceramic.
 3. Exercise gas lighting and absorption in a naturally irregular moving plume.
+
+## 2026-08-15 — broad-form PLNT canopy lighting
+
+Status: retained normal-WebGL botanical volume refinement.
+
+### What changed
+
+- Large PLNT bodies now use their continuous solid-distance dome and a
+  low-frequency 20-cell distance-field slope for the final canopy light turn.
+  A soft upper/source-facing crown opposes a recessed canopy pocket, while the
+  established lamina, pigment, hierarchy, and lifecycle detail remains layered
+  through the broad form.
+- Smooth current-depth support prevents the effect from reaching thin stems,
+  isolated particles, shallow structures, or empty space. Four filtered depth
+  reads replace the rejected binary owner mask and keep the construction tied
+  to the actual broad body.
+- Earlier versions were discarded: local-fold modulation was invisible at fit
+  view, distant binary owner taps produced hard circular/rectangular masks, and
+  a local-normal version produced diagonal stripes. A temporary false-colour
+  probe was removed after confirming the intended crown/pocket orientation.
+
+### Visual decision
+
+- Keep v5. The large botanical body finally reads as overlapping canopy mass
+  with soft large-scale light and shadow rather than a flat mottled carpet.
+  Detail stays legible, and adjacent Wood, contacts, holes, stems, and small
+  material controls remain visually stable.
+- An independent visual pass returned KEEP, identifying the retained lobes as
+  canopy-scaled rather than mask-like or striped.
+
+### Lightweight checks used
+
+- `npm run build` completes and closes all 19 production resources.
+- The retained full comparison is
+  `/tmp/anifor-plnt-broad-form-compare-v5.png`; the enlarged canopy comparison
+  is `/tmp/anifor-plnt-broad-form-crop-compare-v5.png` (before left, retained
+  after right).
+- The comparison used the large botanical-body WebGL fixture at 2×. The
+  temporary diagnostic frame is `/tmp/anifor-plnt-broad-form-debug.png` and is
+  not part of the retained renderer.
+
+### Next visual work
+
+1. Give Glass a real refracted backdrop in the HDR compositor, distinguishing
+   it from the newly improved reflective Metal family.
+2. Exercise participating gas light and absorption in a naturally irregular,
+   moving plume rather than a rectangular atlas body.
+3. Continue material-scale response for translucent crystals, Wax, and mixed
+   liquid/solid contacts before returning to isolated element decoration.

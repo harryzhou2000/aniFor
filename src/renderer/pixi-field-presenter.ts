@@ -11270,16 +11270,60 @@ void main() {
                       color, leafCanopyFoliageAlbedo,
                       leafCanopyFoliageBlend
                     );
-                    color *= vec3(1.0) - vec3(0.120, 0.055, 0.158)
-                      * leafCanopyFoliagePocket
-                      * leafCanopyFoliageWeight;
+                    // Local hierarchy signals still compose the lamina and
+                    // pigment above. The final light turn uses the continuous
+                    // exact-PLNT distance dome and a low-frequency slope of
+                    // that same field. This gives a broad body one crown and
+                    // opposing pocket without hard owner-mask edges or the
+                    // repeated bands of the local normal; shallow stems and
+                    // isolated cells never reach the smooth depth support.
+                    float canopyFormSupport = leafCanopyFoliageWeight
+                      * smoothstep(
+                        6.0 / 255.0, 52.0 / 255.0, solidOpticalDepth
+                      );
+                    vec2 canopySlopeOffset = uTexel * 20.0;
+                    vec2 canopyDepthSlope = vec2(
+                      boundaryStabilityAt(
+                        fieldUv + vec2(canopySlopeOffset.x, 0.0)
+                      ) - boundaryStabilityAt(
+                        fieldUv - vec2(canopySlopeOffset.x, 0.0)
+                      ),
+                      boundaryStabilityAt(
+                        fieldUv + vec2(0.0, canopySlopeOffset.y)
+                      ) - boundaryStabilityAt(
+                        fieldUv - vec2(0.0, canopySlopeOffset.y)
+                      )
+                    );
+                    float canopySlopeLength = length(canopyDepthSlope);
+                    vec2 canopyLightDirection = normalize(
+                      vec2(-0.48, -0.68)
+                    );
+                    float canopyDirectionalTurn = clamp(
+                      dot(
+                        canopyDepthSlope / max(canopySlopeLength, 0.0001),
+                        canopyLightDirection
+                      ) * smoothstep(0.012, 0.13, canopySlopeLength)
+                        + dot(normal.xy, canopyLightDirection) * 0.12,
+                      -1.0, 1.0
+                    );
+                    float canopyDome = smoothstep(
+                      10.0 / 255.0, 108.0 / 255.0, solidOpticalDepth
+                    ) * 2.0 - 1.0;
+                    float canopyForm = clamp(
+                      canopyDirectionalTurn * 0.72 + canopyDome * 0.30,
+                      -1.0, 1.0
+                    );
+                    float canopyFormCrown = smoothstep(
+                      0.025, 0.56, canopyForm
+                    );
+                    float canopyFormPocket = smoothstep(
+                      0.025, 0.56, -canopyForm
+                    );
+                    color *= vec3(1.0) - vec3(0.205, 0.110, 0.245)
+                      * canopyFormPocket * canopyFormSupport;
                     color += (vec3(1.08) - clamp(color, 0.0, 1.08))
-                      * (
-                        vec3(0.27, 0.78, 0.26)
-                          * leafCanopyFoliageCrown * 0.138
-                        + solidEnvironment
-                          * leafCanopyFoliageCrown * 0.051
-                      ) * leafCanopyFoliageWeight;
+                      * (leafKey * 0.310 + solidEnvironment * 0.078)
+                      * canopyFormCrown * canopyFormSupport;
                   }
                 }
               }
