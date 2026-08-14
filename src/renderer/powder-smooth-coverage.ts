@@ -9,13 +9,13 @@ export const POWDER_SMOOTH_COVERAGE_GLSL = `
 float powderSmoothDirectionalSignal(vec4 shape) {
   float verticalShare = abs(shape.z)
     / (abs(shape.y) + abs(shape.z) + 0.000001);
-  // Heap slopes commonly carry comparable horizontal and vertical gradient.
-  // The old 0.42..0.70 gate transferred only about one fifth of the wide field
-  // at a 45-degree slope, leaving the semantic staircase visible everywhere
-  // except a nearly horizontal crown. Admit diagonal gravity-facing slopes
-  // strongly while a vertical wall/column (verticalShare ~= 0) remains an
-  // exact no-op and therefore keeps its authored fine topology.
-  return smoothstep(0.24, 0.56, verticalShare)
+  // Smooth the oblique shoulders of a settled heap, not every broad edge. A
+  // vertical wall/column has verticalShare ~= 0 and a flat ledge/cap approaches
+  // 1, so the two-sided window preserves both kinds of authored fine topology
+  // while admitting more of the diagonal field that removes pile stair-steps.
+  float heapSlope = smoothstep(0.12, 0.34, verticalShare);
+  float flatTopReject = 1.0 - smoothstep(0.84, 0.98, verticalShare);
+  return heapSlope * flatTopReject
     * smoothstep(0.004, 0.027, abs(shape.z));
 }
 

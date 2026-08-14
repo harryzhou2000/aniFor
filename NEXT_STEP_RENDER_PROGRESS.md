@@ -65,3 +65,59 @@ Status: visually favoured and ready to checkpoint.
 Visual comparisons and interactive judgment are the acceptance mechanism while
 this work is evolving. Exact PNG hashes and historical response envelopes are
 not visual requirements.
+
+## 2026-08-14 — shared material-volume foundation
+
+Status: visually favoured; supersedes the procedural-noise limitation above.
+
+### What changed
+
+- Added one deterministic seamless 64×64 RGB volume-detail tile, uploaded as a
+  linear-filtered repeating texture. Normal WebGL materials now get broad and
+  mesoscopic variation from one scale-independent fetch instead of evaluating
+  procedural noise at every supersampled fragment.
+- Gas uses the shared tile at 1×–4×. Existing coherent velocity advects its
+  lookup, while the atmosphere field continues to own cloud support, species,
+  gaps, silhouette, and alpha. Compact true 8× remains on its separate shader.
+- Stable Smooth powder retains its existing cell grains and sub-cell facets,
+  then receives a slower material-offset key/pocket fold in deep bulk only.
+  The directional contour transfer now favours diagonal heap shoulders while
+  explicitly rejecting flat caps and vertical columns, preserving fine Clay
+  and Concrete structures.
+- Liquid lighting fuses local and mesoscale normals only on coherent shallow
+  shells. A small moving normal breaks the uniform rim into broad reflections;
+  family-aware opacity now leaves ordinary Water more transmissive while deep
+  cores retain stronger optical thickness. Metallic and viscous liquids remain
+  denser.
+
+### Visual decision
+
+- Keep the combined pass. Powder remains granular inside a clean bulk shape,
+  while the new slow fold prevents large piles from looking uniformly lit.
+- Keep the gas texture path. Grey, blue, and violet regions read as one soft
+  cloud volume with more coherent interior lobes and no return to particle dots.
+- Keep the Water transmission change. The large showcase body is slightly
+  darker but now reads more like a translucent liquid volume than glowing cyan
+  acrylic. A later pass should lift only the thin surface highlight rather than
+  undoing the deeper transmission.
+
+### Lightweight checks used
+
+- The production bundle builds with its complete 19-resource runtime closure.
+- A real 2× WebGL/HDR production showcase compiled the shader and captured with
+  zero browser errors; direct before/after inspection favoured the new image.
+- The two focused renderer files pass 267 checks. No historical screenshot hash
+  or old response envelope was used to accept or reject the aesthetic change.
+- Software SwiftShader can still exceed the full 4× showcase deadline. Hardware
+  4× remains a supported visual target, and the shared texture removes the old
+  per-fragment procedural-noise multiplier from that path.
+
+### Next visual work
+
+1. Polish the liquid shell with a thinner, brighter reflected crest while
+   retaining the new deeper transmission.
+2. Reuse the shared volume carrier for illuminated smoke, fire tongues, and
+   coloured gas scatter rather than adding isolated shader noise functions.
+3. Add broad powder valley/contact occlusion beneath the retained grain layer.
+4. Continue material-family tuning through direct scene comparison; keep CI and
+   review evidence subordinate to visible renderer progress.

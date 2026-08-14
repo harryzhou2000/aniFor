@@ -1075,15 +1075,14 @@ describe('Pixi presenter startup configuration', () => {
     expect(gasVfx).toContain('sin(dot(gasBillowPosition');
     expect(gasVfx).toContain('gasBillowPosition = fieldPosition - gasMotionDirection * uTime');
     expect(gasVfx).toContain('12.0 * gasMotionStrength * gasMaterialVolumeB');
-    expect(gasVfx).toContain('gasVfxNoiseMacro = botanicalBodyNoise(');
-    expect(gasVfx).toContain('gasVfxNoiseMeso = botanicalBodyNoise(');
-    expect(gasVfx).toContain('if (gasMaterialVolumeB > 0.5 && uGasVolumeNoiseDetail > 0.5)');
-    expect(gasVfx).toContain('gasVfxWaveBasis * 0.38 + gasVfxFbm * 0.92');
+    expect(gasVfx).toContain('if (gasMaterialVolumeB > 0.5)');
+    expect(gasVfx).toContain('texture(uMaterialVolumeTexture, gasVfxNoiseUv).rgb');
+    expect(gasVfx).toContain('gasVfxWaveBasis * 0.32 + gasVfxFbm * 1.08');
     expect(gasVfx).toContain('gasVfxBodySupport');
     expect(normal).toContain('gasStyleState = texture(uAtmosphereStyleTexture, fieldUv)');
-    expect(source).toContain('uGasVolumeNoiseDetail: { value: outputScale <= 2 ? 1 : 0');
-    expect(normal).toContain('uniform float uGasVolumeNoiseDetail;');
-    expect(eight).not.toContain('uGasVolumeNoiseDetail');
+    expect(source).toContain("addressMode: 'repeat'");
+    expect(normal).toContain('uniform sampler2D uMaterialVolumeTexture;');
+    expect(eight).not.toContain('uMaterialVolumeTexture');
     expect(normal.match(/texture\(uAtmosphereStyleTexture/g)).toHaveLength(1);
     expect(normal).toContain('if (uGasIdentityStyling > 0.5 || uGasMotionVfx > 0.5\n      || uMaterialBodyFinish > 0.5)');
     expect(gasVfx).toContain('if (uGasMotionVfx > 0.5)');
@@ -1174,7 +1173,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(gasVfx).toContain('(vec3(1.12) - clamp(color, 0.0, 1.12))');
     expect(gasVfx).toContain('color -= clamp(color, 0.0, 1.0)');
     expect(gasVfx).not.toMatch(/sin\([^;\n]*uTime/);
-    expect(gasVfx).not.toContain('texture(');
+    expect(gasVfx.match(/texture\(/g)).toHaveLength(1);
     expect(gasVfx).not.toContain('state.ba');
     expect(gasVfx).not.toMatch(/\balpha\s*[+*]?=/);
 

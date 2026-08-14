@@ -39,6 +39,7 @@ import {
   GAS_IDENTITY_MOTIF_TEXTURE_HEIGHT,
   GAS_IDENTITY_MOTIF_TEXTURE_WIDTH,
 } from './canvas-gas-identity-style';
+import { VOLUME_NOISE_TEXTURE } from './volume-noise-texture';
 import { canvasAtmosphereAlphaAtWorldCell } from './canvas-atmosphere-relief';
 import { sampleCanvasFieldAlpha } from './canvas-surface-light';
 import {
@@ -3594,6 +3595,7 @@ uniform sampler2D uPhotonStateTexture;
 uniform sampler2D uAtmosphereTexture;
 uniform sampler2D uAtmosphereStyleTexture;
 uniform sampler2D uGasIdentityMotifTexture;
+uniform sampler2D uMaterialVolumeTexture;
 uniform sampler2D uEmissionTexture;
 uniform sampler2D uLongRangeEmissionTexture;
 uniform sampler2D uLiquidTexture;
@@ -3688,7 +3690,6 @@ uniform float uHighQuality;
 uniform float uAnalyticLightingQuality;
 uniform float uGasFieldLighting;
 uniform float uGasVolumeChroma;
-uniform float uGasVolumeNoiseDetail;
 uniform float uGasIdentityStyling;
 uniform float uEmissionVolumeChroma;
 uniform float uLiquidFieldLighting;
@@ -6908,24 +6909,23 @@ void main() {
         gasVfxWaveA * 0.50 + gasVfxWaveB * 0.31 + gasVfxWaveC * 0.19,
         -1.0, 1.0
       );
-      // Two smooth world-space noise octaves break the wave basis into broad,
-      // nested lobes. The sine pair warps their coordinates so the result reads
-      // as rolling participating media rather than a repeated surface texture.
-      // This is enhanced-look RGB detail only: the atmosphere field continues
-      // to own density, silhouette, gaps, species, and alpha.
+      // One shared, linear-filtered material-volume fetch replaces procedural
+      // noise at supersampled fragment frequency. Its three seamless channels
+      // carry broad and nested lobes consistently at 1x-4x; the sine pair only
+      // bends the lookup so it reads as rolling participating media instead of
+      // a tiled image. The atmosphere still owns density, silhouette, gaps,
+      // species, and alpha.
       vec2 gasVfxWarp = vec2(gasVfxWaveB, gasVfxWaveC) * 7.5;
       float gasVfxBillow = gasVfxWaveBasis;
-      if (gasMaterialVolumeB > 0.5 && uGasVolumeNoiseDetail > 0.5) {
-        float gasVfxNoiseMacro = botanicalBodyNoise(
-          (gasBillowPosition + gasVfxWarp) * 0.040 + vec2(17.3, 5.1)
-        );
-        float gasVfxNoiseMeso = botanicalBodyNoise(
-          (gasBillowPosition - gasVfxWarp * 0.45) * 0.085 + vec2(3.7, 23.9)
-        );
-        float gasVfxFbm = ((gasVfxNoiseMacro - 0.5) * 0.68
-          + (gasVfxNoiseMeso - 0.5) * 0.32) * 2.0;
+      if (gasMaterialVolumeB > 0.5) {
+        vec2 gasVfxNoiseUv = (gasBillowPosition + gasVfxWarp * 0.85)
+          / 160.0 + vec2(0.17, 0.31);
+        vec3 gasVfxNoise = texture(uMaterialVolumeTexture, gasVfxNoiseUv).rgb;
+        float gasVfxFbm = ((gasVfxNoise.r - 0.5) * 0.58
+          + (gasVfxNoise.g - 0.5) * 0.29
+          + (gasVfxNoise.b - 0.5) * 0.13) * 2.0;
         gasVfxBillow = clamp(
-          gasVfxWaveBasis * 0.38 + gasVfxFbm * 0.92, -1.0, 1.0
+          gasVfxWaveBasis * 0.32 + gasVfxFbm * 1.08, -1.0, 1.0
         );
       }
       float gasVfxBodySupport = smoothstep(0.090, 0.32, gasShadeDensity)
@@ -7770,9 +7770,14 @@ void main() {
         volume, connectedFieldDensity, liquidAirContour * liquidCohesionStrength
       );
     }
+    float liquidBodyOpacity = mix(0.52, 0.76, liquidDepth)
+      - aqueous * mix(0.045, 0.070, liquidDepth)
+      - cryogenic * mix(0.020, 0.045, liquidDepth)
+      + metallicLiquid * mix(0.080, 0.140, liquidDepth)
+      + viscousLiquid * mix(0.025, 0.070, liquidDepth);
     alpha = smoothstep(
       0.48 - liquidEdgeHalfWidth, 0.48 + liquidEdgeHalfWidth, liquidSilhouetteDensity
-    ) * mix(0.56, 0.82, liquidDepth);
+    ) * clamp(liquidBodyOpacity, 0.44, 0.90);
     color = liquidBase * mix(1.24, depthTransmission, liquidDepth)
       * liquidDiffuse * mix(1.0, liquidBodyExposure, liquidDepth);
     // The normal bends reflection across unlike liquids; this small signed
@@ -8607,15 +8612,47 @@ void main() {
         1.0, liquidFinishOptics, uMaterialBodyFinish
       );
       vec4 liquidFinishResponse = liquidFinishProfile.optics;
+      // Fuse the local one-cell normal with the established mesoscale liquid
+      // field only on coherent shallow shells. Agreement keeps broad shoulders
+      // glossy and continuous, while sharp turns, notches, and deep interiors
+      // retain their local geometry instead of being blurred into a plate.
+      vec2 liquidLocalSlope = semanticSlope + volumeSlope;
+      vec2 liquidMesoSlope = semanticSlope + materialMesoscaleSlope;
+      float liquidLocalSlopeLength = length(liquidLocalSlope);
+      float liquidMesoSlopeLength = length(liquidMesoSlope);
+      float liquidSlopeAgreement = 1.0;
+      if (liquidLocalSlopeLength > 0.0001 && liquidMesoSlopeLength > 0.0001) {
+        liquidSlopeAgreement = 0.5 + 0.5 * dot(
+          liquidLocalSlope, liquidMesoSlope
+        ) / (liquidLocalSlopeLength * liquidMesoSlopeLength);
+      }
+      float liquidMesoSurfaceBand = 1.0 - smoothstep(
+        0.38, 0.82, liquidFinishDepth
+      );
+      float liquidMesoWeight = materialMesoscaleCoherence
+        * liquidMesoSurfaceBand * mix(0.18, 0.58, liquidSlopeAgreement);
+      vec2 liquidLightingSlope = mix(
+        liquidLocalSlope, liquidMesoSlope, liquidMesoWeight
+      );
+      // Reuse the same scale-independent volume tile as gas for a very low
+      // amplitude moving liquid normal. It modulates only a proven shallow,
+      // connected shell in the Volumetric look, so highlights and reflection
+      // drift across broad bodies without softening their silhouette or making
+      // deep interiors look noisy.
+      vec2 liquidVolumeUv = fieldPosition / 96.0
+        + vec2(uTime * 0.0035, -uTime * 0.0020) + vec2(0.61, 0.11);
+      vec3 liquidVolumeNoise = texture(
+        uMaterialVolumeTexture, liquidVolumeUv
+      ).rgb;
+      float liquidVolumeNormalWeight = step(1.5, uMaterialLightingVariant)
+        * liquidMesoSurfaceBand * liquidFinishEligibility
+        * mix(0.42, 1.0, materialMesoscaleCoherence);
+      liquidLightingSlope += (liquidVolumeNoise.rg - vec2(0.5))
+        * (0.085 * liquidVolumeNormalWeight);
       color = applyMaterialBodyFinish(
         color, 1.0, liquidFinishResponse, liquidFinishProfile.roughness, liquidSurfaceDensity, liquidFinishDepth,
-        semanticSlope + volumeSlope, liquidFinishEligibility,
+        liquidLightingSlope, liquidFinishEligibility,
         uMaterialBodyFinish, uMaterialLightingVariant
-      );
-      vec2 liquidLightingSlope = mix(
-        semanticSlope + volumeSlope,
-        semanticSlope + materialMesoscaleSlope,
-        materialMesoscaleCoherence * 0.72
       );
       float liquidLightingNeighbourMean = mix(
         liquidNeighbourMean, materialMesoscaleNeighbourMean,
@@ -8644,6 +8681,25 @@ void main() {
         liquidSurfaceDensity, liquidFinishDepth, liquidLightingSlope,
         liquidFinishEligibility, uMaterialBodyFinish, uMaterialLightingVariant
       );
+      // A directional, smoothly varying reflection breaks the old uniform cyan
+      // rim into broad highlights. It reuses the liquid normal and shared
+      // material tile already sampled above, and remains strongest only on the
+      // shallow connected shell; the deeper body stays transmission-led.
+      vec3 liquidVolumeNormal = normalize(vec3(
+        -liquidLightingSlope.x * 1.55,
+        -liquidLightingSlope.y * 1.55,
+        0.82
+      ));
+      vec3 liquidVolumeLight = normalize(vec3(-0.46, -0.66, 0.92));
+      float liquidVolumeReflection = pow(
+        max(0.0, dot(liquidVolumeNormal, liquidVolumeLight)), 7.0
+      ) * liquidMesoSurfaceBand * liquidFinishEligibility
+        * mix(0.72, 1.18, liquidVolumeNoise.b);
+      vec3 liquidVolumeReflectionTint = mix(
+        vec3(0.48, 0.80, 1.10), vividColor(base, 1.06), 0.34
+      );
+      color += (vec3(1.18) - clamp(color, 0.0, 1.18))
+        * liquidVolumeReflectionTint * liquidVolumeReflection * 0.075;
     }
   } else {
     float powderVisualCohesion = 0.0;
@@ -9752,6 +9808,33 @@ void main() {
           + grainFacet * (0.10 + roughSurface * 0.04) * facetRetention * facetGain
         );
       color *= mix(1.0, powderMineralFactor, powderContourTextureRetention);
+      // A stable Smooth pile now receives one broad, material-offset volume
+      // fold from the shared filtered tile. The established grain and facet
+      // cadence remains intact above it, while this slower key/pocket response
+      // makes bulk read as shaped matter instead of a uniformly lit pixel bed.
+      // Loose grains, thin structures, Local, Grains, and contour alpha never
+      // enter this interior-only colour layer.
+      vec2 powderVolumeUv = fieldPosition / 112.0
+        + vec2(material * 0.037, material * 0.061);
+      vec3 powderVolumeNoise = texture(
+        uMaterialVolumeTexture, powderVolumeUv
+      ).rgb;
+      float powderVolumeFold = clamp(
+        ((powderVolumeNoise.r - 0.5) * 0.68
+          + (powderVolumeNoise.g - 0.5) * 0.32) * 2.0
+          + powderMesostrataSlope * 0.18,
+        -1.0, 1.0
+      );
+      float powderVolumeSupport = stablePowderMineral
+        * step(1.5, uPowderStyle) * powderContourTextureRetention;
+      vec3 powderVolumeKey = mix(
+        vec3(0.92, 0.76, 0.54), vividColor(base, 1.08), 0.62
+      );
+      color += (vec3(1.10) - clamp(color, 0.0, 1.10))
+        * powderVolumeKey * max(powderVolumeFold, 0.0)
+        * (0.055 * powderVolumeSupport);
+      color *= 1.0 - max(-powderVolumeFold, 0.0)
+        * (0.075 * powderVolumeSupport);
       // A large, fully settled Smooth body should retain its mineral vocabulary
       // without reading as a dense cell-frequency pepper field at fit view.
       // Leave the existing low-frequency body depth and mesostrata untouched;
@@ -12542,6 +12625,16 @@ export class PixiFieldPresenter {
       scaleMode: 'nearest',
       autoGarbageCollect: false,
     });
+    const materialVolumeSource = outputScale < 8 ? new BufferImageSource({
+      resource: VOLUME_NOISE_TEXTURE.data,
+      width: VOLUME_NOISE_TEXTURE.width,
+      height: VOLUME_NOISE_TEXTURE.height,
+      format: 'rgba8unorm',
+      alphaMode: 'no-premultiply-alpha',
+      scaleMode: 'linear',
+      addressMode: 'repeat',
+      autoGarbageCollect: false,
+    }) : undefined;
     this.emissionSource = new BufferImageSource({
       resource: this.fieldSet.emission.bytes,
       width: this.fieldSet.emission.width,
@@ -13090,9 +13183,6 @@ export class PixiFieldPresenter {
       },
       uGasFieldLighting: { value: 1, type: 'f32' },
       uGasVolumeChroma: { value: 1, type: 'f32' },
-      // 4x already shades four times the backing area. Retain its established
-      // broad wave volume and reserve procedural volume noise for 1x/2x.
-      uGasVolumeNoiseDetail: { value: outputScale <= 2 ? 1 : 0, type: 'f32' },
       uGasIdentityStyling: { value: 1, type: 'f32' },
       uEmissionVolumeChroma: { value: 1, type: 'f32' },
       uLiquidFieldLighting: { value: 1, type: 'f32' },
@@ -13183,6 +13273,10 @@ export class PixiFieldPresenter {
       uAtmosphereStyleSampler: this.atmosphereStyleSource.style,
       uGasIdentityMotifTexture: gasIdentityMotifSource,
       uGasIdentityMotifSampler: gasIdentityMotifSource.style,
+      ...(materialVolumeSource ? {
+        uMaterialVolumeTexture: materialVolumeSource,
+        uMaterialVolumeSampler: materialVolumeSource.style,
+      } : {}),
       uEmissionTexture: this.emissionSource,
       uEmissionSampler: this.emissionSource.style,
       ...(this.longRangeEmissionSource ? {
