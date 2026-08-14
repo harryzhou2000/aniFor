@@ -8257,6 +8257,19 @@ are unnecessary without weakening or rotating evidence. Keep the optimization;
 profile first-use shader/allocation and CPU field convergence before attempting
 a larger render-path change.
 
+The exact-artifact recovery boundary now also recognizes the post-deploy launch
+fault exposed by branch-head run `31755310988`. That run built and deployed the
+exact `3d416af` artifact and passed live 19-resource closure, but its fresh
+Chrome never exposed DevTools: zero contexts, targets, captures, and timing
+samples were created. Reuse remains fail-closed. A failed source run may have
+exactly one failed `verify-deployment` job only when the same run contains
+exactly one successful build and one later successful deploy for the same SHA,
+and the failed verification started after deploy completed. All other failed
+jobs, mismatched jobs, missing timestamps, and multiple failures still reject.
+This lets an immutable already-live artifact retry an infrastructure-only smoke
+without rebuilding or weakening the smoke itself. Deployment evidence for this
+recovery extension is pending.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

@@ -200,17 +200,40 @@ function validateFailedSourceJobs(sourceJobs, build) {
     'source build job completed_at',
   );
   const failed = sourceJobs.jobs.filter(({ conclusion }) => conclusion === 'failure');
-  if (failed.length !== 1 || failed[0].name !== 'visual-lab-review') {
+  if (failed.length !== 1
+    || (failed[0].name !== 'visual-lab-review' && failed[0].name !== 'verify-deployment')) {
     throw new Error(
-      'failed source run may contain only one failed visual-lab-review job',
+      'failed source run may contain only one failed visual-lab-review or verify-deployment job',
     );
   }
-  const reviewStartedAt = requireTimestamp(
-    failed[0].started_at,
-    'failed visual-lab-review job started_at',
+  const failedJob = failed[0];
+  const failedStartedAt = requireTimestamp(
+    failedJob.started_at,
+    `failed ${failedJob.name} job started_at`,
   );
-  if (reviewStartedAt < buildCompletedAt) {
-    throw new Error('failed visual-lab-review job must start after the source build completed');
+  if (failedJob.name === 'visual-lab-review') {
+    if (failedStartedAt < buildCompletedAt) {
+      throw new Error('failed visual-lab-review job must start after the source build completed');
+    }
+    return;
+  }
+  const deploys = sourceJobs.jobs.filter(({ name }) => name === 'deploy');
+  if (deploys.length !== 1 || deploys[0].status !== 'completed'
+    || deploys[0].conclusion !== 'success') {
+    throw new Error('failed verify-deployment reuse requires exactly one successful deploy job');
+  }
+  const deploy = deploys[0];
+  if (deploy.run_id !== build.run_id || deploy.head_sha !== build.head_sha) {
+    throw new Error('successful deploy job must match the source build run and commit');
+  }
+  const deployCompletedAt = requireTimestamp(
+    deploy.completed_at,
+    'source deploy job completed_at',
+  );
+  if (deployCompletedAt < buildCompletedAt || failedStartedAt < deployCompletedAt) {
+    throw new Error(
+      'failed verify-deployment job must start after the successful source deploy completed',
+    );
   }
 }
 

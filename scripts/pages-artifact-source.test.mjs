@@ -170,10 +170,34 @@ describe('Pages artifact source provenance', () => {
     });
   });
 
+  it('accepts a failed post-deploy verification after the exact build and deploy passed', () => {
+    const evidence = fixture();
+    evidence.sourceRun.conclusion = 'failure';
+    evidence.sourceJobs.jobs.push({
+      id: 783,
+      run_id: SOURCE_RUN_ID,
+      head_sha: SHA,
+      name: 'deploy',
+      status: 'completed',
+      conclusion: 'success',
+      started_at: '2026-08-12T05:05:00Z',
+      completed_at: '2026-08-12T05:06:00Z',
+    });
+    evidence.sourceJobs.total_count = evidence.sourceJobs.jobs.length;
+    evidence.sourceJobs.jobs[1].conclusion = 'failure';
+    evidence.sourceJobs.jobs[1].started_at = '2026-08-12T05:07:00Z';
+    expect(validatePagesArtifactSource(evidence)).toEqual({
+      artifactId: 551,
+      sourceRunId: SOURCE_RUN_ID,
+      artifactDigest: DIGEST,
+    });
+  });
+
   it.each([
     ['failed non-review job', (value) => {
+      value.sourceJobs.jobs[1].name = 'unrelated-job';
       value.sourceJobs.jobs[1].conclusion = 'failure';
-    }, 'only one failed visual-lab-review'],
+    }, 'only one failed visual-lab-review or verify-deployment'],
     ['review failed before build completed', (value) => {
       value.sourceJobs.jobs[1].name = 'visual-lab-review';
       value.sourceJobs.jobs[1].conclusion = 'failure';
@@ -184,6 +208,9 @@ describe('Pages artifact source provenance', () => {
       value.sourceJobs.jobs[1].conclusion = 'failure';
       delete value.sourceJobs.jobs[0].completed_at;
     }, 'nonempty timestamp'],
+    ['failed deployment verification without a successful deploy', (value) => {
+      value.sourceJobs.jobs[1].conclusion = 'failure';
+    }, 'exactly one successful deploy'],
   ])('rejects unsafe failed-run artifact reuse: %s', (_name, mutate, message) => {
     const evidence = fixture();
     evidence.sourceRun.conclusion = 'failure';
