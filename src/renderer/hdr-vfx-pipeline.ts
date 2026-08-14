@@ -224,6 +224,16 @@ vec3 liquidInteriorTransport(
   vec3 sourceRadiance, float material, vec4 semanticCentre
 ) {
   vec4 liquidCentre = texture(uLiquidTexture, vUv);
+  // Sample the bounded field shoulders explicitly. Pixi's cross-backend GLSL
+  // path does not consistently expose fragment derivatives, while these four
+  // filtered reads give the optical layer a stable world-space contour at
+  // every presentation scale.
+  vec2 liquidContour = vec2(
+    texture(uLiquidTexture, boundedUv(vUv + vec2(uWorldTexel.x, 0.0))).a
+      - texture(uLiquidTexture, boundedUv(vUv - vec2(uWorldTexel.x, 0.0))).a,
+    texture(uLiquidTexture, boundedUv(vUv + vec2(0.0, uWorldTexel.y))).a
+      - texture(uLiquidTexture, boundedUv(vUv - vec2(0.0, uWorldTexel.y))).a
+  ) * 0.5;
   float opticalDepth = texture(uLiquidDepthTexture, vUv).r;
   float denseBody = smoothstep(0.58, 0.92, liquidCentre.a);
   float deepBody = smoothstep(18.0 / 255.0, 108.0 / 255.0, opticalDepth);
@@ -263,13 +273,21 @@ vec3 liquidInteriorTransport(
     mix(upstreamRadiance.g, dispersedRadiance.g, 0.42),
     dispersedRadiance.b
   );
-  // The private optical layer receives a coherent, low-frequency lens warp.
-  // It makes broad water bodies visibly bend the studio environment without
-  // blurring the foreground material boundary or changing scene alpha.
+  // Keep the broad-field component restrained: in a flat pool it should add
+  // only a little depth variation, not translate the entire environment like
+  // a decal. Put the clearer lens response on the existing liquid contour;
+  // this bends the private backdrop around a real supported boundary while
+  // foreground RGB and scene alpha remain untouched.
   vec2 opticalWarp = (volume.rg - vec2(0.5)) * uWorldTexel
-    * mix(1.35, 3.60, deepBody);
+    * mix(0.72, 1.70, deepBody);
   opticalWarp += dispersionAxis * uWorldTexel * (fold - 0.5)
-    * mix(0.80, 2.20, deepBody);
+    * mix(0.52, 1.35, deepBody);
+  float contourMagnitude = length(liquidContour);
+  vec2 contourDirection = contourMagnitude > 0.0001
+    ? liquidContour / contourMagnitude : vec2(0.0);
+  float contourWarp = smoothstep(0.008, 0.105, contourMagnitude);
+  opticalWarp += contourDirection * uWorldTexel * contourWarp
+    * mix(0.72, 2.35, deepBody);
   vec2 behindUv = boundedUv(upstreamUv + opticalWarp);
   vec2 behindDispersionUv = boundedUv(dispersionUv - opticalWarp * 0.52);
   vec3 behindRadiance = straightRadiance(texture(uBehindTexture, behindUv));
@@ -316,6 +334,19 @@ vec3 liquidInteriorTransport(
   float caustic = projectionSupport * body * causticCrown
     * mix(0.075, 0.25, deepBody);
   result += headroom * projectedLight * caustic;
+  // Keep a readable signed fold through broad, otherwise level liquid.  The
+  // earlier caustic is intentionally selective; this lower-amplitude studio
+  // lobe gives the whole connected body a slow bright face and an opposing
+  // absorptive pocket, which survives fit-view presentation without becoming
+  // cell texture.  It remains colour-only inside the exact liquid owner.
+  float liquidLensFold = clamp((fold - 0.5) * 2.35, -1.0, 1.0);
+  float liquidFoldKey = max(liquidLensFold, 0.0) * body
+    * mix(0.075, 0.165, deepBody);
+  float liquidFoldPocket = max(-liquidLensFold, 0.0) * body
+    * mix(0.090, 0.210, deepBody);
+  result += max(vec3(0.0), vec3(1.16) - clamp(result, 0.0, 1.16))
+    * causticTint * liquidFoldKey;
+  result *= exp(-absorption * liquidFoldPocket * 1.65);
   result *= exp(-absorption * body * deepBody * (0.42 + causticPocket * 0.85));
   return result;
 }

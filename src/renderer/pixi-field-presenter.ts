@@ -6737,6 +6737,16 @@ void main() {
     float particleAlpha = smoothstep(0.08, 0.72, density) * (0.38 + atmosphere * 0.06);
     float cloudAlpha = smoothstep(0.004, 0.22, atmosphereState.a)
       * (0.085 + atmosphereState.a * 0.36) * billow;
+    // Volumetric/B lets a genuinely connected, low-density atmosphere read as
+    // one veil instead of a constellation of faint carriers.  This is still
+    // bounded by the field's near-and-wide coherence: isolated particles,
+    // authored holes and narrow wisps cannot manufacture the mist body.
+    float gasCoherentMist = step(1.5, uMaterialLightingVariant)
+      * materialMesoscaleCoherence
+      * smoothstep(0.026, 0.130, min(atmosphereState.a, gasLightingNeighbourMean))
+      * (1.0 - smoothstep(0.38, 0.78, gasShadeDensity));
+    float gasMistAlpha = gasCoherentMist
+      * (0.050 + cleanGas * 0.016 - sootyGas * 0.008);
     float semanticAccentShare = mix(0.22, 0.055, gasFieldSupport)
       + (materialEmissive ? 0.035 : 0.0);
     // Once the shared atmosphere field proves a dense cloud, it owns the
@@ -6749,6 +6759,7 @@ void main() {
     alpha = cloudOnly > 0.5
       ? cloudAlpha
       : cloudAlpha + semanticAccentAlpha * (1.0 - cloudAlpha);
+    alpha += gasMistAlpha * (1.0 - alpha);
     // Beer-like optical depth keeps the core saturated and translucent while a
     // directional silver lining gives the boundary volume without a hard edge.
     // The Canvas volume keeps a broad, soft midtone through a dense billow.
@@ -6772,6 +6783,10 @@ void main() {
     // mass, gaps, and silhouette. Keep sooty Smoke slightly less reflective.
     float gasForwardScatter = opticalDepth * (1.0 - opticalDepth)
       * (0.085 + cleanGas * 0.020 - sootyGas * 0.008);
+    // Carry the same coherent dilute veil into forward scatter so the added
+    // opacity remains luminous participating media, not a flat dark halo.
+    gasForwardScatter += gasCoherentMist
+      * (0.090 + cleanGas * 0.020 - sootyGas * 0.010);
     vec3 gasForwardColor = mix(vividColor(gasBase, 1.06), vec3(0.62, 0.76, 0.92),
       0.18 + cleanGas * 0.14);
     color += (vec3(1.0) - clamp(color, 0.0, 1.0)) * gasForwardColor
@@ -7005,8 +7020,8 @@ void main() {
         * gasVfxTint * gasVfxKey;
       color *= 1.0 - gasVfxPocket;
       float gasMaterialBillowExposure = gasMaterialVolumeB * gasVfxBodySupport
-        * (max(gasVfxBillow, 0.0) * 0.070
-          - max(-gasVfxBillow, 0.0) * 0.060) * gasInteriorContrast;
+        * (max(gasVfxBillow, 0.0) * 0.130
+          - max(-gasVfxBillow, 0.0) * 0.105) * gasInteriorContrast;
       color *= 1.0 + gasMaterialBillowExposure;
 
       // Let nearby emissive matter illuminate the participating volume rather
@@ -12387,10 +12402,15 @@ void main() {
         + powderVolumeFold.b * 0.13,
       0.0, 1.0
     );
+    // Let the settled field's actual slope lead the bulk grade.  The static
+    // fold remains a restrained mineral-scale irregularity, rather than
+    // becoming a competing cloud-shaped light source across a large heap.
+    // The existing cinematic-body proof keeps this RGB-only response out of
+    // Local, Grains, loose powder, holes, narrow structures, and contacts.
     float powderFacet = clamp(
-      powderLightBodySlope * 1.02
-        + (powderBroadFold - 0.5) * 2.10
-        + (0.48 - powderLightBodyDepth) * 0.32,
+      powderLightBodySlope * 1.48
+        + (powderBroadFold - 0.5) * 1.46
+        + (0.48 - powderLightBodyDepth) * 0.38,
       -1.0, 1.0
     );
     float powderCrown = smoothstep(0.02, 0.78, powderFacet);

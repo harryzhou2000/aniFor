@@ -309,3 +309,71 @@ Status: visually favoured at 2× and 4×; ready for checkpoint.
    soot, and reactive powders retain distinct roughness and scatter character.
 4. Prototype a bounded compact true-8× version of the retained material-volume
    vocabulary, with visual viability and browser responsiveness as the criteria.
+
+## 2026-08-14 — visual-first contour, mist, and body-light pass
+
+Status: visually favoured; visual quality is the primary development criterion.
+
+### Direction change
+
+- Continue the roadmap as a visual overhaul, not an evidence-framework project.
+  Direct 2×/4× WebGL inspection may accept a visually stronger checkpoint even
+  when historical hashes, exact-frame equality, or old numeric envelopes move.
+- Keep only lightweight renderer-health checks during art iteration: the bundle
+  must build, WebGL/HDR must actually activate, the scene must be visible, and
+  browser shader errors must be absent. Broader gates remain optional until a
+  visually substantial material pass is ready to checkpoint.
+
+### What changed
+
+- Liquid backdrop displacement is now contour-led. Four bounded samples of the
+  existing liquid field provide a stable world-space lens direction; the broad
+  noise component was reduced so a flat pool no longer translates the entire
+  environment like a decal.
+- Dense liquid now carries a signed, low-frequency lens fold through its whole
+  supported body: the lit half catches profile-coloured caustic light and the
+  opposing half receives wavelength-selective absorption. This makes a broad
+  Water tank read as transparent volume at fit view rather than a cyan slab.
+- Volumetric/B gas now bridges connected low-density atmosphere into one faint
+  translucent veil. The same coherence proof feeds forward scatter, while the
+  existing advected billow receives stronger light/pocket separation. Sparse
+  isolated carriers and authored holes remain outside the mist body.
+- The final Smooth-powder grade is more slope-led and less texture-led. Broad
+  settled shape now owns the pile lighting; the material-volume tile supplies
+  restrained mineral irregularity instead of cloud-shaped blotches. Local and
+  square Grains remain unchanged.
+
+### Visual decision
+
+- Keep the stronger liquid lens fold. Enlarged direct comparison shows broad
+  cyan caustic windows and deep pockets inside the tank while walls, obstacles,
+  and the hard water boundary remain crisp.
+- Keep the connected gas mist and stronger billow contrast. The effect remains
+  translucent and field-shaped rather than becoming a blurred sprite halo.
+- Keep the slope-led powder rebalance. It preserves the granular pigment layer
+  while making the large pile read as one illuminated mass.
+
+### Lightweight checks used
+
+- The production bundle builds and closes all 19 runtime resources.
+- Real 2× and 4× production WebGL/HDR captures complete with zero browser
+  errors. The latest retained 2× visual is
+  `/tmp/anifor-visual-overhaul-v4-2x.png`; the retained 4× comparison is
+  `/tmp/anifor-visual-overhaul-v4-4x.png`.
+- A derivative-based contour prototype was rejected immediately because the
+  live Pixi WebGL shader did not compile; explicit field samples replaced it.
+  No historical PNG hash or exact settle comparison participated in the visual
+  decision.
+
+### Next visual work
+
+1. Build the gas transmittance/light stage as an actual low-resolution reusable
+   buffer so clouds can cast soft internal shadow and receive longer coloured
+   shafts without adding particle-like detail.
+2. Let the liquid optical background include deliberately authored nearby forms
+   and project a soft caustic onto receiving solids, making transparency and
+   refraction obvious in ordinary play rather than only in a lab tank.
+3. Add broad contact shadow and colour bounce between settled bulk materials,
+   avoiding separator outlines and preserving the grain/facet layer.
+4. After normal 2×/4× art direction stabilises, bring a cheaper version of the
+   same visual vocabulary to true 8× with browser responsiveness as the gate.
