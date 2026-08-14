@@ -8253,7 +8253,8 @@ retained the exact RenderOptics result and all three PNG hashes, passed all 49
 regions with WebGL/HDR and zero browser errors, and kept OFF/A/B at submissions
 5/6/7. Its 2.66-second GPU-completion sample is too close to the prior 2.76
 seconds to claim a performance win, but it proves the two full RGBA16F clears
-are unnecessary without weakening or rotating evidence. Keep the optimization;
+are unnecessary for this reviewed RenderOptics fixture without weakening its
+evidence. Keep the optimization;
 profile first-use shader/allocation and CPU field convergence before attempting
 a larger render-path change.
 
@@ -8269,6 +8270,24 @@ jobs, mismatched jobs, missing timestamps, and multiple failures still reject.
 This lets an immutable already-live artifact retry an infrastructure-only smoke
 without rebuilding or weakening the smoke itself. Deployment evidence for this
 recovery extension is pending.
+
+The combined timing, bloom-clear, and recovery checkpoint is deployed at exact
+revision `c2626a159efc9e6381a379659398ba8ea8e7f1dc` by workflow run
+`31755865701`. The cached build passed 1,631 source and 419 tooling tests plus
+14 pretests, restored all Node/Emscripten/TPT/ccache layers, reported 270/271
+cacheable C++ calls, and verified exact 19-resource packaging. Pages deployed
+in nine seconds; live closure passed all 19 resources on attempt one. The hosted
+Water package then passed WebGL/HDR capture, all 18 regions, strict portable
+verification, and bounded evidence upload as artifact `9202803687`.
+
+Water's informational result rotated from the earlier
+`sha256:c83123c25c6181ecdc10d0668cb3b1c6a56d22888b7bb79d02d1739d5824be5b`
+to `sha256:295e1f609305872845b749e4e22c27944d6957af0e2c02a69c619eebf42a1b6c`.
+Do not call the bloom-clear change globally encoded-identical: the local
+RenderOptics captures were exact, but Water establishes a reviewable rendered
+change under the current current-only visual policy. It is neither a deployment
+failure nor an accepted-baseline rotation. The active next work is first-use
+shader/allocation and CPU field-convergence profiling, not more proof reduction.
 
 ## Deferred long-term visual roadmap
 
