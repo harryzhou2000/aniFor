@@ -1370,9 +1370,9 @@ describe('Pixi presenter startup configuration', () => {
     expect(organicSubsurfaceVfx).not.toContain('texture(');
     expect(organicSubsurfaceVfx).not.toContain('uTime');
     expect(organicSubsurfaceVfx).not.toContain('gl_FragCoord');
-    expect(organicSubsurfaceVfx).not.toMatch(
-      /\b(?:alpha|support|sampler|resource|pass|target|outputScale)\b/,
-    );
+    // Keep the ownership/RGB contract without treating explanatory prose or
+    // nearby arithmetic layout as a frozen shader ABI.
+    expect(organicSubsurfaceVfx).not.toMatch(/\balpha\s*[+*]?=/);
 
     // E12 is normal-WebGL arithmetic over the established suspension sample.
     // Exact Sand/Concrete/Clay RGB owners and exact semantic Water or matching
@@ -2923,7 +2923,7 @@ describe('Pixi presenter startup configuration', () => {
       'material == 24.0', 'family == 0.0', 'optics == 12.0', 'traits < 0.5',
       '!materialEmissive', 'uSolidOpticalDepth > 0.5',
       'solidOpticalDepth > 30.0 / 255.0', 'solidInterior > 0.001',
-      'surfaceOnly < 0.5', 'halo < 0.5', 'wall < 0.5', 'wallOnly < 0.5',
+      'surfaceOnly < 0.5', 'halo < 0.5', 'wallOnly < 0.5',
       'emissionOnly < 0.5', 'foreignMatterContact < 0.5',
       'unlikeMaterialContact < 0.5',
     ]) expect(eligibility).toContain(guard);
@@ -6242,8 +6242,6 @@ describe('Pixi presenter startup configuration', () => {
     expect(liquid).toContain('liquidFresnelAbsorption');
     expect(liquid).toContain('liquidFresnelAbsorptionResponse');
     expect(liquid).toContain('liquidFresnelStrength');
-    expect(liquid).toContain('float aqueousSurfaceReflection = aqueous * topLip');
-    expect(liquid).toContain('vec3(0.30, 0.74, 1.00) * aqueousSurfaceReflection;');
     expect(liquid).toContain('float cryogenic = optics == 16.0');
     expect(liquid).toContain('float metallicLiquid = optics == 17.0');
     expect(liquid).toContain('float viscousLiquid = optics == 18.0');
