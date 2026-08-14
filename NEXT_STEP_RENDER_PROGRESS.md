@@ -651,3 +651,48 @@ Status: visually accepted normal-WebGL material-class checkpoint.
    reflection while preserving its harder liquid boundary.
 3. Translate the accepted material-class vocabulary to a robust compact true
    8× path without cloning the full normal shader or losing style separation.
+
+## 2026-08-14 — connected moving-Water crest islands
+
+Status: visually accepted normal-WebGL liquid-surface increment.
+
+### What changed
+
+- Moving Water now reuses the normal material pass's existing wide top-density
+  probe as a short surface-distance carrier. This lets a whitecap occupy a few
+  connected interior fragments instead of being limited to the old one-row
+  slope lip, without expanding liquid alpha or changing its boundary.
+- The wide carrier is velocity-gated, Water-owned, support-gated, and broken by
+  two low-frequency live surface signals. Calm Water keeps its glassy cyan lip;
+  moving surfaces gain sparse pale crest islands and a small darker trough.
+- Calm reflection and moving foam were deliberately separated after an early
+  experiment made the whole top edge look like a pasted white stripe. The
+  retained v6 uses the local shell for continuous reflection and the wider
+  carrier only for sparse moving crest islands.
+
+### Visual decision
+
+- Keep v6. The open moving surface gains visible broken highlights at fit view
+  while the still tank and non-Water liquid controls remain quiet. Two
+  independent visual passes accepted the retained balance.
+- The large checkerboard inside the moving tank is the unchanged authored
+  native-wall coexistence control. It is not foam and must be excluded from
+  future Water aesthetic judgments.
+
+### Lightweight checks used
+
+- `npm run build` completes and closes all 19 production resources.
+- The retained Water frame is `/tmp/anifor-water-connected-foam-v6/b.png`.
+- The fit-view before/after board is
+  `/tmp/anifor-water-connected-foam-v6-comparison.png`; the enlarged open-
+  surface comparison is
+  `/tmp/anifor-water-connected-foam-v6-crop-comparison.png`.
+
+### Next visual work
+
+1. Give grounded bulk a restrained environment-colour bounce so its new mass
+   shadow remains chromatic rather than merely darker.
+2. Port the accepted powder, liquid, gas, translucent, metallic, and organic
+   visual vocabulary into a compact, stable true 8× shader grammar.
+3. Continue material-family work from shared optics before returning to
+   isolated element-by-element motifs.

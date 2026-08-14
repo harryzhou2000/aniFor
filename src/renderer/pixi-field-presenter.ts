@@ -6276,6 +6276,7 @@ void main() {
   float materialMesoscaleCurvature = 0.0;
   float materialMesoscaleNeighbourMean = 0.0;
   float materialMesoscaleCoherence = 0.0;
+  float liquidMesoscaleTopDensity = 1.0;
   float adjacentLiquidSupport = 0.0;
   float exposedLiquidSide = 0.0;
   // This packed state is consumed by the later gas-colour branch. Keep it in
@@ -6364,6 +6365,7 @@ void main() {
         vec4(liquidLeft.a, liquidRight.a, liquidTop.a, liquidBottom.a),
         liquidWide, mesoProfile
       );
+      liquidMesoscaleTopDensity = liquidWide.z;
       materialMesoscaleSlope = meso.slope * 0.65;
       materialMesoscaleCurvature = meso.curvature;
       materialMesoscaleNeighbourMean = meso.neighbourMean;
@@ -7937,7 +7939,27 @@ void main() {
     // species seams, droplets, and reconstructed support remain on their
     // established paths; this is a bounded RGB-only aqueous refinement.
     if (uAqueousSurfaceReflection > 0.5 && aqueous > 0.5) {
-      float aqueousSurfaceReflection = aqueous * topLip
+      // The old topLip alone was only a one-fragment slope response. Blend it
+      // with the already-proven connected Fresnel shell, admitted toward the
+      // sky-facing half, so a broad pool carries a continuous curved reflection
+      // shoulder at fit view without changing its alpha or silhouette.
+      float aqueousSkyFacing = smoothstep(-0.018, 0.105, volumeSlope.y);
+      float aqueousLocalSurface = liquidFresnelShell * aqueousSkyFacing
+        * smoothstep(0.42, 0.72, liquidNeighbourMean);
+      // The normal material pass already sampled a wider top neighbour for its
+      // mesoscale normal. Reuse that paid-for density as a short interior
+      // distance carrier: dense Water whose wide top probe still sees air is
+      // part of a connected crest band, not a new particle or expanded alpha.
+      float aqueousWideSurface = step(1.5, uMaterialLightingVariant)
+        * smoothstep(0.18, 0.66, liquidDensity)
+        * (1.0 - smoothstep(0.20, 0.72, liquidMesoscaleTopDensity))
+        * smoothstep(0.32, 0.76, materialMesoscaleCoherence)
+        * smoothstep(0.42, 0.72, adjacentLiquidSupport);
+      float aqueousConnectedSurface = max(
+        aqueousLocalSurface, aqueousWideSurface * 0.57
+      );
+      float aqueousReflectionBand = max(topLip, aqueousLocalSurface * 0.35);
+      float aqueousSurfaceReflection = aqueous * aqueousReflectionBand
         * (0.026 + broadSheen * 0.024 + fresnel * 0.016);
       color += (vec3(1.0) - clamp(color, 0.0, 1.0))
         * vec3(0.30, 0.74, 1.00) * aqueousSurfaceReflection;
@@ -7953,25 +7975,29 @@ void main() {
         && unlikeMaterialContact < 0.5) {
         float aqueousFoamMotion = smoothstep(0.09, 0.42, length(velocity));
         float aqueousFoamCarrier = 0.5 + 0.5 * sin(
-          fieldPosition.x * 0.145 - fieldPosition.y * 0.033
-            + causticWave * 4.4 + broadSheen * 2.1
+          fieldPosition.x * 0.108 - fieldPosition.y * 0.046
+            + causticWave * 3.7 + broadSheen * 1.8 + uTime * 0.12
         );
-        float aqueousFoamPattern = smoothstep(
-          0.64, 0.88,
-          aqueousFoamCarrier * 0.54 + causticWave * 0.46
-        );
+        float aqueousFoamSignal = aqueousFoamCarrier * 0.52
+          + causticWave * 0.31 + broadSheen * 0.17;
+        float aqueousFoamVein = smoothstep(0.52, 0.74, aqueousFoamSignal);
+        float aqueousFoamIsland = smoothstep(0.68, 0.88, aqueousFoamSignal);
+        float aqueousFoamPattern = aqueousFoamVein
+          * (0.38 + aqueousFoamIsland * 0.62);
+        float aqueousFoamBand = max(topLip, aqueousConnectedSurface)
+          * smoothstep(0.34, 0.66, adjacentLiquidSupport);
         float aqueousFoam = step(1.5, uMaterialLightingVariant)
-          * topLip * aqueousFoamMotion
-          * (0.08 + aqueousFoamPattern * 0.92);
+          * aqueousFoamBand * aqueousFoamMotion * aqueousFoamPattern;
         float aqueousFoamTrough = step(1.5, uMaterialLightingVariant)
-          * topLip * aqueousFoamMotion * (1.0 - aqueousFoamPattern);
-        color *= 1.0 - aqueousFoamTrough * 0.22;
+          * aqueousFoamBand * aqueousFoamMotion
+          * aqueousFoamVein * (1.0 - aqueousFoamIsland) * 0.72;
+        color *= 1.0 - aqueousFoamTrough * 0.20;
         color = mix(
           color, vec3(1.02, 1.10, 1.16),
-          clamp(aqueousFoam * 2.95, 0.0, 0.84)
+          clamp(aqueousFoam * 3.15, 0.0, 0.80)
         );
         color += vec3(0.24, 0.34, 0.44)
-          * aqueousFoamPattern * aqueousFoam;
+          * aqueousFoamIsland * aqueousFoam;
       }
       // A true Water core gets a small submerged volume response in addition
       // to the shared aqueous surface. Keep this stricter than the surface
