@@ -6785,8 +6785,13 @@ void main() {
       * (0.085 + cleanGas * 0.020 - sootyGas * 0.008);
     // Carry the same coherent dilute veil into forward scatter so the added
     // opacity remains luminous participating media, not a flat dark halo.
-    gasForwardScatter += gasCoherentMist
-      * (0.090 + cleanGas * 0.020 - sootyGas * 0.010);
+    // Bias that lift into the readable middle of a connected cloud. The rim
+    // already owns a silver lining; lighting the interior is what makes a
+    // normal-fit plume read as translucent volume instead of a blurred decal.
+    float gasMistInterior = gasCoherentMist
+      * smoothstep(0.11, 0.30, gasShadeDensity);
+    gasForwardScatter += gasMistInterior
+      * (0.135 + cleanGas * 0.024 - sootyGas * 0.012);
     vec3 gasForwardColor = mix(vividColor(gasBase, 1.06), vec3(0.62, 0.76, 0.92),
       0.18 + cleanGas * 0.14);
     color += (vec3(1.0) - clamp(color, 0.0, 1.0)) * gasForwardColor
@@ -7004,7 +7009,7 @@ void main() {
           + gasForwardScatter * 0.68 + silverLining * 0.140)
           * gasVfxSupport * (1.0 - opticalDepth * 0.20)
           + max(gasVfxBillow, 0.0) * gasVfxBodySupport
-            * 0.055 * gasBillowKeyScale
+            * 0.098 * gasBillowKeyScale
       );
       float gasVfxPocket = min(
         mix(0.065, 0.125, gasMaterialVolumeB),
@@ -7013,16 +7018,40 @@ void main() {
           + gasVfxShoulder * (1.0 - smoothstep(0.48, 0.76, diffuse)) * 0.022)
           * gasVfxSupport
           + max(-gasVfxBillow, 0.0) * gasVfxBodySupport
-            * 0.040 * gasBillowPocketScale
+            * 0.070 * gasBillowPocketScale
       );
-      vec3 gasVfxTint = mix(vec3(0.44, 0.68, 1.00), vividColor(gasBase, 1.12), 0.62);
+      vec3 gasVfxTint = mix(vec3(0.40, 0.66, 1.00), vividColor(gasBase, 1.12), 0.52);
       color += (vec3(1.35) - clamp(color, 0.0, 1.35))
         * gasVfxTint * gasVfxKey;
       color *= 1.0 - gasVfxPocket;
       float gasMaterialBillowExposure = gasMaterialVolumeB * gasVfxBodySupport
-        * (max(gasVfxBillow, 0.0) * 0.130
-          - max(-gasVfxBillow, 0.0) * 0.105) * gasInteriorContrast;
+        * (max(gasVfxBillow, 0.0) * 0.178
+          - max(-gasVfxBillow, 0.0) * 0.148) * gasInteriorContrast;
       color *= 1.0 + gasMaterialBillowExposure;
+      // Push the same large-scale billow beyond a local surface accent into a
+      // readable participating-light body. Coherent mist widens the carrier
+      // through the translucent middle while the field still owns every gap
+      // and edge. The positive lobe transmits a cool sky key; its opposing
+      // pocket absorbs into charcoal, giving normal-fit clouds an obvious
+      // front/back volume without particle texture or added blur.
+      float gasParticipatingSupport = gasMaterialVolumeB
+        * gasFieldSupport * smoothstep(0.035, 0.24, gasShadeDensity)
+        * (1.0 - opticalDepth * 0.12);
+      float gasParticipatingPhase = clamp(
+        gasVfxBillow * 0.72 + gasVfxWaveA * 0.28
+          + gasDirectionalRelief * 0.10,
+        -1.0, 1.0
+      );
+      float gasParticipatingKey = gasParticipatingSupport
+        * smoothstep(-0.28, 0.72, gasParticipatingPhase) * 0.300;
+      float gasParticipatingPocket = gasParticipatingSupport
+        * smoothstep(-0.20, 0.76, -gasParticipatingPhase) * 0.220;
+      vec3 gasParticipatingTint = mix(
+        vec3(0.34, 0.56, 1.00), vividColor(gasBase, 1.10), 0.46
+      );
+      color += (vec3(1.20) - clamp(color, 0.0, 1.20))
+        * gasParticipatingTint * gasParticipatingKey;
+      color *= vec3(1.0) - vec3(0.54, 0.64, 0.82) * gasParticipatingPocket;
 
       // Let nearby emissive matter illuminate the participating volume rather
       // than merely tint its outer particles. The already-filtered shared tile
@@ -8777,19 +8806,46 @@ void main() {
           - (liquidVolumeNoise.g - 0.5) * 0.24,
         -1.0, 1.0
       );
-      float liquidVolumeCaustic = smoothstep(
+      float liquidVolumeBroadCaustic = smoothstep(
         0.56, 0.86,
         liquidVolumeNoise.r * 0.58 + liquidVolumeNoise.b * 0.42
       ) * (1.0 - smoothstep(0.74, 1.0, liquidFinishDepth));
-      vec3 liquidVolumeBodyTint = mix(
-        vividColor(base, 1.08), vec3(0.42, 0.82, 1.10), 0.42
+      // Two oblique waves, bent by the filtered volume tile, meet in curved
+      // pool-like filaments. Unlike a backdrop plate this web lives entirely
+      // inside the established connected body, so the deep teal silhouette,
+      // transparent edge and internal objects remain authoritative.
+      float liquidVolumePhaseA = sin(
+        dot(fieldPosition, vec2(0.108, 0.041))
+          + (liquidVolumeNoise.r - 0.5) * 4.2 + uTime * 0.055
       );
+      float liquidVolumePhaseB = sin(
+        dot(fieldPosition, vec2(-0.064, 0.126))
+          + (liquidVolumeNoise.g - 0.5) * 3.8 - uTime * 0.041
+      );
+      float liquidVolumeFilament = pow(
+        1.0 - smoothstep(
+          0.045, 0.310, min(abs(liquidVolumePhaseA), abs(liquidVolumePhaseB))
+        ),
+        1.35
+      ) * (1.0 - smoothstep(0.82, 1.0, liquidFinishDepth));
+      vec3 liquidVolumeBodyTint = mix(
+        vividColor(base, 1.08), vec3(0.58, 0.96, 1.16),
+        clamp(0.34 + aqueous * 0.40 + cryogenic * 0.16 - oily * 0.12, 0.18, 0.82)
+      );
+      float liquidVolumeFilamentGain = liquidVolumeFilament
+        * (0.055 + aqueous * 0.175 + corrosive * 0.065
+          + cryogenic * 0.060 - oily * 0.014
+          - metallicLiquid * 0.026 - viscousLiquid * 0.018);
       color += (vec3(1.18) - clamp(color, 0.0, 1.18))
         * liquidVolumeBodyTint * liquidVolumeBody
         * (max(liquidVolumeFold, 0.0) * 0.080
-          + liquidVolumeCaustic * 0.050);
+          + liquidVolumeBroadCaustic * 0.038
+          + liquidVolumeFilamentGain);
       color *= vec3(1.0) - vec3(0.046, 0.035, 0.026)
-        * liquidVolumeBody * max(-liquidVolumeFold, 0.0);
+        * liquidVolumeBody * (
+          max(-liquidVolumeFold, 0.0)
+          + aqueous * (1.0 - liquidVolumeFilament) * 0.22
+        );
       // A directional, smoothly varying reflection breaks the old uniform cyan
       // rim into broad highlights. It reuses the liquid normal and shared
       // material tile already sampled above, and remains strongest only on the
@@ -12237,30 +12293,43 @@ void main() {
       && profileIrradianceEligibility > 0.001
       && (profileIrradianceNormalLength > 0.0001 || gasVolume > 0.5)) {
       vec4 longRangeEmission = texture(uLongRangeEmissionTexture, fieldUv);
-      longRangeTransportEmission = longRangeEmission;
-      profileIrradianceEmission = mix(
-        emissionState, longRangeEmission,
-        smoothstep(0.002, 0.035, longRangeEmission.a)
-      );
       // Reconstruct the actual source direction from the transported energy
       // rather than imposing a world-space diagonal. Four cardinal reads cost
       // only two more samples than the previous fixed-axis probe and add no
       // field, texture, or pass. The gradient points toward increasing
       // radiance; projecting it onto the already-supported outward body normal
       // yields one signed key/shadow response for every material phase.
-      vec2 transportProbe = uEmissionTexel * 2.0;
-      float transportLeft = texture(
+      // Participating gas needs the same direction to survive well past the
+      // source-adjacent rim. Probe the already-downsampled transport field at
+      // a wider radius for gas only, while the centre carrier remains the sole
+      // radiance/support owner. Opaque phases keep their exact local probe.
+      // This recovers a broad direction cue without adding a target, pass,
+      // upload, cross-wall energy path, or Canvas dependency.
+      vec2 transportProbe = uEmissionTexel * (gasVolume > 0.5 ? 7.0 : 2.0);
+      vec4 transportLeftSample = texture(
         uLongRangeEmissionTexture, fieldUv - vec2(transportProbe.x, 0.0)
-      ).a;
-      float transportRight = texture(
+      );
+      vec4 transportRightSample = texture(
         uLongRangeEmissionTexture, fieldUv + vec2(transportProbe.x, 0.0)
-      ).a;
-      float transportTop = texture(
+      );
+      vec4 transportTopSample = texture(
         uLongRangeEmissionTexture, fieldUv - vec2(0.0, transportProbe.y)
-      ).a;
-      float transportBottom = texture(
+      );
+      vec4 transportBottomSample = texture(
         uLongRangeEmissionTexture, fieldUv + vec2(0.0, transportProbe.y)
-      ).a;
+      );
+      float transportLeft = transportLeftSample.a;
+      float transportRight = transportRightSample.a;
+      float transportTop = transportTopSample.a;
+      float transportBottom = transportBottomSample.a;
+      // Wider reads supply direction only. The centre sample remains the sole
+      // owner of radiance/support so a gas fragment cannot borrow light from
+      // beyond the carrier or from the opposite side of an opaque wall.
+      longRangeTransportEmission = longRangeEmission;
+      profileIrradianceEmission = mix(
+        emissionState, longRangeEmission,
+        smoothstep(0.002, 0.035, longRangeEmission.a)
+      );
       vec2 transportGradient = vec2(
         transportRight - transportLeft, transportBottom - transportTop
       );
@@ -12270,7 +12339,7 @@ void main() {
       vec2 profileIrradianceOutward = profileIrradianceNormal
         / profileIrradianceNormalLength;
       float transportConfidence = gasVolume > 0.5
-        ? smoothstep(0.0005, 0.025, transportGradientMagnitude)
+        ? smoothstep(0.00025, 0.016, transportGradientMagnitude)
         : smoothstep(0.002, 0.05, transportGradientMagnitude);
       longRangeTransportDirection = transportDirection;
       longRangeTransportConfidence = transportConfidence;
@@ -12354,16 +12423,26 @@ void main() {
           + shaftVolume.b * 0.11,
         0.0, 1.0
       );
-      float shaftLobe = smoothstep(0.40, 0.74, shaftFold);
+      float shaftSignedFold = clamp((shaftFold - 0.5) * 2.15, -1.0, 1.0);
+      float shaftLobe = smoothstep(0.34, 0.72, shaftFold);
+      float shaftMiddle = 4.0 * shaftFold * (1.0 - shaftFold);
+      float shaftDirectionSupport = mix(
+        longRangeTransportConfidence,
+        sqrt(clamp(longRangeTransportConfidence, 0.0, 1.0)),
+        0.55
+      );
       float shaftBody = gasInterior
         * smoothstep(0.045, 0.34, atmosphereState.a)
-        * longRangeTransportConfidence;
+        * shaftDirectionSupport;
       float shaftOptical = smoothstep(
         0.035, 0.62, mix(density, atmosphereState.a, gasInterior)
       );
       shaftBody *= mix(1.0, 0.72, shaftOptical);
-      float sourceEnergy = smoothstep(
+      float sourceEnergyLinear = smoothstep(
         0.0005, 0.035, longRangeTransportEmission.a
+      );
+      float sourceEnergy = mix(
+        sourceEnergyLinear, sqrt(sourceEnergyLinear), 0.45
       );
       vec3 sourceRadiance = max(longRangeTransportEmission.rgb, vec3(0.0));
       float sourcePeak = max(sourceRadiance.r, max(sourceRadiance.g, sourceRadiance.b));
@@ -12373,11 +12452,20 @@ void main() {
       vec3 shaftHeadroom = max(
         vec3(0.0), vec3(1.18) - clamp(color, 0.0, 1.18)
       );
+      // The transported field already proves the source, direction and gas
+      // body. Let that proof survive fit-view composition as participating
+      // media: a broad source-coloured middle, brighter aligned folds and
+      // complementary absorptive pockets. The previous two-byte shoulder was
+      // technically present but visually read as a uniformly matte gas card.
       float shaftKey = shaftBody * sourceEnergy
-        * (0.035 + shaftLobe * 0.180);
+        * (0.075 + max(shaftSignedFold, 0.0) * 0.260
+          + shaftMiddle * 0.060);
       color += shaftHeadroom * sourceSpectrum * shaftKey;
-      float rearExtinction = shaftBody * max(-longRangeIncidence, 0.0)
-        * (0.035 + (1.0 - shaftLobe) * 0.065);
+      float rearExtinction = shaftBody * (
+        max(-longRangeIncidence, 0.0)
+          * (0.050 + (1.0 - shaftLobe) * 0.120)
+        + max(-shaftSignedFold, 0.0) * sourceEnergy * 0.100
+      );
       color *= 1.0 - rearExtinction;
     }
   }

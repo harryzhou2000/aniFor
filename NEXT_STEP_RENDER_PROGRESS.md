@@ -377,3 +377,63 @@ Status: visually favoured; visual quality is the primary development criterion.
    avoiding separator outlines and preserving the grain/facet layer.
 4. After normal 2×/4× art direction stabilises, bring a cheaper version of the
    same visual vocabulary to true 8× with browser responsiveness as the gate.
+
+## 2026-08-14 — participating-light gas and internal liquid caustics
+
+Status: visually favoured checkpoint; accepted from direct 2×/4× inspection.
+
+### What changed
+
+- Volumetric gas now probes the existing downsampled, obstacle-aware emission
+  carrier at a genuinely useful gas-scale radius. Those wider reads establish
+  direction only; the local centre carrier remains the sole owner of radiance
+  and support. This creates a longer source-directed response without borrowing
+  light through an opaque wall.
+- Connected dilute gas moves its forward-scatter lift inward to a mid-density
+  shoulder. A widened field-owned participating-light lobe then gives the cloud
+  a cool transmitted key and an opposing charcoal pocket. The transparent rim
+  keeps its silver lining, while the middle reads as volume rather than a matte
+  blurred card.
+- Connected liquids reuse the filtered material-volume tile to bend two oblique
+  light waves into a slow curved caustic web. The highlights and complementary
+  absorption live inside the liquid body, so Water retains its deep teal
+  silhouette, transparent edge, and readable submerged objects.
+- The failed receiver-panel experiment was removed rather than hidden. Cyan,
+  neutral, strip, and inset wall backplates all made the tank read as a frosted
+  rectangle or an artificial inner frame. The retained design changes no
+  showcase geometry and puts the optical variation in the material itself.
+
+### Visual decision
+
+- Keep the widened gas-direction probe and broad participating-light body. The
+  normal showcase retains rounded, field-shaped clouds while focused cards show
+  source-coloured transmission beyond a thin rim.
+- Keep the internal Water caustic. It gives the pool curved highlight and depth
+  variation without bleaching the lower tank or replacing transparency with a
+  visible receiver plate.
+- Keep WebGL as the canonical art path and Canvas2D as a permissive fallback.
+  This visual choice was made from ordinary fit-view composition, not from an
+  exact historical image match.
+
+### Lightweight checks used
+
+- `npm run build` completes and closes all 19 production resources.
+- The retained production scene captured successfully through real WebGL/HDR
+  at both 2× and 4× with zero browser errors:
+  `/tmp/anifor-visual-overhaul-v19-2x.png` and
+  `/tmp/anifor-visual-overhaul-v19-4x.png`.
+- The focused source-lit gas board also completed in loose visual mode at
+  `/tmp/anifor-gas-source-v4-e13-gas-light-2x-off.png`. Historical hashes,
+  exact settle equality, and old response envelopes were not aesthetic gates.
+
+### Next visual work
+
+1. Add a distinct fire/flame/ember presentation with velocity-shaped tongues
+   and blackbody-driven core-to-smoke transitions.
+2. Add foam and detached spray to fast or exposed liquid while keeping the
+   current hard liquid ownership boundary.
+3. Extend profile-driven bulk lighting so translucent solids, metals, powders,
+   and organics receive more distinct roughness, scatter, and reflection.
+4. Prototype a cheaper normal-to-true-8× translation only after the remaining
+   normal-path visual systems are established; browser responsiveness remains
+   more important than exact cross-scale image identity.
