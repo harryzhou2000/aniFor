@@ -9418,7 +9418,44 @@ void main() {
           + (vec3(1.0) - clamp(metallicIdentity, 0.0, 1.0)) * 0.18;
         color += (vec3(1.22) - clamp(color, 0.0, 1.22))
           * metallicCrownTint * metallicCrown;
-        color += solidEnvironment * metallicCrown * 0.35;
+        // Let the whole proven metal body reflect one readable environment:
+        // a cool sky face, a warm ground face, and a broad horizon turn. The
+        // normal owns the roll while identity pigment remains in the result,
+        // avoiding both a flat brightness gain and a material-wide silvering.
+        float metallicSkyFacing = clamp(
+          0.50 - normal.y * 0.62 + normal.x * 0.16
+            + metallicRelief * 0.10,
+          0.0, 1.0
+        );
+        float metallicHorizon = 1.0 - smoothstep(
+          0.12, 0.62, abs(metallicSkyFacing - 0.50)
+        );
+        float metallicEnvironmentFace = clamp(
+          (metallicSkyFacing - 0.50) * 1.55
+            + metallicFacing * 0.35,
+          -1.0, 1.0
+        );
+        float metallicSkyCrown = metallicBodyDepth * (
+          max(metallicEnvironmentFace, 0.0) * 0.440
+            + metallicHorizon * 0.090
+            + smoothstep(0.020, 0.22, solidFresnel) * 0.120
+        );
+        float metallicGroundPocket = metallicBodyDepth * (
+          max(-metallicEnvironmentFace, 0.0) * 0.380
+            + metallicHorizon * 0.052
+        );
+        vec3 metallicSkyTint = mix(
+          vec3(0.20, 0.52, 1.04), metallicIdentity, 0.34
+        );
+        vec3 metallicGroundTint = mix(
+          vec3(0.62, 0.25, 0.055), metallicIdentity, 0.46
+        );
+        color += (vec3(1.24) - clamp(color, 0.0, 1.24))
+          * metallicSkyTint * metallicSkyCrown;
+        color += (vec3(1.16) - clamp(color, 0.0, 1.16))
+          * metallicGroundTint * metallicGroundPocket * 0.100;
+        color *= vec3(1.0) - vec3(0.075, 0.145, 0.290)
+          * metallicGroundPocket;
         color *= vec3(1.0) - metallicPocketAbsorption * metallicPocket;
       }
     }

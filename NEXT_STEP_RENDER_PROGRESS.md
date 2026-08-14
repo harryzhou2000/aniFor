@@ -1091,3 +1091,45 @@ Status: retained normal-WebGL moving-surface refraction.
    especially Glass and mixed Metal/Water contacts.
 3. Exercise the retained gas source-light transport in a naturally irregular
    plume rather than only an atlas-shaped body.
+
+## 2026-08-15 — signed sky/ground reflection for metallic bodies
+
+Status: retained normal-WebGL MetallicRigid environment roll.
+
+### What changed
+
+- METL, BMTL, GOLD, IRON, PTNM, and TTAN now share a broad reflected-world
+  turn after their existing material lighting: cool sky-facing planes advance,
+  while the opposing ground-facing planes become warmer and slightly recessed.
+- The response is signed rather than a general gloss/exposure lift. It follows
+  the existing solid normal, relief, Fresnel, body depth, and pigment identity;
+  holes, contacts, thin structures, walls, alpha, and support are untouched.
+- Two quieter tunings were rejected. The retained third tuning is the first to
+  read as two reflected planes at fit view, and it stops before the cool band
+  becomes a painted blue decal.
+
+### Visual decision
+
+- Keep v3. Cool blue-silver faces and complementary warm pockets give the six
+  metal bodies a clearer reflective mass, while Gold remains recognizably gold
+  and the grey alloys remain distinct from one another.
+- An independent visual pass returned KEEP and specifically advised against
+  increasing the amplitude further.
+
+### Lightweight checks used
+
+- `npm run build` completes and closes all 19 production resources.
+- The retained comparison is
+  `/tmp/anifor-metal-environment-compare-v3.png`; the larger material crop is
+  `/tmp/anifor-metal-environment-crop-compare-v3.png` (before above/left,
+  retained after below/right).
+- The comparison used the six-card multi-metal WebGL atlas at 2×. Aesthetic
+  preference, not an exact visual hash, selected the checkpoint.
+
+### Next visual work
+
+1. Build the PLNT canopy turn from broad exact-species form rather than the
+   existing local mottled foliage signals.
+2. Explore true Glass backdrop transmission in the HDR compositor, using the
+   render-optics atlas to distinguish it from Metal, Wax, and Ceramic.
+3. Exercise gas lighting and absorption in a naturally irregular moving plume.
