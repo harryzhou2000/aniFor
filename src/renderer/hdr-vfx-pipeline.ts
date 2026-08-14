@@ -525,6 +525,31 @@ vec3 liquidSurfaceTransport(
     material == MATERIAL_WATER ? 0.18 : (material == MATERIAL_OIL ? 0.15 : 0.16)
   ) * (1.0 + wallBacked * 0.24 + transportAgitation);
   vec3 result = mix(sourceRadiance, transported, min(0.24, transportAmount));
+  // Moving Water folds the existing private environment along its proven
+  // air-facing contour. Two signed components travel with the semantic flow,
+  // producing a curved lens instead of another flat cyan highlight. This is
+  // RGB-only: semantic/liquid ownership and the caller's alpha remain exact.
+  float movingWaterLens = exactMaterial(material, MATERIAL_WATER)
+    * surface * liquidAgitation * (1.0 - wallBacked);
+  float curvedWaterWave = 0.5 + 0.5 * sin(
+    dot(worldPosition, tangent * 0.235 + transportDirection * 0.145)
+      + ripple * 3.35
+  );
+  float curvedWaterCrest = smoothstep(0.56, 0.90, curvedWaterWave);
+  vec2 curvedWaterWarp = (
+    outward * (0.62 + (curvedWaterWave - 0.5) * 1.72)
+      + tangent * (ripple * 0.78 + (curvedWaterWave - 0.5) * 0.92)
+  ) * uWorldTexel * movingWaterLens * (1.35 + motionFacing * 1.55);
+  vec3 curvedWaterBehind = straightRadiance(texture(
+    uBehindTexture, boundedUv(transmissionUv + curvedWaterWarp)
+  ));
+  vec3 curvedWaterTransmission = mix(
+    transmitted, curvedWaterBehind, 0.76
+  ) * transmissionTint;
+  result = mix(
+    result, curvedWaterTransmission,
+    movingWaterLens * (0.085 + curvedWaterCrest * 0.190)
+  );
   // E65: the same velocity proof that bends transmission may lift only exact
   // Water's already-authoritative air-facing surface. This is a restrained
   // RGB whitecap, not spray support: scene alpha and every semantic/liquid

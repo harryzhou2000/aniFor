@@ -1044,3 +1044,50 @@ Status: retained normal-WebGL participating-gas refinement.
 2. Exercise source-lit gas in a less rectangular, naturally evolving plume.
 3. Continue broader translucent and metallic family lighting before isolated
    element decoration.
+
+## 2026-08-15 — moving-Water curved environment lens
+
+Status: retained normal-WebGL moving-surface refraction.
+
+### What changed
+
+- Exact moving Water now bends the existing private environment layer along
+  its proven air-facing contour. The warp combines the surface normal,
+  tangent, native flow direction, and a signed travelling fold, so a crest
+  behaves like a curved lens rather than receiving another cyan highlight.
+- The refracted environment is applied after the established surface
+  transport and only to the moving Water colour. The existing liquid shape,
+  contact handling, scene alpha, and simulation remain unchanged.
+- Two attempts to turn PLNT with its current local canopy fold were rejected
+  before checkpointing. Both preserved detail but were too subtle at normal
+  size; a future PLNT pass needs a stronger broad-form lighting construction,
+  not larger coefficients on the same mottled finish.
+
+### Visual decision
+
+- Keep the travelling Water lens. On the curved moving-water scene, the raised
+  mound has a clearer lit shoulder and deeper body read without a fixed stripe
+  or universal rim. The ordinary moving-water atlas remains clean and avoids
+  visible sinusoidal banding.
+- An independent visual pass returned KEEP on the geometry-appropriate curved
+  fixture after rejecting the quieter first implementation.
+
+### Lightweight checks used
+
+- `npm run build` completes and closes all 19 production resources.
+- The broad moving-water comparison is
+  `/tmp/anifor-water-refraction-compare-v2.png`; the curved-surface comparison
+  is `/tmp/anifor-water-curved-lens-compare.png`, with the magnified body at
+  `/tmp/anifor-water-curved-lens-crop-compare.png` (before above/left,
+  retained after below/right).
+- All captures used WebGL at 2×. No strict visual hash or historical baseline
+  was used to make the aesthetic decision.
+
+### Next visual work
+
+1. Build a visibly directional PLNT canopy light from broad botanical form,
+   while retaining the existing lamina and pigment detail.
+2. Give translucent and reflective solids a clearer material-scale response,
+   especially Glass and mixed Metal/Water contacts.
+3. Exercise the retained gas source-light transport in a naturally irregular
+   plume rather than only an atlas-shaped body.
