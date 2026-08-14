@@ -6641,14 +6641,14 @@ void main() {
         * smoothstep(48.0, 88.0, fireTemperatureByte)
         * mix(0.76, 1.24, fireVolumeAperture);
       color += (vec3(1.18) - clamp(color, 0.0, 1.18))
-        * fireThermalColor * (fireBodyGlow * 0.045 + fireHotCore * 0.34);
-      color *= vec3(1.0) - vec3(0.018, 0.050, 0.092)
+        * fireThermalColor * (fireBodyGlow * 0.085 + fireHotCore * 0.52);
+      color *= vec3(1.0) - vec3(0.055, 0.140, 0.285)
         * fireCoolPocket * mix(1.18, 0.72, fireVolumeAperture);
-      color *= vec3(1.0) - vec3(0.020, 0.050, 0.092)
-        * fireBodySupport * max(-fireVolumeRoll, 0.0) * 0.90;
+      color *= vec3(1.0) - vec3(0.075, 0.180, 0.360)
+        * fireBodySupport * max(-fireVolumeRoll, 0.0) * 0.78;
       color += (vec3(1.22) - clamp(color, 0.0, 1.22))
         * vec3(1.00, 0.62, 0.22) * fireBodySupport
-        * max(fireVolumeRoll, 0.0) * 0.18;
+        * max(fireVolumeRoll, 0.0) * 0.28;
 
       float fireUpwardFlow = smoothstep(0.14, 0.72, -velocity.y);
       float fireFlowFacing = max(
@@ -6665,7 +6665,21 @@ void main() {
         * fireUpwardFlow * fireFlowFacing * mix(0.55, 1.0, edge)
         * fireTonguePattern * (0.76 + pulse * 0.24);
       color += (vec3(1.20) - clamp(color, 0.0, 1.20))
-        * vec3(1.00, 0.54, 0.16) * fireTongueShoulder * 0.38;
+        * vec3(1.00, 0.54, 0.16) * fireTongueShoulder * 0.52;
+      // A narrow velocity-aligned thread makes the moving tongue flicker like
+      // attached embers instead of a uniformly bright trapezoid. Genuine
+      // detached embers remain simulation-owned EMBR particles; this thread
+      // never escapes exact connected Fire support or changes its alpha.
+      float fireEmberThreadWave = sin(
+        fieldPosition.x * 0.40 + fieldPosition.y * 0.078
+          - uTime * (3.2 + fireUpwardFlow * 2.6)
+          + fireVolumeRoll * 3.1
+      );
+      float fireEmberThread = fireTongueShoulder
+        * (1.0 - smoothstep(0.055, 0.260, abs(fireEmberThreadWave)))
+        * smoothstep(0.18, 0.78, fireVolumeAperture);
+      color += (vec3(1.28) - clamp(color, 0.0, 1.28))
+        * vec3(1.00, 0.88, 0.38) * fireEmberThread * 0.90;
     }
     // E16: a broad exact Plasma body should read as contained luminous matter,
     // not a uniformly violet marker. The already-sampled emission alpha proves
@@ -7927,6 +7941,38 @@ void main() {
         * (0.026 + broadSheen * 0.024 + fresnel * 0.016);
       color += (vec3(1.0) - clamp(color, 0.0, 1.0))
         * vec3(0.30, 0.74, 1.00) * aqueousSurfaceReflection;
+      // Moving Water breaks its wider top-lip field into pearly foam patches.
+      // This is deliberately stronger than the thin HDR Fresnel crest: the
+      // field slope provides a multi-fragment band, native velocity turns it
+      // on, and two already-live liquid carriers keep the whitecap irregular.
+      // Still pools, side walls, deep interiors and non-aqueous liquids remain
+      // on the glassy reflection above.
+      if (material == 2.0 && liquidOnly < 0.5 && halo < 0.5
+        && wall < 0.5 && surfaceOnly < 0.5 && traits < 0.5
+        && !materialEmissive && foreignMatterContact < 0.5
+        && unlikeMaterialContact < 0.5) {
+        float aqueousFoamMotion = smoothstep(0.09, 0.42, length(velocity));
+        float aqueousFoamCarrier = 0.5 + 0.5 * sin(
+          fieldPosition.x * 0.145 - fieldPosition.y * 0.033
+            + causticWave * 4.4 + broadSheen * 2.1
+        );
+        float aqueousFoamPattern = smoothstep(
+          0.64, 0.88,
+          aqueousFoamCarrier * 0.54 + causticWave * 0.46
+        );
+        float aqueousFoam = step(1.5, uMaterialLightingVariant)
+          * topLip * aqueousFoamMotion
+          * (0.08 + aqueousFoamPattern * 0.92);
+        float aqueousFoamTrough = step(1.5, uMaterialLightingVariant)
+          * topLip * aqueousFoamMotion * (1.0 - aqueousFoamPattern);
+        color *= 1.0 - aqueousFoamTrough * 0.22;
+        color = mix(
+          color, vec3(1.02, 1.10, 1.16),
+          clamp(aqueousFoam * 2.95, 0.0, 0.84)
+        );
+        color += vec3(0.24, 0.34, 0.44)
+          * aqueousFoamPattern * aqueousFoam;
+      }
       // A true Water core gets a small submerged volume response in addition
       // to the shared aqueous surface. Keep this stricter than the surface
       // cue: distilled/salt water retain their native identity, and shores,
@@ -7949,6 +7995,26 @@ void main() {
         color += (vec3(1.0) - clamp(color, 0.0, 1.0))
           * vec3(0.16, 0.52, 0.86) * aqueousCoreGlaze;
       }
+    }
+    // Detached or weakly connected fast Water already owns a rounded
+    // species-aware density silhouette. Give that existing droplet a pearly
+    // spray glint instead of inventing a sprite or new particle: velocity,
+    // exposed-side proof and low local support contain the lift to genuine
+    // moving spray, while broad pools and resting droplets remain unchanged.
+    if (material == 2.0 && liquidOnly < 0.5 && halo < 0.5
+      && wall < 0.5 && surfaceOnly < 0.5 && traits < 0.5
+      && !materialEmissive && foreignMatterContact < 0.5
+      && unlikeMaterialContact < 0.5) {
+      float waterSpraySpeed = smoothstep(0.10, 0.46, length(velocity));
+      float waterSpraySparse = 1.0 - smoothstep(1.45, 3.35, shape.w);
+      float waterSprayGlint = step(1.5, uMaterialLightingVariant)
+        * waterSpraySpeed * waterSpraySparse * exposedLiquidSide
+        * (0.62 + broadSheen * 0.38);
+      color = mix(
+        color, vec3(0.92, 1.07, 1.16),
+        clamp(waterSprayGlint * 0.82, 0.0, 0.58)
+      );
+      color += vec3(0.26, 0.38, 0.54) * waterSprayGlint;
     }
     // Acid shares the dense-liquid body proof with Water, but it should not
     // inherit Water's sky-blue submerged glaze. Reuse the already-live depth,

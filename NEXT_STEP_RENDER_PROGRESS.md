@@ -437,3 +437,61 @@ Status: visually favoured checkpoint; accepted from direct 2×/4× inspection.
 4. Prototype a cheaper normal-to-true-8× translation only after the remaining
    normal-path visual systems are established; browser responsiveness remains
    more important than exact cross-scale image identity.
+
+## 2026-08-14 — flame volume and moving-Water crest detail
+
+Status: visually favoured checkpoint; flame overhaul accepted, Water foam kept
+as a restrained first layer rather than treated as a finished fluid system.
+
+### What changed
+
+- Fire now uses its existing temperature, velocity, and material-volume fields
+  to separate a pale hot core, orange body, red absorptive pockets, and darker
+  cooling folds. Upward flow stretches the body into attached tongues instead
+  of leaving one flat orange slab.
+- A narrow, velocity-aligned high-temperature thread flickers inside the upper
+  tongue. It suggests attached sparks without drawing shader-owned dots;
+  detached embers remain real simulation-owned `EMBR` matter.
+- Moving Water now breaks its connected HDR crest into sparse pearly islands
+  gated by native speed and shear. The ordinary shader adds irregular bright
+  caps and darker troughs only to moving exact Water, while resting pools keep
+  their glassy continuous shoulder.
+- Fast weakly connected Water receives a small over-white spray glint on its
+  existing rounded density silhouette. No particle, support, or alpha is added,
+  so this cannot invent droplets in empty air.
+- A Fire-alpha experiment was rejected because it exposed the underlying wall
+  checker through the flame and made the body look perforated. Fire ownership
+  and alpha therefore remain unchanged.
+
+### Visual decision
+
+- Keep the stronger flame core, cool channels, rising tongues, and attached
+  thread. The retained frame reads as luminous moving volume rather than a
+  uniformly coloured trapezoid.
+- Keep the Water crest/spray layer as a supporting effect, not the endpoint of
+  the liquid overhaul. At fit view it separates the fast strand and moving
+  surface from the still pool, but broader foam geometry still needs a future
+  field-level treatment.
+- Continue accepting visual work from direct WebGL inspection. Old calibrated
+  response envelopes and historical image hashes are not aesthetic gates while
+  this art direction is moving.
+
+### Lightweight checks used
+
+- `npm run build` completes and closes all 19 production resources.
+- The retained Fire frame is
+  `/tmp/anifor-fire-overhaul-v2-fire-flame-1x-movingOn.png`.
+- The retained Water frame is `/tmp/anifor-water-foam-v8/b.png`; its real
+  WebGL/HDR capture completed with no browser errors.
+
+### Next visual work
+
+1. Give thick and wall-backed Glass a denser cool transmitted interior while
+   preserving a crisp grazing crown and readable refracted pattern.
+2. Extend material-class lighting to metals, translucent solids, and organics
+   so their bulk appearance is distinct before more individual elements are
+   tuned.
+3. Return to foam with a broader connected surface-distance carrier rather than
+   trying to make a one-cell crest do all of the visual work.
+4. Translate the established normal-path vocabulary to true 8× only after the
+   remaining bulk classes have a clear art direction.

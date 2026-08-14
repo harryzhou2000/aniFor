@@ -503,11 +503,34 @@ vec3 liquidSurfaceTransport(
   // Water's already-authoritative air-facing surface. This is a restrained
   // RGB whitecap, not spray support: scene alpha and every semantic/liquid
   // topology decision remain owned by the established E08 inputs.
-  float whitecapPattern = smoothstep(0.18, 0.88, ripple * 0.5 + 0.5);
-  float whitecap = surface * liquidAgitation
-    * (0.380 + whitecapPattern * 0.720 + min(0.280, velocityShear * 0.36));
+  float whitecapPattern = smoothstep(0.52, 0.86, ripple * 0.5 + 0.5);
+  // Break an agitated crest into soft pearly islands instead of laying one
+  // continuous cyan highlight along the surface. The second incommensurate
+  // carrier is world-anchored, while native speed/shear decides whether it is
+  // visible; a resting pool therefore remains clean and glassy.
+  float whitecapCells = smoothstep(
+    0.62, 0.88,
+    0.5 + 0.5 * sin(
+      dot(worldPosition, vec2(0.163, -0.097)) + ripple * 2.35
+    )
+  );
+  float whitecapBreakup = smoothstep(
+    0.07, 0.42, motionSpeed + velocityShear * 0.82
+  );
+  float foamAgitation = exactMaterial(material, MATERIAL_WATER)
+    * smoothstep(0.075, 0.36, motionEnergy)
+    * (0.38 + motionFacing * 0.62);
+  float whitecap = surface * max(liquidAgitation, foamAgitation)
+    * (0.090 + whitecapPattern * 0.340
+      + whitecapCells * whitecapBreakup * 1.720
+      + min(0.320, velocityShear * 0.42));
   result += (vec3(1.18) - clamp(result, 0.0, 1.18))
-    * vec3(0.82, 0.96, 1.08) * whitecap;
+    * vec3(0.90, 1.00, 1.08) * whitecap;
+  // Let the sparse surviving islands cross the display-white shoulder so the
+  // compositor gives them a soft photographic rolloff. This is radiance only:
+  // no bloom/support/alpha is manufactured for calm water or empty air.
+  result += vec3(0.14, 0.20, 0.26)
+    * whitecapCells * whitecapBreakup * whitecap;
   // E69: exact moving Oil stretches its already-live HDR reflection along the
   // native flow and carries an opposing cool absorptive wake. The direction
   // comes only from E08's retained semantic velocity samples; the ribbon
