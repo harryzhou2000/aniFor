@@ -861,3 +861,52 @@ Status: retained moving-gas overhaul and true 8× liquid/gas parity checkpoint.
    transparent shallow zones, restrained reflection, and deeper colour falloff.
 3. Continue family-level translucent, metallic, organic, and granular optics
    before returning to exact element-specific decoration.
+
+## 2026-08-15 — sparse sky reflections for connected Water
+
+Status: retained normal-WebGL Water surface overhaul.
+
+### What changed
+
+- Dense exact Water now receives a shallow reflected-sky lobe immediately
+  below its free surface. The existing vertical optical-depth plane confines
+  the response to real Water, while the existing material-volume tile admits
+  broad irregular islands and gently varies their depth.
+- Reflection islands turn toward a desaturated sky colour through available
+  HDR headroom. They change RGB only: liquid support, alpha, holes, contacts,
+  other liquid species, Canvas, compact true 8×, and simulation state are
+  unchanged.
+- Several weaker or uniform-band experiments were discarded. A continuous
+  depth band became a milky cyan cap when made visible; a low-strength folded
+  band and a wide-surface-only lobe disappeared at fit view. None of those
+  rejected variants remain in source.
+
+### Visual decision
+
+- Keep the sparse volume-warped islands. At fit view they establish a clear
+  horizontal surface plane and glass-like reflected sky without filling the
+  Water body with milk or reading as foam. The lower edge varies slowly rather
+  than forming one ruler-straight stripe.
+- An independent visual pass reached the same keep decision and specifically
+  judged the bright regions as reflected sky confined to the free surface.
+
+### Lightweight checks used
+
+- `npm run build` completes and closes all 19 production resources.
+- A fresh 2× Water Visual Lab capture completed on WebGL with HDR active, zero
+  browser errors, and unchanged semantic, liquid-field, and framebuffer-alpha
+  support. The retained full frame is
+  `/tmp/anifor-water-sky-islands-v1/b.png`; the old/new magnified comparison is
+  `/tmp/anifor-water-sky-islands-v1-compare.png` (old above, retained below).
+- A separate 4× showcase glance reached the built renderer but the loaded
+  software GPU timed out before returning its framebuffer; it produced no
+  visual rejection and left no Chrome process behind.
+
+### Next visual work
+
+1. Give settled bulk powder a broad shoulder-to-core depth split without
+   erasing its mineral grains, thin columns, or authored holes.
+2. Carry the reflected-sky vocabulary into curved moving-water crests and
+   smaller droplets without creating a universal white rim.
+3. Continue translucent, metallic, organic, and granular family optics before
+   isolated exact-element decoration.

@@ -321,6 +321,32 @@ vec3 liquidInteriorTransport(
     sourceRadiance, refractedRadiance * transmissionTint, refractionShare
   );
 
+  // Break Water's shallow sky reflection into broad, connected optical
+  // islands instead of laying a uniform pale cap across the whole pool. The
+  // existing volume tile controls both island admission and a small depth
+  // warp, while the vertical optical-depth field keeps every lobe immediately
+  // below a real Water surface. This changes colour only inside exact Water.
+  if (material == MATERIAL_WATER) {
+    float aqueousOpticalDepth = max(
+      0.0, opticalDepth + (volume.b - 0.5) * (24.0 / 255.0)
+    );
+    float aqueousShallowSupport = denseBody
+      * smoothstep(0.0, 12.0 / 255.0, aqueousOpticalDepth)
+      * (1.0 - smoothstep(
+        36.0 / 255.0, 108.0 / 255.0, aqueousOpticalDepth
+      ));
+    float aqueousSkySignal = volume.r * 0.58 + volume.g * 0.42;
+    float aqueousSkyVeil = smoothstep(0.44, 0.68, aqueousSkySignal);
+    float aqueousSkyIsland = smoothstep(0.56, 0.76, aqueousSkySignal);
+    float aqueousSkyStrength = aqueousSkyVeil * 0.18
+      + aqueousSkyIsland * 0.62;
+    vec3 aqueousHeadroom = max(
+      vec3(0.0), vec3(1.15) - clamp(result, 0.0, 1.15)
+    );
+    result += aqueousHeadroom * vec3(0.70, 0.95, 1.08)
+      * aqueousShallowSupport * aqueousSkyStrength;
+  }
+
   // A real emissive lobe is preferred when present; a restrained broad studio
   // key keeps ordinary water readable as volume rather than a flat cyan fill.
   vec3 causticTint = material == MATERIAL_WATER
