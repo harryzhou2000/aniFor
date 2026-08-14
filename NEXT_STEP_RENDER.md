@@ -8316,6 +8316,26 @@ drains, and texture uploads, then optimize the largest reusable component.
 Do not reduce receipt, framebuffer, semantic, authoritative-field, or screenshot
 proof to hide the independent loaded-software-GPU completion interval.
 
+This timing checkpoint is deployed at exact revision
+`154f6cc89e0f316279e7a6b0504b4a5e8783e481` by workflow run
+`31757394437`. The cached build completed in 2m52s, packaged the exact
+19-resource site, and saved the successful ccache lineage. The canonical
+shared-host material-lighting review passed all ten candidates in 10m35s with
+one host, ten fresh contexts/targets, zero restarts, 328 current response and
+appearance regions, and downloaded-artifact portable verification. Across the
+loaded CI cohort, field preparation ranged from about 320.7 to 723.0 ms while
+the synchronous render call ranged only from 1.8 to 3.2 ms, independently
+confirming the local diagnosis.
+
+Pages deployed in nine seconds. Exact revision and all 19 live resources passed,
+then the hosted Water receipt-v2 package portably verified with result
+`sha256:295e1f609305872845b749e4e22c27944d6957af0e2c02a69c619eebf42a1b6c`
+and bounded evidence artifact `9203575266`. The next active implementation is
+the exclusive five-lane CPU preparation split: semantic/boundary,
+powder/solid-derived fields, volume fields, texture-update calls, and other.
+Keep Pixi invalidation calls distinct from actual GPU transfer, which can occur
+later inside `renderApplication()`.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the
