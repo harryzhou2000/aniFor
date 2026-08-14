@@ -495,3 +495,55 @@ as a restrained first layer rather than treated as a finished fluid system.
    trying to make a one-cell crest do all of the visual work.
 4. Translate the established normal-path vocabulary to true 8× only after the
    remaining bulk classes have a clear art direction.
+
+## 2026-08-14 — optically dense Glass and class-wide metallic reflections
+
+Status: visually favoured normal-WebGL material-class checkpoint.
+
+### What changed
+
+- Thick Glass now carries stronger selective warm-wavelength absorption, cool
+  transmission, broad oblique volume folds, and a brighter grazing crown. The
+  body remains transparent and keeps its authored holes, thin panes, contacts,
+  semantic support, and alpha unchanged.
+- Co-located native-wall Glass no longer skips the deep optical treatment. Its
+  refracted checker is tinted and attenuated by the existing Glass depth, so it
+  reads behind a cool dense pane instead of pasted over a flat blue card.
+- All `MetallicRigid` owners now receive one B-only reflection model after
+  their material pigment and rolled structure are composed. A cool directional
+  crown, environment shoulder, and opposing pigment-preserving pocket cover
+  Metal, bimetal, Gold, Iron, Platinum, and Titanium without another per-ID
+  texture pattern.
+- The metallic crown was deliberately capped below the first experiment's
+  value after direct comparison showed Platinum beginning to wash out. Gold
+  keeps the strongest fit-view gain while pale metals retain grey depth.
+
+### Visual decision
+
+- Keep the deeper cyan Glass body and wall-backed attenuation. The production
+  tank walls gain visible optical thickness and interior folds without turning
+  into opaque blue plastic.
+- Keep the class-wide metallic sweep with the reduced crown cap. The six-card
+  board reads more like reflective mass and less like six patterned slabs;
+  holes, isolated pieces, contacts, and silhouettes remain visually clean.
+- Continue using the ordinary B/Volumetric view as the art target. Canvas2D
+  stays a permissive fallback and old response envelopes remain non-gating.
+
+### Lightweight checks used
+
+- `npm run build` completes and closes all 19 production resources after both
+  shader increments.
+- The retained Glass production frame is
+  `/tmp/anifor-glass-overhaul-v2-showcase.png`.
+- The retained six-material reflection frame is
+  `/tmp/anifor-metal-reflection-v3/b.png`; its WebGL/HDR capture completed with
+  no browser errors.
+
+### Next visual work
+
+1. Add a broad, stable contact-darkening and bounced-colour layer for grounded
+   heaps and rigid bodies without drawing categorical separator lines.
+2. Extend the depth/transmission vocabulary from Glass to Ice and other
+   translucent rigid materials that still read as flat tinted solids.
+3. Add a cheaper matching crown/pocket vocabulary to true 8× once the remaining
+   normal-path material families are visually settled.

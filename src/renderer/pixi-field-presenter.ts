@@ -9275,6 +9275,47 @@ void main() {
         solidInterior * solidLightingFamily, uMaterialBodyFinish,
         uMaterialLightingVariant
       );
+      // Enhanced metallic bodies share one depth-proven reflection grammar
+      // after their individual pigments and rolled structure are composed.
+      // A cool source-facing crown and a quieter pigment-biased opposing pocket
+      // make the six MetallicRigid owners read as reflective mass rather than
+      // patterned panels. This is B-only RGB arithmetic over signals already
+      // live in the supported-solid branch; it adds no sample, resource,
+      // support, alpha, material-ID dispatch, or compact true-8x work.
+      if (metallicSurface > 0.5 && uMaterialLightingVariant > 1.5) {
+        float metallicBodyDepth = solidInterior
+          * smoothstep(6.0 / 255.0, 58.0 / 255.0, solidOpticalDepth);
+        float metallicRelief = clamp(
+          solidReliefTone * 255.0 / 7.0, -1.0, 1.0
+        );
+        float metallicFacing = clamp(
+          dot(normal.xy, normalize(vec2(-0.82, -0.57))) * 1.24
+            + metallicRelief * 0.72,
+          -1.0, 1.0
+        );
+        float metallicSourceLobe = pow(
+          max(0.0, dot(normal, normalize(vec3(-0.54, -0.38, 0.86)))), 5.5
+        );
+        float metallicCrown = metallicBodyDepth * min(
+          0.180,
+          metallicSourceLobe * 0.140
+            + max(metallicFacing, 0.0) * 0.120
+            + smoothstep(0.025, 0.22, solidFresnel) * 0.080
+        );
+        float metallicPocket = metallicBodyDepth * min(
+          0.160, max(-metallicFacing, 0.0) * 0.180
+        );
+        vec3 metallicIdentity = vividColor(base, 1.13);
+        vec3 metallicCrownTint = mix(
+          vec3(0.60, 0.80, 1.10), metallicIdentity, 0.54
+        );
+        vec3 metallicPocketAbsorption = vec3(0.24, 0.20, 0.17)
+          + (vec3(1.0) - clamp(metallicIdentity, 0.0, 1.0)) * 0.18;
+        color += (vec3(1.22) - clamp(color, 0.0, 1.22))
+          * metallicCrownTint * metallicCrown;
+        color += solidEnvironment * metallicCrown * 0.35;
+        color *= vec3(1.0) - metallicPocketAbsorption * metallicPocket;
+      }
     }
     // Moving/loose powder stays a deterministic soft grain. The CPU-owned
     // stability field requires persistent low velocity and compatible contact,
@@ -9745,7 +9786,7 @@ void main() {
         && traits < 0.5 && !materialEmissive
         && uSolidOpticalDepth > 0.5 && solidOpticalDepth > 30.0 / 255.0
         && solidInterior > 0.001 && surfaceOnly < 0.5 && halo < 0.5
-        && wall < 0.5 && wallOnly < 0.5 && emissionOnly < 0.5
+        && wallOnly < 0.5 && emissionOnly < 0.5
         && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5
         ? smoothstep(30.0 / 255.0, 78.0 / 255.0, solidOpticalDepth) * solidInterior
         : 0.0;
@@ -9764,6 +9805,7 @@ void main() {
       // on its independently proven Glass path.
       if (glassBodyWeight > 0.0) {
         float glassBodyDepth = glassBodyWeight;
+        float glassWallBacked = step(0.5, wall);
         float glassBodyRelief = clamp(
           solidReliefTone * (255.0 / 6.0), -1.0, 1.0
         );
@@ -9772,19 +9814,41 @@ void main() {
           -1.0, 1.0
         );
         // Beer-like selective absorption makes a thick body clearer and
-        // cooler without reducing its authoritative presentation alpha.
-        color *= vec3(1.0) - vec3(0.090, 0.043, 0.015) * glassBodyDepth;
+        // cooler without reducing its authoritative presentation alpha. A
+        // co-located native wall now receives the same optical body, with a
+        // denser warm-wavelength loss so its checker recedes behind the pane.
+        vec3 glassBodyAbsorption = mix(
+          vec3(0.180, 0.080, 0.020),
+          vec3(0.270, 0.130, 0.040),
+          glassWallBacked
+        );
+        color *= vec3(1.0) - glassBodyAbsorption * glassBodyDepth;
         float glassBodyTransmission = glassBodyDepth * clamp(
           0.48 + (1.0 - solidKey) * 0.22 - max(-glassBodyFacing, 0.0) * 0.12,
           0.34, 0.72
         );
         color = mix(
-          color, color * vec3(0.84, 0.965, 1.075), glassBodyTransmission * 0.42
+          color, color * vec3(0.76, 0.95, 1.14),
+          glassBodyTransmission * mix(0.62, 0.76, glassWallBacked)
         );
+        // Two broad oblique folds turn the transmitted body into a coherent
+        // volume instead of a flat blue rectangle. They are depth-gated RGB
+        // lighting only and therefore cannot fill holes, thicken a pane, or
+        // alter the co-located wall topology.
+        float glassVolumeFold = sin(
+          fieldPosition.x * 0.030 + fieldPosition.y * 0.051
+            + sin(fieldPosition.y * 0.024 - fieldPosition.x * 0.017) * 1.15
+        ) * sin(fieldPosition.x * -0.019 + fieldPosition.y * 0.036 + 1.7);
+        float glassFoldKey = max(glassVolumeFold, 0.0) * glassBodyDepth;
+        float glassFoldPocket = max(-glassVolumeFold, 0.0) * glassBodyDepth;
+        color += (vec3(1.16) - clamp(color, 0.0, 1.16))
+          * vec3(0.24, 0.58, 1.00) * glassFoldKey * 0.120;
+        color *= vec3(1.0) - vec3(0.075, 0.105, 0.135)
+          * glassFoldPocket;
         float glassBodyCrown = glassBodyDepth * min(
-          0.060,
-          max(glassBodyFacing, 0.0) * 0.044
-            + smoothstep(0.018, 0.18, solidFresnel) * 0.026
+          0.085,
+          max(glassBodyFacing, 0.0) * 0.064
+            + smoothstep(0.018, 0.18, solidFresnel) * 0.038
         );
         float glassBodyPocket = glassBodyDepth
           * min(0.036, max(-glassBodyFacing, 0.0) * 0.040);
@@ -12823,7 +12887,16 @@ void main() {
     } else {
       backdropPattern = wallPattern(wall, fieldPosition);
     }
-    premultiplied += wallColor(wall) * backdropPattern * backgroundAlpha * (1.0 - compositeAlpha);
+    vec3 backdropColor = wallColor(wall) * backdropPattern;
+    if (refractedInterior > 0.5 && material == 24.0) {
+      float glassBackdropDepth = smoothstep(
+        30.0 / 255.0, 210.0 / 255.0, solidOpticalDepth
+      );
+      backdropColor *= mix(
+        vec3(1.0), vec3(0.44, 0.68, 0.96), glassBackdropDepth * 0.82
+      );
+    }
+    premultiplied += backdropColor * backgroundAlpha * (1.0 - compositeAlpha);
     compositeAlpha += backgroundAlpha * (1.0 - compositeAlpha);
   }
   // PHOT has its own native map and can share this world cell with pmap matter.
