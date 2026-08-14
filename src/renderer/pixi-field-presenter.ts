@@ -6582,8 +6582,9 @@ void main() {
     // gains yellow-white radiance, a cooler pocket keeps red/orange absorption,
     // and genuinely upward native flow lifts its connected tongue body and
     // exposed shoulder.
-    // This changes RGB only and adds no sample, texture, field, pass, target,
-    // upload, allocation, clock, noise source, or compact true-8x branch.
+    // This changes RGB only and reuses the normal-WebGL material-volume tile;
+    // it adds no field, pass, target, upload, scaled allocation, or compact
+    // true-8x branch.
     if (uFireFlameVfx > 0.5 && uHDRVfx > 0.5 && material == 4.0
       && surfaceOnly < 0.5 && halo < 0.5 && wall < 0.5
       && traits < 0.5 && foreignMatterContact < 0.5
@@ -6598,8 +6599,29 @@ void main() {
       float fireBodyTopology = smoothstep(2.5, 3.5, shape.w);
       float fireBodySupport = fireThermalSupport * cohesiveEnergy
         * smoothstep(0.42, 0.88, core) * fireBodyTopology;
+      // One elongated, upward-advected material-volume lookup gives a broad
+      // flame coherent rolling tongues and translucent hot windows. It is
+      // evaluated only for exact connected Fire in normal WebGL; semantic
+      // support, sparse sparks, alpha and the compact true-8x path are intact.
+      vec2 fireVolumePosition = fieldPosition
+        + vec2(-velocity.x * uTime * 7.0, uTime * 16.0);
+      vec2 fireVolumeUv = vec2(
+        fireVolumePosition.x / 88.0,
+        fireVolumePosition.y / 184.0
+      ) + vec2(0.23, 0.41);
+      vec3 fireVolumeNoise = texture(
+        uMaterialVolumeTexture, fireVolumeUv
+      ).rgb;
+      float fireVolumeRoll = clamp(
+        ((fireVolumeNoise.r - 0.5) * 1.05
+          + (fireVolumeNoise.g - 0.5) * 0.58
+          + (fireVolumeNoise.b - 0.5) * 0.27) * 1.75,
+        -1.0, 1.0
+      );
+      float fireVolumeAperture = smoothstep(-0.34, 0.48, fireVolumeRoll);
       float fireHotCore = fireBodySupport
-        * smoothstep(74.0, 142.0, fireTemperatureByte);
+        * smoothstep(74.0, 142.0, fireTemperatureByte)
+        * mix(0.58, 1.34, fireVolumeAperture);
       float fireCoolPocket = fireBodySupport
         * (1.0 - smoothstep(56.0, 88.0, fireTemperatureByte));
       // Let the established HDR thermal tail perform the one authoritative
@@ -6610,10 +6632,17 @@ void main() {
         smoothstep(0.18, 0.92, heat)
       );
       float fireBodyGlow = fireBodySupport
-        * smoothstep(48.0, 88.0, fireTemperatureByte);
+        * smoothstep(48.0, 88.0, fireTemperatureByte)
+        * mix(0.76, 1.24, fireVolumeAperture);
       color += (vec3(1.18) - clamp(color, 0.0, 1.18))
         * fireThermalColor * (fireBodyGlow * 0.045 + fireHotCore * 0.34);
-      color *= vec3(1.0) - vec3(0.018, 0.050, 0.092) * fireCoolPocket;
+      color *= vec3(1.0) - vec3(0.018, 0.050, 0.092)
+        * fireCoolPocket * mix(1.18, 0.72, fireVolumeAperture);
+      color *= vec3(1.0) - vec3(0.020, 0.050, 0.092)
+        * fireBodySupport * max(-fireVolumeRoll, 0.0) * 0.90;
+      color += (vec3(1.22) - clamp(color, 0.0, 1.22))
+        * vec3(1.00, 0.62, 0.22) * fireBodySupport
+        * max(fireVolumeRoll, 0.0) * 0.18;
 
       float fireUpwardFlow = smoothstep(0.14, 0.72, -velocity.y);
       float fireFlowFacing = max(
@@ -6623,7 +6652,9 @@ void main() {
         ),
         max(edge * 0.30, core * 0.72)
       );
-      float fireTonguePattern = smoothstep(-0.50, 0.72, flowWave);
+      float fireTonguePattern = smoothstep(
+        -0.50, 0.72, flowWave * 0.48 + fireVolumeRoll * 0.72
+      );
       float fireTongueShoulder = fireThermalSupport * cohesiveEnergy * fireBodyTopology
         * fireUpwardFlow * fireFlowFacing * mix(0.55, 1.0, edge)
         * fireTonguePattern * (0.76 + pulse * 0.24);
@@ -6872,8 +6903,9 @@ void main() {
     // atmosphere remains the sole owner of mass, colour mixture, support, and
     // alpha. Coherent E07 flow advects the established broad pattern in the
     // enhanced material look, so a moving cloud reads as living media instead
-    // of a painted static shape. This remains bounded RGB arithmetic: no new
-    // sample, field, target, pass, or output-scale resource.
+    // of a painted static shape. The one shared filtered sample described
+    // below remains the complete added resource: no new field, target, pass,
+    // or output-scale allocation is introduced.
     if (uGasBodyVfx > 0.5) {
       float gasVfxSupport = smoothstep(0.002, 0.050, gasShadeDensity)
         * mix(0.60, 1.0, gasInterior);
@@ -6917,10 +6949,11 @@ void main() {
       // species, and alpha.
       vec2 gasVfxWarp = vec2(gasVfxWaveB, gasVfxWaveC) * 7.5;
       float gasVfxBillow = gasVfxWaveBasis;
+      vec3 gasVfxNoise = vec3(0.5);
       if (gasMaterialVolumeB > 0.5) {
         vec2 gasVfxNoiseUv = (gasBillowPosition + gasVfxWarp * 0.85)
           / 160.0 + vec2(0.17, 0.31);
-        vec3 gasVfxNoise = texture(uMaterialVolumeTexture, gasVfxNoiseUv).rgb;
+        gasVfxNoise = texture(uMaterialVolumeTexture, gasVfxNoiseUv).rgb;
         float gasVfxFbm = ((gasVfxNoise.r - 0.5) * 0.58
           + (gasVfxNoise.g - 0.5) * 0.29
           + (gasVfxNoise.b - 0.5) * 0.13) * 2.0;
@@ -6969,6 +7002,34 @@ void main() {
         * (max(gasVfxBillow, 0.0) * 0.070
           - max(-gasVfxBillow, 0.0) * 0.060) * gasInteriorContrast;
       color *= 1.0 + gasMaterialBillowExposure;
+
+      // Let nearby emissive matter illuminate the participating volume rather
+      // than merely tint its outer particles. The already-filtered shared tile
+      // opens broad windows through the middle of a connected cloud; source
+      // incidence stretches that response toward the lit side. Empty gaps,
+      // sparse particles and the alpha silhouette remain atmosphere-owned.
+      float gasEmitterReach = smoothstep(0.004, 0.34, gasLightReach);
+      float gasEmitterDepth = clamp(atmosphereState.a, 0.0, 1.0);
+      float gasEmitterMiddle = 4.0 * gasEmitterDepth * (1.0 - gasEmitterDepth);
+      float gasEmitterAperture = smoothstep(
+        0.24, 0.78,
+        gasVfxNoise.r * 0.58 + gasVfxNoise.g * 0.29
+          + gasVfxNoise.b * 0.13
+      );
+      float gasEmitterSupport = gasMaterialVolumeB * gasVfxBodySupport
+        * gasEmitterReach * mix(0.56, 1.0, gasEmitterMiddle);
+      float gasEmitterFacing = clamp(
+        0.52 + gasLightIncidence * 0.34 + gasForwardScatter * 1.8,
+        0.42, 1.18
+      );
+      float gasEmitterScatter = gasEmitterSupport * gasEmitterFacing
+        * mix(0.64, 1.22, gasEmitterAperture)
+        * mix(0.070, 0.112, gasFinishProfile.interiorScatter);
+      vec3 gasEmitterTint = vividColor(gasLightColor, 1.10);
+      color += (vec3(1.16) - clamp(color, 0.0, 1.16))
+        * gasEmitterTint * gasEmitterScatter;
+      color *= vec3(1.0) - vec3(0.032, 0.026, 0.020)
+        * gasEmitterSupport * opticalDepth * (1.0 - gasEmitterAperture);
 
       // E15: deepen only the connected atmosphere-owned cores selected by the
       // already propagated gas identity. The existing E04 static billow,
@@ -8681,6 +8742,33 @@ void main() {
         liquidSurfaceDensity, liquidFinishDepth, liquidLightingSlope,
         liquidFinishEligibility, uMaterialBodyFinish, uMaterialLightingVariant
       );
+      // Carry the shared volume beyond the surface normal into the connected
+      // liquid body. Broad positive folds transmit a cool, pigment-aware key;
+      // opposing pockets absorb it. This gives clear liquids internal depth
+      // and caustic variation without blurring or moving their boundary.
+      float liquidMaterialVolumeB = step(1.5, uMaterialLightingVariant);
+      float liquidVolumeBody = liquidMaterialVolumeB
+        * liquidFinishEligibility
+        * smoothstep(0.16, 0.76, liquidFinishDepth);
+      float liquidVolumeFold = clamp(
+        (liquidVolumeNoise.b - 0.5) * 1.12
+          + (liquidVolumeNoise.r - 0.5) * 0.56
+          - (liquidVolumeNoise.g - 0.5) * 0.24,
+        -1.0, 1.0
+      );
+      float liquidVolumeCaustic = smoothstep(
+        0.56, 0.86,
+        liquidVolumeNoise.r * 0.58 + liquidVolumeNoise.b * 0.42
+      ) * (1.0 - smoothstep(0.74, 1.0, liquidFinishDepth));
+      vec3 liquidVolumeBodyTint = mix(
+        vividColor(base, 1.08), vec3(0.42, 0.82, 1.10), 0.42
+      );
+      color += (vec3(1.18) - clamp(color, 0.0, 1.18))
+        * liquidVolumeBodyTint * liquidVolumeBody
+        * (max(liquidVolumeFold, 0.0) * 0.080
+          + liquidVolumeCaustic * 0.050);
+      color *= vec3(1.0) - vec3(0.046, 0.035, 0.026)
+        * liquidVolumeBody * max(-liquidVolumeFold, 0.0);
       // A directional, smoothly varying reflection breaks the old uniform cyan
       // rim into broad highlights. It reuses the liquid normal and shared
       // material tile already sampled above, and remains strongest only on the
@@ -8691,15 +8779,33 @@ void main() {
         0.82
       ));
       vec3 liquidVolumeLight = normalize(vec3(-0.46, -0.66, 0.92));
-      float liquidVolumeReflection = pow(
-        max(0.0, dot(liquidVolumeNormal, liquidVolumeLight)), 7.0
-      ) * liquidMesoSurfaceBand * liquidFinishEligibility
+      float liquidVolumeNdotL = max(
+        0.0, dot(liquidVolumeNormal, liquidVolumeLight)
+      );
+      float liquidVolumeReflectionA = pow(liquidVolumeNdotL, 7.0)
+        * liquidMesoSurfaceBand * liquidFinishEligibility
         * mix(0.72, 1.18, liquidVolumeNoise.b);
+      // Enhanced material lighting narrows the old broad shoulder into a
+      // brighter, spatially varied crest. The filtered volume tile modulates
+      // both width and energy, so a pool catches irregular ribbons of light
+      // instead of one uniformly cyan outline. The mesoscale shell continues
+      // to reject the deep body, leaving transmission and absorption intact.
+      float liquidCrestSharpness = mix(15.0, 9.0, liquidVolumeNoise.b);
+      float liquidVolumeReflectionB = pow(
+        liquidVolumeNdotL, liquidCrestSharpness
+      ) * liquidMesoSurfaceBand * liquidFinishEligibility
+        * mix(0.72, 1.28, liquidVolumeNoise.b);
+      float liquidCrestB = step(1.5, uMaterialLightingVariant);
+      float liquidVolumeReflection = mix(
+        liquidVolumeReflectionA, liquidVolumeReflectionB, liquidCrestB
+      );
+      float liquidVolumeReflectionGain = mix(0.075, 0.090, liquidCrestB);
       vec3 liquidVolumeReflectionTint = mix(
         vec3(0.48, 0.80, 1.10), vividColor(base, 1.06), 0.34
       );
       color += (vec3(1.18) - clamp(color, 0.0, 1.18))
-        * liquidVolumeReflectionTint * liquidVolumeReflection * 0.075;
+        * liquidVolumeReflectionTint * liquidVolumeReflection
+        * liquidVolumeReflectionGain;
     }
   } else {
     float powderVisualCohesion = 0.0;
@@ -9832,9 +9938,9 @@ void main() {
       );
       color += (vec3(1.10) - clamp(color, 0.0, 1.10))
         * powderVolumeKey * max(powderVolumeFold, 0.0)
-        * (0.055 * powderVolumeSupport);
+        * (0.078 * powderVolumeSupport);
       color *= 1.0 - max(-powderVolumeFold, 0.0)
-        * (0.075 * powderVolumeSupport);
+        * (0.102 * powderVolumeSupport);
       // A large, fully settled Smooth body should retain its mineral vocabulary
       // without reading as a dense cell-frequency pepper field at fit view.
       // Leave the existing low-frequency body depth and mesostrata untouched;

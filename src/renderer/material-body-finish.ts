@@ -418,6 +418,19 @@ vec3 applyMaterialAmbientGrounding(
   float interior = smoothstep(0.24, 0.84, clamp(depth, 0.0, 1.0));
   float slopeQuiet = 1.0 - smoothstep(0.018, 0.18, length(slope));
   float cavity = body * interior * mix(0.48, 1.0, slopeQuiet);
+  // A proven Smooth powder body receives a second, broader basin response.
+  // Unlike a contour shadow, this lives in quiet deep heap interiors and
+  // therefore makes valleys/contact mass readable without outlining grains or
+  // erasing fine columns. The caller's body gate already excludes moving,
+  // sparse, Local, Grains, contacted, and unsupported powder.
+  float powderBasin = powder * eligibility
+    * smoothstep(0.68, 0.90, density)
+    * smoothstep(0.58, 0.90, clamp(depth, 0.0, 1.0))
+    * (1.0 - smoothstep(0.028, 0.14, length(slope)));
+  float powderBasinOcclusion = min(
+    6.5 / 255.0,
+    powderBasin * (0.014 + clamp(finishResponse.y, 0.0, 1.0) * 0.012)
+  );
   float transmission = clamp((finishResponse.w - 0.50) / 1.0, 0.0, 1.0);
   float roughness = clamp((finishRoughness - 0.5) / 1.0, 0.0, 1.0);
   float phaseGrounding = composition.ambientGrounding;
@@ -427,7 +440,7 @@ vec3 applyMaterialAmbientGrounding(
   float identityPeak = max(max(color.r, color.g), max(color.b, 0.12));
   vec3 identityTint = clamp(color / identityPeak, 0.0, 1.0);
   vec3 cavityTint = mix(vec3(0.74, 0.80, 0.88), identityTint, 0.34);
-  color *= vec3(1.0) - cavityTint * grounding;
+  color *= vec3(1.0) - cavityTint * (grounding + powderBasinOcclusion);
   return max(color, vec3(0.0));
 }
 

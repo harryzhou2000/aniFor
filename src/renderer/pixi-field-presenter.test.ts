@@ -5162,8 +5162,11 @@ describe('Pixi presenter startup configuration', () => {
     expect(branch).toContain('fireHotCore');
     expect(branch).toContain('fireCoolPocket');
     expect(branch).toContain('fireTongueShoulder');
-    expect(branch).not.toContain('texture(');
-    expect(branch).not.toContain('uTime');
+    expect(branch).toMatch(
+      /vec3 fireVolumeNoise = texture\(\s*uMaterialVolumeTexture, fireVolumeUv\s*\)\.rgb;/,
+    );
+    expect(branch.match(/texture\(/g)).toHaveLength(1);
+    expect(branch).toContain('uTime * 16.0');
     expect(branch).not.toContain('blackbodyColor(');
     expect(branch).not.toContain('gl_FragCoord');
     expect(branch).not.toContain('valueNoise');
@@ -7398,7 +7401,7 @@ describe('Pixi presenter startup configuration', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const normalStart = source.indexOf('const FIELD_FRAGMENT = `');
     const start = source.indexOf('  } else if (energyCore > 0.5) {', normalStart);
-    const end = source.indexOf('  } else if (gasVolume > 0.5) {', start);
+    const end = source.indexOf('// E67: exact Fire receives', start);
     const block = source.slice(start, end);
 
     expect(normalStart).toBeGreaterThan(0);
@@ -9159,7 +9162,7 @@ describe('Pixi presenter startup configuration', () => {
     const source = readFileSync(new URL('./pixi-field-presenter.ts', import.meta.url), 'utf8');
     const normal = source.slice(source.indexOf('const FIELD_FRAGMENT = `'));
     const start = normal.indexOf('float energyCorona = cohesiveEnergy * edge');
-    const end = normal.indexOf('  } else if (gasVolume > 0.5) {', start);
+    const end = normal.indexOf('// E67: exact Fire receives', start);
     const block = normal.slice(start, end);
 
     expect(start).toBeGreaterThan(0);

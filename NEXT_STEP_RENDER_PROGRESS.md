@@ -121,3 +121,66 @@ Status: visually favoured; supersedes the procedural-noise limitation above.
 3. Add broad powder valley/contact occlusion beneath the retained grain layer.
 4. Continue material-family tuning through direct scene comparison; keep CI and
    review evidence subordinate to visible renderer progress.
+
+## 2026-08-14 — connected-material light and volume pass
+
+Status: visually favoured; ready for a visual checkpoint and deployment.
+
+### What changed
+
+- Liquid now carries the shared material-volume texture through the connected
+  body, not only through its surface normal. Broad cool transmission folds,
+  restrained absorptive pockets, and a shallow caustic lane give Water and
+  related liquids readable internal depth while preserving their exact support
+  and curved silhouette.
+- The reflected liquid shell is narrower and brighter in the Volumetric look.
+  Filtered volume variation changes the crest width and energy across a body,
+  avoiding a uniform cyan outline while retaining the deeper transmission.
+- Stable Smooth powder gains a broad basin-occlusion term in deep, quiet heap
+  interiors, plus a stronger slow key/pocket fold. The grain/facet layer is
+  composed afterward and remains legible; Local, square Grains, sparse grains,
+  holes, motion, and fine Clay/Concrete structures do not enter the new layer.
+- Connected Fire uses one vertically stretched, upward-advected sample of the
+  shared volume carrier. Hot windows, cooler pockets, and moving tongue relief
+  now form one flame body rather than a uniformly orange carrier block. Sparse
+  sparks and true 8× remain on their existing paths.
+- Connected gas reuses its existing shared volume sample to scatter nearby
+  emissive colour through broad interior apertures. Optical depth closes the
+  opposing pockets, so lit Smoke/FOG read as participating media rather than
+  particles with a flat colour overlay.
+
+### Visual decision
+
+- Keep the liquid pass. In the production showcase, the large Water body now
+  has clearly readable internal blue/cyan folds and depth variation without
+  blurring the glass contact, Oil boundary, or outer contour.
+- Keep the powder pass. Sand and Clay retain their granular colour vocabulary,
+  while the pile reads as a slower illuminated mass with a more grounded basin.
+- Keep the gas and Fire volume carriers. The isolated lit-gas scene retains
+  holes and sparse gaps while showing broad interior shade; the Fire scene now
+  exposes coherent warm lobes and cool pockets which will become more organic
+  as the simulation supplies a naturally changing flame silhouette.
+
+### Lightweight checks used
+
+- The production bundle builds and closes all 19 runtime resources.
+- A real production WebGL/HDR 2× showcase compiled and captured with zero
+  browser errors. Direct comparison favoured the stronger material-volume
+  image over the previous checkpoint.
+- The isolated lit-gas scene rendered at 2× and kept the compact true-8× path
+  separate and operational. No Chrome process remained afterward.
+- The legacy Fire response envelope rejects the intentionally larger colour and
+  spatial response. Its off/on images were retained and judged directly; that
+  historical numeric calibration is not a visual acceptance gate.
+
+### Next visual work
+
+1. Move the liquid body/thickness response into a reusable screen-space fluid
+   stage so refraction and caustic projection can respond to the scene behind
+   the material rather than only to analytic colour.
+2. Add source-direction-aware low-resolution gas shafts and coloured extinction
+   using the existing long-range emission carrier.
+3. Add broad contact shadows between unlike settled bulk materials without
+   drawing separator lines or suppressing the retained grain layer.
+4. Prototype the same material-volume vocabulary in the true-8× compositor or
+   a bounded half-resolution auxiliary pass, keeping automatic fallback intact.
