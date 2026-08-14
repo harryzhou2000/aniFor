@@ -1001,3 +1001,46 @@ Status: retained normal-WebGL material-lighting overhaul.
 2. Give PLNT a genuinely directional broad canopy turn; do not revive the
    rejected macro-brightness grade.
 3. Integrate source light and flow-aligned billows in an irregular gas plume.
+
+## 2026-08-15 — separated gas volume lobes and advected source light
+
+Status: retained normal-WebGL participating-gas refinement.
+
+### What changed
+
+- The broad participating-gas phase now has disjoint positive and negative
+  lobes. Neutral areas no longer receive a simultaneous key and pocket, so a
+  connected cloud turns from one lit shoulder into an opposing recessed belly
+  instead of filling toward a padded midtone.
+- The long-range source-light volume window now travels in the same coherent
+  velocity frame as the gas billow. Still or incoherent gas remains
+  world-anchored; moving gas carries its illuminated folds through the plume.
+- Both changes reuse the existing atmosphere, motion, emission-transport, and
+  smooth volume carriers. Gas support, alpha, holes, sparse particles, Canvas,
+  and compact true 8× presentation are unchanged.
+
+### Visual decision
+
+- Keep the separated gas lobes. CleanGas gains a clearer broad interior roll,
+  while Smoke remains soft and connected rather than breaking into blobs.
+- Keep the advected source-light frame. The moving-gas scene retains soft
+  cloud structure and coherent source-coloured windows without a stationary
+  texture overlay.
+
+### Lightweight checks used
+
+- `npm run build` completes and closes all 19 production resources.
+- The static gas comparison is
+  `/tmp/anifor-gas-participating-compare.png` (before left, retained right).
+- The moving source-lit frame is
+  `/tmp/anifor-gas-source-motion-after.png`.
+- An independent gas-focused visual pass returned KEEP. No project-owned
+  Chrome process remained after capture.
+
+### Next visual work
+
+1. Replace PLNT's flat canopy read with a directional broad crown/pocket while
+   preserving the existing lamina, pigment, and lifecycle detail.
+2. Exercise source-lit gas in a less rectangular, naturally evolving plume.
+3. Continue broader translucent and metallic family lighting before isolated
+   element decoration.

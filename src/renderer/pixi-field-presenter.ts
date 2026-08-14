@@ -7103,9 +7103,9 @@ void main() {
         -1.0, 1.0
       );
       float gasParticipatingKey = gasParticipatingSupport
-        * smoothstep(-0.28, 0.72, gasParticipatingPhase) * 0.300;
+        * smoothstep(0.04, 0.72, gasParticipatingPhase) * 0.360;
       float gasParticipatingPocket = gasParticipatingSupport
-        * smoothstep(-0.20, 0.76, -gasParticipatingPhase) * 0.220;
+        * smoothstep(0.04, 0.76, -gasParticipatingPhase) * 0.280;
       vec3 gasParticipatingTint = mix(
         vec3(0.34, 0.56, 1.00), vividColor(gasBase, 1.10), 0.46
       );
@@ -12740,9 +12740,29 @@ void main() {
       && longRangeTransportEmission.a > 0.0005) {
       vec2 shaftAxis = longRangeTransportDirection;
       vec2 shaftAcross = vec2(-shaftAxis.y, shaftAxis.x);
+      // Carry the measured source-light shaft in the same coherent motion
+      // frame as the connected billow. A still or incoherent gas keeps the
+      // world-anchored volume exactly; moving gas transports the illuminated
+      // windows through its body instead of sliding underneath a static beam.
+      vec2 shaftBillowPosition = fieldPosition;
+      if (uGasMotionVfx > 0.5) {
+        vec2 shaftMotionBytes = floor(
+          gasStyleState.gb * 255.0 + vec2(0.5)
+        ) - vec2(128.0);
+        float shaftMotionSpeed = length(shaftMotionBytes);
+        float shaftMotionCoherence = smoothstep(0.45, 0.75, gasStyleState.a);
+        if (shaftMotionSpeed > 0.5 && shaftMotionCoherence > 0.001) {
+          vec2 shaftMotionDirection = shaftMotionBytes / shaftMotionSpeed;
+          float shaftMotionStrength = smoothstep(
+            6.0, 30.0, shaftMotionSpeed
+          ) * shaftMotionCoherence;
+          shaftBillowPosition -= shaftMotionDirection * uTime
+            * (12.0 * shaftMotionStrength);
+        }
+      }
       vec2 shaftUv = vec2(
-        dot(fieldPosition, shaftAxis) / 264.0,
-        dot(fieldPosition, shaftAcross) / 120.0
+        dot(shaftBillowPosition, shaftAxis) / 264.0,
+        dot(shaftBillowPosition, shaftAcross) / 120.0
       ) + vec2(0.21, 0.37);
       vec3 shaftVolume = texture(uMaterialVolumeTexture, shaftUv).rgb;
       float shaftFold = clamp(
