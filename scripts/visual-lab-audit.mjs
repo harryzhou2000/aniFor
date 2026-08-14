@@ -2004,15 +2004,26 @@ async function readFixtureActivationPresentationTiming(cdp, label, ticket) {
   assert(timing !== null && typeof timing === 'object' && !Array.isArray(timing),
     `${label} fixture activation presentation timing ${ticket} is unavailable`);
   const keys = Object.keys(timing);
-  assert(keys.length === 5
+  const split = timing.fieldPreparation;
+  const splitKeys = split !== null && typeof split === 'object' && !Array.isArray(split)
+    ? Object.keys(split) : [];
+  assert(keys.length === 6
     && keys[0] === 'schema' && keys[1] === 'ticket' && keys[2] === 'submission'
     && keys[3] === 'fieldPreparationMs' && keys[4] === 'renderSubmissionMs'
-    && timing.schema === 'anifor.renderer.fixture-activation-presentation-timing/v1'
+    && keys[5] === 'fieldPreparation'
+    && timing.schema === 'anifor.renderer.fixture-activation-presentation-timing/v2'
     && timing.ticket === ticket
     && Number.isSafeInteger(timing.submission) && timing.submission > 0
     && Number.isFinite(timing.fieldPreparationMs) && timing.fieldPreparationMs >= 0
     && Number.isFinite(timing.renderSubmissionMs) && timing.renderSubmissionMs >= 0,
   `${label} fixture activation presentation timing ${ticket} is malformed`);
+  assert(splitKeys.length === 5
+    && ['semanticBoundaryMs', 'powderSolidMs', 'volumeFieldsMs',
+      'textureUpdateCallsMs', 'otherMs'].every((key, index) => splitKeys[index] === key)
+    && splitKeys.every((key) => Number.isFinite(split[key]) && split[key] >= 0)
+    && Math.abs(splitKeys.reduce((sum, key) => sum + split[key], 0)
+      - timing.fieldPreparationMs) <= 0.25,
+  `${label} fixture activation field-preparation timing ${ticket} is malformed`);
   return timing;
 }
 

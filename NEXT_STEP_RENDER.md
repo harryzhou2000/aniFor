@@ -8336,6 +8336,26 @@ powder/solid-derived fields, volume fields, texture-update calls, and other.
 Keep Pixi invalidation calls distinct from actual GPU transfer, which can occur
 later inside `renderApplication()`.
 
+The five-lane diagnostic is implemented locally as
+`fixture-activation-presentation-timing/v2`. One transition recorder assigns
+every activation-owned CPU interval exclusively to semantic/boundary,
+powder/solid, volume fields, texture-update calls, or other, and the validator
+requires their exact sum to match `fieldPreparationMs`. The timer surrounds
+both ordinary and drained volume paths; it does not mislabel Pixi invalidation
+as a GPU upload. The record remains bounded, optional, receipt/submission-bound,
+and outside all frozen visual and package identities.
+
+A fresh SwiftShader RenderOptics review at
+`.artifacts/visual-lab-reviews/render-optics-6cdea729-4384-453a-97ed-cd410717efb4`
+passed current region evidence, portable verification, and strict teardown with
+the same result and PNG hashes as the preceding local checkpoint. Its 357.6 ms
+field preparation split into approximately 182.0 ms volume fields, 116.9 ms
+powder/solid-derived fields, 55.0 ms semantic/boundary, 3.6 ms texture-update
+calls, and 0.1 ms other; synchronous render submission remained 1.4 ms. The
+next optimization target is therefore reusable activation-owned volume-field
+convergence, followed by powder/solid derivation. Do not optimize texture
+invalidation based on this evidence.
+
 ## Deferred long-term visual roadmap
 
 The older phase plan below is design background only. It does not override the

@@ -1397,14 +1397,25 @@ const readCandidateReport = async (candidateDirectory, recipe, {
       const timing = report.readinessFixtureActivationPresentationTiming;
       const fields = timing !== null && typeof timing === 'object' && !Array.isArray(timing)
         ? Reflect.ownKeys(timing) : [];
+      const split = timing?.fieldPreparation;
+      const splitFields = split !== null && typeof split === 'object' && !Array.isArray(split)
+        ? Reflect.ownKeys(split) : [];
       if (!isDeepStrictEqual(fields, [
         'schema', 'ticket', 'submission', 'fieldPreparationMs', 'renderSubmissionMs',
+        'fieldPreparation',
       ])
-        || timing.schema !== 'anifor.renderer.fixture-activation-presentation-timing/v1'
+        || timing.schema !== 'anifor.renderer.fixture-activation-presentation-timing/v2'
         || !Number.isSafeInteger(timing.ticket) || timing.ticket <= 0
         || !Number.isSafeInteger(timing.submission) || timing.submission <= 0
         || !Number.isFinite(timing.fieldPreparationMs) || timing.fieldPreparationMs < 0
-        || !Number.isFinite(timing.renderSubmissionMs) || timing.renderSubmissionMs < 0) {
+        || !Number.isFinite(timing.renderSubmissionMs) || timing.renderSubmissionMs < 0
+        || !isDeepStrictEqual(splitFields, [
+          'semanticBoundaryMs', 'powderSolidMs', 'volumeFieldsMs',
+          'textureUpdateCallsMs', 'otherMs',
+        ])
+        || splitFields.some((field) => !Number.isFinite(split[field]) || split[field] < 0)
+        || Math.abs(splitFields.reduce((sum, field) => sum + split[field], 0)
+          - timing.fieldPreparationMs) > 0.25) {
         throw new Error('fixture-activation presentation timing is malformed');
       }
       fixtureActivationPresentationTiming = Object.freeze({
@@ -1413,6 +1424,7 @@ const readCandidateReport = async (candidateDirectory, recipe, {
         submission: timing.submission,
         fieldPreparationMs: timing.fieldPreparationMs,
         renderSubmissionMs: timing.renderSubmissionMs,
+        fieldPreparation: Object.freeze({ ...timing.fieldPreparation }),
       });
     }
     if (typeof report.url !== 'string') throw new Error('capture URL must be a string');

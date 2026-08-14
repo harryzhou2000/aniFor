@@ -224,11 +224,18 @@ const fixtureActivationCaptureSubphaseRecord = () => {
 };
 
 const fixtureActivationPresentationTimingRecord = () => ({
-  schema: 'anifor.renderer.fixture-activation-presentation-timing/v1',
+  schema: 'anifor.renderer.fixture-activation-presentation-timing/v2',
   ticket: 1,
   submission: 9,
   fieldPreparationMs: 12.5,
   renderSubmissionMs: 345.25,
+  fieldPreparation: {
+    semanticBoundaryMs: 3,
+    powderSolidMs: 4,
+    volumeFieldsMs: 2,
+    textureUpdateCallsMs: 1,
+    otherMs: 2.5,
+  },
 });
 
 const crc32 = (bytes) => {

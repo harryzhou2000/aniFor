@@ -163,7 +163,7 @@ export interface WebGLPresentationTiming {
 }
 
 export const FIXTURE_ACTIVATION_PRESENTATION_TIMING_SCHEMA =
-  'anifor.renderer.fixture-activation-presentation-timing/v1' as const;
+  'anifor.renderer.fixture-activation-presentation-timing/v2' as const;
 
 /** Diagnostic-only CPU split for one activation-owned populated submission. */
 export interface FixtureActivationPresentationTiming {
@@ -172,6 +172,44 @@ export interface FixtureActivationPresentationTiming {
   readonly submission: number;
   readonly fieldPreparationMs: number;
   readonly renderSubmissionMs: number;
+  readonly fieldPreparation: FixtureActivationFieldPreparationTiming;
+}
+
+export interface FixtureActivationFieldPreparationTiming {
+  readonly semanticBoundaryMs: number;
+  readonly powderSolidMs: number;
+  readonly volumeFieldsMs: number;
+  readonly textureUpdateCallsMs: number;
+  readonly otherMs: number;
+}
+
+type FixtureActivationFieldPreparationLane = keyof FixtureActivationFieldPreparationTiming;
+
+class FixtureActivationFieldPreparationTimer {
+  private lane: FixtureActivationFieldPreparationLane = 'otherMs';
+  private lastAt: number;
+  private readonly totals: Record<FixtureActivationFieldPreparationLane, number> = {
+    semanticBoundaryMs: 0,
+    powderSolidMs: 0,
+    volumeFieldsMs: 0,
+    textureUpdateCallsMs: 0,
+    otherMs: 0,
+  };
+
+  constructor(startedAt: number) { this.lastAt = startedAt; }
+
+  enter(lane: FixtureActivationFieldPreparationLane): void {
+    const now = performance.now();
+    this.totals[this.lane] += Math.max(0, now - this.lastAt);
+    this.lastAt = now;
+    this.lane = lane;
+  }
+
+  finish(): { readonly endedAt: number; readonly timing: FixtureActivationFieldPreparationTiming } {
+    const endedAt = performance.now();
+    this.totals[this.lane] += Math.max(0, endedAt - this.lastAt);
+    return { endedAt, timing: Object.freeze({ ...this.totals }) };
+  }
 }
 
 export const WEBGL_COMPLETED_FRAME_RECEIPT_SCHEMA =
@@ -15032,8 +15070,19 @@ export class PixiFieldPresenter {
   ): void {
     const activationOwner = this.fixtureActivationSubmissionOwner;
     const activationTimingStartedAt = activationOwner > 0 ? performance.now() : 0;
+    const preparationTimer = activationOwner > 0
+      ? new FixtureActivationFieldPreparationTimer(activationTimingStartedAt) : undefined;
+    const textureUpdate = (
+      restore: FixtureActivationFieldPreparationLane,
+      update: () => void,
+    ): void => {
+      preparationTimer?.enter('textureUpdateCallsMs');
+      update();
+      preparationTimer?.enter(restore);
+    };
     const dynamicOwner = refreshDynamicFields
       && this.fixtureActivationDynamicOwner === activationOwner ? activationOwner : 0;
+    preparationTimer?.enter('semanticBoundaryMs');
     if (refreshDynamicFields) {
       this.chunks.markAll();
       if (this.fixtureActivationFullSemanticRepackOwner === activationOwner) {
@@ -15083,7 +15132,7 @@ export class PixiFieldPresenter {
       ) || boundaryTextureDirty;
     }
     if (rectangles.length) {
-      this.fieldSource.update();
+      textureUpdate('semanticBoundaryMs', () => this.fieldSource.update());
       boundaryTextureDirty = true;
     }
     let wallTextureDirty = rectangles.length > 0 && presentationState !== undefined;
@@ -15108,7 +15157,9 @@ export class PixiFieldPresenter {
       this.nativeWallsHydrated = true;
     }
     this.uniforms.uniforms.uNativeWallsActive = this.nativeWallsActive ? 1 : 0;
-    if (photonTextureDirty) this.photonStateSource.update();
+    if (photonTextureDirty) {
+      textureUpdate('semanticBoundaryMs', () => this.photonStateSource.update());
+    }
     // Native PHOT can move without a pmap material mutation, so a dynamic
     // refresh is authoritative for removal as well as arrival. Avoid a second
     // full-world JS scan on every ordinary particle dirty frame.
@@ -15120,6 +15171,7 @@ export class PixiFieldPresenter {
       this.photonStateHydrated = true;
     }
     this.uniforms.uniforms.uPhotonActive = this.photonStateActive ? 1 : 0;
+    preparationTimer?.enter('powderSolidMs');
     if (this.powderSurfaceDirty
       && scheduleTime - this.lastPowderSurfaceRefresh >= POWDER_SURFACE_REFRESH_INTERVAL) {
       const changed = this.fieldSet.powderSurface.update(
@@ -15132,12 +15184,12 @@ export class PixiFieldPresenter {
       this.lastPowderSurfaceRefresh = scheduleTime;
       this.uniforms.uniforms.uPowderSurfaceActive = this.fieldSet.powderSurface.hasSurface ? 1 : 0;
       if (changed) {
-        this.powderSurfaceSource.update();
+        textureUpdate('powderSolidMs', () => this.powderSurfaceSource.update());
         packExteriorAir(this.wallBytes, this.fieldSet.powderSurface.exteriorAirBytes);
         wallTextureDirty = true;
       }
     }
-    if (wallTextureDirty) this.wallSource.update();
+    if (wallTextureDirty) textureUpdate('powderSolidMs', () => this.wallSource.update());
     if (this.solidOpticalDepthDirty
       && scheduleTime - this.lastSolidOpticalDepthRefresh >= POWDER_SURFACE_REFRESH_INTERVAL) {
       writeSolidOpticalDepth(
@@ -15151,6 +15203,7 @@ export class PixiFieldPresenter {
       this.lastSolidOpticalDepthRefresh = scheduleTime;
       boundaryTextureDirty = true;
     }
+    preparationTimer?.enter('volumeFieldsMs');
     const gasMotionActive = Boolean(velocities)
       && (this.uniforms.uniforms.uGasMotionVfx as number) > 0.5;
     // A promoted presenter can inherit a clean atmosphere field produced by
@@ -15173,6 +15226,7 @@ export class PixiFieldPresenter {
     if (drainOwnedVolumeFields) {
       boundaryTextureDirty = this.drainFixtureActivationVolumeFields(
         activationOwner, materials, scheduleTime, walls, velocities, temperatures, gasMotionActive,
+        preparationTimer,
       ) || boundaryTextureDirty;
     } else {
       const volumeField = this.fieldSet.updateNext(
@@ -15187,25 +15241,35 @@ export class PixiFieldPresenter {
       }
       {
         const suspensionChanged = this.fieldSet.refreshSuspension(materials, scheduleTime, walls);
-        if (suspensionChanged) this.suspensionSource.update();
+        if (suspensionChanged) {
+          textureUpdate('volumeFieldsMs', () => this.suspensionSource.update());
+        }
         // A promoted presenter may share a field that Canvas already refreshed.
         // Hydrate state even when no rebuild is due, or a paused scene can leave
         // the pre-populated suspension texture permanently disabled.
         this.uniforms.uniforms.uSuspensionActive = this.fieldSet.suspension.hasSuspension ? 1 : 0;
       }
       if (volumeField === 'atmosphere') {
-        this.atmosphereSource.update();
-        this.atmosphereStyleSource.update();
+        textureUpdate('volumeFieldsMs', () => {
+          this.atmosphereSource.update();
+          this.atmosphereStyleSource.update();
+        });
         if (gasMotionActive) this.atmosphereMotionHydrated = true;
       } else if (volumeField === 'liquid') {
-        this.liquidSource.update();
-        this.liquidOpticsSource.update();
+        textureUpdate('volumeFieldsMs', () => {
+          this.liquidSource.update();
+          this.liquidOpticsSource.update();
+        });
       } else if (volumeField === 'emission') {
-        this.emissionSource.update();
-        this.longRangeEmissionSource?.update();
+        textureUpdate('volumeFieldsMs', () => {
+          this.emissionSource.update();
+          this.longRangeEmissionSource?.update();
+        });
       }
     }
-    if (boundaryTextureDirty) this.boundaryStabilitySource.update();
+    if (boundaryTextureDirty) {
+      textureUpdate('otherMs', () => this.boundaryStabilitySource.update());
+    } else preparationTimer?.enter('otherMs');
     this.uniforms.uniforms.uTime = visualTime * 0.001;
     // A newly authored supported powder body needs several CPU stability
     // passes before it reaches the established Smooth boundary. At true 8x,
@@ -15217,7 +15281,8 @@ export class PixiFieldPresenter {
     // retain their visible temporal settling cadence.
     if (this.outputScale === 8 && this.boundaryEvolutionPending
       && !hasExternalPresentationMutation) return;
-    const renderSubmissionStartedAt = activationOwner > 0 ? performance.now() : 0;
+    const preparation = preparationTimer?.finish();
+    const renderSubmissionStartedAt = preparation?.endedAt ?? 0;
     this.renderApplication();
     const timings = this.fixtureActivationPresentationTimings;
     if (activationOwner > 0
@@ -15229,6 +15294,13 @@ export class PixiFieldPresenter {
         submission: this.presentationSubmission,
         fieldPreparationMs: Math.max(0, renderSubmissionStartedAt - activationTimingStartedAt),
         renderSubmissionMs: Math.max(0, performance.now() - renderSubmissionStartedAt),
+        fieldPreparation: preparation?.timing ?? Object.freeze({
+          semanticBoundaryMs: 0,
+          powderSolidMs: 0,
+          volumeFieldsMs: 0,
+          textureUpdateCallsMs: 0,
+          otherMs: 0,
+        }),
       });
       const history = this.fixtureActivationPresentationTimings ??= new Map();
       history.set(activationOwner, timing);
@@ -15249,14 +15321,17 @@ export class PixiFieldPresenter {
     velocities: Int8Array | undefined,
     temperatures: Uint16Array | undefined,
     gasMotionActive: boolean,
+    preparationTimer?: FixtureActivationFieldPreparationTimer,
   ): boolean {
     const lanes = this.fieldSet.drainActivationOwned(
       owner, materials, scheduleTime, walls, velocities, temperatures,
     );
     let liquidDepthChanged = false;
     if (lanes & RenderFieldDirtyLane.Atmosphere) {
+      preparationTimer?.enter('textureUpdateCallsMs');
       this.atmosphereSource.update();
       this.atmosphereStyleSource.update();
+      preparationTimer?.enter('volumeFieldsMs');
       if (gasMotionActive) this.atmosphereMotionHydrated = true;
     }
     if (lanes & RenderFieldDirtyLane.Liquid) {
@@ -15265,8 +15340,10 @@ export class PixiFieldPresenter {
       );
       this.liquidOpticalDepthHydrated = true;
       liquidDepthChanged = true;
+      preparationTimer?.enter('textureUpdateCallsMs');
       this.liquidSource.update();
       this.liquidOpticsSource.update();
+      preparationTimer?.enter('volumeFieldsMs');
     } else if (!this.liquidOpticalDepthHydrated) {
       // Preserve presenter-promotion hydration even when this activation did
       // not own a liquid rebuild.
@@ -15277,10 +15354,16 @@ export class PixiFieldPresenter {
       liquidDepthChanged = true;
     }
     if (lanes & RenderFieldDirtyLane.Emission) {
+      preparationTimer?.enter('textureUpdateCallsMs');
       this.emissionSource.update();
       this.longRangeEmissionSource?.update();
+      preparationTimer?.enter('volumeFieldsMs');
     }
-    if (lanes & RenderFieldDirtyLane.Suspension) this.suspensionSource.update();
+    if (lanes & RenderFieldDirtyLane.Suspension) {
+      preparationTimer?.enter('textureUpdateCallsMs');
+      this.suspensionSource.update();
+      preparationTimer?.enter('volumeFieldsMs');
+    }
     this.uniforms.uniforms.uSuspensionActive = this.fieldSet.suspension.hasSuspension ? 1 : 0;
     return liquidDepthChanged;
   }
