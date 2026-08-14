@@ -424,12 +424,12 @@ vec3 applyMaterialAmbientGrounding(
   // erasing fine columns. The caller's body gate already excludes moving,
   // sparse, Local, Grains, contacted, and unsupported powder.
   float powderBasin = powder * eligibility
-    * smoothstep(0.68, 0.90, density)
-    * smoothstep(0.58, 0.90, clamp(depth, 0.0, 1.0))
-    * (1.0 - smoothstep(0.028, 0.14, length(slope)));
+    * smoothstep(0.54, 0.84, density)
+    * smoothstep(0.20, 0.70, clamp(depth, 0.0, 1.0))
+    * (1.0 - smoothstep(0.028, 0.18, length(slope)));
   float powderBasinOcclusion = min(
-    6.5 / 255.0,
-    powderBasin * (0.014 + clamp(finishResponse.y, 0.0, 1.0) * 0.012)
+    18.0 / 255.0,
+    powderBasin * (0.035 + clamp(finishResponse.y, 0.0, 1.0) * 0.030)
   );
   float transmission = clamp((finishResponse.w - 0.50) / 1.0, 0.0, 1.0);
   float roughness = clamp((finishRoughness - 0.5) / 1.0, 0.0, 1.0);
@@ -437,10 +437,25 @@ vec3 applyMaterialAmbientGrounding(
   float grounding = cavity * phaseGrounding
     * mix(1.08, 0.62, transmission) * mix(0.88, 1.10, roughness)
     * (0.026 + finishResponse.y * 0.032);
+  // Bulk powder and supported solid need a broader mass cue than the small
+  // cavity term alone. Keep it on dense, optically deep, quiet interiors so a
+  // pile gains a settled base and a slab gains weight without drawing a dark
+  // contour, filling a hole, or swallowing a thin column. Local/Grains and
+  // compact true-8x never enter this helper through their existing call gates.
+  float powderOrSolid = max(powder, solid);
+  float broadMass = powderOrSolid * body
+    * smoothstep(0.36, 0.80, density)
+    * smoothstep(0.12, 0.62, clamp(depth, 0.0, 1.0))
+    * mix(0.48, 1.0, slopeQuiet);
+  float broadMassOcclusion = broadMass * phaseGrounding
+    * mix(0.92, 0.58, transmission)
+    * (0.050 + roughness * 0.045);
   float identityPeak = max(max(color.r, color.g), max(color.b, 0.12));
   vec3 identityTint = clamp(color / identityPeak, 0.0, 1.0);
   vec3 cavityTint = mix(vec3(0.74, 0.80, 0.88), identityTint, 0.34);
-  color *= vec3(1.0) - cavityTint * (grounding + powderBasinOcclusion);
+  vec3 massTint = mix(vec3(0.68, 0.74, 0.82), identityTint, 0.44);
+  color *= vec3(1.0) - cavityTint * (grounding + powderBasinOcclusion)
+    - massTint * broadMassOcclusion;
   return max(color, vec3(0.0));
 }
 

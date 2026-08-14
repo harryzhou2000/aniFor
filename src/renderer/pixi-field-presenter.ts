@@ -8949,6 +8949,34 @@ void main() {
       color += (vec3(1.18) - clamp(color, 0.0, 1.18))
         * liquidVolumeReflectionTint * liquidVolumeReflection
         * liquidVolumeReflectionGain;
+      // Viscous liquids share a softer transmitted-light grammar with Wax.
+      // Reuse the connected body, material-volume fold, and palette pigment
+      // already composed above: a warm middle and brown-grey opposing pocket
+      // make MWAX/GEL-like matter feel thick rather than merely matte. The
+      // RenderOptics class owns admission, so no exact-material branch, sample,
+      // alpha, support, contact, or simulation path is added.
+      if (viscousLiquid > 0.5 && liquidMaterialVolumeB > 0.5) {
+        float viscousTransmissionBody = liquidFinishEligibility
+          * smoothstep(0.16, 0.78, liquidFinishDepth);
+        float viscousTransmissionFacing = clamp(
+          liquidVolumeFold * 0.78
+            + (liquidVolumeNdotL - 0.48) * 0.72,
+          -1.0, 1.0
+        );
+        float viscousTransmissionKey = viscousTransmissionBody
+          * (0.045 + max(viscousTransmissionFacing, 0.0) * 0.180);
+        float viscousTransmissionPocket = viscousTransmissionBody
+          * (0.026 + max(-viscousTransmissionFacing, 0.0) * 0.110);
+        vec3 viscousTransmissionIdentity = vividColor(base, 1.08);
+        vec3 viscousTransmissionTint = mix(
+          viscousTransmissionIdentity, vec3(1.08, 0.68, 0.30), 0.46
+        );
+        color += (vec3(1.16) - clamp(color, 0.0, 1.16))
+          * viscousTransmissionTint * viscousTransmissionKey;
+        color *= vec3(1.0) - mix(
+          vec3(0.32, 0.25, 0.20), viscousTransmissionIdentity, 0.16
+        ) * viscousTransmissionPocket;
+      }
     }
   } else {
     float powderVisualCohesion = 0.0;
@@ -12341,6 +12369,38 @@ void main() {
       color += (vec3(1.14) - clamp(color, 0.0, 1.14))
         * organicSubsurfaceTint * organicSubsurfaceBand
         * organicSubsurfaceWrap * organicSubsurfaceGain * organicHydrationGain;
+      // Carry the shallow E11 wrap into a softer shell-to-core body in the
+      // Volumetric look. A broad wax/leaf fold transmits a warm pigment-aware
+      // key and retains an opposing absorptive pocket, separating organic mass
+      // from crystalline prism and metallic reflection. Existing exact owner,
+      // hydration, optical-depth, support, and topology proofs remain the only
+      // admission path; this changes RGB only.
+      float organicBodyB = step(1.5, uMaterialLightingVariant);
+      float organicBodyDepth = organicBodyB * organicSubsurfaceEligible
+        * solidInterior
+        * smoothstep(12.0 / 255.0, 38.0 / 255.0, solidOpticalDepth);
+      float organicBodyFold = sin(
+        fieldPosition.x * 0.022 + fieldPosition.y * 0.038
+          + sin(fieldPosition.y * 0.016 - fieldPosition.x * 0.021 + 0.8) * 1.18
+      ) * sin(fieldPosition.x * -0.013 + fieldPosition.y * 0.029 + 2.5);
+      float organicBodyFacing = clamp(
+        (diffuse - 0.70) * 1.10 + organicBodyFold * 0.72,
+        -1.0, 1.0
+      );
+      float organicBodyKey = organicBodyDepth
+        * (0.060 + max(organicBodyFacing, 0.0) * 0.235);
+      float organicBodyPocket = organicBodyDepth
+        * (0.035 + max(-organicBodyFacing, 0.0) * 0.145);
+      vec3 organicBodyIdentity = vividColor(base, 1.10);
+      vec3 organicBodyKeyTint = organicWaxEligible > 0.5
+        ? mix(organicBodyIdentity, vec3(1.16, 0.68, 0.24), 0.62)
+        : mix(organicBodyIdentity, vec3(0.62, 1.02, 0.48), 0.48);
+      vec3 organicBodyPocketTint = organicWaxEligible > 0.5
+        ? vec3(0.36, 0.25, 0.18) : vec3(0.26, 0.36, 0.24);
+      color += (vec3(1.18) - clamp(color, 0.0, 1.18))
+        * organicBodyKeyTint * organicBodyKey * organicHydrationGain;
+      color *= vec3(1.0)
+        - organicBodyPocketTint * organicBodyPocket;
     }
   }
   if (uHDRVfx > 0.5) {

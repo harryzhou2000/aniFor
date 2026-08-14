@@ -598,3 +598,56 @@ Status: visually accepted normal-WebGL material-class increment.
    from the new crystalline prism and metallic crown.
 3. Translate the established crown/pocket/volume vocabulary into a cheaper
    true-8× grammar while retaining Smooth/Local/Grains style separation.
+
+## 2026-08-14 — wax transmission and broad material grounding
+
+Status: visually accepted normal-WebGL material-class checkpoint.
+
+### What changed
+
+- Solid Wax and hydrated Plant now carry a soft shell-to-core transmitted-light
+  response beyond their existing shallow subsurface rim. A warm, pigment-aware
+  key and restrained opposing absorption give deep organic matter an internal
+  glow distinct from crystalline Ice and reflective metal.
+- Thick viscous liquids reuse the connected liquid-volume fold for a related
+  warm transmission response. This covers MWAX/GEL-like optics as a class and
+  does not add exact-material texture branches or alter liquid boundaries.
+- Bulk Smooth powder and supported solids now share a broader deep-mass
+  grounding response. Dense, optically deep, low-slope interiors darken gently,
+  so heap valleys feel settled and rigid cards read as shaped slabs instead of
+  bright patterned sheets.
+- The grounding remains continuous and interior-only. It does not draw contact
+  separators, fill holes, expand silhouettes, or change support, alpha, the
+  simulation, Local powder, square Grains, or compact true 8× rendering.
+
+### Visual decision
+
+- Keep the wax transmission pass. At fit view both Wax panels gain a soft body
+  glow while their cuts and thin structures stay crisp; the earlier board read
+  more like a flat patterned sheet.
+- Keep the stronger v2 powder/solid grounding. Smooth Sand and Clay retain
+  internal grain colour variation but gain heavier cores and a clearer shared
+  valley. The solid atlas gains deeper recesses and broad-body weight without
+  muddying pigments or fine controls.
+- These were accepted by direct image inspection plus independent agent visual
+  passes. Historical hashes and strict response envelopes were intentionally
+  not used as visual approval gates.
+
+### Lightweight checks used
+
+- `npm run build` completes and closes all 19 production resources.
+- The retained wax frame is `/tmp/anifor-wax-transmission-v1/b.png`; its
+  before/after board is `/tmp/anifor-wax-transmission-v1-comparison.png`.
+- The retained Smooth powder comparison is
+  `/tmp/anifor-powder-grounding-v2-smooth-comparison.png`.
+- The retained solid comparison is
+  `/tmp/anifor-solid-grounding-v2-comparison.png`.
+
+### Next visual work
+
+1. Add a restrained lower-hemisphere colour bounce to the grounded bulk so
+   deep shadow gains environmental colour instead of only losing brightness.
+2. Broaden connected Water foam/crest geometry and improve open-surface
+   reflection while preserving its harder liquid boundary.
+3. Translate the accepted material-class vocabulary to a robust compact true
+   8× path without cloning the full normal shader or losing style separation.
