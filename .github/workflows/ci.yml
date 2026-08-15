@@ -21,6 +21,11 @@ on:
         required: true
         default: false
         type: boolean
+      run_deploy_visual_smoke:
+        description: Run the hosted SwiftShader Visual Lab smoke after deployment
+        required: true
+        default: false
+        type: boolean
       verified_build_run_id:
         description: Exact-SHA run with a successful build job to reuse for deploy-verified
         required: false
@@ -547,6 +552,8 @@ jobs:
         run: node scripts/verify-live-pages.mjs "${PAGE_URL}" "${GITHUB_SHA}"
 
       - name: Capture and verify deployed Visual Lab fixture package
+        if: >-
+          github.event_name != 'workflow_dispatch' || inputs.run_deploy_visual_smoke == true
         env:
           PAGE_URL: ${{ needs.deploy.outputs.page_url }}
           SMOKE_DIR: ${{ runner.temp }}/anifortpt-live-visual-lab-smoke
@@ -576,6 +583,8 @@ jobs:
             2>&1 | tail -c 65536 | tee "${DIAGNOSTIC_DIR}/verify.log"
 
       - name: Generate deployed Visual Lab smoke evidence
+        if: >-
+          github.event_name != 'workflow_dispatch' || inputs.run_deploy_visual_smoke == true
         env:
           SMOKE_DIR: ${{ runner.temp }}/anifortpt-live-visual-lab-smoke
           EVIDENCE_DIR: ${{ runner.temp }}/anifortpt-live-visual-lab-evidence
@@ -589,7 +598,9 @@ jobs:
           test "$(wc -c < "${EVIDENCE_DIR}/evidence.json")" -le 16384
 
       - name: Upload deployed Visual Lab smoke evidence
-        if: success()
+        if: >-
+          success() &&
+          (github.event_name != 'workflow_dispatch' || inputs.run_deploy_visual_smoke == true)
         uses: actions/upload-artifact@v7
         with:
           name: anifortpt-live-visual-lab-evidence-${{ github.run_attempt }}
@@ -598,7 +609,9 @@ jobs:
           retention-days: 7
 
       - name: Upload deployed Visual Lab failure diagnostics
-        if: failure()
+        if: >-
+          failure() &&
+          (github.event_name != 'workflow_dispatch' || inputs.run_deploy_visual_smoke == true)
         uses: actions/upload-artifact@v7
         with:
           name: anifortpt-live-visual-lab-diagnostics-${{ github.run_attempt }}

@@ -56,6 +56,13 @@ describe('deploy-verified CI workflow contract', () => {
 
     const inputReferences = workflow.match(/\$\{\{\s*inputs\.verified_build_run_id\s*\}\}/g) ?? [];
     expect(inputReferences).toHaveLength(1);
+
+    const unitTests = indentedEntry(workflow, 'run_unit_tests', 6);
+    expect(unitTests).toContain('default: false');
+    expect(unitTests).toContain('type: boolean');
+    const deploySmoke = indentedEntry(workflow, 'run_deploy_visual_smoke', 6);
+    expect(deploySmoke).toContain('default: false');
+    expect(deploySmoke).toContain('type: boolean');
   });
 
   it('defaults manual Visual Lab review to the hosted-compatible v9 proof', () => {
@@ -363,7 +370,8 @@ describe('deploy-verified CI workflow contract', () => {
     expect(evidence).toContain('--browser-version="$(google-chrome --product-version)"');
     expect(evidence).toContain('> "${EVIDENCE_DIR}/evidence.json"');
     expect(evidence).toContain('test "$(wc -c < "${EVIDENCE_DIR}/evidence.json")" -le 16384');
-    expect(evidenceUpload).toContain('if: success()');
+    expect(evidenceUpload).toContain('success() &&');
+    expect(evidenceUpload).toContain('inputs.run_deploy_visual_smoke == true');
     expect(evidenceUpload).toContain('uses: actions/upload-artifact@v7');
     expect(evidenceUpload).toContain(
       'name: anifortpt-live-visual-lab-evidence-${{ github.run_attempt }}',
@@ -377,7 +385,8 @@ describe('deploy-verified CI workflow contract', () => {
     expect(evidenceUpload).not.toContain('anifortpt-live-visual-lab-diagnostics');
     const failureUpload = live.indexOf('Upload deployed Visual Lab failure diagnostics');
     expect(failureUpload).toBeGreaterThan(evidencePublication);
-    expect(live.slice(failureUpload)).toContain('if: failure()');
+    expect(live.slice(failureUpload)).toContain('failure() &&');
+    expect(live.slice(failureUpload)).toContain('inputs.run_deploy_visual_smoke == true');
     expect(live.slice(failureUpload)).toContain('actions/upload-artifact@v7');
     expect(live.slice(failureUpload)).toContain(
       'path: ${{ runner.temp }}/anifortpt-live-visual-lab-diagnostics',
