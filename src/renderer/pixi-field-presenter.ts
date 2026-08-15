@@ -4609,7 +4609,7 @@ vec3 energyIdentityDelta(float material, vec2 position, float time, vec2 velocit
       membrane >= 4.0 && membrane <= 6.0 ? 3.0 : 0.0,
       membrane <= 2.0 ? 8.0 : 2.0
     );
-  } else if (material == 101.0) {
+  } else if (material == 101.0 && uMaterialLightingVariant <= 1.5) {
     float branch = mod(x * 3.0 + y * 5.0 + frame * 2.0, 16.0);
     float node = mod(x + y + frame, 8.0);
     delta = branch <= 2.0
@@ -4620,21 +4620,21 @@ vec3 energyIdentityDelta(float material, vec2 position, float time, vec2 velocit
     float localY = mod(y, 16.0) - 8.0;
     float ring = mod(localX * localX + localY * localY + frame, 32.0);
     delta = ring >= 10.0 && ring <= 16.0 ? vec3(-5.0, 3.0, 11.0) : vec3(3.0, -2.0, 5.0);
-  } else if (material == 106.0) {
+  } else if (material == 106.0 && uMaterialLightingVariant <= 1.5) {
     float track = mod(x * 5.0 - y * 3.0 + frame, 16.0);
     float gap = mod(x + y * 2.0, 8.0);
     delta = track <= 1.0 && gap > 1.0 ? vec3(4.0, 9.0, 8.0) : vec3(-3.0, 1.0, 2.0);
-  } else if (material == 107.0) {
+  } else if (material == 107.0 && uMaterialLightingVariant <= 1.5) {
     float band = mod(x + y + frame * 2.0, 16.0);
     delta = band <= 2.0 ? vec3(11.0, 10.0, 4.0)
       : (band >= 8.0 && band <= 10.0 ? vec3(-4.0, 1.0, 10.0) : vec3(1.0, 3.0, 2.0));
-  } else if (material == 110.0) {
+  } else if (material == 110.0 && uMaterialLightingVariant <= 1.5) {
     float rail = mod(x * 2.0 - y + frame, 8.0);
     float bead = mod(x + y * 3.0 + frame * 2.0, 16.0);
     delta = rail <= 1.0
       ? vec3(12.0, 5.0 + (bead <= 2.0 ? 5.0 : 0.0), 2.0)
       : vec3(-2.0, 1.0, 5.0);
-  } else if (material == 197.0) {
+  } else if (material == 197.0 && uMaterialLightingVariant <= 1.5) {
     float rail = abs(mod(x - y, 16.0) - 8.0);
     float node = mod(x + y - frame * 2.0, 16.0);
     delta = rail <= 1.0
@@ -4649,6 +4649,99 @@ vec3 energyIdentityDelta(float material, vec2 position, float time, vec2 velocit
     delta = spark < 4.0 ? vec3(13.0, 8.0, -2.0) : vec3(-3.0, -1.0, 2.0);
   }
   return clamp(delta, vec3(-14.0), vec3(14.0)) / 255.0;
+}
+// Enhanced look: one coherent transport action per exact charged carrier.
+// Dense bodies read as moving energy volumes instead of coloured tiles, while
+// sparse particles retain short exact tracks. This is sampler- and alpha-free.
+vec3 energyCarrierTransportDelta(
+  float material, vec2 position, float time, vec2 velocity,
+  float core, float cohesive
+) {
+  if (material != 101.0 && material != 106.0 && material != 107.0
+    && material != 110.0 && material != 197.0) return vec3(0.0);
+
+  float speed = length(velocity);
+  vec2 movingDirection = velocity / max(speed, 0.001);
+  vec2 fallback = material == 101.0 ? normalize(vec2(0.72, -0.69))
+    : (material == 106.0 ? normalize(vec2(0.93, -0.37))
+    : (material == 107.0 ? normalize(vec2(0.55, 0.83))
+    : (material == 110.0 ? normalize(vec2(0.96, 0.28))
+    : normalize(vec2(0.82, -0.57)))));
+  vec2 direction = mix(fallback, movingDirection, smoothstep(0.035, 0.18, speed));
+  vec2 side = vec2(-direction.y, direction.x);
+  float along = dot(position, direction);
+  float laneSpan = mix(8.0, 24.0, cohesive);
+  float across = mod(dot(position, side) + laneSpan * 0.5, laneSpan)
+    - laneSpan * 0.5;
+  float detail = mix(1.0, 0.62, cohesive) * (0.34 + core * 0.66);
+  vec3 delta = vec3(0.0);
+
+  if (material == 101.0) {
+    // ELEC: a forked, cold ion filament.
+    float bend = sin(along * 0.42 - time * 7.4) * 0.78
+      + sin(along * 0.91 + time * 4.1) * 0.26;
+    float filamentDistance = abs(across - bend);
+    float filament = 1.0 - smoothstep(0.30, 1.05, filamentDistance);
+    float filamentGlow = 1.0 - smoothstep(0.72, 2.65, filamentDistance);
+    float fork = 1.0 - smoothstep(0.22, 0.72,
+      abs(across + bend * 0.55 - sin(along * 0.30 + time * 5.3) * 1.65));
+    float spark = smoothstep(0.86, 0.98, fract(along * 0.173 - time * 1.8));
+    delta = vec3(0.018, 0.060, 0.13) * filamentGlow
+      + vec3(0.03, 0.17, 0.31) * filament
+      + vec3(0.04, 0.10, 0.20) * fork * 0.55
+      + vec3(0.20, 0.42, 0.62) * spark * filament * 0.34;
+  } else if (material == 106.0) {
+    // NEUT: a narrow cold scattering track.
+    float trackDistance = abs(
+      across - sin(along * 0.16 - time * 1.3) * 0.20
+    );
+    float track = 1.0 - smoothstep(0.24, 0.78, trackDistance);
+    float trackGlow = 1.0 - smoothstep(0.66, 2.30, trackDistance);
+    float knot = smoothstep(0.79, 0.95, fract(along * 0.205 - time * 0.72));
+    delta = vec3(-0.012, -0.050, 0.018) * (1.0 - trackGlow) * 0.34
+      + vec3(0.030, 0.060, 0.075) * trackGlow
+      + vec3(0.18, 0.22, 0.17) * track
+      + vec3(0.34, 0.42, 0.42) * knot * track * 0.36;
+  } else if (material == 107.0) {
+    // PHOT: a white sheet with split spectral flanks.
+    float sheetDistance = abs(
+      across + sin(along * 0.19 - time * 1.8) * 0.34
+    );
+    float sheet = 1.0 - smoothstep(0.36, 1.20, sheetDistance);
+    float sheetGlow = 1.0 - smoothstep(0.92, 2.75, sheetDistance);
+    float redFlank = 1.0 - smoothstep(0.16, 0.52, abs(across - 0.72));
+    float blueFlank = 1.0 - smoothstep(0.16, 0.52, abs(across + 0.72));
+    delta = vec3(0.024, 0.030, 0.040) * sheetGlow
+      + vec3(0.10, 0.11, 0.08) * sheet * 0.42
+      + vec3(0.040, -0.28, -0.34) * redFlank * 0.65
+      + vec3(-0.30, -0.10, 0.040) * blueFlank * 0.65;
+  } else if (material == 110.0) {
+    // PROT: a warm charged rail with a denser forward head.
+    float railDistance = abs(
+      across - sin(along * 0.23 - time * 2.4) * 0.18
+    );
+    float rail = 1.0 - smoothstep(0.24, 0.78, railDistance);
+    float railGlow = 1.0 - smoothstep(0.68, 2.35, railDistance);
+    float head = smoothstep(0.70, 0.96, fract(along * 0.145 - time * 1.45));
+    delta = vec3(0.080, 0.050, 0.006) * railGlow
+      + vec3(0.24, 0.18, 0.020) * rail
+      + vec3(0.42, 0.32, 0.080) * head * rail * 0.46
+      - vec3(0.060, 0.020, 0.050) * (1.0 - rail) * 0.28;
+  } else {
+    // BRAY: a sharp gold-magenta reaction beam.
+    float beamDistance = abs(
+      across - sin(along * 0.12 - time * 1.5) * 0.15
+    );
+    float beam = 1.0 - smoothstep(0.20, 0.66, beamDistance);
+    float beamGlow = 1.0 - smoothstep(0.62, 2.20, beamDistance);
+    float shoulder = 1.0 - smoothstep(0.72, 1.55, abs(across));
+    float ignition = smoothstep(0.76, 0.96, fract(along * 0.112 - time * 1.05));
+    delta = vec3(0.060, 0.022, 0.070) * beamGlow
+      + vec3(0.34, 0.18, 0.055) * beam
+      + vec3(0.19, 0.035, 0.24) * shoulder * 0.30
+      + vec3(0.58, 0.34, 0.34) * ignition * beam * 0.34;
+  }
+  return clamp(delta * detail, vec3(-0.12), vec3(0.42));
 }
 // Exact native electric-discharge matter. LIGH/THDR do not enter the Energy
 // family branch, so this shared arithmetic motif is composed later over their
@@ -4694,7 +4787,7 @@ vec3 radioactiveBodyIdentityDelta(float material, vec2 position) {
     float radiusSquared = dot(local, local);
     delta = radiusSquared >= 6.0 && radiusSquared <= 11.0
       ? vec3(8.0, 10.0, 3.0) : vec3(-2.0, 1.0, -1.0);
-  } else if (material == 111.0) {
+  } else if (material == 111.0 && uMaterialLightingVariant <= 1.5) {
     vec2 local = mod(vec2(x, y), 16.0) - 8.0;
     float radiusSquared = dot(local, local);
     delta = radiusSquared >= 35.0 && radiusSquared <= 58.0
@@ -6642,7 +6735,10 @@ void main() {
     float energyIdentityGain = mix(1.0, 0.35, cohesiveEnergy);
     vec3 energyComposed = max(
       color + energyIdentityDelta(material, fieldPosition, uTime, velocity)
-        * energyIdentityGain * uEnergyIdentityStyling,
+        * energyIdentityGain * uEnergyIdentityStyling
+        + energyCarrierTransportDelta(
+          material, fieldPosition, uTime, velocity, core, cohesiveEnergy
+        ) * step(1.5, uMaterialLightingVariant) * uEnergyIdentityStyling,
       vec3(0.0)
     );
     color = mix(
@@ -7775,6 +7871,59 @@ void main() {
           }
         }
       }
+
+      // WARP owns a dense phase-distortion body rather than another luminous
+      // fog colour. Propagated gas style 14 carries ownership into the merged
+      // atmosphere, so broad cyan/violet shears and an absorptive centre stay
+      // continuous across sparse carriers. This bends RGB only; atmosphere
+      // support and alpha remain the existing gas field's responsibility.
+      if (uGasIdentityStyling > 0.5 && gasMaterialVolumeB > 0.5
+        && wall < 0.5 && !materialEmissive) {
+        float warpStyle = floor(gasStyleState.r * 255.0 + 0.5);
+        float warpOwner = 1.0 - step(0.5, abs(warpStyle - 14.0));
+        if (warpOwner > 0.5) {
+          float warpBody = warpOwner * gasVfxBodySupport
+            * smoothstep(0.18, 0.54, cloudNeighbourMean)
+            * smoothstep(0.14, 0.48, atmosphereState.a)
+            * mix(0.72, 1.0, materialMesoscaleCoherence);
+          float warpNoiseShear = (gasVfxNoise.r - gasVfxNoise.g) * 1.05
+            + (gasVfxNoise.b - 0.5) * 0.66;
+          float warpPhase = clamp(
+            gasVfxBillow * 0.46 + warpNoiseShear * 0.82
+              + gasVfxWaveB * 0.20 - gasVfxWaveC * 0.16
+              + gasDirectionalRelief * 0.12,
+            -1.0, 1.0
+          );
+          float warpBend = clamp(
+            (gasVfxNoise.r - 0.5) * 1.10
+              - (gasVfxNoise.b - 0.5) * 0.72
+              + gasCurvature * 0.08,
+            -1.0, 1.0
+          );
+          float warpCyanShear = warpBody
+            * smoothstep(0.05, 0.70, warpPhase)
+            * (0.64 + max(warpBend, 0.0) * 0.36);
+          float warpVioletShear = warpBody
+            * smoothstep(0.05, 0.70, -warpPhase)
+            * (0.64 + max(-warpBend, 0.0) * 0.36);
+          float warpFold = warpBody
+            * (1.0 - smoothstep(0.045, 0.22, abs(warpPhase)))
+            * (0.62 + abs(warpBend) * 0.38)
+            * (1.0 - opticalDepth * 0.22);
+          float warpCore = warpBody
+            * smoothstep(0.34, 0.82, opticalDepth)
+            * mix(0.60, 1.0,
+              1.0 - smoothstep(0.16, 0.72, abs(warpPhase)));
+          color = mix(
+            color, max(color, vec3(0.17, 0.085, 0.27)), warpBody * 0.44
+          );
+          color += vec3(-0.040, 0.094, 0.142) * warpCyanShear;
+          color += vec3(0.124, -0.042, 0.158) * warpVioletShear;
+          color += vec3(-0.038, 0.030, 0.096) * warpFold;
+          color *= vec3(1.0) - vec3(0.32, 0.28, 0.16) * warpCore;
+          color = max(color, vec3(0.0));
+        }
+      }
     }
     if (uGasIdentityStyling > 0.5) {
       float gasIdentityStyle = floor(gasStyleState.r * 255.0 + 0.5);
@@ -7799,7 +7948,30 @@ void main() {
     // and atmosphere support are correct. Keep one exact-owner violet floor in
     // RGB only: it does not brighten neighbouring gases, alter the propagated
     // field, or claim coverage, and the existing gas alpha remains authoritative.
-    if (material == 114.0) color = max(color, vec3(0.115, 0.075, 0.155));
+    if (material == 114.0) {
+      color = max(color, vec3(0.115, 0.075, 0.155));
+      // Exact carriers retain one slow, coherent phase fold even where the
+      // propagated atmosphere style is too dilute to own the reconstructed
+      // body. This makes the distortion readable at fit view while the gas
+      // field continues to soften the outer cloud and sparse fragments.
+      float warpExactBody = smoothstep(0.20, 0.62, gasShadeDensity);
+      float warpExactPhase = sin(
+        dot(fieldPosition, vec2(0.086, -0.052))
+          + sin(dot(fieldPosition, vec2(0.027, 0.061)) + uTime * 0.18) * 1.35
+      );
+      float warpExactCyan = smoothstep(0.05, 0.72, warpExactPhase)
+        * warpExactBody;
+      float warpExactViolet = smoothstep(0.05, 0.72, -warpExactPhase)
+        * warpExactBody;
+      float warpExactSeam = (1.0 - smoothstep(
+        0.045, 0.19, abs(warpExactPhase)
+      )) * warpExactBody;
+      color += (vec3(0.72, 1.02, 1.20) - clamp(color, 0.0, 1.20))
+        * vec3(0.10, 0.46, 0.78) * warpExactCyan * 0.15;
+      color += (vec3(0.92, 0.62, 1.18) - clamp(color, 0.0, 1.18))
+        * vec3(0.58, 0.16, 0.90) * warpExactViolet * 0.17;
+      color *= vec3(1.0) - vec3(0.16, 0.11, 0.04) * warpExactSeam;
+    }
   } else if (liquidVolume > 0.5) {
     float aqueous = optics == 1.0 ? 1.0 : 0.0;
     float oily = optics == 2.0 ? 1.0 : 0.0;
@@ -9187,6 +9359,48 @@ void main() {
       color += (vec3(1.18) - clamp(color, 0.0, 1.18))
         * liquidVolumeReflectionTint * liquidVolumeReflection
         * liquidVolumeReflectionGain;
+      // Metallic liquid is a heavy graphite mirror rather than translucent
+      // grey gel. The existing curved normal and material-volume tile bend one
+      // coherent cool-to-warm studio ribbon over an opposing dark pocket.
+      if (metallicLiquid > 0.5 && liquidMaterialVolumeB > 0.5) {
+        float liquidMetalBody = liquidFinishEligibility
+          * smoothstep(0.18, 0.78, liquidFinishDepth);
+        float liquidMetalCore = liquidMetalBody
+          * smoothstep(0.34, 0.86, liquidFinishDepth)
+          * (1.0 - liquidFresnelContour * 0.45);
+        float liquidMetalPolish = clamp(
+          1.35 - liquidFinishProfile.roughness * 0.55, 0.55, 1.05
+        );
+        float liquidMetalPhase = clamp(
+          (liquidVolumeNdotL - 0.58) * 1.80
+            + (liquidVolumeNoise.r - 0.5) * 0.78
+            - (liquidVolumeNoise.g - 0.5) * 0.44
+            + (broadSheen - 0.5) * 0.18,
+          -1.0, 1.0
+        );
+        float liquidMetalRibbon = liquidMetalBody
+          * (1.0 - smoothstep(0.060, 0.285, abs(liquidMetalPhase - 0.10)))
+          * mix(0.58, 1.0, liquidMesoSurfaceBand);
+        float liquidMetalPocket = liquidMetalBody
+          * smoothstep(0.06, 0.70, -liquidMetalPhase);
+        float liquidMetalLuma = dot(color, vec3(0.2126, 0.7152, 0.0722));
+        color = mix(
+          color,
+          mix(vec3(liquidMetalLuma), vividColor(base, 0.98), 0.16),
+          liquidMetalCore * 0.58
+        );
+        color *= vec3(1.0) - vec3(0.27, 0.24, 0.19)
+          * liquidMetalPocket * (0.42 + liquidMetalCore * 0.40);
+        vec3 liquidMetalEnvironment = mix(
+          vec3(0.48, 0.72, 1.02), vec3(1.04, 0.79, 0.44),
+          clamp(0.50 - liquidVolumeNormal.y * 0.68, 0.0, 1.0)
+        );
+        color += (vec3(1.16) - clamp(color, 0.0, 1.16))
+          * liquidMetalEnvironment * liquidMetalRibbon
+          * (0.42 * liquidMetalPolish);
+        color += reflectedEnvironment * liquidMetalBody
+          * max(liquidMetalPhase, 0.0) * 0.040;
+      }
       // Viscous liquids share a softer transmitted-light grammar with Wax.
       // Reuse the connected body, material-volume fold, and palette pigment
       // already composed above: a warm middle and brown-grey opposing pocket
@@ -9995,31 +10209,101 @@ void main() {
           * smoothstep(224.0 / 255.0, 1.0, boundaryStability)
           * smoothstep(0.66, 0.94, widePowderShape.x)
           * smoothstep(5.5, 8.5, widePowderShape.w);
-        float radioactivePowderSlope = clamp(
-          widePowderShape.y * -2.20 + widePowderShape.z * -3.20, -1.0, 1.0
-        ) * radioactivePowderCore;
-        float radioactivePowderCrown = max(radioactivePowderSlope, 0.0);
-        float radioactivePowderPocket = max(-radioactivePowderSlope, 0.0);
-        vec3 radioactivePowderAbsorption = vec3(0.046, 0.057, 0.033);
-        vec3 radioactivePowderKey = vec3(0.34, 0.74, 0.30);
         if (material == 99.0) {
-          radioactivePowderAbsorption = vec3(0.058, 0.032, 0.078);
-          radioactivePowderKey = vec3(0.48, 0.28, 0.78);
-        } else if (material == 108.0 || material == 112.0) {
-          radioactivePowderAbsorption = vec3(0.065, 0.053, 0.018);
-          radioactivePowderKey = vec3(0.64, 0.80, 0.22);
+          float bvbrSlope = clamp(
+            widePowderShape.y * -2.20 + widePowderShape.z * -3.20,
+            -1.0, 1.0
+          ) * radioactivePowderCore;
+          float bvbrCrown = max(bvbrSlope, 0.0);
+          float bvbrPocket = max(-bvbrSlope, 0.0);
+          color *= vec3(1.0) - vec3(0.058, 0.032, 0.078)
+            * (0.040 + bvbrPocket * 0.40) * radioactivePowderCore;
+          color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+            * vec3(0.48, 0.28, 0.78)
+            * (0.014 + bvbrCrown * 0.090) * radioactivePowderCore;
+        } else if (material == 108.0) {
+          // PLUT: compact heavy plates divided by dark irregular cleavage.
+          float plutMacro = botanicalBodyNoise(
+            fieldPosition / 17.0 + vec2(12.7, -6.3)
+          ) * 2.0 - 1.0;
+          float plutFacet = botanicalBodyNoise(
+            fieldPosition / 7.2 + vec2(-4.1, 15.6)
+          ) * 2.0 - 1.0;
+          float plutPlate = clamp(
+            plutMacro * 0.72 + plutFacet * 0.42
+              + widePowderShape.y * -0.10 + widePowderShape.z * -0.14,
+            -1.0, 1.0
+          );
+          float plutCrown = smoothstep(0.05, 0.56, plutPlate);
+          float plutPocket = smoothstep(0.05, 0.60, -plutPlate);
+          float plutCleavage = 1.0 - smoothstep(
+            0.050, 0.205, abs(plutPlate + plutFacet * 0.16)
+          );
+          color *= vec3(1.0) - vec3(0.168, 0.132, 0.040)
+            * (plutPocket * 0.64 + plutCleavage * 0.36)
+            * radioactivePowderCore;
+          color += (vec3(1.08) - clamp(color, 0.0, 1.08))
+            * vec3(0.72, 0.88, 0.14)
+            * (plutCrown * 0.29 + (1.0 - plutCleavage) * 0.025)
+            * radioactivePowderCore;
         } else if (material == 109.0) {
-          radioactivePowderAbsorption = vec3(0.048, 0.066, 0.026);
-          radioactivePowderKey = vec3(0.40, 0.90, 0.34);
-        } else {
-          radioactivePowderAbsorption = vec3(0.074, 0.040, 0.084);
-          radioactivePowderKey = vec3(0.50, 0.30, 0.78);
+          // POLO: rounded radioactive nodules with cooler decay pits.
+          float poloCluster = botanicalBodyNoise(
+            fieldPosition / 15.0 + vec2(-10.8, 6.4)
+          ) * 2.0 - 1.0;
+          float poloNoduleNoise = botanicalBodyNoise(
+            fieldPosition / 6.5 + vec2(18.2, -13.7)
+          ) * 2.0 - 1.0;
+          float poloNodule = clamp(
+            poloCluster * 0.46 + poloNoduleNoise * 0.88, -1.0, 1.0
+          );
+          float poloNoduleCrown = smoothstep(0.12, 0.66, poloNodule);
+          float poloDecayPit = smoothstep(0.10, 0.58, -poloNodule);
+          float poloRim = 1.0 - smoothstep(0.040, 0.155, abs(poloNodule));
+          color *= vec3(1.0) - vec3(0.072, 0.188, 0.060)
+            * (poloDecayPit * 0.72 + poloRim * 0.34)
+            * radioactivePowderCore;
+          color += (vec3(1.10) - clamp(color, 0.0, 1.10))
+            * vec3(0.48, 1.00, 0.18)
+            * (poloNoduleCrown * 0.22 + poloRim * 0.16)
+            * radioactivePowderCore;
+        } else if (material == 112.0) {
+          // URAN: warped interrupted metallic strata, not a screen-space grid.
+          float uranWarp = botanicalBodyNoise(
+            fieldPosition / 18.0 + vec2(7.9, 11.4)
+          ) * 2.0 - 1.0;
+          float uranInterrupt = smoothstep(0.34, 0.72, botanicalBodyNoise(
+            fieldPosition / 8.4 + vec2(-15.2, 4.7)
+          ));
+          float uranStrata = sin(
+            fieldPosition.x * 0.265 + fieldPosition.y * 0.118
+              + uranWarp * 2.30
+          );
+          float uranLayer = uranStrata * mix(0.42, 1.0, uranInterrupt);
+          float uranCrown = smoothstep(0.18, 0.72, uranLayer);
+          float uranPocket = smoothstep(0.18, 0.70, -uranLayer);
+          float uranSeam = (1.0 - smoothstep(0.042, 0.140, abs(uranStrata)))
+            * uranInterrupt;
+          color *= vec3(1.0) - vec3(0.170, 0.145, 0.034)
+            * (uranPocket * 0.48 + uranSeam * 0.27)
+            * radioactivePowderCore;
+          color += (vec3(1.08) - clamp(color, 0.0, 1.08))
+            * vec3(0.98, 0.88, 0.15)
+            * (uranCrown * 0.31 + (1.0 - uranSeam) * 0.024)
+            * radioactivePowderCore;
+        } else if (uMaterialLightingVariant <= 1.5) {
+          float singSlope = clamp(
+            widePowderShape.y * -2.20 + widePowderShape.z * -3.20,
+            -1.0, 1.0
+          ) * radioactivePowderCore;
+          float singCrown = max(singSlope, 0.0);
+          float singPocket = max(-singSlope, 0.0);
+          color *= vec3(1.0) - vec3(0.074, 0.040, 0.084)
+            * (0.040 + singPocket * 0.40) * radioactivePowderCore;
+          color += (vec3(1.0) - clamp(color, 0.0, 1.0))
+            * vec3(0.50, 0.30, 0.78)
+            * (0.014 + singCrown * 0.090) * radioactivePowderCore;
         }
-        color *= vec3(1.0) - radioactivePowderAbsorption
-          * (0.040 + radioactivePowderPocket * 0.40) * radioactivePowderCore;
-        color += (vec3(1.0) - clamp(color, 0.0, 1.0))
-          * radioactivePowderKey * (0.014 + radioactivePowderCrown * 0.090)
-          * radioactivePowderCore;
       }
       float grainOffsetY = fract(sin(dot(floor(fieldPosition), vec2(39.346, 11.135))) * 24634.6345) - 0.5;
       vec2 grainCentre = vec2(grain, grainOffsetY) * 0.075;
@@ -12623,7 +12907,8 @@ void main() {
       // One stable 24-cell mechanism glyph family replaces the former narrow,
       // animated backend-specific decals. It remains readable at fit view and
       // costs only branch-local arithmetic at true 8x.
-      if (emitter + sink + forceRole > 0.5) {
+      if (emitter + sink + forceRole > 0.5
+        && !(material == 111.0 && uMaterialLightingVariant > 1.5)) {
         vec2 roleTile = fract(
           (fieldPosition + vec2(material * 3.0, material * 5.0)) / 24.0
         ) - 0.5;
@@ -12675,6 +12960,33 @@ void main() {
       float decay = step(0.90, isotopeNoise) * (0.55 + roleWave * 0.45);
       vec3 isotopeTint = mix(vec3(0.20, 0.72, 0.18), vec3(0.36, 0.82, 1.0), carrier);
       color += isotopeTint * (0.008 + decay * 0.034 + traitEdge * 0.010);
+      // Styled SING is one inward cold-glass void, not the legacy grid of
+      // target rings. A broad bent fold is anchored in world space so compact
+      // bodies retain a coherent lens while isolated grains keep their plain
+      // charcoal identity. This is RGB-only and cannot widen powder support.
+      if (material == 111.0 && uMaterialLightingVariant > 1.5
+        && uEnergyIdentityStyling > 0.5 && uPowderBodyDepth > 0.5
+        && uPowderStyle > 1.5 && wall < 0.5
+        && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5) {
+        float singBody = smoothstep(2.25, 3.75, shape.w)
+          * smoothstep(0.56, 0.94, density)
+          * smoothstep(224.0 / 255.0, 1.0, boundaryStability);
+        float singPhase = sin(
+          dot(fieldPosition, vec2(0.082, -0.047))
+            + sin(dot(fieldPosition, vec2(0.031, 0.071)) + 1.30) * 1.42
+        );
+        float singWindow = smoothstep(-0.12, 0.72, singPhase) * singBody;
+        float singPocket = smoothstep(-0.08, 0.78, -singPhase) * singBody;
+        float singInnerCaustic = (1.0 - smoothstep(
+          0.080, 0.34, abs(singPhase + 0.08)
+        )) * singBody;
+        color *= vec3(1.0) - vec3(0.36, 0.28, 0.40)
+          * (0.28 + singPocket * 0.72) * singBody;
+        color += (vec3(0.86, 1.02, 1.18) - clamp(color, 0.0, 1.18))
+          * vec3(0.10, 0.42, 0.78) * singWindow * 0.12;
+        color += (vec3(0.92, 1.08, 1.22) - clamp(color, 0.0, 1.22))
+          * vec3(0.14, 0.46, 0.72) * singInnerCaustic * 0.055;
+      }
     }
     float botanicalIdentity = (material == 9.0 || material == 10.0 || material == 50.0
       || material == 52.0 || material == 83.0) ? 1.0 : 0.0;
@@ -13626,6 +13938,27 @@ void main() {
         ) * (photonSpectrum / max(photonPeak, 0.0001)) * photonMetalIrradiance;
       }
       premultiplied = mix(premultiplied, photonSpectrum * compositeAlpha, photonAmount);
+      // In the enhanced look, the native photon plane keeps one spectrum-
+      // driven caustic after its ordinary composite. It shears colour within
+      // the already-owned photon alpha instead of painting a flat white cell.
+      if (uMaterialLightingVariant > 1.5) {
+        vec3 spectrumKey = photonSpectrum / max(photonPeak, 0.0001);
+        vec2 prismVector = vec2(
+          0.42 + spectrumKey.r - spectrumKey.b,
+          -0.21 + spectrumKey.g - (spectrumKey.r + spectrumKey.b) * 0.25
+        );
+        vec2 prismDirection = prismVector / max(length(prismVector), 0.001);
+        float prismPhase = dot(fieldPosition, prismDirection) * 0.19
+          + spectrumKey.r * 0.31 - spectrumKey.b * 0.23;
+        float caustic = 1.0 - smoothstep(
+          0.18, 0.44, abs(fract(prismPhase) - 0.5)
+        );
+        float photonShear = photonPeak * (0.010 + caustic * 0.034);
+        premultiplied += (
+          vec3(1.16) * compositeAlpha
+            - min(premultiplied, vec3(1.16) * compositeAlpha)
+        ) * spectrumKey * photonShear;
+      }
     }
   }
   finalColor = vec4(premultiplied, compositeAlpha);

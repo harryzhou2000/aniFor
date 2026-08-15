@@ -1493,3 +1493,72 @@ Status: retained normal-WebGL visual-overhaul checkpoint.
    translucent cores, coherent rails, and motion-aligned filaments.
 3. Deepen meniscus geometry through a real curvature/depth treatment instead
    of increasing contact-line brightness.
+
+## 2026-08-15 — radioactive matter, carrier tracks, and liquid-metal reflection
+
+Status: retained normal-WebGL cross-phase visual-overhaul checkpoint.
+
+### What changed
+
+- PLUT, POLO, and URAN no longer share one generic radioactive spotlight.
+  Settled Smooth PLUT uses broad olive plates with irregular cleavage, POLO
+  uses rounded toxic nodules and decay pits, and URAN uses warped interrupted
+  metallic laminae. The treatment stays inside dense material bodies, leaving
+  sparse particles and the powder contour intact.
+- Enhanced-look SING drops the repeating blue target-ring grid. Compact bodies
+  become an absorptive charcoal void crossed by one bent cold-glass caustic;
+  isolated grains remain plain. WARP keeps its soft gas silhouette but gains a
+  slow cyan/violet phase split and dark seam through exact carriers and the
+  propagated atmosphere body.
+- ELEC, NEUT, PHOT, PROT, and BRAY now use motion-aware periodic carrier lanes
+  instead of only small cell badges. Their signatures are respectively a
+  forked ion filament, cold scattering track, prismatic photon sheet, warm
+  charged rail, and gold-magenta reaction beam. Each has a restrained broad
+  shoulder so the line belongs to a luminous volume rather than looking drawn
+  over it. Native photon-map composition also receives a spectrum-driven
+  caustic inside its existing alpha.
+- Metallic RenderOptics liquids now read as heavy liquid metal: a desaturated
+  graphite core carries a coherent cool-to-warm environment ribbon and an
+  opposing dark pocket. It uses the existing liquid normal, optical depth,
+  volume noise, and reflection state; liquid support and alpha are unchanged.
+
+### Visual decision
+
+- Keep the distinct ore structures. POLO's decay clusters and URAN's laminae
+  are immediately legible at fit view, while PLUT remains intentionally denser
+  and quieter. The rejected common radiogenic lobe has not returned.
+- Keep the simplified SING and the stronger WARP. SING now reads as a dark
+  optical sink with one internal curve instead of an icon grid; WARP remains
+  dark gas but carries a visible violet/cyan body turn at both 2x and 4x.
+- Keep the carrier family. The no-HUD atlas makes the five different actions
+  visible without turning the full energy body into a repeated neon texture.
+  PHOT uses the most restrained semantic-body split because its native photon
+  plane supplies the stronger spectral caustic in real scenes.
+- Keep the metallic-liquid experiment. Mercury changes from translucent grey
+  gel/striping into a weightier reflective pool with irregular studio-light
+  response, while Water, Oil, Acid, Lava, LN2, and MWAX retain their separate
+  optical languages.
+
+### Lightweight checks used
+
+- `npm run build` completes and closes all 19 production resources.
+- `/tmp/anifor-energy-radioactive-current.png` is the original reference;
+  `/tmp/anifor-energy-overhaul-final-2x.png` is the retained 2x WebGL atlas and
+  `/tmp/anifor-energy-overhaul-final-4x.png` confirms the combined normal 4x
+  path. `/tmp/anifor-render-optics-metal-liquid-v1.png` is the direct 2x
+  metallic-liquid view.
+- The 4x screenshot completed successfully. Its bounded host teardown query
+  timed out afterward; an immediate process scan found no Chrome residue.
+  Selection used direct image inspection, not exact hashes, baselines,
+  profiling, or broad unit-test gates.
+
+### Next visual work
+
+1. Give GRVT/AMTR and native LIGH/THDR equally coherent field-scale visuals,
+   including local illumination of nearby matter where the current emission
+   field already provides a usable source carrier.
+2. Deepen screen-space liquid curvature/refraction and underwater caustics so
+   Water and Oil affect the scene behind and beneath them, not only their own
+   surface colour.
+3. Add cheap contact/AO depth under powder heaps and at solid/wall creases,
+   then return to growing plants and other organic material bodies.
