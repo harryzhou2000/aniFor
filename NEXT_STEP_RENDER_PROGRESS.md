@@ -1562,3 +1562,75 @@ Status: retained normal-WebGL cross-phase visual-overhaul checkpoint.
    surface colour.
 3. Add cheap contact/AO depth under powder heaps and at solid/wall creases,
    then return to growing plants and other organic material bodies.
+
+## 2026-08-15 — field anomalies, discharge volumes, and focused liquid lenses
+
+Status: retained visual-first normal-WebGL checkpoint.
+
+### What changed
+
+- GRVT's enhanced look no longer repeats the legacy target-ring decal. A broad
+  moving cyan/lime shear, asymmetric compression key, and dark inward throat
+  now read across its existing energy body. Its ordinary role bullseye is also
+  suppressed in this look so one field-scale lens owns the material.
+- AMTR now has a dark-violet annihilation body with opposed cyan and magenta
+  pressure faces. The treatment runs through both propagated gas support and
+  exact carriers, making a compact AMTR cloud visibly distinct from neutral
+  Smoke without changing gas opacity or support.
+- Dense LIGH and settled Smooth THDR now carry continuous curved discharge
+  lanes instead of a grid of per-cell identity marks. LIGH uses a cooler blue
+  body with a white braided spine; THDR uses a warmer amber body with a blue
+  pressure flank. Thin stems, branches, gaps, contacts, and isolated sparks
+  keep their sharp native presentation.
+- The shared material finish gains phase-local buried-mass shading. Quiet deep
+  powder, solid, and liquid interiors settle into a restrained cool ambient
+  pocket without deriving a dark outline from material-contact flags.
+- Water/Oil and their Distilled/Diesel siblings now focus a co-located native
+  wall through restrained spectral displacement, a curved caustic ridge, and
+  opposing depth absorption. The operation modifies only the analytic backdrop
+  colour; liquid alpha and boundary ownership remain unchanged.
+
+### Visual decision
+
+- Keep the GRVT/AMTR split. The energy/radioactive board now shows GRVT as a
+  cleaner green field lens and AMTR as a visibly folded cyan/magenta dark gas,
+  rather than two more tiled badges.
+- Keep the discharge-volume treatment. Several early tunings were rejected as
+  effectively flat because the source material was already near white and the
+  negative range was capped too tightly. The retained look lowers the dense
+  body, preserves luminous spines, and is readable at fit view without painting
+  over the protected thin controls.
+- Keep the strengthened liquid lens. In the direct wall-coexistence comparison,
+  the enabled Water-like control develops a larger cyan focus network and the
+  Oil-like control gains broader warm folds; the disabled view remains a flat
+  checker. This is deliberately conditional on a visible backdrop rather than
+  adding fake refraction to an empty black scene.
+- Keep the ambient pocket as a quiet scene-depth layer. It does not replace
+  material texture, highlights, or contact treatments and therefore avoids the
+  uniform muddy wash rejected in earlier visual experiments.
+
+### Lightweight visual checks used
+
+- `npm run build` completes and closes all 19 production resources.
+- `/tmp/anifor-anomalous-carriers-kept.png` is the retained GRVT/AMTR board;
+  its final tuning deepens GRVT's throat and removes AMTR's milky centre.
+- `/tmp/anifor-electric-discharge-volume-kept.png` is the retained LIGH/THDR
+  body-and-topology board.
+- `/tmp/anifor-liquid-wall-lens-off.png` and
+  `/tmp/anifor-liquid-wall-lens-v2.png` are the direct disabled/enabled liquid
+  backdrop comparison.
+- `/tmp/anifor-render-optics-depth-lens-v1.png` is the shared material-depth
+  matrix. Selection was made from screenshots and aesthetic inspection; no
+  exact visual hash, promotion gate, profiler, or broad unit-test run was used.
+
+### Next visual work
+
+1. Push the common scene-light layer: stronger source-shaped illumination,
+   soft cast shadows, and coloured bounce on nearby powder, liquid, and solid
+   bodies using the already-live emission field.
+2. Extend liquid refraction beyond native-wall coexistence with an inexpensive
+   optical scene layer, then add broader underwater caustic motion without
+   blurring the liquid boundary.
+3. Deepen gas volume separation with self-shadowed cores, brighter forward
+   scatter, and larger light shafts; then return to growing plants and organic
+   material morphology.

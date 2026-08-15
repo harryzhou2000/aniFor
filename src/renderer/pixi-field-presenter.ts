@@ -610,7 +610,7 @@ vec3 energyEightXIdentityDelta(float material, vec2 cell) {
     delta = branch <= 2.0
       ? vec3(8.0, 11.0, 13.0)
       : vec3(-2.0, 1.0, 4.0 + (node < 0.5 ? 5.0 : 0.0));
-  } else if (material == 103.0) {
+  } else if (material == 103.0 && uMaterialLightingVariant <= 1.5) {
     vec2 local = mod(cell, 16.0) - 8.0;
     float ring = mod(dot(local, local), 32.0);
     bool rim = ring >= 10.0 && ring <= 16.0;
@@ -4743,6 +4743,48 @@ vec3 energyCarrierTransportDelta(
   }
   return clamp(delta * detail, vec3(-0.12), vec3(0.42));
 }
+// GRVT is a moving field lens in the enhanced look, not a tiled target ring.
+// The already-live emission body supplies admission while two low-frequency
+// world-space folds produce an asymmetric compression key and inward throat.
+// RGB changes only; semantic energy support and its aura remain authoritative.
+vec3 gravitonLensingDelta(
+  float material, vec2 position, float time, vec2 velocity,
+  vec4 emissionState, float core, float cohesive
+) {
+  if (material != 103.0) return vec3(0.0);
+  float speed = length(velocity);
+  vec2 movingDirection = velocity / max(speed, 0.001);
+  vec2 fallbackDirection = normalize(vec2(0.86, -0.51));
+  vec2 direction = mix(
+    fallbackDirection, movingDirection, smoothstep(0.025, 0.16, speed)
+  );
+  vec2 side = vec2(-direction.y, direction.x);
+  float along = dot(position, direction);
+  float across = dot(position, side);
+  float body = core * mix(0.30, 1.0, cohesive)
+    * smoothstep(0.012, 0.16, emissionState.a);
+  float bentCoordinate = sin(
+    along * 0.105 - time * 0.42
+      + sin(across * 0.074 + time * 0.17) * 1.34
+  );
+  float lensShear = clamp(
+    bentCoordinate * 0.76 + sin(across * 0.133 - along * 0.035) * 0.34,
+    -1.0, 1.0
+  );
+  float cyanWing = smoothstep(0.05, 0.72, lensShear) * body;
+  float limeWing = smoothstep(0.05, 0.72, -lensShear) * body;
+  float throat = (1.0 - smoothstep(0.035, 0.235, abs(lensShear))) * body;
+  float compression = (1.0 - smoothstep(
+    0.030, 0.105, abs(lensShear - 0.43)
+  )) * body * (0.64 + 0.36 * sin(along * 0.19 - time * 0.63) * 0.5 + 0.18);
+  vec3 sourceTint = vividColor(emissionState.rgb, 1.14);
+  vec3 delta = -vec3(0.105, 0.075, 0.090) * body * 0.48
+    + vec3(-0.060, 0.155, 0.275) * cyanWing
+    + vec3(0.180, 0.215, -0.050) * limeWing
+    + mix(vec3(0.14, 0.36, 0.52), sourceTint, 0.38) * compression * 0.82
+    - vec3(0.32, 0.28, 0.18) * throat * 0.92;
+  return clamp(delta, vec3(-0.30), vec3(0.42));
+}
 // Exact native electric-discharge matter. LIGH/THDR do not enter the Energy
 // family branch, so this shared arithmetic motif is composed later over their
 // authoritative semantic cells. It changes RGB only and performs no sampling.
@@ -4770,6 +4812,63 @@ vec3 electricDischargeIdentityDelta(float material, vec2 position) {
     );
   }
   return clamp(delta, vec3(-18.0), vec3(18.0)) / 255.0;
+}
+// Enhanced LIGH/THDR are connected charged volumes rather than independent
+// cell glyphs. A velocity-aligned braided spine, opposing return trough, and
+// broad shoulder use only existing emission and material-body proof.
+vec3 electricDischargeVolumeDelta(
+  float material, vec2 position, float time, vec2 velocity,
+  vec3 emissionColor, float body
+) {
+  if (body <= 0.0001 || (material != 93.0 && material != 97.0)) {
+    return vec3(0.0);
+  }
+  float speed = length(velocity);
+  vec2 movingDirection = velocity / max(speed, 0.001);
+  vec2 fallbackDirection = material == 93.0
+    ? normalize(vec2(0.76, -0.65)) : normalize(vec2(0.91, 0.42));
+  vec2 direction = mix(
+    fallbackDirection, movingDirection, smoothstep(0.025, 0.15, speed)
+  );
+  vec2 side = vec2(-direction.y, direction.x);
+  float along = dot(position, direction);
+  float across = dot(position, side);
+  float bend = sin(along * 0.071 - time * 0.54) * 0.92
+    + sin(along * 0.149 + time * 0.31) * 0.28;
+  // A continuous phase field spans the whole authored body. Using an
+  // unwrapped distance from one world-space line made all but the card nearest
+  // the origin flat; the sinusoidal carrier gives broad curved lanes without
+  // returning to a per-cell decal.
+  float dischargePhase = sin(across * 0.118 - bend);
+  float spine = 1.0 - smoothstep(0.035, 0.205, abs(dischargePhase));
+  float shoulder = 1.0 - smoothstep(0.16, 0.82, abs(dischargePhase));
+  float returnTrough = 1.0 - smoothstep(
+    0.045, 0.185, abs(dischargePhase - 0.58)
+  );
+  float braidPhase = sin(
+    across * 0.118 + bend * 0.62 + sin(along * 0.103 + time * 0.77) * 0.44
+  );
+  float braid = 1.0 - smoothstep(0.045, 0.18, abs(braidPhase));
+  vec3 normalizedEmission = emissionColor
+    / max(max(emissionColor.r, emissionColor.g), max(emissionColor.b, 0.0001));
+  vec3 coldKey = mix(vec3(0.26, 0.74, 1.18), normalizedEmission, 0.34);
+  vec3 warmKey = mix(vec3(1.16, 0.48, 0.08), normalizedEmission, 0.24);
+  vec3 key = mix(coldKey, warmKey, material == 97.0 ? 1.0 : 0.0);
+  vec3 flank = material == 97.0
+    ? vec3(-0.030, 0.065, 0.155) : vec3(0.040, 0.110, 0.190);
+  vec3 bodyTint = material == 97.0
+    ? vec3(0.12, -0.24, -0.34)
+    : vec3(-0.28, -0.11, 0.06);
+  vec3 bodyDepth = material == 97.0
+    ? vec3(-0.030, -0.080, -0.140)
+    : vec3(-0.100, -0.050, -0.010);
+  vec3 delta = bodyDepth
+    + bodyTint * shoulder * 0.92
+    + key * spine * 0.20
+    + key * braid * 0.080
+    + flank * shoulder * 0.30
+    - vec3(0.22, 0.18, 0.12) * returnTrough * 0.82;
+  return clamp(delta * body, vec3(-0.34), vec3(0.34));
 }
 vec3 radioactiveBodyIdentityDelta(float material, vec2 position) {
   float x = floor(position.x);
@@ -6738,6 +6837,10 @@ void main() {
         * energyIdentityGain * uEnergyIdentityStyling
         + energyCarrierTransportDelta(
           material, fieldPosition, uTime, velocity, core, cohesiveEnergy
+        ) * step(1.5, uMaterialLightingVariant) * uEnergyIdentityStyling
+        + gravitonLensingDelta(
+          material, fieldPosition, uTime, velocity,
+          emissionState, core, cohesiveEnergy
         ) * step(1.5, uMaterialLightingVariant) * uEnergyIdentityStyling,
       vec3(0.0)
     );
@@ -7924,6 +8027,58 @@ void main() {
           color = max(color, vec3(0.0));
         }
       }
+      // AMTR reads as an annihilation volume in B: a dark pressure core with
+      // one warped cyan/magenta reaction seam, carried across the propagated
+      // atmosphere rather than stamped on each semantic particle. RGB only;
+      // the existing gas field continues to own cloud support and opacity.
+      if (uGasIdentityStyling > 0.5 && gasMaterialVolumeB > 0.5
+        && wall < 0.5 && !materialEmissive) {
+        float antimatterStyle = floor(gasStyleState.r * 255.0 + 0.5);
+        float antimatterOwner = 1.0 - step(0.5, abs(antimatterStyle - 13.0));
+        if (antimatterOwner > 0.5) {
+          float antimatterBody = antimatterOwner * gasVfxBodySupport
+            * smoothstep(0.22, 0.58, cloudNeighbourMean)
+            * smoothstep(0.14, 0.52, atmosphereState.a)
+            * mix(0.70, 1.0, materialMesoscaleCoherence);
+          float antimatterPhase = clamp(
+            gasVfxBillow * 0.48
+              + (gasVfxNoise.r - gasVfxNoise.b) * 0.88
+              + gasVfxWaveB * 0.24 - gasVfxWaveC * 0.18
+              + gasDirectionalRelief * 0.11,
+            -1.0, 1.0
+          );
+          float antimatterWarp = clamp(
+            (gasVfxNoise.g - 0.5) * 1.16
+              - (gasVfxNoise.r - 0.5) * 0.64
+              + gasCurvature * 0.10,
+            -1.0, 1.0
+          );
+          float antimatterSeam = antimatterBody
+            * (1.0 - smoothstep(0.030, 0.145, abs(antimatterPhase)))
+            * (0.64 + abs(antimatterWarp) * 0.36);
+          float antimatterCyan = antimatterBody
+            * smoothstep(0.04, 0.66, antimatterPhase)
+            * (0.58 + max(antimatterWarp, 0.0) * 0.42);
+          float antimatterMagenta = antimatterBody
+            * smoothstep(0.04, 0.66, -antimatterPhase)
+            * (0.58 + max(-antimatterWarp, 0.0) * 0.42);
+          float antimatterCore = antimatterBody
+            * smoothstep(0.24, 0.76, opticalDepth)
+            * (0.62 + (1.0 - abs(antimatterPhase)) * 0.38);
+          color = mix(
+            color, max(color, vec3(0.085, 0.040, 0.115)),
+            antimatterBody * 0.42
+          );
+          color *= vec3(1.0) - vec3(0.42, 0.34, 0.20) * antimatterCore * 0.72;
+          color += (vec3(0.82, 1.06, 1.18) - clamp(color, 0.0, 1.18))
+            * vec3(0.10, 0.70, 0.92) * antimatterCyan * 0.20;
+          color += (vec3(1.12, 0.72, 1.16) - clamp(color, 0.0, 1.16))
+            * vec3(0.92, 0.12, 0.82) * antimatterMagenta * 0.22;
+          color += (vec3(1.18) - clamp(color, 0.0, 1.18))
+            * vec3(0.62, 0.92, 1.00) * antimatterSeam * 0.16;
+          color = max(color, vec3(0.0));
+        }
+      }
     }
     if (uGasIdentityStyling > 0.5) {
       float gasIdentityStyle = floor(gasStyleState.r * 255.0 + 0.5);
@@ -7948,6 +8103,34 @@ void main() {
     // and atmosphere support are correct. Keep one exact-owner violet floor in
     // RGB only: it does not brighten neighbouring gases, alter the propagated
     // field, or claim coverage, and the existing gas alpha remains authoritative.
+    if (material == 98.0 && uMaterialLightingVariant > 1.5) {
+      // Exact AMTR keeps the same annihilation language where its propagated
+      // atmosphere is too dilute to own the reconstructed cloud. A slow bent
+      // seam gives even a compact body a dark-violet volume with opposing
+      // cyan/magenta pressure faces instead of a neutral grey gas patch.
+      float antimatterExactBody = smoothstep(0.18, 0.62, gasShadeDensity);
+      float antimatterExactPhase = sin(
+        dot(fieldPosition, vec2(0.074, -0.049))
+          + sin(dot(fieldPosition, vec2(0.029, 0.066)) + uTime * 0.16) * 1.48
+      );
+      float antimatterExactCyan = smoothstep(0.04, 0.70, antimatterExactPhase)
+        * antimatterExactBody;
+      float antimatterExactMagenta = smoothstep(0.04, 0.70, -antimatterExactPhase)
+        * antimatterExactBody;
+      float antimatterExactSeam = (1.0 - smoothstep(
+        0.028, 0.15, abs(antimatterExactPhase)
+      )) * antimatterExactBody;
+      color = mix(color, max(color, vec3(0.085, 0.040, 0.115)),
+        antimatterExactBody * 0.46);
+      color *= vec3(1.0) - vec3(0.38, 0.32, 0.18)
+        * antimatterExactBody * 0.62;
+      color += (vec3(0.80, 1.04, 1.18) - clamp(color, 0.0, 1.18))
+        * vec3(0.08, 0.68, 0.94) * antimatterExactCyan * 0.18;
+      color += (vec3(1.12, 0.68, 1.16) - clamp(color, 0.0, 1.16))
+        * vec3(0.92, 0.10, 0.82) * antimatterExactMagenta * 0.20;
+      color += (vec3(1.16) - clamp(color, 0.0, 1.16))
+        * vec3(0.60, 0.90, 1.0) * antimatterExactSeam * 0.12;
+    }
     if (material == 114.0) {
       color = max(color, vec3(0.115, 0.075, 0.155));
       // Exact carriers retain one slow, coherent phase fold even where the
@@ -12774,9 +12957,41 @@ void main() {
   }
   if (uEnergyIdentityStyling > 0.5 && halo < 0.5 && surfaceOnly < 0.5
     && wallOnly < 0.5 && emissionOnly < 0.5
+    && uMaterialLightingVariant <= 1.5
     && (material == 93.0 || material == 97.0)) {
     color = clamp(
       color + electricDischargeIdentityDelta(material, fieldPosition),
+      0.0, 1.0
+    );
+  }
+  if (uEnergyIdentityStyling > 0.5 && uMaterialLightingVariant > 1.5
+    && halo < 0.5 && surfaceOnly < 0.5 && wall < 0.5
+    && wallOnly < 0.5 && emissionOnly < 0.5
+    && foreignMatterContact < 0.5 && unlikeMaterialContact < 0.5
+    && (material == 93.0 || material == 97.0)) {
+    float broadExactDischarge = smoothstep(0.64, 0.94, density)
+      * smoothstep(2.5, 3.8, shape.w);
+    float electricDischargeBody = 0.0;
+    if (material == 93.0) {
+      electricDischargeBody = max(
+        solidInterior * smoothstep(0.72, 0.96, density),
+        broadExactDischarge
+      );
+    } else if (uPowderStyle > 1.5 && uPowderBodyDepth > 0.5) {
+      float settledThunderBody = powderBulkDepth
+        * smoothstep(224.0 / 255.0, 1.0, boundaryStability)
+        * smoothstep(0.66, 0.94, widePowderShape.x)
+        * smoothstep(5.5, 8.5, widePowderShape.w);
+      electricDischargeBody = max(settledThunderBody, broadExactDischarge);
+    }
+    electricDischargeBody *= mix(
+      0.74, 1.0, smoothstep(0.010, 0.22, emissionState.a)
+    );
+    color = clamp(
+      color + electricDischargeVolumeDelta(
+        material, fieldPosition, uTime, velocity,
+        emissionState.rgb, electricDischargeBody
+      ),
       0.0, 1.0
     );
   }
@@ -12908,7 +13123,8 @@ void main() {
       // animated backend-specific decals. It remains readable at fit view and
       // costs only branch-local arithmetic at true 8x.
       if (emitter + sink + forceRole > 0.5
-        && !(material == 111.0 && uMaterialLightingVariant > 1.5)) {
+        && !((material == 111.0 || material == 103.0)
+          && uMaterialLightingVariant > 1.5)) {
         vec2 roleTile = fract(
           (fieldPosition + vec2(material * 3.0, material * 5.0)) / 24.0
         ) - 0.5;
@@ -13889,6 +14105,81 @@ void main() {
       backdropPattern = wallPattern(wall, fieldPosition);
     }
     vec3 backdropColor = wallColor(wall) * backdropPattern;
+    // Water and Oil turn the co-located native wall into an optical backdrop,
+    // not a flat tinted sticker. The central wavelength keeps the established
+    // integer refraction while adjacent analytic wall coordinates provide a
+    // restrained red/blue split. A slow volume fold focuses that spectrum into
+    // curved caustics and absorption pockets. This remains backdrop RGB only:
+    // liquid support, opacity, material ownership, and silhouette stay intact.
+    if (refractedLiquid > 0.5 && uMaterialLightingVariant > 1.5
+      && (material == 2.0 || material == 8.0
+        || material == 34.0 || material == 35.0)) {
+      float liquidLensOil = (material == 8.0 || material == 35.0) ? 1.0 : 0.0;
+      float liquidLensDepth = smoothstep(
+        6.0 / 255.0, 120.0 / 255.0, liquidOpticalDepth
+      );
+      float liquidLensBody = smoothstep(
+        0.42, 0.84, min(liquidDensity, liquidNeighbourMean)
+      ) * mix(0.70, 1.0, materialMesoscaleCoherence)
+        * mix(0.64, 1.0, liquidLensDepth);
+      vec2 liquidLensAxis = sign(liquidBackdropOffset);
+      vec3 liquidLensPattern = vec3(
+        wallPattern(wall, fieldPosition + liquidBackdropOffset - liquidLensAxis),
+        backdropPattern,
+        wallPattern(wall, fieldPosition + liquidBackdropOffset + liquidLensAxis)
+      );
+      float liquidLensDispersion = liquidLensBody
+        * mix(0.72, 0.92, liquidLensOil);
+      backdropColor = wallColor(wall) * mix(
+        vec3(backdropPattern), liquidLensPattern, liquidLensDispersion
+      );
+
+      vec2 liquidLensPosition = fieldPosition - velocity * uTime
+        * mix(2.20, 0.80, liquidLensOil);
+      vec3 liquidLensNoise = texture(
+        uMaterialVolumeTexture,
+        liquidLensPosition / vec2(124.0, 94.0)
+          + vec2(uTime * 0.0016, -uTime * 0.0010)
+          + vec2(0.19, 0.43)
+      ).rgb;
+      float liquidLensFold = clamp(
+        (liquidLensNoise.r - 0.5) * 1.30
+          + (liquidLensNoise.g - 0.5) * 0.72
+          - (liquidLensNoise.b - 0.5) * 0.44
+          + materialMesoscaleCurvature * 0.34
+          + dot(volumeSlope, normalize(vec2(-0.42, -0.91))) * 0.55,
+        -1.0, 1.0
+      );
+      float liquidLensRidge = 1.0 - smoothstep(
+        0.035, 0.170,
+        abs(liquidLensFold - mix(0.10, -0.05, liquidLensOil))
+      );
+      float liquidLensCrown = smoothstep(0.08, 0.70, liquidLensFold);
+      float liquidLensPocket = smoothstep(0.08, 0.72, -liquidLensFold);
+      float liquidLensFocus = liquidLensBody * mix(
+        mix(0.82, 1.12, liquidLensDepth),
+        mix(0.90, 0.64, liquidLensDepth),
+        liquidLensOil
+      );
+      vec3 liquidLensKey = mix(
+        vec3(0.28, 0.76, 1.00), vec3(1.00, 0.62, 0.18), liquidLensOil
+      );
+      vec3 liquidLensAbsorption = mix(
+        vec3(0.21, 0.075, 0.020),
+        vec3(0.060, 0.17, 0.48),
+        liquidLensOil
+      );
+      float liquidLensKeyAmount = liquidLensFocus
+        * (liquidLensRidge * 0.98 + liquidLensCrown * 0.12);
+      backdropColor += max(
+        vec3(0.0), vec3(1.0) - clamp(backdropColor, 0.0, 1.0)
+      ) * liquidLensKey * liquidLensKeyAmount;
+      backdropColor *= exp(
+        -liquidLensAbsorption * liquidLensFocus
+          * (liquidLensPocket * 0.54
+            + liquidLensDepth * mix(0.030, 0.120, liquidLensOil))
+      );
+    }
     if (refractedInterior > 0.5 && material == 24.0) {
       float glassBackdropDepth = smoothstep(
         30.0 / 255.0, 210.0 / 255.0, solidOpticalDepth

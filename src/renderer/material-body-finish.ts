@@ -450,12 +450,31 @@ vec3 applyMaterialAmbientGrounding(
   float broadMassOcclusion = broadMass * phaseGrounding
     * mix(0.92, 0.58, transmission)
     * (0.050 + roughness * 0.045);
+  // Deep, quiet material gets one phase-local ambient pocket. This is not a
+  // contact shadow: it reads only the owner's own density/depth/slope, so a
+  // liquid pool, settled heap, or solid body gains weight without drawing a
+  // separator around neighbouring matter or changing its silhouette.
+  float materialPhase = max(powder, max(liquid, solid));
+  float phasePocketWeight = powder * 1.00 + liquid * 0.52 + solid * 0.78;
+  float buriedMass = materialPhase * eligibility
+    * smoothstep(0.46, 0.82, density)
+    * smoothstep(0.20, 0.76, clamp(depth, 0.0, 1.0))
+    * mix(0.42, 1.0, slopeQuiet);
+  float buriedOcclusion = min(
+    9.0 / 255.0,
+    buriedMass * phasePocketWeight * phaseGrounding
+      * mix(1.04, 0.56, transmission)
+      * mix(0.86, 1.12, roughness)
+      * (0.012 + finishResponse.y * 0.020)
+  );
   float identityPeak = max(max(color.r, color.g), max(color.b, 0.12));
   vec3 identityTint = clamp(color / identityPeak, 0.0, 1.0);
   vec3 cavityTint = mix(vec3(0.74, 0.80, 0.88), identityTint, 0.34);
   vec3 massTint = mix(vec3(0.68, 0.74, 0.82), identityTint, 0.44);
+  vec3 buriedTint = mix(vec3(0.64, 0.73, 0.86), identityTint, 0.46);
   color *= vec3(1.0) - cavityTint * (grounding + powderBasinOcclusion)
-    - massTint * broadMassOcclusion;
+    - massTint * broadMassOcclusion
+    - buriedTint * buriedOcclusion;
   return max(color, vec3(0.0));
 }
 
