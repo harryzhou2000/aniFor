@@ -330,6 +330,32 @@ vec3 applyMaterialProfileIrradiance(
   color += (vec3(1.12) - clamp(color, 0.0, 1.12))
     * irradianceTint * irradiance;
 
+  // Turn the transported emitter carrier into coloured receiver bounce. Keep
+  // the strong lobe on the source-facing shell and admit only a quiet lateral
+  // cavity fill deeper inside: large powder slabs should read as shaped matter,
+  // not as uniformly airbrushed colour. It changes RGB only and adds no
+  // support, sample, pass, or light owner.
+  float sideLight = 1.0 - abs(lightIncidence);
+  float receiverShell = smoothstep(0.04, 0.22, bodyDepth)
+    * (1.0 - smoothstep(0.50, 0.82, bodyDepth));
+  float cavityPocket = smoothstep(0.22, 0.50, bodyDepth)
+    * (1.0 - smoothstep(0.72, 0.96, bodyDepth)) * sideLight;
+  float bounceBand = receiverShell * mix(0.34, 1.0, sourceFacing)
+    + cavityPocket * 0.28;
+  float bouncePhase = powder * 0.70 + liquid * 1.00 + gas * 0.90 + solid * 0.82;
+  float chromaticBounce = lightReach * body * phaseGain * bouncePhase
+    * bounceBand * mix(0.58, 1.12, transmissionReserve)
+    * mix(0.56, 1.0, interiorScatter)
+    * (0.025 + sideLight * 0.055 + max(lightIncidence, 0.0) * 0.250)
+    * mix(0.72, 1.0, penetration);
+  vec3 bounceTint = mix(
+    absorbedLightTint, lightTint, 0.55 + transmissionReserve * 0.30
+  );
+  vec3 bounceHeadroom = max(
+    vec3(0.0), vec3(1.18) - clamp(color, vec3(0.0), vec3(1.18))
+  );
+  color += bounceHeadroom * bounceTint * chromaticBounce;
+
   // A source-shaped in-scattering lobe gives transmissive matter a readable
   // interior rather than concentrating every cue on its silhouette. The
   // parabola is zero at the exposed shell and deepest core, and the signed
@@ -375,8 +401,10 @@ vec3 applyMaterialProfileIrradiance(
     0.55, 1.0, clamp((opticalAbsorption - 0.35) / 2.05, 0.0, 1.0)
   );
   float shadowPhase = composition.farSideShadow;
+  float penumbra = smoothstep(0.08, 0.70, bodyDepth)
+    * mix(0.64, 1.0, 1.0 - abs(lightIncidence));
   float softShadow = lightReach * body * shadowFacing * shadowAbsorption
-    * shadowPhase * (0.045 + bodyDepth * 0.105);
+    * shadowPhase * penumbra * (0.080 + bodyDepth * 0.180);
   vec3 shadowSpectrum = mix(
     vec3(0.82), vec3(0.98) - lightTint * 0.28, 0.70
   );

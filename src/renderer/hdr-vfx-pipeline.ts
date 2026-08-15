@@ -70,6 +70,7 @@ const BLOOM_EXTRACT_FRAGMENT = `
 in vec2 vUv;
 out vec4 finalColor;
 uniform sampler2D uHdrTexture;
+uniform sampler2D uSemanticTexture;
 uniform vec2 uHdrTexel;
 uniform float uThreshold;
 
@@ -84,12 +85,26 @@ vec3 thresholded(vec4 sampleValue) {
   return radiance * contribution * sampleValue.a;
 }
 
+float emissiveBloomFamily(vec2 uv) {
+  float material = floor(texture(uSemanticTexture, uv).r * 255.0 + 0.5);
+  float fire = 1.0 - step(0.5, abs(material - 4.0));
+  float plasma = 1.0 - step(0.5, abs(material - 20.0));
+  float lightning = 1.0 - step(0.5, abs(material - 93.0));
+  float thunder = 1.0 - step(0.5, abs(material - 97.0));
+  return max(max(fire, plasma), max(lightning, thunder));
+}
+
+vec3 focusedThresholded(vec2 uv) {
+  vec3 extracted = thresholded(texture(uHdrTexture, uv));
+  return extracted * mix(1.0, 2.40, emissiveBloomFamily(uv));
+}
+
 void main() {
-  vec3 bloom = thresholded(texture(uHdrTexture, vUv)) * 0.40;
-  bloom += thresholded(texture(uHdrTexture, vUv + vec2(uHdrTexel.x * 1.5, 0.0))) * 0.15;
-  bloom += thresholded(texture(uHdrTexture, vUv - vec2(uHdrTexel.x * 1.5, 0.0))) * 0.15;
-  bloom += thresholded(texture(uHdrTexture, vUv + vec2(0.0, uHdrTexel.y * 1.5))) * 0.15;
-  bloom += thresholded(texture(uHdrTexture, vUv - vec2(0.0, uHdrTexel.y * 1.5))) * 0.15;
+  vec3 bloom = focusedThresholded(vUv) * 0.40;
+  bloom += focusedThresholded(vUv + vec2(uHdrTexel.x * 1.5, 0.0)) * 0.15;
+  bloom += focusedThresholded(vUv - vec2(uHdrTexel.x * 1.5, 0.0)) * 0.15;
+  bloom += focusedThresholded(vUv + vec2(0.0, uHdrTexel.y * 1.5)) * 0.15;
+  bloom += focusedThresholded(vUv - vec2(0.0, uHdrTexel.y * 1.5)) * 0.15;
   finalColor = vec4(bloom, 1.0);
 }
 `;
@@ -152,6 +167,7 @@ in vec2 vUv;
 out vec4 finalColor;
 uniform sampler2D uHdrTexture;
 uniform sampler2D uBloomTexture;
+uniform sampler2D uBloomSoftTexture;
 uniform sampler2D uSemanticTexture;
 uniform sampler2D uWallTexture;
 uniform sampler2D uLiquidTexture;
@@ -172,6 +188,7 @@ uniform vec4 uVisualLab;
 uniform float uLiquidSurfaceVfx;
 uniform float uWaterCurvatureVfx;
 uniform float uBloomIntensity;
+uniform float uBloomSoftIntensity;
 uniform float uExposure;
 uniform float uSaturation;
 
@@ -289,8 +306,14 @@ vec3 liquidInteriorTransport(
   float contourWarp = smoothstep(0.008, 0.105, contourMagnitude);
   opticalWarp += contourDirection * uWorldTexel * contourWarp
     * mix(0.72, 2.35, deepBody);
-  vec2 behindUv = boundedUv(upstreamUv + opticalWarp);
-  vec2 behindDispersionUv = boundedUv(dispersionUv - opticalWarp * 0.52);
+  // Deep connected liquid acts as a genuine scene lens: reuse the private
+  // non-liquid backdrop, but bend it farther than the material's own colour
+  // sample. Shallow shores keep the restrained established displacement while
+  // full bodies reveal a clearer refracted scene and chromatic split.
+  float sceneLens = projectionSupport * body * deepBody;
+  vec2 sceneWarp = opticalWarp * (1.0 + sceneLens * 1.35);
+  vec2 behindUv = boundedUv(upstreamUv + sceneWarp);
+  vec2 behindDispersionUv = boundedUv(dispersionUv - sceneWarp * 0.52);
   vec3 behindRadiance = straightRadiance(texture(uBehindTexture, behindUv));
   vec3 behindDispersion = straightRadiance(texture(uBehindTexture, behindDispersionUv));
   vec3 refractedBackground = vec3(
@@ -300,8 +323,13 @@ vec3 liquidInteriorTransport(
   );
   // Shallow liquid admits more of the private non-liquid/environment layer;
   // deeper columns retain their material-authored body before absorption.
+  float privateSceneShare = mix(0.70, 0.46, deepBody);
+  privateSceneShare = max(
+    privateSceneShare,
+    sceneLens * (0.32 + smoothstep(0.50, 0.78, fold) * 0.38)
+  );
   refractedRadiance = mix(
-    refractedRadiance, refractedBackground, mix(0.70, 0.46, deepBody)
+    refractedRadiance, refractedBackground, privateSceneShare
   );
   vec3 upstreamBloom = texture(uBloomTexture, upstreamUv).rgb;
   float causticCrown = smoothstep(0.50, 0.78, fold);
@@ -318,6 +346,11 @@ vec3 liquidInteriorTransport(
       ? vec3(0.020, 0.075, 0.190)
       : vec3(0.085, 0.022, 0.075));
   float refractionShare = projectionSupport * body * mix(0.20, 0.38, deepBody);
+  refractionShare = min(
+    0.64,
+    refractionShare + sceneLens
+      * (0.16 + smoothstep(0.50, 0.78, fold) * 0.16)
+  );
   vec3 result = mix(
     sourceRadiance, refractedRadiance * transmissionTint, refractionShare
   );
@@ -360,6 +393,7 @@ vec3 liquidInteriorTransport(
   vec3 headroom = max(vec3(0.0), vec3(1.18) - clamp(result, 0.0, 1.18));
   float caustic = projectionSupport * body * causticCrown
     * mix(0.075, 0.25, deepBody);
+  caustic *= 1.0 + sceneLens * 0.85;
   result += headroom * projectedLight * caustic;
   // Keep a readable signed fold through broad, otherwise level liquid.  The
   // earlier caustic is intentionally selective; this lower-amplitude studio
@@ -878,8 +912,19 @@ vec3 acesFilm(vec3 value) {
 
 void main() {
   vec4 scene = texture(uHdrTexture, vUv);
+  vec3 hotBloom = texture(uBloomTexture, vUv).rgb * uBloomIntensity;
+  vec3 softBloom = texture(uBloomSoftTexture, vUv).rgb * uBloomSoftIntensity;
+  vec3 bloomRadiance = hotBloom + softBloom;
   if (scene.a <= 0.0001) {
-    finalColor = vec4(0.0);
+    // Emissive matter may illuminate nearby empty air. Keep this deliberately
+    // soft and premultiplied: it is a presentation halo, not material support,
+    // and therefore never feeds semantic boundaries or the simulation field.
+    float bloomPeak = max(bloomRadiance.r, max(bloomRadiance.g, bloomRadiance.b));
+    float haloAlpha = smoothstep(0.004, 0.20, bloomPeak) * 0.72;
+    vec3 haloColor = clamp(bloomRadiance * uExposure, 0.0, 1.0);
+    float haloLuma = dot(haloColor, vec3(0.2126, 0.7152, 0.0722));
+    haloColor = mix(vec3(haloLuma), haloColor, uSaturation);
+    finalColor = vec4(haloColor * haloAlpha, haloAlpha);
     return;
   }
   vec3 radiance = scene.rgb / scene.a;
@@ -896,10 +941,11 @@ void main() {
     }
   }
   ${visualLabEnabled ? 'radiance = applyHdrVolumeLab(radiance, vUv);' : ''}
-  // Bloom is presentation-only RGB. Existing scene alpha remains the sole
-  // owner of silhouettes, gaps, and sparse material topology.
+  // Bloom is presentation-only RGB. Scene alpha still owns material
+  // silhouettes and topology; the empty-air branch above owns only its soft
+  // light halo and never feeds support back into the simulation renderer.
   float support = smoothstep(0.002, 0.10, scene.a);
-  radiance += texture(uBloomTexture, vUv).rgb * uBloomIntensity * support;
+  radiance += bloomRadiance * support;
   radiance *= uExposure;
   float luma = dot(radiance, vec3(0.2126, 0.7152, 0.0722));
   radiance = mix(vec3(luma), radiance, uSaturation);
@@ -987,9 +1033,11 @@ export class HDRVfxPipeline {
   private readonly behindTarget: RenderTexture;
   private readonly bloomA: RenderTexture;
   private readonly bloomB: RenderTexture;
+  private readonly bloomSoft: RenderTexture;
   private readonly behindScene = new Container();
   private readonly extractScene = new Container();
   private readonly blurScene = new Container();
+  private readonly wideBlurScene = new Container();
   private readonly compositeScene = new Container();
   private compositeUniforms?: UniformGroup;
   private readonly sourceUniforms: UniformGroup;
@@ -1010,6 +1058,7 @@ export class HDRVfxPipeline {
     let behindTarget: RenderTexture | undefined;
     let bloomA: RenderTexture | undefined;
     let bloomB: RenderTexture | undefined;
+    let bloomSoft: RenderTexture | undefined;
     try {
       hdrTarget = RenderTexture.create({
         width, height, resolution: outputScale, format: 'rgba16float',
@@ -1024,6 +1073,10 @@ export class HDRVfxPipeline {
         alphaMode: 'premultiplied-alpha', scaleMode: 'linear', antialias: false,
       });
       bloomB = RenderTexture.create({
+        width: bloomWidth, height: bloomHeight, resolution: outputScale, format: 'rgba16float',
+        alphaMode: 'premultiplied-alpha', scaleMode: 'linear', antialias: false,
+      });
+      bloomSoft = RenderTexture.create({
         width: bloomWidth, height: bloomHeight, resolution: outputScale, format: 'rgba16float',
         alphaMode: 'premultiplied-alpha', scaleMode: 'linear', antialias: false,
       });
@@ -1049,6 +1102,8 @@ export class HDRVfxPipeline {
           }),
           uHdrTexture: hdrTarget.source,
           uHdrSampler: hdrTarget.source.style,
+          uSemanticTexture: composition.semanticTexture,
+          uSemanticSampler: composition.semanticTexture.style,
         },
         'hdr-bloom-extract',
       ));
@@ -1068,9 +1123,26 @@ export class HDRVfxPipeline {
         },
         'hdr-bloom-blur',
       ));
+      this.wideBlurScene.addChild(createPassMesh(
+        bloomWidth, bloomHeight, BLOOM_BLUR_FRAGMENT,
+        {
+          passUniforms: new UniformGroup({
+            // A logical-cell footprint keeps the outer halo stable from 1x
+            // through 4x while the first bloom level preserves a crisp core.
+            uBloomTexel: {
+              value: new Float32Array([4 / bloomWidth, 4 / bloomHeight]),
+              type: 'vec2<f32>',
+            },
+          }),
+          uBloomTexture: bloomB.source,
+          uBloomSampler: bloomB.source.style,
+        },
+        'hdr-bloom-wide-blur',
+      ));
       const visualLabEnabled = isVisualLabDomainImplemented(composition.visualLab.domain);
       const compositeUniforms = new UniformGroup({
         uBloomIntensity: { value: look === 'neon-lab' ? 0.62 : 0.34, type: 'f32' },
+        uBloomSoftIntensity: { value: look === 'neon-lab' ? 0.38 : 0.26, type: 'f32' },
         uExposure: { value: look === 'neon-lab' ? 1.04 : 1.0, type: 'f32' },
         uSaturation: { value: look === 'neon-lab' ? 1.14 : 1.01, type: 'f32' },
         uWorldTexel: {
@@ -1107,6 +1179,8 @@ export class HDRVfxPipeline {
           uHdrSampler: hdrTarget.source.style,
           uBloomTexture: bloomB.source,
           uBloomSampler: bloomB.source.style,
+          uBloomSoftTexture: bloomSoft.source,
+          uBloomSoftSampler: bloomSoft.source.style,
           uSemanticTexture: composition.semanticTexture,
           uSemanticSampler: composition.semanticTexture.style,
           uWallTexture: composition.wallTexture,
@@ -1135,6 +1209,7 @@ export class HDRVfxPipeline {
       this.behindTarget = behindTarget;
       this.bloomA = bloomA;
       this.bloomB = bloomB;
+      this.bloomSoft = bloomSoft;
       this.info = {
         active: true, look, liquidSurfaceVfx: composition.enabled,
         waterCurvatureVfx: composition.enabled && composition.curvatureEnabled,
@@ -1147,12 +1222,14 @@ export class HDRVfxPipeline {
       // every local allocation rather than waiting for Pixi's eventual GC.
       try { this.extractScene.destroy({ children: true }); } catch { /* best effort */ }
       try { this.blurScene.destroy({ children: true }); } catch { /* best effort */ }
+      try { this.wideBlurScene.destroy({ children: true }); } catch { /* best effort */ }
       try { this.compositeScene.destroy({ children: true }); } catch { /* best effort */ }
       try { this.behindScene.destroy({ children: true }); } catch { /* best effort */ }
       try { hdrTarget?.destroy(true); } catch { /* best effort */ }
       try { behindTarget?.destroy(true); } catch { /* best effort */ }
       try { bloomA?.destroy(true); } catch { /* best effort */ }
       try { bloomB?.destroy(true); } catch { /* best effort */ }
+      try { bloomSoft?.destroy(true); } catch { /* best effort */ }
       throw error;
     }
   }
@@ -1200,6 +1277,7 @@ export class HDRVfxPipeline {
     // therefore redundant and only adds two full RGBA16F writes per frame.
     this.renderer.render({ container: this.extractScene, target: this.bloomA, clear: false });
     this.renderer.render({ container: this.blurScene, target: this.bloomB, clear: false });
+    this.renderer.render({ container: this.wideBlurScene, target: this.bloomSoft, clear: false });
     this.renderer.render({ container: this.compositeScene, clear: true });
   }
 
@@ -1217,11 +1295,13 @@ export class HDRVfxPipeline {
     this.behindScene.destroy({ children: true });
     this.extractScene.destroy({ children: true });
     this.blurScene.destroy({ children: true });
+    this.wideBlurScene.destroy({ children: true });
     this.compositeScene.destroy({ children: true });
     this.hdrTarget.destroy(true);
     this.behindTarget.destroy(true);
     this.bloomA.destroy(true);
     this.bloomB.destroy(true);
+    this.bloomSoft.destroy(true);
   }
 }
 

@@ -1634,3 +1634,69 @@ Status: retained visual-first normal-WebGL checkpoint.
 3. Deepen gas volume separation with self-shadowed cores, brighter forward
    scatter, and larger light shafts; then return to growing plants and organic
    material morphology.
+
+## 2026-08-15 — scene light, multi-scale bloom, liquid lensing, and gas depth
+
+Status: retained visual-overhaul checkpoint for canonical normal WebGL.
+
+### What changed
+
+- The HDR compositor now carries two bloom scales. The established half-scale
+  lobe keeps a sharp luminous core, while a second wider lobe produces a soft
+  outer glow with a logical-cell footprint that stays consistent from 1x to
+  4x. Fire, Plasma, LIGH, and THDR receive a stronger semantic extraction, and
+  bright energy can illuminate nearby empty air without changing simulation
+  material support.
+- Shared material lighting now retains the dominant transported source hue.
+  Powder, liquid, solid, and gas receivers gain localized coloured bounce on
+  source-facing shells and cavities plus a deeper far-side penumbra; broad
+  interiors remain textured instead of receiving a uniform brightness wash.
+- Participating gas now pairs its source-facing shoulder with a source-shaped
+  interior self-shadow. Warm/cool shafts turn through a cloud body rather than
+  reading as a flat colour decal, with no change to gas silhouette or alpha.
+- Deep Water, Oil, and Acid use the existing private non-liquid backdrop as a
+  stronger scene lens. Connected full bodies bend and split the scene farther,
+  admit more focused refracted colour, and concentrate the existing caustic;
+  shallow shores retain the restrained earlier response and sharp boundary.
+- Moving Water receives a cool crest glint on the existing velocity-gated foam
+  islands. Calm pools, submerged body, side walls, and disconnected static
+  droplets do not gain a generic white outline.
+
+### Visual decision
+
+- Keep the two-scale bloom and current radius. Energy/radioactive carriers read
+  as luminous at fit view, Plasma retains its internal folds, and ordinary
+  powder/liquid texture remains crisp. The outer lobe was deliberately stopped
+  before tiny sparks dissolved into haze.
+- Keep the deep liquid lens. The RenderOptics matrix shows a clearer glassy
+  depth and chromatic scene displacement in Water, Oil, Acid, and pale optical
+  bodies without softening their silhouettes or powder controls.
+- Keep the gas depth and localized receiver-light direction as shared scene
+  vocabulary. Their fit-view contribution is quieter than the bloom/lens but
+  adds coherent warm/cool turning and avoids the rejected airbrushed interior.
+- Keep the Water crest refinement. The regular checker visible through one
+  authored motion fixture is its deliberate non-liquid refraction backdrop,
+  not foam topology manufactured by the new crest light.
+
+### Lightweight visual checks used
+
+- `npm run build` completes and closes all 19 production resources.
+- `/tmp/anifor-energy-radioactive-multiscale-bloom-v1.png` and
+  `/tmp/anifor-plasma-multiscale-bloom-v3.png` are the retained 2x bloom views;
+  `/tmp/anifor-material-lighting-multiscale-bloom-v1.png` is the non-emissive
+  sharpness control.
+- `/tmp/anifor-render-optics-deep-lens-v2.png`,
+  `/tmp/anifor-water-motion-crest-v1.png`,
+  `/tmp/anifor-gas-self-shadow-v2.png`, and
+  `/tmp/anifor-powder-light-localized-bounce-v2.png` are the retained direct
+  WebGL material views. Selection used fit-view inspection and one independent
+  aesthetic pass, not hashes, accepted baselines, profiling, or broad tests.
+
+### Next visual work
+
+1. Add scene-wide source light to more emissive/radioactive families and give
+   receiver bodies clearer contact shadows without flattening their pigment.
+2. Extend liquid optics into broader underwater caustic projection and improve
+   moving foam/spray breakup in ordinary simulation scenes.
+3. Continue gas volume work with larger density-owned shafts, then return to
+   plant growth silhouettes and organic translucency.

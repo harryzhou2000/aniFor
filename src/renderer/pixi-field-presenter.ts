@@ -8477,6 +8477,15 @@ void main() {
         );
         color += vec3(0.24, 0.34, 0.44)
           * aqueousFoamIsland * aqueousFoam;
+        // Give fast, upward-facing crests a cool directional glint over the
+        // existing irregular foam islands. The already-gated foam term owns
+        // motion and connected Water support, so calm pools and side walls do
+        // not acquire a generic bright rim.
+        float aqueousCrestFacing = smoothstep(0.035, 0.220, -volumeSlope.y);
+        float aqueousCrestLight = aqueousFoam * aqueousCrestFacing
+          * (0.34 + aqueousFoamIsland * 0.66);
+        color += (vec3(1.14) - clamp(color, 0.0, 1.14))
+          * vec3(0.34, 0.76, 1.00) * aqueousCrestLight * 0.115;
       }
       // A true Water core gets a small submerged volume response in addition
       // to the shared aqueous surface. Keep this stricter than the surface
@@ -13558,6 +13567,25 @@ void main() {
         : smoothstep(0.002, 0.05, transportGradientMagnitude);
       longRangeTransportDirection = transportDirection;
       longRangeTransportConfidence = transportConfidence;
+      // Preserve the hue of the dominant transported side instead of letting
+      // opposed warm/cool emitters average into a neutral centre sample. The
+      // centre field remains the sole alpha/radiance owner; these already-paid
+      // cardinal reads contribute only a directional spectrum for receiver
+      // bounce and gas shafts.
+      vec4 dominantHorizontal = transportLeft > transportRight
+        ? transportLeftSample : transportRightSample;
+      vec4 dominantVertical = transportTop > transportBottom
+        ? transportTopSample : transportBottomSample;
+      vec4 dominantTransport = dominantHorizontal.a > dominantVertical.a
+        ? dominantHorizontal : dominantVertical;
+      float directionalTintShare = transportConfidence
+        * smoothstep(0.0005, 0.035, longRangeEmission.a) * 0.88;
+      profileIrradianceEmission.rgb = mix(
+        profileIrradianceEmission.rgb,
+        dominantTransport.rgb,
+        directionalTintShare
+      );
+      longRangeTransportEmission.rgb = profileIrradianceEmission.rgb;
       if (profileIrradianceNormalLength > 0.0001) {
         longRangeIncidence = dot(profileIrradianceOutward, transportDirection)
           * transportConfidence;
@@ -13750,7 +13778,26 @@ void main() {
         vec3(1.0), sourceSpectrum, 0.74
       );
       color += forwardScatterHeadroom * forwardScatterSpectrum
-        * forwardScatterShoulder * 0.68;
+        * forwardScatterShoulder * 0.82;
+      // The source-facing shoulder now has an atmosphere-owned opposite: a
+      // broad interior countershade that makes the same shaft turn through the
+      // cloud instead of reading as a bright decal. Reuse the two density
+      // probes and source/shaft terms already live above; RGB only, with gas
+      // support, alpha, holes, and silhouette left untouched.
+      float shaftBackFacing = smoothstep(
+        0.018, 0.30,
+        forwardScatterTowardDensity - forwardScatterInwardDensity
+      );
+      float shaftCoreDepth = smoothstep(0.16, 0.60, atmosphereState.a)
+        * (0.50 + shaftMiddle * 0.50);
+      float shaftSelfShadow = shaftBody * shaftCoreDepth * shaftBackFacing
+        * shaftSourceEnergy * (0.42 + (1.0 - shaftLobe) * 0.58)
+        * shaftOverhaul;
+      vec3 shaftShadowTint = mix(
+        vec3(0.20, 0.27, 0.40), sourceSpectrum, 0.18
+      );
+      color *= vec3(1.0) - shaftShadowTint
+        * min(shaftSelfShadow * 0.40, 0.21);
       float baseRearExtinction = shaftBody * (
         max(-longRangeIncidence, 0.0)
           * (0.050 + (1.0 - shaftBaseLobe) * 0.120)
