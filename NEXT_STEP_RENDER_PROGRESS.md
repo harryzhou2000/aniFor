@@ -1824,3 +1824,28 @@ requirement.
   captures. They are current visual review artifacts, not baselines or gates.
 - Manual Pages run `32015045574` built, deployed, and completed live
   verification successfully for `9cf36f2`.
+
+## 2026-08-17 — isolated WebGPU presentation probe
+
+Status: experimental branch only; no production renderer preference changed.
+
+### What changed
+
+- `experiment/webgpu-presentation-probe` adds a query-only offscreen WebGPU
+  probe. With `?webgpuProbe=1`, it requests an adapter/device, configures an
+  isolated canvas, submits one clear pass, and reports its terminal capability
+  state on the existing WebGL canvas dataset.
+- The semantic renderer remains explicitly WebGL because its canonical custom
+  program is GLSL/WebGL2. The probe does not select Pixi WebGPU, share the live
+  canvas, alter shader resources, or modify the WebGL/Canvas fallback path.
+
+### Result and next decision
+
+- The production build succeeds. The local SwiftShader headless browser reaches
+  the probe and reports `adapter-unavailable`: WebGPU is detectable there but
+  cannot acquire a usable adapter. This validates the fallback boundary and
+  rules out treating headless WebGPU as a release dependency.
+- A future WGSL/compute renderer should be attempted only behind this same
+  capability check on a real hardware browser. It must preserve the current
+  WebGL/HDR material vocabulary and fall back before allocating scene resources
+  when the adapter/device/configuration probe is not `configured`.

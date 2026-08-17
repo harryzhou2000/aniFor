@@ -50,6 +50,7 @@ import { HDRVfxPipeline, type HDRPipelineInfo } from './hdr-vfx-pipeline';
 import { MATERIAL_BODY_FINISH_GLSL } from './material-body-finish';
 import { POWDER_SMOOTH_COVERAGE_GLSL } from './powder-smooth-coverage';
 import { resolveCeramicBlackbodyVfxEnabled } from './ceramic-blackbody-vfx';
+import { probeWebGpuPresentation } from './webgpu-presentation-probe';
 import {
   isVisualLabExecutionSupported, resolveVisualLabState,
   type VisualLabState, type VisualLabVariant,
@@ -15462,6 +15463,17 @@ export class PixiFieldPresenter {
     presenter.app.canvas.dataset.backingSize = presenter.app.canvas.width + 'x' + presenter.app.canvas.height;
     presenter.app.canvas.dataset.renderLook = presenter.hdrPipelineInfo.look;
     presenter.app.canvas.dataset.hdrPipeline = presenter.hdrPipelineInfo.active ? 'active' : 'inactive';
+    // Keep the production canvas and GLSL renderer on WebGL. A query-only
+    // offscreen WebGPU clear verifies that an eventual WGSL/compute path can
+    // acquire and present a device without risking this established renderer.
+    if (typeof location !== 'undefined'
+      && new URLSearchParams(location.search).get('webgpuProbe') === '1') {
+      presenter.app.canvas.dataset.webgpuProbe = 'pending';
+      void probeWebGpuPresentation().then((result) => {
+        presenter.app.canvas.dataset.webgpuProbe = result.status;
+        if (result.detail) presenter.app.canvas.dataset.webgpuProbeDetail = result.detail;
+      });
+    }
     presenter.publishVisualLabDataset();
     presenter.app.canvas.dataset.denseBodyAmbientFill = outputScale < 8
       && Number(presenter.uniforms.uniforms.uDenseBodyAmbientFill) > 0.5
