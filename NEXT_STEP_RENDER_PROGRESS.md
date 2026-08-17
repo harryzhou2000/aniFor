@@ -2032,6 +2032,11 @@ remained active.
 - Production build passed with the exact 19-resource closure. The local browser
   exercise proves the no-adapter fallback only; adapter-backed compute execution
   remains an explicit future hardware verification item.
+- A second isolated headless Chrome run with the default `auto` GPU policy also
+  reached the real renderer host and reported `webgpu=no-adapter`; this is not
+  a SwiftShader-only limitation. The current CI/container environment therefore
+  cannot execute WebGPU compute and must not be used to promote or reject that
+  optional path.
 
 ### Delivery checkpoint
 
