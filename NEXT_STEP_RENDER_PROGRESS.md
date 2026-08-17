@@ -1781,3 +1781,46 @@ Status: retained normal-WebGL B-only material-lighting refinement.
    lighting vocabulary is sufficiently stable.
 3. Revisit a WebGPU compute prototype only after the WebGL visual stack is
    stable enough to preserve as a quality fallback.
+
+## 2026-08-17 — visual-roadmap coverage audit
+
+Status: phases 1–3 are materially implemented in the canonical WebGL/HDR
+renderer; Phase 4 remains an engineering exploration rather than a release
+requirement.
+
+### Confirmed current coverage
+
+- Phase 1: the normal renderer uses an HDR compositor with bloom/tonemap,
+  semantic emission transport, temperature-driven blackbody radiance, material
+  normals/depth lighting, and source-local receiver transport. The Ceramic and
+  electric-discharge boards visibly exercise the thermal/HDR response.
+- Phase 2: connected liquid bodies carry depth, meniscus, reflection,
+  refraction, internal caustic filaments, foam/spray cues, and backdrop lensing;
+  connected gas carries density-owned billows, transmitted middles, self-shadow,
+  motion-shaped noise, and long-range source shafts. The Water-motion, Gas,
+  Botanical, and Electric-discharge WebGL boards show these effects without
+  changing their simulation silhouettes.
+- Phase 3: class profiles supply key/fill/pigment/transmission/roughness/
+  interior-scatter responses; transmissive solid, powder bulk, organic/wax,
+  botanical lifecycle, and material-volume paths already use that vocabulary.
+  The botanical board confirms hydrated plant canopy variation and shallow
+  subsurface response while preserving thin stems, holes, and growing topology.
+
+### Remaining deliberate work
+
+- A Pixi WebGPU/compute prototype and an adaptive GPU-time quality governor
+  remain Phase 4 experiments. WebGL/HDR stays the canonical look and Canvas2D
+  remains the permissive fallback until a prototype can preserve that visual
+  vocabulary and robustly fall back on unsupported devices.
+- Future aesthetic work should favour scene-specific composition and material
+  tuning over another generic body layer; the common lighting, liquid, gas,
+  blackbody, and organic seams are now populated and visually inspected.
+
+### Lightweight visual checks used
+
+- `/tmp/anifor-water-motion-current.png`, `/tmp/anifor-gas-volume-separation-v2.png`,
+  `/tmp/anifor-ceramic-current.png`, `/tmp/anifor-electric-discharge-current.png`,
+  and `/tmp/anifor-botanical-current.png` are direct 2x normal-WebGL review
+  captures. They are current visual review artifacts, not baselines or gates.
+- Manual Pages run `32015045574` built, deployed, and completed live
+  verification successfully for `9cf36f2`.
