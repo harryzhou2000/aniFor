@@ -7113,6 +7113,15 @@ void main() {
     color += (vec3(1.0) - clamp(color, 0.0, 1.0)) * gasForwardColor
       * gasForwardScatter * (0.65 + diffuse * 0.35);
     color *= 1.0 + gasCrown * 0.21 - gasPocket * 0.13;
+    // In the enhanced look, let the atmosphere-owned crown field lift the
+    // broad, already-connected middle a little more than it deepens pockets.
+    // This separates cloud lobes at fit view without a uniform veil, a new
+    // carrier, or a compact-field reinterpretation; support and alpha remain
+    // entirely in the established atmosphere reconstruction.
+    float gasBVolumeTurn = step(1.5, uMaterialLightingVariant)
+      * gasInterior * smoothstep(0.14, 0.56, gasShadeDensity)
+      * (1.0 - opticalDepth * 0.34);
+    color *= 1.0 + gasBVolumeTurn * (gasCrown * 0.260 - gasPocket * 0.012);
     color += mix(vec3(0.16, 0.19, 0.24), gasBase, 0.30 + cleanGas * 0.12)
       * silverLining * gasScatter;
     color += mix(vec3(0.10, 0.12, 0.16), gasBase, 0.34)

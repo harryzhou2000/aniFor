@@ -2040,3 +2040,21 @@ remained active.
   exact 19-resource runtime-closure verification all passed. The compute probe
   remains opt-in and non-rendering; hosted visual review was intentionally not
   selected for this architectural checkpoint.
+
+## 2026-08-17 — dense-gas crown separation
+
+Status: retained normal-WebGL B-only material-volume refinement.
+
+- The existing atmosphere-owned curvature field now gives only a fully
+  connected, mid-density gas interior a stronger crown lift than pocket
+  attenuation. It consumes no additional texture, field, carrier, support,
+  alpha, topology, contact, Canvas2D, or compact true-8x path.
+- The adjustment is deliberately one-sided: it separates broad lit lobes
+  without restoring the previously rejected rectangular dense-gas treatment or
+  laying a uniform dark veil over neutral Smoke/FOG.
+- Direct 2x WebGL comparison favoured the retained `v2` strength: the upper
+  neutral clouds gain wider light-facing shoulders and clearer large-scale
+  volume turns, while coloured gas, sparse controls, and the existing source
+  shafts remain legible. `npm run build` passed with the exact 19-resource
+  production closure. These captures are current visual review only, not
+  image-hash gates.
