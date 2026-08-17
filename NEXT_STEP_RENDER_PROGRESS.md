@@ -1840,3 +1840,30 @@ Status: isolated experiment at `experiment/webgpu-presentation-probe` commit
   should shed actual post-processing passes only from a measured GPU budget and
   must remain opt-in/observable; a CPU submission heuristic would be a hidden
   visual downgrade rather than reliable GPU adaptation.
+
+## 2026-08-17 — Phase 4 adaptive HDR presentation governor
+
+Status: implemented locally as an explicit normal-WebGL/HDR experiment; it is
+not enabled for ordinary pages unless `?adaptiveQuality=1` is present.
+
+- The governor reuses the existing `EXT_disjoint_timer_query_webgl2` elapsed-GPU
+  path at a bounded 750 ms cadence. It refuses Canvas2D, HDR fallback, compact
+  true-8x, fence latency, and CPU submission timing, so an unsupported driver
+  remains at the complete established presentation rather than receiving a
+  guessed downgrade.
+- Its only possible response is presentation quality: `full` retains the
+  established two-scale bloom, `reduced` keeps the crisp bloom core while
+  dropping the wide halo, and `minimal` preserves the HDR material/tonemap
+  composite while skipping bloom. Simulation, field construction, material
+  shaders, alpha, support, topology, contacts, camera state, and Canvas2D are
+  outside the governor.
+- The canvas publishes the opted-in tier, timing source, and rolling GPU sample
+  as `data-adaptive-presentation-*`. A static scene receives a nonblocking
+  animation-frame query poll; unlike audit timing, the governor never calls
+  `gl.finish()` to force a late result.
+- Local production build completes with the exact 19-resource closure. The
+  SwiftShader WebGL/HDR probe reports `quality=full`, `timing=gpu-query`, and a
+  real returned sample (`15219.85 ms` for its software-rendered fixture). The
+  conservative hysteresis therefore waits for sustained samples before
+  reducing bloom; no ordinary screenshot changes merely because the feature
+  was compiled.

@@ -47,6 +47,9 @@ import {
 } from './visual-capture-evidence';
 import type { VisualCaptureEvidencePlane } from '../shared/visual-capture-static-contract.js';
 import { HDRVfxPipeline, type HDRPipelineInfo } from './hdr-vfx-pipeline';
+import {
+  AdaptivePresentationQuality, type AdaptivePresentationQualityTier,
+} from './adaptive-presentation-quality';
 import { MATERIAL_BODY_FINISH_GLSL } from './material-body-finish';
 import { POWDER_SMOOTH_COVERAGE_GLSL } from './powder-smooth-coverage';
 import { resolveCeramicBlackbodyVfxEnabled } from './ceramic-blackbody-vfx';
@@ -14353,12 +14356,19 @@ export class PixiFieldPresenter {
   private webGLTimingExtension?: WebGLTimerQueryExtension;
   private webGLTimingPending?: WebGLQuery;
   private webGLTimingQueryStartedAt = 0;
+  /** Marks a governor-owned query, which must never force a blocking finish. */
+  private webGLTimingPendingAdaptive = false;
+  private webGLTimingQueryPoll = 0;
   private webGLTimingFence?: WebGLSync;
   private webGLTimingFenceStartedAt = 0;
   private webGLTimingFencePoll = 0;
   private readonly webGLTimingSamples: number[] = [];
   private webGLTimingDiscarded = 0;
   private webGLTimingSequence = 0;
+  /** Opt-in governor; it receives elapsed GPU queries only, never CPU timings. */
+  private adaptivePresentationQuality?: AdaptivePresentationQuality;
+  private adaptivePresentationQualityNextSampleAt = 0;
+  private adaptivePresentationTimingRequested = false;
   private presentationSubmission = 0;
   private completedFrameTicketSequence = 0;
   private completedFrameReceipt?: MutableWebGLCompletedFrameReceipt;
@@ -15462,6 +15472,10 @@ export class PixiFieldPresenter {
     presenter.app.canvas.dataset.backingSize = presenter.app.canvas.width + 'x' + presenter.app.canvas.height;
     presenter.app.canvas.dataset.renderLook = presenter.hdrPipelineInfo.look;
     presenter.app.canvas.dataset.hdrPipeline = presenter.hdrPipelineInfo.active ? 'active' : 'inactive';
+    if (typeof location !== 'undefined'
+      && new URLSearchParams(location.search).get('adaptiveQuality') === '1') {
+      presenter.enableAdaptivePresentationQuality();
+    }
     presenter.publishVisualLabDataset();
     presenter.app.canvas.dataset.denseBodyAmbientFill = outputScale < 8
       && Number(presenter.uniforms.uniforms.uDenseBodyAmbientFill) > 0.5
@@ -16719,6 +16733,33 @@ export class PixiFieldPresenter {
     this.webGLTimingSource = extension ? 'gpu-query' : gl ? 'gpu-fence' : 'cpu-submission';
   }
 
+  /**
+   * Explicit user/developer opt-in for presentation-only adaptive quality.
+   * It is deliberately unavailable for Canvas, compact true-8x, HDR fallback,
+   * and drivers without elapsed GPU queries: none of those paths should infer
+   * visual quality from CPU submission or fence latency.
+   */
+  enableAdaptivePresentationQuality(): void {
+    if (this.outputScale >= 8 || !this.hdrVfxPipeline || !this.hdrPipelineInfo.active) {
+      this.app.canvas.dataset.adaptivePresentationQuality = 'unavailable';
+      return;
+    }
+    this.enableWebGLPresentationTiming();
+    if (!this.webGLTimingExtension || this.webGLTimingSource !== 'gpu-query') {
+      this.app.canvas.dataset.adaptivePresentationQuality = 'timer-unavailable';
+      return;
+    }
+    this.adaptivePresentationQuality = new AdaptivePresentationQuality();
+    this.adaptivePresentationQualityNextSampleAt = 0;
+    this.hdrVfxPipeline.setPresentationQuality('full');
+    this.publishAdaptivePresentationQuality('full');
+  }
+
+  private publishAdaptivePresentationQuality(tier: AdaptivePresentationQualityTier): void {
+    this.app.canvas.dataset.adaptivePresentationQuality = tier;
+    this.app.canvas.dataset.adaptivePresentationTiming = 'gpu-query';
+  }
+
   requestWebGLPresentationTimingSample(): boolean {
     if (!this.webGLTimingEnabled) return false;
     this.pollCompletedFrameFence();
@@ -17435,7 +17476,9 @@ export class PixiFieldPresenter {
     // SwiftShader the timing fence can signal while that redundant sibling
     // remains pending indefinitely. Later mutations stay latest-wins queued
     // until whichever single owner fence retires.
+    this.pollWebGLTimingQuery();
     this.pollWebGLTimingFence();
+    this.requestAdaptivePresentationTiming();
     if (this.outputScale === 8 && (this.renderFence || this.webGLTimingFence)) {
       this.renderQueued = true;
       if (!this.prepareEightXRender()) return;
@@ -17454,6 +17497,17 @@ export class PixiFieldPresenter {
     }
     if (this.outputScale !== 8) this.armFramebufferAlphaReadback(submission);
     this.armFixtureActivationFramebufferAlphaReadback(submission);
+  }
+
+  /** Requests one existing elapsed-GPU query at a restrained cadence. */
+  private requestAdaptivePresentationTiming(): void {
+    if (!this.adaptivePresentationQuality || this.webGLTimingSource !== 'gpu-query') return;
+    const now = performance.now();
+    if (now < this.adaptivePresentationQualityNextSampleAt
+      || this.webGLTimingRequested || this.webGLTimingPending || this.webGLTimingFence) return;
+    this.webGLTimingRequested = true;
+    this.adaptivePresentationTimingRequested = true;
+    this.adaptivePresentationQualityNextSampleAt = now + 750;
   }
 
   /**
@@ -17507,6 +17561,8 @@ export class PixiFieldPresenter {
       return;
     }
     this.webGLTimingRequested = false;
+    const adaptiveTiming = this.adaptivePresentationTimingRequested;
+    this.adaptivePresentationTimingRequested = false;
     const extension = this.webGLTimingExtension;
     let query: WebGLQuery | null = null;
     try { query = extension && gl ? gl.createQuery() : null; }
@@ -17546,6 +17602,8 @@ export class PixiFieldPresenter {
       gl.flush();
       this.webGLTimingPending = query;
       this.webGLTimingQueryStartedAt = started;
+      this.webGLTimingPendingAdaptive = adaptiveTiming;
+      if (adaptiveTiming) this.scheduleWebGLTimingQueryPoll();
     } catch {
       try { gl.deleteQuery(query); } catch { /* context may already be invalid */ }
       if (!this.insertWebGLTimingFence(gl, started)) {
@@ -18026,6 +18084,7 @@ export class PixiFieldPresenter {
     let nanoseconds: number;
     try {
       if (!gl.getQueryParameter(query, gl.QUERY_RESULT_AVAILABLE)) {
+        if (this.webGLTimingPendingAdaptive) return;
         if (performance.now() - this.webGLTimingQueryStartedAt < WEBGL_TIMING_QUERY_STALL_MS) return;
         // The visible frame already submitted successfully; only the optional
         // elapsed-time query is stale. This path is used solely by an explicit
@@ -18047,6 +18106,7 @@ export class PixiFieldPresenter {
       try { gl.deleteQuery(query); } catch { /* context may already be invalid */ }
       this.webGLTimingPending = undefined;
       this.webGLTimingQueryStartedAt = 0;
+      this.webGLTimingPendingAdaptive = false;
       this.useFenceTimingFallback();
       this.recordWebGLTimingSample(Number.NaN);
       return;
@@ -18054,12 +18114,40 @@ export class PixiFieldPresenter {
     try { gl.deleteQuery(query); } catch { /* result is already consumed */ }
     this.webGLTimingPending = undefined;
     this.webGLTimingQueryStartedAt = 0;
+    this.webGLTimingPendingAdaptive = false;
     this.webGLTimingSequence++;
     if (disjoint || !Number.isFinite(nanoseconds) || nanoseconds < 0) {
       this.webGLTimingDiscarded++;
       return;
     }
-    this.webGLTimingSamples.push(nanoseconds / 1_000_000);
+    const gpuMilliseconds = nanoseconds / 1_000_000;
+    this.webGLTimingSamples.push(gpuMilliseconds);
+    this.observeAdaptivePresentationTiming(gpuMilliseconds);
+  }
+
+  /** Keeps opt-in asynchronous timing alive in a static scene without blocking. */
+  private scheduleWebGLTimingQueryPoll(): void {
+    if (this.webGLTimingQueryPoll !== 0 || !this.webGLTimingPending
+      || !this.webGLTimingPendingAdaptive || this.destroyed || this.contextLost) return;
+    this.webGLTimingQueryPoll = requestAnimationFrame(() => {
+      this.webGLTimingQueryPoll = 0;
+      this.pollWebGLTimingQuery();
+      if (this.webGLTimingPending && this.webGLTimingPendingAdaptive) {
+        this.scheduleWebGLTimingQueryPoll();
+      }
+    });
+  }
+
+  private observeAdaptivePresentationTiming(gpuMilliseconds: number): void {
+    const governor = this.adaptivePresentationQuality;
+    const pipeline = this.hdrVfxPipeline;
+    if (!governor || !pipeline) return;
+    const update = governor.observeGpuMilliseconds(gpuMilliseconds);
+    if (!update) return;
+    this.app.canvas.dataset.adaptivePresentationGpuMs = update.averageGpuMs.toFixed(2);
+    if (!update.changed) return;
+    pipeline.setPresentationQuality(update.tier);
+    this.publishAdaptivePresentationQuality(update.tier);
   }
 
   private renderAndRecordFenceTiming(gl: WebGL2RenderingContext): void {
@@ -18392,6 +18480,10 @@ export class PixiFieldPresenter {
   }
 
   private releaseWebGLTimingQuery(): void {
+    if (this.webGLTimingQueryPoll !== 0) {
+      cancelAnimationFrame(this.webGLTimingQueryPoll);
+      this.webGLTimingQueryPoll = 0;
+    }
     const query = this.webGLTimingPending;
     const gl = this.webGLContext();
     if (query && gl) {
@@ -18399,6 +18491,7 @@ export class PixiFieldPresenter {
     }
     this.webGLTimingPending = undefined;
     this.webGLTimingQueryStartedAt = 0;
+    this.webGLTimingPendingAdaptive = false;
   }
 
   private webGLContext(): WebGL2RenderingContext | undefined {

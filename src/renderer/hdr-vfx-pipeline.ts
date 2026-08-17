@@ -4,6 +4,7 @@ import {
 import type { TextureSource } from 'pixi.js';
 import { HDR_VOLUME_LAB_GLSL } from './hdr-volume-lab';
 import type { FieldOutputScale } from './render-resolution';
+import type { AdaptivePresentationQualityTier } from './adaptive-presentation-quality';
 import type { RenderLook } from './render-look';
 import {
   isVisualLabDomainImplemented, packVisualLabState, type VisualLabState,
@@ -1041,6 +1042,9 @@ export class HDRVfxPipeline {
   private readonly compositeScene = new Container();
   private compositeUniforms?: UniformGroup;
   private readonly sourceUniforms: UniformGroup;
+  private readonly bloomIntensity: number;
+  private readonly bloomSoftIntensity: number;
+  private presentationQuality: AdaptivePresentationQualityTier = 'full';
 
   private constructor(
     private readonly renderer: RenderPassRenderer,
@@ -1052,6 +1056,8 @@ export class HDRVfxPipeline {
     composition: HDRCompositionResources,
   ) {
     this.sourceUniforms = composition.sourceUniforms;
+    this.bloomIntensity = look === 'neon-lab' ? 0.62 : 0.34;
+    this.bloomSoftIntensity = look === 'neon-lab' ? 0.38 : 0.26;
     const bloomWidth = Math.max(1, Math.ceil(width / 2));
     const bloomHeight = Math.max(1, Math.ceil(height / 2));
     let hdrTarget: RenderTexture | undefined;
@@ -1141,8 +1147,8 @@ export class HDRVfxPipeline {
       ));
       const visualLabEnabled = isVisualLabDomainImplemented(composition.visualLab.domain);
       const compositeUniforms = new UniformGroup({
-        uBloomIntensity: { value: look === 'neon-lab' ? 0.62 : 0.34, type: 'f32' },
-        uBloomSoftIntensity: { value: look === 'neon-lab' ? 0.38 : 0.26, type: 'f32' },
+        uBloomIntensity: { value: this.bloomIntensity, type: 'f32' },
+        uBloomSoftIntensity: { value: this.bloomSoftIntensity, type: 'f32' },
         uExposure: { value: look === 'neon-lab' ? 1.04 : 1.0, type: 'f32' },
         uSaturation: { value: look === 'neon-lab' ? 1.14 : 1.01, type: 'f32' },
         uWorldTexel: {
@@ -1275,11 +1281,30 @@ export class HDRVfxPipeline {
     // Both bloom meshes disable blending, exactly cover their matching target,
     // and unconditionally write RGBA. Clearing those private targets first is
     // therefore redundant and only adds two full RGBA16F writes per frame.
-    this.renderer.render({ container: this.extractScene, target: this.bloomA, clear: false });
-    this.renderer.render({ container: this.blurScene, target: this.bloomB, clear: false });
-    this.renderer.render({ container: this.wideBlurScene, target: this.bloomSoft, clear: false });
+    // The adaptive tiers are presentation-only: full retains the established
+    // two-scale bloom, reduced keeps its crisp core, and minimal preserves the
+    // HDR material composite while shedding the optional bloom work.
+    if (this.presentationQuality !== 'minimal') {
+      this.renderer.render({ container: this.extractScene, target: this.bloomA, clear: false });
+      this.renderer.render({ container: this.blurScene, target: this.bloomB, clear: false });
+      if (this.presentationQuality === 'full') {
+        this.renderer.render({ container: this.wideBlurScene, target: this.bloomSoft, clear: false });
+      }
+    }
     this.renderer.render({ container: this.compositeScene, clear: true });
   }
+
+  /** Changes optional bloom work only; the HDR scene/material pass stays intact. */
+  setPresentationQuality(tier: AdaptivePresentationQualityTier): void {
+    if (tier === this.presentationQuality) return;
+    this.presentationQuality = tier;
+    const uniforms = this.compositeUniforms?.uniforms;
+    if (!uniforms) return;
+    uniforms.uBloomIntensity = tier === 'minimal' ? 0 : this.bloomIntensity;
+    uniforms.uBloomSoftIntensity = tier === 'full' ? this.bloomSoftIntensity : 0;
+  }
+
+  getPresentationQuality(): AdaptivePresentationQualityTier { return this.presentationQuality; }
 
   /** Updates only the fixed comparison vec4; callers decide when to render. */
   setVisualLabState(state: Readonly<VisualLabState>): void {
