@@ -2058,3 +2058,10 @@ Status: retained normal-WebGL B-only material-volume refinement.
   shafts remain legible. `npm run build` passed with the exact 19-resource
   production closure. These captures are current visual review only, not
   image-hash gates.
+
+### Delivery checkpoint
+
+- Commit `865dc96` was pushed to `main_codex` and manually deployed in Actions
+  run `32022602418`. Its cached build, Pages deployment, deployed revision, and
+  exact 19-resource runtime-closure verification all passed. The optional
+  hosted visual batch remains independent of this direct-review visual change.
