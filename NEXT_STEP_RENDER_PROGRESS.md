@@ -2004,3 +2004,11 @@ replace the canonical WebGL renderer.
 - Production build passed with the exact 19-resource closure. The scaffold is
   deliberately not a claimed WebGPU renderer; its next step is a separate
   adapter-ready compute prototype for one field operation.
+
+### Delivery checkpoint
+
+- Commit `b067ae1` was pushed to `main_codex` and manually deployed in Actions
+  run `32020319757`. The cached build, Pages deployment, deployed revision, and
+  exact 19-resource runtime-closure verification all passed. The optional
+  hosted visual review remains intentionally independent of this capability
+  scaffold.
