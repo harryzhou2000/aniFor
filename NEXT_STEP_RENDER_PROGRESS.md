@@ -1867,3 +1867,31 @@ not enabled for ordinary pages unless `?adaptiveQuality=1` is present.
   conservative hysteresis therefore waits for sustained samples before
   reducing bloom; no ordinary screenshot changes merely because the feature
   was compiled.
+
+### Delivery checkpoint
+
+- Commit `597964f1090b612498ca4056472c9c2bc8f17a5e` was pushed to `main_codex`
+  and manually deployed by GitHub Actions run `32016871717`. Its build restored
+  the compiler cache and completed successfully; Pages deployment and the
+  deployed revision/19-resource closure verification both passed. The optional
+  hosted visual smoke was intentionally not selected for this delivery because
+  the governor is inactive without its explicit query opt-in.
+
+## 2026-08-17 — scene-local emission-light audit
+
+Status: no duplicate active-light list was added because normal WebGL already
+has a stronger scene-local transport implementation than a capped screen-space
+light list would provide here.
+
+- The normal 1x-4x presenter owns an opt-in long-range emission carrier that
+  transports color and intensity through the existing low-resolution emission
+  field, blocks it at native walls, and reconstructs a source direction from
+  the transported gradient. It supplies material, liquid, wax, gas, and
+  atmospheric receivers while leaving semantic emission cores, support, alpha,
+  topology, and Canvas2D unchanged.
+- That is the renderer's practical dynamic-light grid: it combines all nearby
+  sources into a bounded, wall-aware field rather than maintaining an arbitrary
+  16–32 source list that can pop as a source crosses a selection threshold.
+  The current next visual opportunities are therefore composition tuning
+  (gas shafts/broad organic forms) and hardware validation of the isolated
+  WebGPU prototype, not a second local-light architecture.
