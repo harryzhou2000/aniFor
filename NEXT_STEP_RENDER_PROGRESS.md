@@ -1958,3 +1958,23 @@ Status: rejected after direct WebGL comparison; no renderer source is retained.
   worse than the retained local billow response, so the exact source was
   restored. Future gas work needs a genuinely continuous dense-cloud signal,
   not another reinterpretation of the compact mesoscale field.
+
+## 2026-08-17 — continuous dense-gas billow preservation
+
+Status: retained after normal-WebGL/HDR comparison. Broad Smoke/Clean-gas
+bodies now preserve their existing positive/negative billow relief deeper into
+a truly coherent density core, giving the large clouds a clearer volumetric
+lobe read without repeating the rejected rectangular response.
+
+- The signal is not a new texture, macro carrier, or procedural tile. It is
+  the existing half-resolution Gaussian atmosphere density: B admits the
+  stronger interior billow only when both the centre and its existing cardinal
+  mean prove dense coherent gas. Sparse chains, thin fringes, contacts,
+  support, alpha, topology, Canvas2D, compact true-8x, and OFF/A retain their
+  established paths.
+- Three bounded direct 2x SwiftShader WebGL comparisons were inspected. The
+  initial admission was too quiet; the selected strength retains the soft
+  cloud silhouette while separating broad light and shadow lobes. It does not
+  expose the compact-field rectangles seen in the rejected predecessor. The
+  result is visual review evidence only, not an image-hash gate.
+- Production build passed with the exact 19-resource closure.

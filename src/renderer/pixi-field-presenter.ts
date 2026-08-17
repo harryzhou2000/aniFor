@@ -7322,8 +7322,21 @@ void main() {
           gasVfxWaveBasis * 0.32 + gasVfxFbm * 1.08, -1.0, 1.0
         );
       }
-      float gasVfxBodySupport = smoothstep(0.090, 0.32, gasShadeDensity)
+      float gasLocalBillowSupport = smoothstep(0.090, 0.32, gasShadeDensity)
         * gasInterior * (1.0 - opticalDepth * 0.35);
+      // The half-resolution atmosphere field is already a continuous Gaussian
+      // density carrier. In B, use agreement between its centre and cardinal
+      // density only to keep the existing billow's positive/negative relief
+      // alive through a dense cloud core. It adds no noise, probe, support, or
+      // alpha path: sparse gas and incoherent fringes retain the local body
+      // response, while a genuinely merged cloud avoids becoming one grey slab.
+      float gasDenseBillowAdmission = step(1.5, uMaterialLightingVariant)
+        * gasInterior
+        * smoothstep(0.20, 0.52, min(atmosphereState.a, cloudNeighbourMean))
+        * smoothstep(0.24, 0.66, gasShadeDensity);
+      float gasVfxBodySupport = mix(
+        gasLocalBillowSupport, gasInterior * 1.28, gasDenseBillowAdmission
+      );
       // The shared material-lighting B look turns this already-established
       // static billow basis into a clearer interior volume. It changes only
       // the strength of RGB key/pocket modulation after atmosphere support is
