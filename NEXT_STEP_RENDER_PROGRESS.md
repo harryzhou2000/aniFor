@@ -1943,3 +1943,18 @@ wall-backed and leaving the open-water crest/body treatment unchanged.
   revision, and 19-resource runtime-closure verification all passed. Optional
   hosted Visual Lab capture was deliberately not selected for this small
   direct-review checkpoint.
+
+## 2026-08-17 — dense-gas lobe probe
+
+Status: rejected after direct WebGL comparison; no renderer source is retained.
+
+- The probe used the already-live, owner-safe atmosphere/material-mesoscale
+  coherence and curvature values only for normal-B, dense connected gas. Sparse
+  chains, support, alpha, contacts, Canvas2D, and other variants stayed on the
+  established path. Its intention was to make the broad cloud light/shadow
+  response more volumetric without adding a macro carrier or texture read.
+- On the real 2x WebGL gas material-lighting scene, the broader curvature
+  exposed rectangular dark panels in the cloud interiors. That is visually
+  worse than the retained local billow response, so the exact source was
+  restored. Future gas work needs a genuinely continuous dense-cloud signal,
+  not another reinterpretation of the compact mesoscale field.
