@@ -7328,10 +7328,10 @@ void main() {
       // remain on their existing paths.
       float gasInteriorContrast = materialCompositionParameters(2.0).interiorContrast;
       float gasBillowKeyScale = mix(
-        1.0, 4.20 * gasInteriorContrast, gasMaterialVolumeB
+        1.0, 6.10 * gasInteriorContrast, gasMaterialVolumeB
       );
       float gasBillowPocketScale = mix(
-        1.0, 3.10 * gasInteriorContrast, gasMaterialVolumeB
+        1.0, 4.50 * gasInteriorContrast, gasMaterialVolumeB
       );
       float gasVfxKey = min(
         mix(0.180, 0.285, gasMaterialVolumeB),
@@ -7374,10 +7374,15 @@ void main() {
           + gasDirectionalRelief * 0.10,
         -1.0, 1.0
       );
+      // A cloud needs a little more separation than a surface lobe: preserve
+      // the existing broad frequency, but concentrate the positive and
+      // negative halves into distinct translucent windows rather than raising
+      // the whole body. This makes a quiet neutral cloud read as a volume at
+      // fit scale without a global grey veil or any support/alpha change.
       float gasParticipatingKey = gasParticipatingSupport
-        * smoothstep(0.04, 0.72, gasParticipatingPhase) * 0.360;
+        * smoothstep(0.10, 0.70, gasParticipatingPhase) * 0.680;
       float gasParticipatingPocket = gasParticipatingSupport
-        * smoothstep(0.04, 0.76, -gasParticipatingPhase) * 0.280;
+        * smoothstep(0.12, 0.74, -gasParticipatingPhase) * 0.500;
       vec3 gasParticipatingTint = mix(
         vec3(0.34, 0.56, 1.00), vividColor(gasBase, 1.10), 0.46
       );

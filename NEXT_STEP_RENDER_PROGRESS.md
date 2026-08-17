@@ -1700,3 +1700,43 @@ Status: retained visual-overhaul checkpoint for canonical normal WebGL.
    moving foam/spray breakup in ordinary simulation scenes.
 3. Continue gas volume work with larger density-owned shafts, then return to
    plant growth silhouettes and organic translucency.
+
+## 2026-08-17 — denser gas billow separation
+
+Status: retained normal-WebGL B-only refinement.
+
+### What changed
+
+- The established dense-atmosphere billow uses a stronger, still bounded
+  positive/negative lobe split. Its broad source-shaped windows now carry a
+  clearer cool transmission and its opposed pockets a deeper absorption,
+  instead of raising the entire cloud body.
+- The response remains inside the existing `uGasBodyVfx` and material-lighting
+  B window. It reuses the live density, optical depth, billow, curvature, and
+  material-volume inputs; gas support, alpha, geometry, texture ownership,
+  Canvas2D, OFF/A, and compact true-8x are unchanged.
+
+### Visual decision
+
+- Keep the stronger separation. In the direct fit-scale gas board, the large
+  neutral cloud controls gain recognizable lit windows and recessed pockets,
+  while the coloured Oxygen/Noble controls preserve their hue and small
+  controls remain crisp. The rejected intermediate tuning was visibly too
+  quiet to overcome the panel-like read.
+
+### Lightweight visual checks used
+
+- `npm run build` completes and closes all 19 production resources.
+- `/tmp/anifor-gas-current.png`, `/tmp/anifor-gas-volume-separation-v1.png`,
+  and the retained `/tmp/anifor-gas-volume-separation-v2.png` are direct 2x
+  normal-WebGL captures. The decision is fit-view inspection, not a visual
+  hash, baseline, profiler result, or broad unit-test gate.
+
+### Next visual work
+
+1. Add larger density-owned shafts to source-lit gas without expanding the
+   cloud silhouette or producing a uniform dark veil.
+2. Extend the existing liquid scene lens into broader underwater caustic
+   projection, then improve moving foam/spray breakup.
+3. Return to material presentation for organic translucency and plant-growth
+   silhouettes after those common fluid-volume layers are established.
