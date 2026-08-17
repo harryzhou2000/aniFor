@@ -113,7 +113,8 @@ import { semanticRenderHeat } from './semantic-field';
 import { compositePixel } from './rgba-composite';
 import { forceCanvas2D, probeWebGLCapabilities } from './webgl-support';
 import {
-  probeWebGPU, webGPUProbeRequested, type WebGPUProbeResult,
+  probeWebGPU, probeWebGPUCompute, webGPUComputeProbeRequested,
+  webGPUProbeRequested, type WebGPUProbeResult,
 } from './webgpu-probe';
 import {
   contourLight, isMaterialBulkInterior, materialNeighbourMask, neighbourDensity,
@@ -500,8 +501,9 @@ export class MaterialRenderer {
     this.contourChunks.markAll();
     if (simulation.walls) this.renderedWalls = new Uint8Array(simulation.walls());
     this.view = new ViewTransform(simulation.width, simulation.height);
-    if (webGPUProbeRequested()) {
-      void probeWebGPU().then((result) => {
+    if (webGPUProbeRequested() || webGPUComputeProbeRequested()) {
+      const probe = webGPUComputeProbeRequested() ? probeWebGPUCompute : probeWebGPU;
+      void probe().then((result) => {
         this.webGPUProbe = result;
         this.host.dataset.webgpuProbe = result.status;
       });

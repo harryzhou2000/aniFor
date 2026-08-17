@@ -2012,3 +2012,23 @@ replace the canonical WebGL renderer.
   exact 19-resource runtime-closure verification all passed. The optional
   hosted visual review remains intentionally independent of this capability
   scaffold.
+
+## 2026-08-17 — WebGPU density-smoothing compute prototype
+
+Status: implemented as a second explicit, non-rendering probe. It is executable
+on adapter-ready hardware but could not run in the local SwiftShader browser,
+which correctly returned the inherited `no-adapter` result while WebGL/HDR
+remained active.
+
+- `?webgpuComputeProbe=1` now requests an adapter/device and dispatches an
+  actual WGSL five-tap, 32-sample density smoothing operation into a separate
+  storage buffer. It copies that result to a mapped readback buffer and checks
+  the returned density before reporting `compute-ready`; all transient buffers
+  and the device are released afterward.
+- The probe consumes no live simulation field, texture, canvas, or presenter
+  target. It therefore establishes a safe executable compute seam for a future
+  half-resolution volume-field pass without changing current WebGL, Canvas2D,
+  support, alpha, topology, allocation, or fallback behaviour.
+- Production build passed with the exact 19-resource closure. The local browser
+  exercise proves the no-adapter fallback only; adapter-backed compute execution
+  remains an explicit future hardware verification item.
