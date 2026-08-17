@@ -256,6 +256,23 @@ vec3 liquidInteriorTransport(
   float opticalDepth = texture(uLiquidDepthTexture, vUv).r;
   float denseBody = smoothstep(0.58, 0.92, liquidCentre.a);
   float deepBody = smoothstep(18.0 / 255.0, 108.0 / 255.0, opticalDepth);
+  // The liquid field correctly excludes native wall cells from its continuous
+  // support. Their semantic owner can nevertheless be exact Water, so absorb
+  // the wall's high-contrast presentation before the continuous-body gate.
+  // The shared broad tile makes the submerged wall read as a low-frequency
+  // variation through Water instead of a pasted regular grid.
+  float centreWall = step(
+    0.5, floor(texture(uWallTexture, vUv).r * 255.0 + 0.5)
+  );
+  if (centreWall > 0.5 && material == MATERIAL_WATER) {
+    vec3 wallVolume = texture(uMaterialVolumeTexture, vUv).rgb;
+    float wallVeil = 0.56 + wallVolume.g * 0.18;
+    sourceRadiance = mix(
+      sourceRadiance,
+      sourceRadiance * vec3(0.34, 0.62, 0.74),
+      wallVeil
+    );
+  }
   float body = denseBody * mix(0.28, 1.0, deepBody);
   if (body < 0.015) return sourceRadiance;
 

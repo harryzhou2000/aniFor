@@ -1915,3 +1915,23 @@ coefficient experiment for receiver bounce was rejected after direct viewing.
   against the retained localized-light view. At normal fit scale it was
   indistinguishable, so the source was restored rather than retaining a hidden
   coefficient change. This remains a visual decision, not an image-hash gate.
+
+## 2026-08-17 — submerged Water/native-wall optical treatment
+
+Status: retained after direct normal-WebGL/HDR viewing. The Water fixture's
+co-located native-wall control now reads as a submerged, low-contrast cyan
+texture instead of a bright diagnostic checker, while remaining visibly native
+wall-backed and leaving the open-water crest/body treatment unchanged.
+
+- `liquidInteriorTransport` uses only already-bound wall, material-volume,
+  semantic, and HDR inputs for this treatment. Before the continuous-liquid
+  field deliberately excludes a co-located wall cell, exact Water attenuates
+  that wall's source RGB with a broad material-volume variation. This is a
+  colour-only presentation change: no field, support, alpha, topology, wall,
+  contact, allocation, or target is changed.
+- Production build passed with the exact 19-resource closure. A fresh 2x
+  SwiftShader WebGL/HDR Water-motion capture was reviewed directly: the prior
+  bright white/cyan lower-right checker became a dimmer, water-coloured
+  submerged grid, while its outer geometry and the pale upper water crest
+  remained readable. The capture is current visual evidence only, not a PNG
+  baseline or a future gate.
