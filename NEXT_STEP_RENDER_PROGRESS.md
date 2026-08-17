@@ -1740,3 +1740,44 @@ Status: retained normal-WebGL B-only refinement.
    projection, then improve moving foam/spray breakup.
 3. Return to material presentation for organic translucency and plant-growth
    silhouettes after those common fluid-volume layers are established.
+
+## 2026-08-17 — localized transported-source illumination
+
+Status: retained normal-WebGL B-only material-lighting refinement.
+
+### What changed
+
+- The common profile irradiance helper now concentrates chromatic bounce on a
+  genuinely source-facing receiver shoulder and reduces its lateral cavity
+  share. Positive external incidence carries a stronger bounded transport
+  lobe, including the established profile-admitted transmissive solid path.
+- This remains shared phase/profile arithmetic over the existing emission,
+  body, depth, slope, and incidence proofs. It adds no light source, sampler,
+  field, pass, allocation, alpha, support, topology, or contact behavior;
+  Canvas2D, OFF/A, and compact true-8x remain outside this B-only response.
+
+### Visual decision
+
+- Keep the localized tuning. The source-opposed powder board now presents a
+  coherent warm-left/cool-right cue across broad granular bodies and preserves
+  the water-backed inset, rather than lifting the whole slab. The ordinary
+  receiver board remains restrained, which is intentional for scenes without
+  strong source incidence.
+
+### Lightweight visual checks used
+
+- `npm run build` completes and closes all 19 production resources.
+- `/tmp/anifor-receiver-current.png`,
+  `/tmp/anifor-receiver-localized-light-v1.png`, and the retained
+  `/tmp/anifor-powder-light-localized-v1.png` are direct 2x normal-WebGL
+  captures. Selection is visual inspection, not a hash, baseline, profiler,
+  or broad unit-test gate.
+
+### Next visual work
+
+1. Add larger density-owned source shafts within gas bodies without expanding
+   their silhouette or lifting neutral clouds uniformly.
+2. Refine organic translucency and plant-growth silhouettes after the common
+   lighting vocabulary is sufficiently stable.
+3. Revisit a WebGPU compute prototype only after the WebGL visual stack is
+   stable enough to preserve as a quality fallback.

@@ -340,13 +340,17 @@ vec3 applyMaterialProfileIrradiance(
     * (1.0 - smoothstep(0.50, 0.82, bodyDepth));
   float cavityPocket = smoothstep(0.22, 0.50, bodyDepth)
     * (1.0 - smoothstep(0.72, 0.96, bodyDepth)) * sideLight;
-  float bounceBand = receiverShell * mix(0.34, 1.0, sourceFacing)
-    + cavityPocket * 0.28;
+  // Favour a real positive source-facing shoulder over a generic side-light
+  // wash. The smaller cavity share retains a coloured recess near an emitter,
+  // but broad quiet interiors no longer receive the same lift as a receiver
+  // directly facing the transported source.
+  float bounceBand = receiverShell * mix(0.18, 1.0, sourceFacing)
+    + cavityPocket * 0.20;
   float bouncePhase = powder * 0.70 + liquid * 1.00 + gas * 0.90 + solid * 0.82;
   float chromaticBounce = lightReach * body * phaseGain * bouncePhase
     * bounceBand * mix(0.58, 1.12, transmissionReserve)
     * mix(0.56, 1.0, interiorScatter)
-    * (0.025 + sideLight * 0.055 + max(lightIncidence, 0.0) * 0.250)
+    * (0.032 + sideLight * 0.062 + max(lightIncidence, 0.0) * 0.360)
     * mix(0.72, 1.0, penetration);
   vec3 bounceTint = mix(
     absorbedLightTint, lightTint, 0.55 + transmissionReserve * 0.30
@@ -383,7 +387,7 @@ vec3 applyMaterialProfileIrradiance(
   float solidScatterGain = mix(1.0, 2.35, solid * solidScatterAdmission);
   float transportLobe = lightReach * body * positiveExternal * midPath
     * phaseScatter * solidScatterAdmission * interiorScatter * transmissionReserve
-    * (0.024 + finishResponse.x * 0.060) * solidScatterGain;
+    * (0.028 + finishResponse.x * 0.074) * solidScatterGain;
   vec3 transportLobeTint = mix(
     absorbedLightTint, lightTint, mix(0.28, 0.82, transmissionReserve)
   );
