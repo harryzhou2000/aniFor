@@ -2032,3 +2032,11 @@ remained active.
 - Production build passed with the exact 19-resource closure. The local browser
   exercise proves the no-adapter fallback only; adapter-backed compute execution
   remains an explicit future hardware verification item.
+
+### Delivery checkpoint
+
+- Commit `e1c9ffa` was pushed to `main_codex` and manually deployed in Actions
+  run `32020878160`. Its cached build, Pages deployment, deployed revision, and
+  exact 19-resource runtime-closure verification all passed. The compute probe
+  remains opt-in and non-rendering; hosted visual review was intentionally not
+  selected for this architectural checkpoint.
