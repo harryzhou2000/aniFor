@@ -2070,3 +2070,41 @@ Status: retained normal-WebGL B-only material-volume refinement.
   run `32022602418`. Its cached build, Pages deployment, deployed revision, and
   exact 19-resource runtime-closure verification all passed. The optional
   hosted visual batch remains independent of this direct-review visual change.
+
+## 2026-08-17 — visual-overhaul roadmap closure audit
+
+Status: implementation scope complete in the canonical WebGL/HDR renderer.
+
+- **HDR and lighting core:** `HDRVfxPipeline` owns the HDR material composition,
+  extract/blur bloom passes, and tonemap; the semantic emission field uses the
+  shared blackbody ramp, while the established long-range emission transport
+  supplies bounded, wall-aware source direction. The current 2x WebGL electric
+  board (`/tmp/anifor-electric-roadmap-audit.png`) visibly retains emissive
+  bloom, hot material rolloff, and locally illuminated receiver forms.
+- **Fluid and gas realism:** connected liquids have depth/refraction/Fresnel,
+  curvature/meniscus transport, moving crest/foam/spray cues, and receiver
+  caustics. Gas uses the field-owned connected density, advected volume billows,
+  source shafts, self-shadow, and the retained dense-crown separation. Current
+  2x WebGL Water and Gas boards (`/tmp/anifor-water-motion-current-v2.png` and
+  `/tmp/anifor-gas-crown-turn-v2.png`) show continuous bodies and cloud lobes
+  rather than discrete particles.
+- **Material delicacy:** the shared appearance/composition profiles supply
+  roughness, transmission, scatter, contrast, and environment response;
+  material grounding supplies safe broad-body ambient occlusion; normal-WebGL
+  powder, liquid, gas, and solid paths consume that vocabulary without moving
+  their simulation support. The botanical board
+  (`/tmp/anifor-plant-roadmap-audit.png`) retains material variation, shallow
+  subsurface response, holes, thin stems, and growth silhouettes.
+- **Technology and scale direction:** normal 1x–4x WebGL/HDR and the compact
+  true-8x path remain separately bounded, while Canvas2D retains its compatible
+  minimum presentation. The opt-in WebGPU adapter/device and density-compute
+  prototype is implemented and safely falls back. Both available headless GPU
+  policies report `no-adapter`, so hardware compute execution is explicitly an
+  external-device validation task rather than a release requirement.
+
+`npm run build` passed with the exact 19-resource closure after the final
+retained visual change, and Actions run `32022602418` deployed it successfully.
+The road map is now complete as an implementation and visual-review objective;
+future work is open-ended material/art tuning or hardware-specific WebGPU
+validation, not an unfulfilled phase of this document. Current captures are
+direct visual evidence only, never cross-revision image gates.
