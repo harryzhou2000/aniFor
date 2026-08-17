@@ -113,6 +113,9 @@ import { semanticRenderHeat } from './semantic-field';
 import { compositePixel } from './rgba-composite';
 import { forceCanvas2D, probeWebGLCapabilities } from './webgl-support';
 import {
+  probeWebGPU, webGPUProbeRequested, type WebGPUProbeResult,
+} from './webgpu-probe';
+import {
   contourLight, isMaterialBulkInterior, materialNeighbourMask, neighbourDensity,
 } from './volumetric-field';
 import { updateBoundaryStabilityRect } from './boundary-stability-field';
@@ -147,6 +150,8 @@ export interface RendererBackendInfo {
     | 'webgl-error' | 'webgl-context-lost';
   readonly requestedOutputScale?: FieldOutputScale;
   readonly outputScale?: FieldOutputScale;
+  /** Opt-in readiness receipt for the future compute path; never selects this renderer. */
+  readonly webgpu?: WebGPUProbeResult;
 }
 
 export interface CanvasPresentationTiming {
@@ -339,6 +344,7 @@ export class MaterialRenderer {
   private firePixels?: ImageData;
   private fallbackFields?: RenderFieldSet;
   private backend: RendererBackendInfo = { backend: 'canvas2d', label: 'Canvas 2D', reason: 'webgl-starting' };
+  private webGPUProbe?: WebGPUProbeResult;
   private lastDraw = -Infinity;
   private lastDynamicFieldRefresh = -Infinity;
   private lastPowderSurfaceRefresh = -Infinity;
@@ -494,6 +500,12 @@ export class MaterialRenderer {
     this.contourChunks.markAll();
     if (simulation.walls) this.renderedWalls = new Uint8Array(simulation.walls());
     this.view = new ViewTransform(simulation.width, simulation.height);
+    if (webGPUProbeRequested()) {
+      void probeWebGPU().then((result) => {
+        this.webGPUProbe = result;
+        this.host.dataset.webgpuProbe = result.status;
+      });
+    }
   }
 
   async init(): Promise<void> {
@@ -998,6 +1010,7 @@ export class MaterialRenderer {
   getBackendInfo(): RendererBackendInfo {
     return {
       ...this.backend,
+      ...(this.webGPUProbe ? { webgpu: this.webGPUProbe } : {}),
       requestedOutputScale: this.requestedOutputScale,
       outputScale: this.backend.backend === 'webgl' ? this.webGLOutputScale : this.outputScale,
     };

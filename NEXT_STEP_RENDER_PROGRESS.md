@@ -1986,3 +1986,21 @@ lobe read without repeating the rejected rectangular response.
   exact 19-resource runtime-closure verification all passed. The optional
   hosted visual batch was intentionally not selected for this direct-review
   visual increment.
+
+## 2026-08-17 — WebGPU compute-readiness scaffold
+
+Status: implemented as an opt-in architectural probe; it does not select or
+replace the canonical WebGL renderer.
+
+- `?webgpuProbe=1` requests an adapter and device through the browser WebGPU
+  API, immediately releases the transient device, and publishes one of
+  `unavailable`, `no-adapter`, `ready`, or `device-error` through the existing
+  renderer backend audit. It allocates no presentation surface and has no
+  effect unless explicitly requested.
+- A real isolated browser pass reported `webgpu=no-adapter` while preserving
+  `semantic-field-webgl` with HDR active. This establishes the actual hardware
+  readiness boundary for a future compute branch without making current visual
+  quality depend on a browser capability that the fallback cannot provide.
+- Production build passed with the exact 19-resource closure. The scaffold is
+  deliberately not a claimed WebGPU renderer; its next step is a separate
+  adapter-ready compute prototype for one field operation.
