@@ -1895,3 +1895,23 @@ light list would provide here.
   The current next visual opportunities are therefore composition tuning
   (gas shafts/broad organic forms) and hardware validation of the isolated
   WebGPU prototype, not a second local-light architecture.
+
+## 2026-08-17 — occlusion and receiver-bounce review
+
+Status: the safe AO portion of the roadmap is already present; a follow-up
+coefficient experiment for receiver bounce was rejected after direct viewing.
+
+- `applyMaterialAmbientGrounding` supplies phase/profile-governed RGB-only
+  cavity, broad-mass, buried-body, and settled-Smooth-powder basin occlusion
+  from existing owner depth/density/slope proofs. It excludes holes, thin and
+  moving structures, contacts, Canvas2D, and compact true-8x. That fulfils the
+  safe occupancy-field AO intent without manufacturing an unstable seam.
+- Cross-owner contact AO remains deliberately deferred: current categorical
+  seam bits cannot determine a stable owner or distinguish a rest contact from
+  a moving/touching edge. Adding it now would violate the renderer's topology
+  and contact guarantees.
+- A tighter source-facing Powder bounce candidate was built and compared on
+  the opposed-source 2x WebGL board (`/tmp/anifor-powder-light-localized-v2.png`)
+  against the retained localized-light view. At normal fit scale it was
+  indistinguishable, so the source was restored rather than retaining a hidden
+  coefficient change. This remains a visual decision, not an image-hash gate.
