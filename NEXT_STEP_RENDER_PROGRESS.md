@@ -1935,3 +1935,11 @@ wall-backed and leaving the open-water crest/body treatment unchanged.
   submerged grid, while its outer geometry and the pale upper water crest
   remained readable. The capture is current visual evidence only, not a PNG
   baseline or a future gate.
+
+### Delivery checkpoint
+
+- Commit `fa22122` was pushed to `main_codex` and manually deployed by Actions
+  run `32018498643`. Its cached build, Pages deployment, exact deployed
+  revision, and 19-resource runtime-closure verification all passed. Optional
+  hosted Visual Lab capture was deliberately not selected for this small
+  direct-review checkpoint.
