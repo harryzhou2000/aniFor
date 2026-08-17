@@ -1824,3 +1824,19 @@ requirement.
   captures. They are current visual review artifacts, not baselines or gates.
 - Manual Pages run `32015045574` built, deployed, and completed live
   verification successfully for `9cf36f2`.
+
+## 2026-08-17 — Phase 4 WebGPU capability experiment
+
+Status: isolated experiment at `experiment/webgpu-presentation-probe` commit
+`5c1ee04`; the canonical production renderer remains WebGL/HDR.
+
+- The experiment verifies adapter/device/offscreen-canvas presentation with one
+  submitted WebGPU clear pass only when `?webgpuProbe=1` is requested. It never
+  changes the live WebGL canvas or shader selection.
+- Local SwiftShader reaches the probe but reports `adapter-unavailable`, so
+  WebGPU cannot be a CI or fallback requirement in this environment. A real
+  hardware browser is required before a WGSL/compute migration can be judged.
+- The proposed adaptive quality governor remains intentionally pending. It
+  should shed actual post-processing passes only from a measured GPU budget and
+  must remain opt-in/observable; a CPU submission heuristic would be a hidden
+  visual downgrade rather than reliable GPU adaptation.
