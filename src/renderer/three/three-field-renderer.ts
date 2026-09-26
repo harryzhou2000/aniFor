@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { ALL_MATERIALS, Material, type MaterialInfo } from '../../shared/materials';
 import type { SimulationBackend } from '../../simulation/types';
 import { renderPhase, RenderPhase } from '../render-profile';
@@ -8,6 +7,7 @@ import { contourContains, materialContours } from './material-contours';
 import { powderSupport, powderVolumeGeometry } from './powder-volume';
 import { StudioPostprocess } from './studio-postprocess';
 import { studioTextures } from './studio-textures';
+import { studioEnvironment } from './studio-environment';
 
 interface Bucket {
   indices: number[]; hash: number; minX: number; minY: number; maxX: number; maxY: number;
@@ -66,7 +66,7 @@ export class ThreeFieldRenderer {
     this.scene.background = new THREE.Color(0x14232c);
     this.scene.fog = new THREE.Fog(0x14232c, 1400, 6500);
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.1;
+    this.renderer.toneMappingExposure = 1;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.autoUpdate = false;
     this.renderer.info.autoReset = false;
@@ -87,8 +87,8 @@ export class ThreeFieldRenderer {
     this.controls.minPolarAngle = Math.PI * 0.15;
     this.controls.maxPolarAngle = Math.PI * 0.5;
     this.controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
-    this.scene.add(new THREE.HemisphereLight(0xd9efff, 0x84634c, 0.45));
-    const key = new THREE.DirectionalLight(0xffeedb, 2);
+    this.scene.add(new THREE.HemisphereLight(0xd9efff, 0x84634c, 0.3));
+    const key = new THREE.DirectionalLight(0xffeedb, 2.4);
     key.position.set(-240, 420, 300);
     key.castShadow = true;
     key.shadow.mapSize.set(2048, 2048);
@@ -101,10 +101,10 @@ export class ThreeFieldRenderer {
     rim.position.set(240, 180, -260);
     this.scene.add(key, rim, this.sourceLight);
     const generator = new THREE.PMREMGenerator(this.renderer);
-    const room = new RoomEnvironment();
-    this.environment = generator.fromScene(room, 0.04);
+    const environment = studioEnvironment();
+    this.environment = generator.fromEquirectangular(environment);
     this.scene.environment = this.environment.texture;
-    room.dispose(); generator.dispose();
+    environment.dispose(); generator.dispose();
     const texture = document.createElement('canvas'); texture.width = texture.height = 64;
     const context = texture.getContext('2d')!;
     const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32);
@@ -128,7 +128,7 @@ export class ThreeFieldRenderer {
     // This plane extends far past the camera's view and fades into the same
     // atmosphere as the background. Following camera X/Z keeps its edge out of
     // sight even after long pans. There is no rear panel or perimeter frame.
-    this.ground = new THREE.Mesh(new THREE.PlaneGeometry(200000, 200000), new THREE.MeshStandardMaterial({ color: 0x14202a, roughness: 0.9, envMapIntensity: 0.22 }));
+    this.ground = new THREE.Mesh(new THREE.PlaneGeometry(200000, 200000), new THREE.MeshStandardMaterial({ color: 0x14202a, roughness: 0.86, envMapIntensity: 0.12 }));
     this.ground.rotation.x = -Math.PI / 2;
     this.ground.position.y = -this.simulation.height / 2 + 3.7;
     this.ground.receiveShadow = true; this.scene.add(this.ground);
@@ -324,24 +324,26 @@ export class ThreeFieldRenderer {
     let material: THREE.Material;
     if (phase === RenderPhase.Gas || phase === RenderPhase.Energy) {
       const luminous = phase === RenderPhase.Energy || infos.get(id)?.emissive;
-      material = new THREE.PointsMaterial({color: new THREE.Color(color).multiplyScalar(luminous ? 3 : 1), size: luminous ? 4 : 5, map: this.softTexture, transparent: true, opacity: luminous ? 0.7 : 0.22, depthWrite: false, blending: luminous ? THREE.AdditiveBlending : THREE.NormalBlending});
+      material = new THREE.PointsMaterial({color: new THREE.Color(color).multiplyScalar(luminous ? 4 : 1), size: luminous ? 6 : 10, map: this.softTexture, transparent: true, opacity: luminous ? 0.24 : 0.065, depthWrite: false, blending: luminous ? THREE.AdditiveBlending : THREE.NormalBlending});
     } else if (phase === RenderPhase.Liquid || id === Material.Glass || id === Material.Ice) {
       const glass = id === Material.Glass;
       const water = id === Material.Water || id === Material.DistilledWater;
-      material = new THREE.MeshPhysicalMaterial({color: glass ? '#e1f4f3' : water ? '#bcebe6' : color, metalness: METALS.has(id) ? 0.95 : 0, roughness: glass ? 0.055 : 0.12, transmission: METALS.has(id) ? 0 : glass ? 0.98 : 0.92, thickness: glass ? 84 : 72, ior: glass ? 1.5 : 1.333, attenuationColor: new THREE.Color(glass ? '#b1dae0' : water ? '#258f99' : color), attenuationDistance: glass ? 350 : 100, envMapIntensity: 1.1, clearcoat: 0.7, clearcoatRoughness: 0.12});
+      material = new THREE.MeshPhysicalMaterial({color: glass ? '#f1fcff' : water ? '#b2e8ef' : color, metalness: METALS.has(id) ? 1 : 0, roughness: glass ? 0.075 : id === Material.Ice ? 0.22 : 0.14, transmission: METALS.has(id) ? 0 : glass ? 1 : 0.94, thickness: glass ? 84 : 72, ior: glass ? 1.5 : 1.333, attenuationColor: new THREE.Color(glass ? '#c6e8ef' : water ? '#289bb3' : color), attenuationDistance: glass ? 500 : 145, envMapIntensity: 1.15, clearcoat: glass ? 0 : 0.35, clearcoatRoughness: 0.16});
+    } else if (METALS.has(id) || id === Material.Wood) {
+      material = new THREE.MeshPhysicalMaterial({color: id === Material.Metal ? '#b9c5d0' : color, roughness: id === Material.Wood ? 0.62 : 0.24, metalness: METALS.has(id) ? 0.96 : 0, envMapIntensity: 1, clearcoat: id === Material.Wood ? 0.18 : 0.28, clearcoatRoughness: 0.3});
     } else {
       material = new THREE.MeshStandardMaterial({color, roughness: METALS.has(id) ? 0.3 : 0.85, metalness: METALS.has(id) ? 0.85 : 0.06, envMapIntensity: 0.7});
     }
     if (material instanceof THREE.MeshStandardMaterial && infos.get(id)?.emissive) { material.emissive.set(color); material.emissiveIntensity = 1.2; }
     if (material instanceof THREE.MeshStandardMaterial && phase === RenderPhase.Powder) {
-      material.roughness = 0.94; material.map = this.textures.grain; material.bumpMap = this.textures.grain; material.bumpScale = 0.42;
+      material.roughness = 0.94; material.metalness = METALS.has(id) ? 0.75 : 0; material.map = this.textures.grain; material.bumpMap = this.textures.grain; material.bumpScale = 0.22;
     }
     if (material instanceof THREE.MeshStandardMaterial && id === Material.Wood) {
       material.color.set('#b27542'); material.map = material.bumpMap = this.textures.wood;
-      material.bumpScale = 0.45; material.roughness = 0.82;
+      material.bumpScale = 0.16; material.roughness = 0.62;
     }
     if (material instanceof THREE.MeshPhysicalMaterial && phase === RenderPhase.Liquid) {
-      material.normalMap = this.textures.waterNormal; material.normalScale.set(0.09, 0.09);
+      material.normalMap = this.textures.waterNormal; material.normalScale.set(0.035, 0.035);
     }
     this.materials.set(id, material); return material;
   }
@@ -420,7 +422,7 @@ export class ThreeFieldRenderer {
     this.updateInstances(body, droplets, material, true);
     if (!shapes.length) return;
     const depth = id === WALL_ID ? 96 : liquid ? 72 : 84;
-    const geometry = new THREE.ExtrudeGeometry(shapes, {depth, steps: 1, bevelEnabled: true, bevelSegments: liquid ? 3 : 1, bevelSize: liquid ? 0.38 : 0.22, bevelThickness: liquid ? 3 : 1.2, curveSegments: 1});
+    const geometry = new THREE.ExtrudeGeometry(shapes, {depth, steps: 1, bevelEnabled: true, bevelSegments: 3, bevelSize: liquid ? 0.38 : 0.35, bevelThickness: liquid ? 3 : 2, curveSegments: 1});
     geometry.translate(0, 0, -depth / 2); geometry.computeBoundingBox();
     const uv = geometry.getAttribute('uv');
     for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) / 64, uv.getY(i) / 64);

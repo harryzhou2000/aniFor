@@ -34,7 +34,7 @@ export class StudioPostprocess {
     this.ao.updateGtaoMaterial({radius: 18, thickness: 12, distanceExponent: 1.4, distanceFallOff: 0.7, samples: 8});
     this.ao.updatePdMaterial({radius: 4, rings: 2, samples: 8});
     this.composer.addPass(this.ao);
-    this.composer.addPass(new UnrealBloomPass(new Vector2(512, 512), 0.22, 0.5, 1.1));
+    this.composer.addPass(new UnrealBloomPass(new Vector2(512, 512), 0.14, 0.45, 2.2));
     this.composer.addPass(new OutputPass());
   }
   resize(width: number, height: number): void {

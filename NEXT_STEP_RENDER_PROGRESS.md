@@ -23,6 +23,13 @@ The earlier showcase script timeout came from its exact-consecutive-image captur
 - Drawing rays pick the actual visible mesh or grain, then resolve native cell ownership, including from behind. Empty space uses the native simulation plane. Native wall erasing, pointer capture/release, continuous strokes and touch are handled explicitly. Camera depth remains presentation-only.
 - The demo includes a solid sand mound, a glass water vessel and a small hearth on a native rigid metal base. It is seeded only for a new world or by the explicit Load demo action.
 
+### Highlight and interaction polish
+
+- A small procedural HDR environment supplies broad warm/cool panels and a narrow reflection strip. It is used for illumination/reflections while the background stays open. Water, glass, ice, metal and wood have distinct roughness, transmission and clearcoat settings; powder stays matte. Three-segment bevels catch smoother highlights. Bloom has a higher threshold and lower strength so the metal platform does not glow like an emitter.
+- Fire/smoke use larger, softer particles with reduced per-particle opacity. Grain/wood bump strength and water normals are restrained to preserve coherent highlights.
+- Brush strokes retain their original draw/erase operation through release, complete a final release position when a move event was omitted, and cancel on focus loss, pointer cancellation or mode changes. Resizing the brush updates its cursor. Holding a brush in a running simulation continuously pours or erases at the selected native cell; releasing stops the source.
+- The studio audit now exercises exact circular footprints at radii 1/7/24, erasing, multiple material families, search and selection outside favorites, release-only stroke endpoints, ignored middle clicks, focus loss, pause/step/resume/clear, held brushes and cancelled touch, in addition to the original camera/surface tests. Both browser audit scripts accept a deployed base URL for fresh-incognito verification of GitHub Pages.
+
 ### Mode switching
 
 Both interfaces expose **2D · Field / 3D · Studio**. `?view=3d` selects Three.js; existing URLs select 2D. Switching saves the complete native world synchronously, then navigates to release the outgoing document and GPU resources. Pause is carried in the URL. An empty saved world stays empty.
@@ -36,8 +43,8 @@ Saving failures keep the current view open. Failed restoration retains the store
 - `npm run audit:render-modes`: 14 checks passed in Chrome with ANGLE Vulkan SwiftShader. Native backend: **The Powder Toy 100.0 (direct WebAssembly)**. Both Realistic/Pixi WebGL with HDR and Three.js WebGL2 rendered.
 - A separate `--live-2d` run passed eight checks: normal-scale GPU backpressure, pause UI, native stepping/autosave, 2D pointer painting, return to 3D, and no browser/shader errors.
 - Browser pointer drawing and orbit worked. A paused **3D → 2D → 3D** round trip preserved the entire native save byte-for-byte. Native OPS file download and upload also restored it exactly. Native stepping, empty-world transitions, and a 390-pixel-wide layout passed without browser/shader errors.
-- `npm run audit:studio`: 25 checks passed after the open-scene and material refinements. Coverage includes angled/back-side surface picking, exact native-cell erasing, separate grains, native walls, continuous draw/erase strokes, right-click erase, out-of-world edits, release outside the world, orbit/zoom/pan without edits, touch after resize, mobile layout, and a cohesive pile after 120 native steps. No browser/shader errors were reported. Desktop, moving-state and mobile captures were inspected.
-- The final demo had 31,744 occupied cells across seven material groups, including 7,811 dense powder cells. The initial reported render was about 97,548 triangles / 34 calls and reconstruction took 140 ms. After 120 native steps, 7,712 dense powder cells and 13 loose grains remained; that reconstruction took 68 ms. These are individual Chrome/SwiftShader observations, not frame-rate guarantees or hardware benchmarks. Render totals include the passes used for that frame.
+- The initial `npm run audit:studio` passed 25 checks after the open-scene refinements. The expanded brush/highlight audit passes 50 checks, recorded in `.artifacts/open-studio/interaction.json` and `polish-audit.log`. The mode/native-file audit passed all 14 checks again after the material changes; the 16 geometry/mode/world-file unit tests were also rerun successfully. No browser/shader errors were reported.
+- An earlier open-studio checkpoint had 31,744 occupied cells across seven material groups, including 7,811 dense powder cells. The initial reported render was about 97,548 triangles / 34 calls and reconstruction took 140 ms. After 120 native steps, 7,712 dense powder cells and 13 loose grains remained; that reconstruction took 68 ms. These are individual Chrome/SwiftShader observations, not frame-rate guarantees or hardware benchmarks. Render totals include the passes used for that frame; the later bevel refinement changes triangle totals.
 - The historical presenter suite is not green: an isolated original-HEAD run had 15 failures, largely assertions about shader source text. Those pre-existing failures are recorded separately from the passing checks above.
 
 Reproduce against the production build:
@@ -46,11 +53,16 @@ Reproduce against the production build:
 npm run audit:render-modes
 node scripts/render-modes-smoke.mjs --live-2d
 npm run audit:studio
+# Run the same input and save checks against the published site:
+STUDIO_BASE_URL=https://harryzhou2000.github.io/aniFor/ node scripts/studio-interaction-smoke.mjs
+RENDER_BASE_URL=https://harryzhou2000.github.io/aniFor/ node scripts/render-modes-smoke.mjs
 ```
 
 Local evidence is in `.artifacts/render-modes/`: `smoke.json`, `live-2d.json`, `three-paused.png`, `three-simulated.png`, `three-mobile.png`, `two-webgl-paused.png`, `two-webgl-live.png`, and the focused test reports. These generated files are intentionally untracked.
 
 The final open-studio evidence is in `.artifacts/open-studio/`: `interaction.json`, `open-scene.png`, `open-simulated.png`, `back-edit.png`, `open-mobile.png`, build output and focused test logs. The mode/save audit was rerun after adding the finishing passes; the studio audit was rerun after the final powder and demo refinements.
+
+Published-site runs write to `.artifacts/published-studio/` and `.artifacts/published-render-modes/`. The deployment workflow verifies the exact commit in `revision.txt` and the live runtime asset closure.
 
 ## Current limits and next work
 

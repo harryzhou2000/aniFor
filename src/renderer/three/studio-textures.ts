@@ -32,5 +32,8 @@ export function studioTextures(): { grain: DataTexture; wood: DataTexture; water
     water[i + 1] = (dy / length * 0.5 + 0.5) * 255;
     water[i + 2] = (1 / length * 0.5 + 0.5) * 255; water[i + 3] = 255;
   }
-  return {grain: texture(grain, size), wood: texture(wood, size), waterNormal: texture(water, size)};
+  const waterNormal = texture(water, size);
+  // Broad ripples keep reflected light coherent at the normal viewing distance.
+  waterNormal.repeat.set(0.18, 0.18);
+  return {grain: texture(grain, size), wood: texture(wood, size), waterNormal};
 }

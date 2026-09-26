@@ -7,9 +7,10 @@ import { startVisualLabChromeHost, connectVisualLabIncognitoPage } from './visua
 
 // Exercise the built application and real native saves in one browser context.
 // Run npm run build first. GPU_MODE=swiftshader forces software WebGL.
-const output = '.artifacts/render-modes';
+const baseUrl = process.env.RENDER_BASE_URL;
+const output = baseUrl ? '.artifacts/published-render-modes' : '.artifacts/render-modes';
 await mkdir(output, { recursive: true });
-const server = await preview({ preview: { host: '127.0.0.1', port: 4187, strictPort: true } });
+const server = baseUrl ? undefined : await preview({ preview: { host: '127.0.0.1', port: 4187, strictPort: true } });
 const host = await startVisualLabChromeHost({ gpuMode: process.env.GPU_MODE ?? 'auto' });
 let page;
 const live2D = process.argv.includes('--live-2d');
@@ -39,7 +40,7 @@ try {
     throw new Error(`Timed out: ${label}`);
   };
   const navigate = async search => {
-    await cdp.send('Page.navigate', { url: `http://127.0.0.1:4187/${search}` });
+    await cdp.send('Page.navigate', { url: new URL(search, baseUrl ?? 'http://127.0.0.1:4187/').href });
     await delay(300);
   };
   const capture = async name => {
@@ -152,5 +153,5 @@ try {
   throw error;
 } finally {
   await writeFile(`${output}/${live2D ? 'live-2d' : 'smoke'}.json`, JSON.stringify({ ...report, errors }, null, 2));
-  await page?.close(); await host.teardown(); await server.close();
+  await page?.close(); await host.teardown(); await server?.close();
 }

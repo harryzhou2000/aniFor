@@ -3,9 +3,10 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { preview } from 'vite';
 import { startVisualLabChromeHost, connectVisualLabIncognitoPage } from './visual-lab-chrome-host.mjs';
 
-const output = '.artifacts/open-studio';
+const baseUrl = process.env.STUDIO_BASE_URL;
+const output = baseUrl ? '.artifacts/published-studio' : '.artifacts/open-studio';
 await mkdir(output, {recursive: true});
-const server = await preview({preview: {host: '127.0.0.1', port: 4187, strictPort: true}});
+const server = baseUrl ? undefined : await preview({preview: {host: '127.0.0.1', port: 4187, strictPort: true}});
 const host = await startVisualLabChromeHost({gpuMode: process.env.GPU_MODE ?? 'auto'});
 const report = {checks: [], errors: []};
 let page;
@@ -41,7 +42,7 @@ try {
     await writeFile(`${output}/${name}.png`, Buffer.from(result.data, 'base64'));
   };
   const reset = async () => { await evaluate('window.__ANIFOR_3D_AUDIT__.clear()'); await delay(150); };
-  await cdp.send('Page.navigate', {url: 'http://127.0.0.1:4187/?view=3d&paused=1&inputAudit=1'});
+  await cdp.send('Page.navigate', {url: new URL('?view=3d&paused=1&inputAudit=1', baseUrl ?? 'http://127.0.0.1:4187/').href});
   await waitFor('window.__ANIFOR_3D_AUDIT__?.state().stats.densePowderCells > 1000', 'native solid sand');
   const initial = await state();
   report.initial = {...initial, world: undefined};
@@ -52,6 +53,7 @@ try {
   await capture('open-scene');
 
   const materials = await evaluate("Object.fromEntries([...document.querySelectorAll('[data-material]')].map(b=>[b.textContent.trim(),Number(b.dataset.material)]))");
+  const brush = size => evaluate(`document.querySelector('.studio-brush input').value='${size}';document.querySelector('.studio-brush input').dispatchEvent(new Event('input',{bubbles:true}))`);
   await evaluate("document.querySelector('.studio-brush input').value='1';document.querySelector('.studio-brush input').dispatchEvent(new Event('input',{bubbles:true}))");
   const sand = await project(95, 320), plane = await project(95, 320, false);
   check('sand has substantial depth', sand.z > 15);
@@ -129,12 +131,84 @@ try {
   const afterPan = await state();
   check('right-drag pans without erasing native state', JSON.stringify(afterPan.target) !== JSON.stringify(afterZoom.target) && afterPan.world === afterZoom.world);
 
+  // Verify the native brush footprint through actual UI selection and pointer input.
+  await click('[data-action="front"]');
+  for (const size of [1, 7, 24]) {
+    await reset(); await brush(size); await click(`[data-material="${materials.Wood}"]`);
+    await tap(await project(306, 192, false));
+    check(`brush radius ${size} paints exactly the native circular footprint`, await evaluate(`(()=>{
+      for(let y=165;y<=219;y++)for(let x=279;x<=333;x++){
+        const expected=(x-306)**2+(y-192)**2<=${size * size}?${materials.Wood}:0;
+        if(window.__ANIFOR_3D_AUDIT__.cell(x,y)!==expected)return false;
+      }return document.querySelector('.studio-brush output').textContent==='${size}';})()`));
+    await click('[data-camera="erase"]'); await tap(await project(306, 192));
+    check(`brush radius ${size} erases its full footprint`, await evaluate('Array.from({length:55*55},(_,i)=>window.__ANIFOR_3D_AUDIT__.cell(279+i%55,165+Math.floor(i/55))).every(v=>v===0)'));
+  }
+  await brush(1);
+  for (const name of ['Water', 'Glass', 'Metal', 'Fire', 'Smoke']) {
+    await reset(); await click(`[data-material="${materials[name]}"]`); await tap(await project(306,192,false));
+    check(`${name} selection paints its native material`, await cell(306,192) === materials[name]);
+  }
+  const search = text => evaluate(`(()=>{const input=document.querySelector('.studio-search');input.value=${JSON.stringify(text)};input.dispatchEvent(new Event('input',{bubbles:true}));})()`);
+  await search('gold');
+  const gold = await evaluate("(()=>{const b=[...document.querySelectorAll('[data-material]')].find(b=>b.textContent.trim().toLowerCase()==='gold');return b?Number(b.dataset.material):null;})()");
+  check('material search finds non-favorite Gold', Number.isInteger(gold));
+  await reset(); await click(`[data-material="${gold}"]`); await tap(await project(306,192,false));
+  check('searched material selection paints the correct native ID', await cell(306,192) === gold);
+  await search('no-material-with-this-name');
+  check('empty search results are explained', await evaluate("document.querySelector('.studio-palette').textContent.includes('No matching')"));
+  await search('');
+
+  await reset(); await click(`[data-material="${materials.Sand}"]`);
+  const releaseStart = await project(250,140,false), releaseEnd = await project(280,140,false);
+  await mouse('mousePressed', releaseStart, 'left', 1); await mouse('mouseReleased', releaseEnd);
+  check('release position completes a stroke without a final move event', await evaluate('Array.from({length:31},(_,i)=>window.__ANIFOR_3D_AUDIT__.cell(250+i,140)).every(v=>v!==0)'));
+  const eraseReleaseStart = await project(250,140), eraseReleaseEnd = await project(280,140);
+  await mouse('mousePressed', eraseReleaseStart, 'right', 2); await mouse('mouseReleased', eraseReleaseEnd, 'right');
+  report.releaseErase = await evaluate('Array.from({length:31},(_,i)=>window.__ANIFOR_3D_AUDIT__.cell(250+i,140))');
+  check('right-button release finishes erasing without painting', report.releaseErase.every(v=>v===0));
+  await reset();
+  await tap(await project(306,192,false), 'middle');
+  check('middle click in Draw does not paint', await cell(306,192) === 0);
+  await mouse('mousePressed', releaseStart, 'left', 1);
+  await evaluate("window.dispatchEvent(new Event('blur'))");
+  await mouse('mouseMoved', releaseEnd, 'left', 1); await mouse('mouseReleased', releaseEnd);
+  check('losing window focus cancels the stroke', await cell(280,140) === 0);
+  await reset(); await click(`[data-material="${materials.Sand}"]`); await tap(await project(306,110,false));
+  const beforeStep = (await state()).world;
+  await click('[data-action="step"]');
+  check('Step advances native state and stays paused', (await state()).paused && (await state()).world !== beforeStep);
+  const frozen = (await state()).world; await delay(200);
+  check('paused native state stays unchanged', (await state()).world === frozen);
+  await click('[data-action="pause"]');
+  await waitFor(`window.__ANIFOR_3D_AUDIT__.state().world !== ${JSON.stringify(frozen)}`, 'resume native steps');
+  await click('[data-action="pause"]');
+  check('Resume and Pause control native stepping', (await state()).paused);
+  await reset(); await click('[data-action="pause"]');
+  const pour = await project(306,110,false);
+  await mouse('mousePressed', pour, 'left', 1);
+  await waitFor('window.__ANIFOR_3D_AUDIT__.state().stats.particles > 20', 'held brush pours particles');
+  check('holding a stationary brush pours particles during native simulation', (await state()).stats.particles > 20);
+  await mouse('mouseReleased', pour); await click('[data-action="pause"]');
+  const countMatter = () => evaluate('window.__ANIFOR_3D_AUDIT__.count()');
+  const afterReleaseCount = await countMatter();
+  await click('[data-action="pause"]'); await delay(250); await click('[data-action="pause"]');
+  check('releasing a held brush stops the particle source', await countMatter() <= afterReleaseCount);
+  await click('[data-action="clear"]');
+  await waitFor('window.__ANIFOR_3D_AUDIT__.state().stats.particles===0', 'clear button');
+  check('Clear world removes all rendered native matter', (await state()).stats.particles === 0);
+
   await reset(); await click('[data-action="reset-camera"]'); await click('[data-camera="draw"]');
   await cdp.send('Emulation.setDeviceMetricsOverride', {width:390,height:844,deviceScaleFactor:1,mobile:true}); await delay(250);
   const touchPoint = await project(306, 192, false);
   await cdp.send('Input.dispatchTouchEvent', {type:'touchStart',touchPoints:[{x:touchPoint.x,y:touchPoint.y,id:0}]});
   await cdp.send('Input.dispatchTouchEvent', {type:'touchEnd',touchPoints:[]});
   check('touch drawing after resize reaches the intended native cell', await cell(306, 192) === materials.Sand);
+  const touchEnd = await project(335,192,false);
+  await cdp.send('Input.dispatchTouchEvent', {type:'touchStart',touchPoints:[{x:touchPoint.x,y:touchPoint.y,id:0}]});
+  await cdp.send('Input.dispatchTouchEvent', {type:'touchCancel',touchPoints:[]});
+  await mouse('mouseMoved', touchEnd);
+  check('cancelled touch does not leave a drawing stroke active', await cell(335,192) === 0);
   await click('[data-action="demo"]'); await delay(250); await click('[data-camera="orbit"]'); await capture('open-mobile');
   check('mobile controls fit the viewport', await evaluate('document.documentElement.scrollWidth <= innerWidth'));
   await evaluate('for(let i=0;i<120;i++)window.__ANIFOR_3D_AUDIT__.step()'); await delay(200);
@@ -147,5 +221,5 @@ try {
   report.passed = false; report.failure = String(error); throw error;
 } finally {
   await writeFile(`${output}/interaction.json`, JSON.stringify(report, null, 2));
-  await page?.close(); await host.teardown(); await server.close();
+  await page?.close(); await host.teardown(); await server?.close();
 }

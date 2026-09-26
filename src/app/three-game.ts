@@ -65,6 +65,7 @@ export async function startThreeGame(root: HTMLElement): Promise<void> {
   };
   setPaused(paused);
   const setInteraction = (value: typeof interaction): void => {
+    cancelStroke();
     interaction = value; renderer.setDrawMode(value !== 'orbit');
     root.querySelectorAll<HTMLButtonElement>('[data-camera]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.camera === value)));
     find('.studio-gesture').textContent = value === 'orbit' ? 'Drag to orbit · scroll to zoom · right-drag to pan' : `${value === 'draw' ? 'Draw' : 'Erase'} on visible surfaces · select Orbit to move the camera`;
@@ -90,7 +91,10 @@ export async function startThreeGame(root: HTMLElement): Promise<void> {
   };
   renderPalette();
   find<HTMLInputElement>('.studio-search').addEventListener('input', event => renderPalette((event.target as HTMLInputElement).value));
-  find<HTMLInputElement>('.studio-brush input').addEventListener('input', event => { radius = Number((event.target as HTMLInputElement).value); find('.studio-brush output').textContent = String(radius); });
+  find<HTMLInputElement>('.studio-brush input').addEventListener('input', event => {
+    radius = Number((event.target as HTMLInputElement).value); find('.studio-brush output').textContent = String(radius);
+    renderer.showBrush(hoverPoint, radius);
+  });
   root.querySelectorAll<HTMLButtonElement>('[data-camera]').forEach(button => button.addEventListener('click', () => setInteraction(button.dataset.camera as typeof interaction)));
   const action = (name: string, callback: () => void): void => find(`[data-action="${name}"]`).addEventListener('click', callback);
   action('pause', () => setPaused(!paused));
@@ -119,42 +123,64 @@ export async function startThreeGame(root: HTMLElement): Promise<void> {
       simulation.loadWorld(before); renderer.invalidate(); notice.textContent = `Open failed: ${error instanceof Error ? error.message : String(error)}`;
     } finally { fileInput.value = ''; }
   });
-  let stroke: {id: number; point?: {x: number; y: number}} | undefined;
+  let stroke: {id: number; erase: boolean; clientX?: number; clientY?: number; point?: {x: number; y: number}} | undefined;
+  let hoverPoint: {x: number; y: number; z?: number} | undefined;
+  function cancelStroke(): void {
+    const previous = stroke; stroke = undefined;
+    if (previous && renderer.canvas.hasPointerCapture(previous.id)) renderer.canvas.releasePointerCapture(previous.id);
+    hoverPoint = undefined; renderer.showBrush(undefined, radius);
+  }
+  const applyBrush = (x: number, y: number, erase: boolean): void => {
+    if (erase) { simulation.erase(x, y, radius); simulation.eraseWall?.(x, y, radius); }
+    else simulation.paint(x, y, material, radius);
+  };
   const paint = (event: PointerEvent): void => {
+    if (stroke) { stroke.clientX = event.clientX; stroke.clientY = event.clientY; }
     const point = renderer.worldPoint(event.clientX, event.clientY);
+    hoverPoint = point;
     renderer.showBrush(point, radius);
     if (!stroke || !point) { if (stroke) stroke.point = undefined; return; }
     const from = stroke.point ?? point;
     const steps = Math.max(1, Math.ceil(Math.hypot(point.x - from.x, point.y - from.y)));
     for (let i = 0; i <= steps; i++) {
       const x = Math.round(from.x + (point.x - from.x) * i / steps), y = Math.round(from.y + (point.y - from.y) * i / steps);
-      if (interaction === 'erase' || event.buttons === 2) { simulation.erase(x, y, radius); simulation.eraseWall?.(x, y, radius); }
-      else simulation.paint(x, y, material, radius);
+      applyBrush(x, y, stroke.erase);
     }
     stroke.point = point; renderer.invalidate();
   };
   renderer.canvas.addEventListener('pointerdown', event => {
     if (interaction === 'orbit' || stroke || (event.button !== 0 && event.button !== 2)) return;
     event.preventDefault();
-    stroke = {id: event.pointerId}; renderer.canvas.setPointerCapture(event.pointerId); paint(event);
+    stroke = {id: event.pointerId, erase: interaction === 'erase' || event.button === 2}; renderer.canvas.setPointerCapture(event.pointerId); paint(event);
   });
   renderer.canvas.addEventListener('pointermove', event => {
+    if (stroke?.id === event.pointerId && event.buttons === 0) { cancelStroke(); return; }
     if (interaction !== 'orbit' && (!stroke || stroke.id === event.pointerId)) paint(event);
   });
   const finishStroke = (event: PointerEvent): void => {
     if (stroke?.id !== event.pointerId) return;
-    if (renderer.canvas.hasPointerCapture(event.pointerId)) renderer.canvas.releasePointerCapture(event.pointerId);
-    stroke = undefined;
+    // Browsers can deliver the release position without a final pointermove.
+    // Keep the original button's operation: pointerup.buttons is already zero.
+    if (event.type === 'pointerup' && (stroke.clientX !== event.clientX || stroke.clientY !== event.clientY)) paint(event);
+    cancelStroke();
   };
   renderer.canvas.addEventListener('pointerup', finishStroke); renderer.canvas.addEventListener('pointercancel', finishStroke);
-  renderer.canvas.addEventListener('lostpointercapture', event => { if (stroke?.id === event.pointerId) stroke = undefined; });
-  renderer.canvas.addEventListener('pointerleave', () => { if (!stroke) renderer.showBrush(undefined, radius); });
+  renderer.canvas.addEventListener('lostpointercapture', event => { if (stroke?.id === event.pointerId) cancelStroke(); });
+  renderer.canvas.addEventListener('pointerleave', () => { if (!stroke) { hoverPoint = undefined; renderer.showBrush(undefined, radius); } });
+  window.addEventListener('blur', cancelStroke);
   renderer.canvas.addEventListener('contextmenu', event => event.preventDefault());
   const autosave = window.setInterval(() => { try { save(); } catch { /* An explicit save or mode switch reports failure. */ } }, 4000);
   const frame = (time: number): void => {
     if (disposed) return;
     const elapsed = Math.min(time - lastFrame, 80); lastFrame = time;
-    if (!paused) { accumulator += elapsed; while (accumulator >= 1000 / 60) { simulation.step(); accumulator -= 1000 / 60; } }
+    if (!paused) {
+      accumulator += elapsed;
+      while (accumulator >= 1000 / 60) {
+        // Hold a brush to pour or erase as matter moves through its native cell.
+        if (stroke?.point) applyBrush(stroke.point.x, stroke.point.y, stroke.erase);
+        simulation.step(); accumulator -= 1000 / 60;
+      }
+    }
     try { if (!renderFailed) renderer.render(time, !paused); }
     catch (error) { renderFailed = true; setPaused(true); notice.textContent = `Rendering stopped: ${String(error)} Switch to 2D to continue with this world.`; }
     if (time - lastStats > 500) {
@@ -165,7 +191,7 @@ export async function startThreeGame(root: HTMLElement): Promise<void> {
     frameId = requestAnimationFrame(frame);
   };
   frameId = requestAnimationFrame(frame);
-  const dispose = (): void => { disposed = true; cancelAnimationFrame(frameId); clearInterval(autosave); renderer.dispose(); };
+  const dispose = (): void => { disposed = true; cancelAnimationFrame(frameId); clearInterval(autosave); window.removeEventListener('blur', cancelStroke); renderer.dispose(); };
   window.addEventListener('pagehide', dispose, {once: true});
   if (new URLSearchParams(location.search).get('inputAudit') === '1') {
     Object.assign(window, {__ANIFOR_3D_AUDIT__: {
@@ -173,6 +199,7 @@ export async function startThreeGame(root: HTMLElement): Promise<void> {
       project: (x: number, y: number, surface = true) => renderer.projectCell(x, y, surface),
       pick: (x: number, y: number) => renderer.worldPoint(x, y),
       cell: (x: number, y: number) => simulation.cells()[y * simulation.width + x],
+      count: () => simulation.cells().reduce((total, id) => total + Number(id !== 0), 0),
       paint: (x: number, y: number, value: number, size: number) => { simulation.paint(x, y, value as Material, size); renderer.invalidate(); },
       wall: (x: number, y: number) => simulation.walls?.()[y * simulation.width + x],
       paintWall: (x: number, y: number, value: number, size: number) => { simulation.paintWall?.(x, y, value, size); renderer.invalidate(); },
