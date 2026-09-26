@@ -86,14 +86,29 @@ describe('atmosphere field', () => {
     materials[192 * 612 + 306] = Material.Smoke;
     velocities[(192 * 612 + 306) * 2] = 48;
 
-    expect(field.allocatedByteLength).toBe(3_348_936);
-    expect(field.allocatedByteLength).toBeLessThan(3.25 * 1024 * 1024);
+    const allocation = field.allocatedByteLength;
+    expect(allocation).toBeLessThan(3.5 * 1024 * 1024);
     field.update(materials, undefined, velocities);
     velocities[(192 * 612 + 306) * 2] = -48;
     field.update(materials, undefined, velocities);
     expect(field.bytes).toBe(bytes);
     expect(field.styleBytes).toBe(styles);
-    expect(field.allocatedByteLength).toBe(3_348_936);
+    expect(field.allocatedByteLength).toBe(allocation);
+  });
+
+  it('keeps WebGL gas identity continuous beside matter while protecting the Canvas overlay', () => {
+    const { field, materials } = fixture();
+    materials.fill(Material.Smoke);
+    materials[10 * 20 + 10] = Material.Water;
+    const original = materials.slice();
+    field.update(materials);
+    const besideDrop = (5 * field.width + 6) * STYLE_STRIDE;
+    expect(field.volumeStyleBytes[besideDrop]).toBe(1);
+    expect(field.styleBytes[besideDrop]).toBe(0);
+    expect(materials).toEqual(original);
+    materials.fill(Material.Empty);
+    field.update(materials);
+    expect(field.volumeStyleBytes.filter((_, i) => i % 4 === 0).every(v => v === 0)).toBe(true);
   });
 
   it('widens a sparse gas cell into a soft bounded volume', () => {

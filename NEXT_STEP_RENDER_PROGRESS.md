@@ -4,6 +4,39 @@
 
 The [plan](NEXT_STEP_RENDER.md) was overhauled before starting the implementation goal. It now targets switchable 2D and real 3D presentation over the existing TPT WebAssembly simulation. No native simulation source, physics rules, or WASM binary was changed.
 
+### Snapshot round: steam contacts and volumetric gas
+
+- The grid at 2D steam contacts came from reusing the Canvas overlay's rectangular
+  exclusion mask for WebGL's gas identity and motion. WebGL now reads the owner
+  field before that mask; its material branches already protect solid/liquid
+  fragments. Canvas keeps its overlay protection. This adds one reusable CPU
+  byte plane, without another GPU sampler or texture.
+- 2D gas has softer particle-scale curvature and a second, offset layer of
+  translucent folds sampled from the existing volume texture.
+- Studio gas uses one shared raymarched colored density volume instead of a
+  sheet of point sprites. Native gas occupancy feeds a filtered density field;
+  a periodic 3D noise texture shapes rolling depth and wisps. Beer attenuation,
+  two light probes and cool interior scattering give the cloud internal shade.
+  A scene-depth pass clips gas against opaque bodies; transmissive glass/water
+  and the cursor stay out of this depth pass. Gas also stays out of GTAO and
+  brush picking. Integration uses 32 samples during interaction, 56 when settled.
+- Powder texture is subtler, with varied roughness and restrained Sand sheen.
+  Lava now has an opaque molten material instead of inheriting liquid transmission.
+- `scripts/capture-native-snapshot.mjs` imports native saves through the real file
+  picker, captures matched 2D/3D views, records source SHA-256 and checks that
+  presentation preserves the paused native world. The supplied source hash is
+  `8bbf937a70bd3108327bbed0d74db1591accfd8bbbf9decdb655f15e3abaab3b`.
+  Its initial state predates the water pool shown in the supplied screenshot.
+  Original-save results are in `.artifacts/steam-snapshot/{before,after}/`.
+  A separate, labelled contact diagnostic adds steam and droplets beside the
+  saved slopes; it is not presented as the original untouched snapshot.
+
+Reproduce (build first):
+
+```sh
+node scripts/capture-native-snapshot.mjs /path/to/save.cps .artifacts/my-snapshot
+```
+
 ### Existing 2D WebGL
 
 Normal 1×/2×/4× presentation previously submitted successive Realistic/HDR frames without the GPU backpressure already present at 8×. Ordinary frames now share one completion fence and coalesce subsequent changes. Promotion waits for the first completed frame, and the existing stalled-frame recovery also covers normal scales. Explicit capture/timing sessions retain their own frame ownership.
@@ -67,6 +100,12 @@ Saving failures keep the current view open. Failed restoration retains the store
 
 ## Verification
 
+- This snapshot round: `npm test` passes all 1,493 application tests and 421
+  script tests. Browser captures of the original native snapshot and the contact
+  diagnostic have no shader/runtime errors and identical native digests before
+  and after. All 50 Studio interaction checks pass with the new gas volume.
+  The self-contained before/after viewer is `.artifacts/steam-snapshot/review.html`.
+
 - Current 2D browser check: all 33 checks pass against native TPT/Pixi HDR, including material motion, 125%/150%/200% desktop scaling, brush/eraser, pause/step, Heat/Cool/held Heat, readable-code search, configured Clone target and mobile touch. No browser/shader errors. Evidence: `.artifacts/field-materials/report.json` and PNGs.
 - Current 2D cleanup: full `npm test` passes (14 prechecks, 1,491 application tests, 421 script tests), including all 48 native backend tests. Logs: `.artifacts/2d-suite-final.log`.
 - Production build and 25-file static runtime asset closure passed.
@@ -99,7 +138,7 @@ Published-site runs write to `.artifacts/published-studio/` and `.artifacts/publ
 
 ## Current limits and next work
 
-TPT physics remains planar and its editable domain remains finite. The background is visually unbounded. Powder bodies have rounded volume; liquid/solid bodies currently have beveled extruded thickness and are not fully volumetric fluid surfaces. Raster positions and contours can show cell stepping, and rebuilding an entire changed material group can be expensive. Gas/fire use soft particles rather than participating-media rendering, and the studio does not yet reproduce every native sign/tool/state-specific appearance from the 2D interface.
+TPT physics remains planar and its editable domain remains finite. The background is visually unbounded. Powder bodies have rounded volume; liquid/solid bodies currently have beveled extruded thickness and are not fully volumetric fluid surfaces. Raster positions and contours can show cell stepping, and rebuilding an entire changed material group can be expensive. Gas has reconstructed volumetric depth; energy/fire retain emissive particles. The volume's light probes approximate internal scattering, and glass does not yet refract the separately composited gas. The studio does not yet reproduce every native sign/tool/state-specific appearance from the 2D interface.
 
 Next: review the live 3D appearance and performance on the user's GPU, improve liquid surface curvature and temporal smoothness, then introduce a read-only native subcell particle export and more local mesh updates if measurements justify them. Keep the working switchable foundation. WebGPU and independently simulated 3D physics remain later, separate decisions.
 

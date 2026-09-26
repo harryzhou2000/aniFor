@@ -16,7 +16,7 @@ export function studioTextures(): { grain: DataTexture; wood: DataTexture; water
     const i = (y * size + x) * 4, u = x / size * Math.PI * 2, v = y / size * Math.PI * 2;
     seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
     const noise = (seed >>> 24) / 255;
-    const g = 100 + noise * 130;
+    const g = 180 + noise * 70;
     grain[i] = grain[i + 1] = grain[i + 2] = g; grain[i + 3] = 255;
     const bend = Math.sin(v) * 0.8 + Math.sin(v * 3 + Math.sin(u)) * 0.25;
     const streak = Math.sin(u * 18 + bend * 3) * 0.5 + 0.5;

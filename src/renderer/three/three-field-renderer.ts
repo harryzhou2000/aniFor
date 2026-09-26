@@ -8,6 +8,7 @@ import { powderSupport, powderVolumeGeometry } from './powder-volume';
 import { StudioPostprocess } from './studio-postprocess';
 import { studioTextures } from './studio-textures';
 import { studioEnvironment } from './studio-environment';
+import { GasVolume } from './gas-volume';
 
 interface Bucket {
   indices: number[]; hash: number; minX: number; minY: number; maxX: number; maxY: number;
@@ -37,6 +38,7 @@ export class ThreeFieldRenderer {
   private readonly environment: THREE.WebGLRenderTarget;
   private readonly softTexture: THREE.CanvasTexture;
   private readonly textures = studioTextures();
+  private readonly gasVolume: GasVolume;
   private postprocess?: StudioPostprocess;
   private shadowsDirty = true;
   private ground!: THREE.Mesh;
@@ -112,6 +114,9 @@ export class ThreeFieldRenderer {
     context.fillStyle = gradient; context.fillRect(0, 0, 64, 64);
     this.softTexture = new THREE.CanvasTexture(texture);
     this.addStage();
+    this.gasVolume = new GasVolume(simulation.width, simulation.height);
+    this.scene.add(this.gasVolume.mesh);
+    this.canvas.dataset.gasRendering = 'raymarched-volume';
     this.brush = new THREE.Mesh(new THREE.RingGeometry(0.9, 1, 48), new THREE.MeshBasicMaterial({ color: 0xffd69a, transparent: true, opacity: 0.8, depthTest: false, side: THREE.DoubleSide }));
     this.brush.userData.excludeFromAO = true;
     this.brush.renderOrder = 100; this.brush.visible = false; this.scene.add(this.brush);
@@ -252,6 +257,7 @@ export class ThreeFieldRenderer {
     this.ground.position.x = this.camera.position.x; this.ground.position.z = this.camera.position.z;
     this.renderer.shadowMap.needsUpdate = this.shadowsDirty; this.shadowsDirty = false;
     this.renderer.info.reset();
+    this.gasVolume.prepare(this.renderer, this.scene, this.camera, running ? time : 1000, interactive);
     if (this.postprocess && !interactive) this.postprocess.render();
     else this.renderer.render(this.scene, this.camera);
     this.interactiveFrame = interactive;
@@ -263,6 +269,7 @@ export class ThreeFieldRenderer {
   private rebuild(): void {
     const started = performance.now();
     const cells = this.simulation.cells(), walls = this.simulation.walls?.();
+    this.gasVolume.update(cells, walls);
     const {width, height} = this.simulation;
     const buckets = new Map<number, Bucket>();
     let occupied = 0, energyX = 0, energyY = 0, energyCount = 0;
@@ -283,6 +290,7 @@ export class ThreeFieldRenderer {
       let body = this.bodies.get(id);
       if (!body) { body = {group: new THREE.Group(), hash: -1}; this.scene.add(body.group); this.bodies.set(id, body); }
       const info = infos.get(id), phase = info ? renderPhase(info) : RenderPhase.Solid;
+      if (phase === RenderPhase.Gas) continue;
       // Foreign matter entering an inter-grain pore must invalidate the merged
       // surface even when none of this powder's own particle cells changed.
       if (phase === RenderPhase.Powder) {
@@ -294,7 +302,7 @@ export class ThreeFieldRenderer {
       if (body.hash === bucket.hash) continue;
       this.shadowsDirty = true;
       const material = this.material(id, phase);
-      if (phase === RenderPhase.Gas || phase === RenderPhase.Energy) {
+      if (phase === RenderPhase.Energy) {
         if (body.mist) { body.mist.geometry.dispose(); body.group.remove(body.mist); }
         const positions = new Float32Array(bucket.indices.length * 3);
         bucket.indices.forEach((index, i) => { positions[i * 3] = index % width + 0.5 - width / 2; positions[i * 3 + 1] = height / 2 - Math.floor(index / width) - 0.5; positions[i * 3 + 2] = 4 + (index * 13 % 17) * 0.15; });
@@ -325,6 +333,14 @@ export class ThreeFieldRenderer {
     if (phase === RenderPhase.Gas || phase === RenderPhase.Energy) {
       const luminous = phase === RenderPhase.Energy || infos.get(id)?.emissive;
       material = new THREE.PointsMaterial({color: new THREE.Color(color).multiplyScalar(luminous ? 4 : 1), size: luminous ? 6 : 10, map: this.softTexture, transparent: true, opacity: luminous ? 0.24 : 0.065, depthWrite: false, blending: luminous ? THREE.AdditiveBlending : THREE.NormalBlending});
+    } else if (id === Material.Lava) {
+      material = new THREE.MeshPhysicalMaterial({color: '#d54b0c', roughness: 0.48,
+        metalness: 0, clearcoat: 0.25, clearcoatRoughness: 0.36,
+        roughnessMap: this.textures.grain, bumpMap: this.textures.grain, bumpScale: 0.10});
+    } else if (id === Material.Sand) {
+      material = new THREE.MeshPhysicalMaterial({color, roughness: 0.88,
+        sheen: 0.18, sheenColor: new THREE.Color('#f4d9a5'), sheenRoughness: 0.9,
+        envMapIntensity: 0.75});
     } else if (phase === RenderPhase.Liquid || id === Material.Glass || id === Material.Ice) {
       const glass = id === Material.Glass;
       const water = id === Material.Water || id === Material.DistilledWater;
@@ -336,7 +352,10 @@ export class ThreeFieldRenderer {
     }
     if (material instanceof THREE.MeshStandardMaterial && infos.get(id)?.emissive) { material.emissive.set(color); material.emissiveIntensity = 1.2; }
     if (material instanceof THREE.MeshStandardMaterial && phase === RenderPhase.Powder) {
-      material.roughness = 0.94; material.metalness = METALS.has(id) ? 0.75 : 0; material.map = this.textures.grain; material.bumpMap = this.textures.grain; material.bumpScale = 0.22;
+      material.roughness = METALS.has(id) ? 0.62 : 0.90;
+      material.metalness = METALS.has(id) ? 0.75 : 0;
+      material.map = material.roughnessMap = this.textures.grain;
+      material.bumpMap = this.textures.grain; material.bumpScale = 0.12;
     }
     if (material instanceof THREE.MeshStandardMaterial && id === Material.Wood) {
       material.color.set('#b27542'); material.map = material.bumpMap = this.textures.wood;
@@ -438,6 +457,7 @@ export class ThreeFieldRenderer {
     this.canvas.removeEventListener('webglcontextlost', this.onContextLost); this.canvas.removeEventListener('webglcontextrestored', this.onContextRestored);
     for (const body of this.bodies.values()) this.removeBody(body);
     this.bodies.clear();
+    this.scene.remove(this.gasVolume.mesh); this.gasVolume.dispose();
     const stageMaterials = new Set<THREE.Material>();
     this.scene.traverse(object => { if (object instanceof THREE.Mesh) { object.geometry.dispose(); for (const material of Array.isArray(object.material) ? object.material : [object.material]) stageMaterials.add(material); } });
     for (const material of this.materials.values()) material.dispose();

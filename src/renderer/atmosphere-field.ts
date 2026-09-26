@@ -25,6 +25,9 @@ export class AtmosphereField {
    * carriers.
    */
   readonly styleBytes: Uint8Array;
+  /** WebGL shades only gas fragments, so it needs the continuous owner/flow
+   * before the Canvas overlay's contact exclusion is applied. */
+  readonly volumeStyleBytes: Uint8Array;
   private readonly seed: Float32Array;
   private readonly horizontal: Float32Array;
   private readonly blurred: Float32Array;
@@ -43,6 +46,7 @@ export class AtmosphereField {
     this.bytes = new Uint8Array(this.width * this.height * 4);
     this.styleBytes = new Uint8Array(this.width * this.height * STYLE_STRIDE);
     initializeFlowZeros(this.styleBytes);
+    this.volumeStyleBytes = this.styleBytes.slice();
     this.seed = new Float32Array(this.bytes.length);
     this.horizontal = new Float32Array(this.bytes.length);
     this.blurred = new Float32Array(this.bytes.length);
@@ -59,8 +63,9 @@ export class AtmosphereField {
     this.seedGas(materials, velocities);
     this.blurHorizontal();
     this.blurVertical();
-    this.suppressStylesNearMatter(materials, walls);
     this.packBytes();
+    this.volumeStyleBytes.set(this.styleBytes);
+    this.suppressStylesNearMatter(materials, walls);
   }
 
   /** Cheap dirty rejection for a changed non-gas particle or native wall. */
@@ -79,7 +84,7 @@ export class AtmosphereField {
   }
 
   get allocatedByteLength(): number {
-    return this.bytes.byteLength + this.styleBytes.byteLength
+    return this.bytes.byteLength + this.styleBytes.byteLength + this.volumeStyleBytes.byteLength
       + this.seed.byteLength + this.horizontal.byteLength + this.blurred.byteLength
       + this.horizontalStyles.byteLength + this.styleWeights.byteLength;
   }

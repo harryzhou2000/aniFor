@@ -2,7 +2,26 @@
 
 Revised 2026-09-26. The switchable rendering foundation below is delivered; see the progress document for evidence.
 
-## Current focus: 2D materials and controls
+## Current focus: steam contacts and gas volumes in both views
+
+Use the supplied native `AniforTPT-20260926-202358.cps` as the visual reference.
+Preserve its native simulation state when comparing the two renderers.
+
+1. Remove rectangular gas-style exclusions from the 2D WebGL cloud. Keep the
+   Canvas overlay's protection against tinting solid/liquid surfaces separate.
+2. Give 2D gas softer carrier-scale relief and overlapping translucent folds.
+3. Replace Studio gas point sprites with a depth-aware raymarched volume:
+   reconstructed native density/color, 3D billows, tapered depth, internal light
+   attenuation, and opaque scene occlusion. Keep energy particles distinct.
+4. Refine powder roughness/grain and molten materials. Gas geometry must never
+   intercept drawing or erasing; clear, resize, orbit and mode switching must work.
+5. Capture the original snapshot before/after at matched cameras, plus a labelled
+   contact diagnostic with steam against its slopes and water droplets. Validate
+   native state preservation, interactions, shader compilation and publish.
+
+The volume reconstructs depth for presentation. TPT continues to simulate in 2D.
+
+## Delivered previous round: 2D materials and controls
 
 The current request is to improve the existing Realistic WebGL view while preserving native TPT and the accepted Water surface. Animate the existing water reflection/refraction field together; give dense steam rolling light and shadow; retain dark crust in Lava's final glow; give settled Sand broad, stable material shading.
 
@@ -61,7 +80,8 @@ Present the simulation in an open scene without a rear board or perimeter box. U
 | Dense powders | Opaque, closed, rounded bulk surfaces with grain texture; join tiny air pores without changing native cells or swallowing foreign materials |
 | Connected liquids | Reconstructed continuous meshes with smooth normals and finite thickness; preserve detached droplets and material boundaries |
 | Solids and native walls | Joined surface geometry with depth; update changed regions rather than creating an object per cell |
-| Gas and energy | Soft particle or volume-like presentation and emissive geometry where appropriate; remain distinguishable from opaque solids |
+| Gas | A shared, colored density volume with 3D noise, ray integration, internal shadowing and opaque scene-depth clipping |
+| Energy | Emissive particles and geometry, kept separate from scattering gas |
 
 For merging, reconstruct an outer surface from connected material support. Merely concatenating sphere buffers does not create a merged liquid body. A contour with rounded depth is a useful initial representation for this planar simulation; a density field and marching cubes are options when additional surface freedom justifies their cost. Preserve holes, wall barriers, and separate material ownership.
 

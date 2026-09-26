@@ -7037,7 +7037,9 @@ void main() {
     float gasBaseLuminance = dot(gasBase, vec3(0.2126, 0.7152, 0.0722));
     float gasNeutralMix = gasInteriorScatter * 0.085;
     gasBase = mix(gasBase, vec3(gasBaseLuminance), gasNeutralMix);
-    float gasCurvature = clamp((atmosphereState.a - cloudNeighbourMean) * 8.0, -1.0, 1.0);
+    // Individual simulation carriers should not emboss rings into a cloud.
+    // Broad folds below carry the volume; local curvature is a soft rim cue.
+    float gasCurvature = clamp((atmosphereState.a - cloudNeighbourMean) * 3.5, -1.0, 1.0);
     vec2 gasLightingSlope = mix(
       volumeSlope, materialMesoscaleSlope, materialMesoscaleCoherence * 0.76
     );
@@ -7340,6 +7342,15 @@ void main() {
         gasVfxBillow = clamp(
           gasVfxWaveBasis * 0.32 + gasVfxFbm * 1.08, -1.0, 1.0
         );
+        // A second, offset depth layer separates translucent front wisps from
+        // the cloud's broad rear folds. Both use the existing filtered tile.
+        vec3 rearNoise = texture(uMaterialVolumeTexture,
+          gasVfxNoiseUv * 1.63 + vec2(0.31, -0.27) + gasVfxWarp / 340.0).rgb;
+        float rearFold = dot(rearNoise - vec3(0.5), vec3(1.04, 0.54, 0.24));
+        gasVfxBillow = gasVfxBillow * 0.76 + rearFold * 0.40;
+        float thinFold = smoothstep(0.10, 0.52, rearFold - gasVfxFbm * 0.22);
+        color += vec3(0.11, 0.17, 0.22) * thinFold * gasFieldSupport;
+        alpha *= 1.0 - thinFold * gasFieldSupport * 0.12;
       }
       float gasLocalBillowSupport = smoothstep(0.090, 0.32, gasShadeDensity)
         * gasInterior * (1.0 - opticalDepth * 0.35);
@@ -14560,7 +14571,7 @@ export class PixiFieldPresenter {
       autoGarbageCollect: false,
     });
     this.atmosphereStyleSource = new BufferImageSource({
-      resource: this.fieldSet.atmosphere.styleBytes,
+      resource: this.fieldSet.atmosphere.volumeStyleBytes,
       width: this.fieldSet.atmosphere.width,
       height: this.fieldSet.atmosphere.height,
       format: 'rgba8unorm',
@@ -15972,7 +15983,7 @@ export class PixiFieldPresenter {
     if (x < 0 || y < 0 || x >= this.width || y >= this.height) return 0;
     const fieldX = Math.min(this.fieldSet.atmosphere.width - 1, Math.floor(x / 2));
     const fieldY = Math.min(this.fieldSet.atmosphere.height - 1, Math.floor(y / 2));
-    return this.fieldSet.atmosphere.styleBytes[
+    return this.fieldSet.atmosphere.volumeStyleBytes[
       (fieldY * this.fieldSet.atmosphere.width + fieldX) * 4
     ];
   }
@@ -15983,7 +15994,7 @@ export class PixiFieldPresenter {
     const fieldX = Math.min(this.fieldSet.atmosphere.width - 1, Math.floor(x / 2));
     const fieldY = Math.min(this.fieldSet.atmosphere.height - 1, Math.floor(y / 2));
     const offset = (fieldY * this.fieldSet.atmosphere.width + fieldX) * 4;
-    const state = this.fieldSet.atmosphere.styleBytes;
+    const state = this.fieldSet.atmosphere.volumeStyleBytes;
     return [state[offset + 1] - 128, state[offset + 2] - 128, state[offset + 3]];
   }
 
