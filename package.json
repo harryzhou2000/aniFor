@@ -5,6 +5,8 @@
   "license": "GPL-3.0-only",
   "type": "module",
   "scripts": {
+    "audit:studio": "npm run build && node scripts/studio-interaction-smoke.mjs",
+    "audit:render-modes": "npm run build && node scripts/render-modes-smoke.mjs",
     "pretest": "vitest run scripts/visual-lab-region-appearance.test.mjs scripts/visual-lab-inspection-presentation.test.mjs src/shared/material-appearance-profile-catalog.test.ts src/shared/material-phase-profile-catalog.test.ts",
     "dev": "vite",
     "build": "tsc -b && vite build && bash scripts/finalize-pages-build.sh",
@@ -213,10 +215,12 @@
     "fetch:tpt": "bash scripts/fetch-powder-toy.sh"
   },
   "dependencies": {
-    "pixi.js": "^8.0.0"
+    "pixi.js": "^8.0.0",
+    "three": "^0.186.1"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
+    "@types/three": "^0.186.0",
     "typescript": "^5.7.0",
     "vite": "^7.0.0",
     "vitest": "^3.0.0"

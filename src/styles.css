@@ -303,3 +303,11 @@ h1 { font-family: inherit; font-size: clamp(26px, 4vw, 44px); font-weight: 500; 
   .action-button { padding-block: 6px; }
   .tool-library { min-height: 0; }
 }
+
+/* Shared mode selection is available before either renderer has completed startup. */
+.topbar .render-mode-switch { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+.topbar .render-mode-switch button { padding: 8px 10px; border: 1px solid #b9a38455; border-radius: 8px; background: #302b23; color: #ddd0bb; font: inherit; font-size: 11px; cursor: pointer; }
+.topbar .render-mode-switch button[aria-pressed="true"] { background: #d4b584; color: #25231f; }
+.topbar .render-mode-error { color: #ffb2a0; font-size: 11px; max-width: 260px; }
+.boot-recovery { padding: 20px; border: 1px solid #ba8973; color: #efd1ae; background: #2c2420; }
+.boot-recovery a { color: #b9dbed; }

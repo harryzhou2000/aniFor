@@ -16095,19 +16095,18 @@ export class PixiFieldPresenter {
     this.renderFenceStartedAt = performance.now();
     this.renderFenceStallForcedForAudit = true;
     this.renderQueued = true;
-    this.scheduleEightXRenderPoll();
+    this.scheduleRenderFencePoll();
     return true;
   }
 
   isContextLost(): boolean { return this.contextLost; }
 
   /**
-   * Waits for the first true-8x GPU frame while the bounded Canvas fallback
-   * remains mounted. Application.render() only proves submission; the fence
-   * proves that the 15-million-fragment frame actually completed.
+   * Wait for GPU completion before replacing the visible Canvas fallback.
+   * Application.render() alone only proves command submission.
    */
   waitForFirstFrame(timeoutMs: number): Promise<boolean> {
-    if (this.outputScale !== 8 || this.firstFrameReady) return Promise.resolve(true);
+    if (!this.usesRenderFence() || this.firstFrameReady) return Promise.resolve(true);
     if (this.destroyed || this.contextLost || this.firstFrameFailed || timeoutMs <= 0) {
       return Promise.resolve(false);
     }
@@ -16120,7 +16119,7 @@ export class PixiFieldPresenter {
       };
       this.firstFrameWaiters.add(finish);
       timeout = setTimeout(() => finish(false), timeoutMs);
-      this.scheduleEightXRenderPoll();
+      this.scheduleRenderFencePoll();
     });
   }
 
@@ -16796,7 +16795,7 @@ export class PixiFieldPresenter {
     // the requested frame nor its fence. The browser audit retries acceptance
     // through the same bounded 30-second queue deadline as ordinary latest-wins
     // presentation.
-    if (this.outputScale === 8 && !this.prepareEightXRender()) return false;
+    if (this.renderFence && !this.prepareRenderFrame()) return false;
     this.webGLTimingRequested = true;
     // Timing requests are audit-only and must own the frame they measure. A
     // paused/static scene may otherwise have no later update to consume the
@@ -16937,13 +16936,13 @@ export class PixiFieldPresenter {
     if (this.webGLTimingRequested || this.webGLTimingPending || this.webGLTimingFence) {
       return undefined;
     }
-    if (this.outputScale === 8) {
+    if (this.outputScale === 8 || this.renderFence) {
       // Promotion itself already owns a receipt-quality fence, but it is not a
       // ticketed capture frame. Accept a request only after promotion and after
       // the prior sole owner has retired; never turn a queued mutation into a
       // falsely attributed receipt.
       if (!this.firstFrameReady || this.renderQueued) return undefined;
-      if (!this.prepareEightXRender() || this.renderFence || this.webGLTimingFence) {
+      if (!this.prepareRenderFrame() || this.renderFence || this.webGLTimingFence) {
         return undefined;
       }
     }
@@ -17492,6 +17491,16 @@ export class PixiFieldPresenter {
       && this.fieldSet.lookups.styleBytes[material * 4] === RenderPhase.Solid;
   }
 
+  private usesRenderFence(): boolean {
+    if (this.outputScale === 8) return true;
+    const gl = this.webGLContext();
+    // Capture/timing sessions have their own completed-frame owners. Ordinary
+    // 1x/2x/4x HDR previously had no GPU backpressure at all.
+    return Boolean(gl && typeof gl.fenceSync === 'function'
+      && typeof gl.clientWaitSync === 'function' && !this.webGLTimingEnabled
+      && !this.completedFrameReceipts && !this.framebufferAlphaReadbacks);
+  }
+
   private renderApplication(): void {
     // An audit timing fence is also a real direct-8x presentation fence. Do
     // not submit a second ordinary fence for the same 15M-fragment frame: on
@@ -17501,19 +17510,19 @@ export class PixiFieldPresenter {
     this.pollWebGLTimingQuery();
     this.pollWebGLTimingFence();
     this.requestAdaptivePresentationTiming();
-    if (this.outputScale === 8 && (this.renderFence || this.webGLTimingFence)) {
+    if (this.renderFence || (this.outputScale === 8 && this.webGLTimingFence)) {
       this.renderQueued = true;
-      if (!this.prepareEightXRender()) return;
+      if (!this.prepareRenderFrame()) return;
       if (this.webGLTimingFence) return;
     }
     // A completed fence has released the only frame in flight. Its queued
     // mutation is being submitted below, so do not let the next fence poll
     // mistake it for another update and redraw the 15M-fragment target again.
-    if (this.outputScale === 8) this.renderQueued = false;
+    this.renderQueued = false;
     this.renderApplicationNow();
     const submission = this.presentationSubmission;
-    if (this.outputScale === 8 && !this.webGLTimingFence) {
-      this.insertEightXRenderFence(submission);
+    if (this.usesRenderFence() && !this.webGLTimingFence) {
+      this.insertRenderFence(submission);
     } else if (this.outputScale !== 8) {
       this.armCompletedFrameFence(submission);
     }
@@ -17931,10 +17940,10 @@ export class PixiFieldPresenter {
   }
 
   /**
-   * True 8x submits 15,040,512 fragments per frame. Keep exactly one frame in
-   * flight and let texture/uniform mutations coalesce while the GPU catches up.
+   * Keep one ordinary frame in flight at every detail level, including the
+   * multi-pass Realistic/HDR path. Coalesce updates while the GPU catches up.
    */
-  private prepareEightXRender(): boolean {
+  private prepareRenderFrame(): boolean {
     const fence = this.renderFence;
     if (!fence) return true;
     if (this.firstFrameReady && (this.renderFenceStallForcedForAudit
@@ -17990,11 +17999,11 @@ export class PixiFieldPresenter {
       this.releaseRenderFence('completed');
       return true;
     }
-    this.scheduleEightXRenderPoll();
+    this.scheduleRenderFencePoll();
     return false;
   }
 
-  private insertEightXRenderFence(submission: number): void {
+  private insertRenderFence(submission: number): void {
     const gl = this.webGLContext();
     if (!gl || this.contextLost || this.destroyed) {
       this.failCompletedFrameReceipt(submission);
@@ -18007,18 +18016,19 @@ export class PixiFieldPresenter {
         this.failCompletedFrameReceipt(submission);
         return;
       }
+      this.app.canvas.dataset.frameBackpressure = 'single-frame';
       this.renderFence = fence;
       this.renderFenceSubmission = submission;
       this.renderFenceStartedAt = performance.now();
       gl.flush();
       // Poll even when no second redraw has arrived. Promotion must not remove
       // the visible Canvas merely because the first 8x frame was submitted.
-      this.scheduleEightXRenderPoll();
+      this.scheduleRenderFencePoll();
       // The candidate's first fence remains owned by waitForFirstFrame(),
       // which shares the one promotion deadline with FieldRenderer. Once that
       // has promoted, however, rAF alone is insufficient to guarantee that an
       // unsignalled later fence restores Canvas after thirty seconds.
-      this.armPromotedEightXFenceWatchdog(fence);
+      this.armPromotedFenceWatchdog(fence);
     } catch {
       // A created-but-unflushed owner must not survive as a phantom in-flight
       // frame. The ordinary recovery path handles context loss; the receipt
@@ -18033,8 +18043,8 @@ export class PixiFieldPresenter {
    * callback is delivered. The identity check makes an expired callback from a
    * completed fence harmless after latest-wins submits a successor.
    */
-  private armPromotedEightXFenceWatchdog(fence: WebGLSync): void {
-    if (this.outputScale !== 8 || !this.firstFrameReady
+  private armPromotedFenceWatchdog(fence: WebGLSync): void {
+    if (!this.firstFrameReady
       || this.destroyed || this.contextLost || this.renderFence !== fence) return;
     if (this.renderFenceWatchdog !== undefined) clearTimeout(this.renderFenceWatchdog);
     this.renderFenceWatchdog = setTimeout(() => {
@@ -18046,13 +18056,13 @@ export class PixiFieldPresenter {
     }, WEBGL_EIGHT_X_FRAME_STALL_MS);
   }
 
-  private scheduleEightXRenderPoll(): void {
+  private scheduleRenderFencePoll(): void {
     if (this.renderFencePoll !== 0 || this.destroyed || this.contextLost) return;
     this.renderFencePoll = requestAnimationFrame(() => {
       this.renderFencePoll = 0;
       if (!this.renderFence || this.destroyed || this.contextLost) return;
       const redraw = this.renderQueued;
-      if (!this.prepareEightXRender()) return;
+      if (!this.prepareRenderFrame()) return;
       // Preserve a queued mutation only while its predecessor fence is still
       // pending. Once that fence signals, the redraw below consumes it.
       this.renderQueued = false;

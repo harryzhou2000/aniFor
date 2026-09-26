@@ -312,7 +312,8 @@ export class Game {
   private signEditor?: NativeSignEditor;
   private radius = 7;
   private eraseMode = false;
-  private paused = false;
+  private paused = new URLSearchParams(location.search).get('paused') === '1';
+  private restoredWorld = false;
   private accumulator = 0;
   private lastFrame = performance.now();
   private probeX = 0;
@@ -508,9 +509,16 @@ export class Game {
     if ((renderLab || materialShowcase || materialCandidateSurvey) && browserInputAuditRequested()) {
       this.installBrowserInputAudit();
     }
+    const pauseButton = toolbox.querySelector<HTMLButtonElement>('.pause');
+    if (pauseButton) {
+      pauseButton.classList.toggle('active', this.paused);
+      pauseButton.textContent = this.paused ? 'Play' : 'Pause';
+    }
     this.renderer.setSimulationRunning(!this.paused);
     requestAnimationFrame(this.frame);
   }
+
+  get isPaused(): boolean { return this.paused; }
 
   /** Releases renderer-owned GPU work before this document is replaced. */
   dispose(): void {
@@ -1610,6 +1618,7 @@ export class Game {
     if (shared) {
       try {
         this.simulation.loadWorld(await decodeSharedWorld(shared));
+        this.restoredWorld = true;
         this.renderer.invalidateDynamicPresentation();
         return;
       }
@@ -1617,14 +1626,20 @@ export class Game {
     }
     try {
       const saved = localStorage.getItem(AUTOSAVE_KEY);
+      if (!saved && new URLSearchParams(location.search).has('handoff')) throw new Error('The saved world from the previous view is unavailable.');
       if (saved) {
         this.simulation.loadWorld(saved);
+        this.restoredWorld = true;
         this.renderer.invalidateDynamicPresentation();
       }
-    } catch { localStorage.removeItem(AUTOSAVE_KEY); }
+    } catch (error) {
+      // Failed restoration must not silently delete a native world during a mode switch.
+      throw error;
+    }
   }
 
   private seedIfEmpty(): void {
+    if (this.restoredWorld) return;
     if (this.simulation.cells().some((cell) => cell !== Material.Empty)) return;
     const floor = this.simulation.height - 8;
     for (let x = 25; x < this.simulation.width - 25; x += 3) this.simulation.paint(x, floor, Material.Wall, 2);

@@ -7,11 +7,13 @@ export const WEBGL_OUTPUT_PIXEL_BUDGET = 16_777_216;
 export const WEBGL_OUTPUT_DIMENSION_BUDGET = 8_192;
 export const CANVAS_FALLBACK_PIXEL_BUDGET = 8_388_608;
 export const CANVAS_FALLBACK_DIMENSION_BUDGET = 4_096;
-export const WEBGL_PROMOTION_TIMEOUT_MS = 10_000;
+// Cold normal-scale HDR compilation plus its first completed frame can exceed
+// 10 seconds on software WebGL. Keep Canvas available during this bounded wait.
+export const WEBGL_PROMOTION_TIMEOUT_MS = 30_000;
 export const WEBGL_EIGHT_X_PROMOTION_TIMEOUT_MS = 30_000;
 // Audit receipts prove one exact submitted framebuffer rather than deciding
 // whether WebGL may replace the bounded startup Canvas. Software GPU runners
-// can promote within 10 seconds yet need longer to retire a later evidence
+// can need substantial time to retire a later evidence
 // frame under load, so keep this bounded independently from promotion.
 export const WEBGL_COMPLETED_FRAME_RECEIPT_TIMEOUT_MS = 30_000;
 // A later 8x frame that remains unsignalled for this long is no longer merely

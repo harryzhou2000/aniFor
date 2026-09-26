@@ -1,5 +1,5 @@
 import './styles.css';
-import { Game } from './app/game';
+import { mountRenderModeSwitch, resolveRenderMode } from './app/render-mode';
 import {
   materialCandidateSurveyRequested, materialShowcaseRequested, renderLabRequested,
 } from './renderer/render-lab-scene';
@@ -13,6 +13,21 @@ import { createSimulation } from './simulation';
 const root = document.querySelector<HTMLElement>('#app');
 if (!root) throw new Error('Missing app root');
 
+if (resolveRenderMode(location.search) === '3d') {
+  try {
+    const { startThreeGame } = await import('./app/three-game');
+    await startThreeGame(root);
+  } catch (error) {
+    const notice = document.createElement('div');
+    notice.className = 'boot-recovery';
+    const message = document.createElement('p');
+    message.textContent = `Could not open 3D: ${error instanceof Error ? error.message : String(error)} Your stored world has been retained.`;
+    const back = document.createElement('a'); back.href = './?view=2d&paused=1'; back.textContent = 'Return to 2D';
+    notice.append(message, back); root.prepend(notice);
+  }
+} else {
+const { Game } = await import('./app/game');
+root.dataset.renderMode = '2d';
 const query = new URLSearchParams(location.search);
 if (visualCaptureLayoutRequested(location.search)) {
   root.dataset.visualCaptureLayout = VISUAL_CAPTURE_GEOMETRY.profile;
@@ -73,7 +88,15 @@ fitViewport();
 
 root.querySelector('.status')!.textContent = `${simulation.name} · saved on this device`;
 const game = new Game(root, simulation);
-await game.start();
+try {
+  await game.start();
+  mountRenderModeSwitch(root.querySelector<HTMLElement>('.topbar')!, '2d', simulation, () => game.isPaused);
+} catch (error) {
+  game.dispose();
+  const message = document.createElement('p'); message.className = 'boot-recovery';
+  message.textContent = `Could not open the world: ${error instanceof Error ? error.message : String(error)} Your stored save has been retained.`;
+  root.prepend(message);
+}
 // Controls are mounted inside Game.start and may change the workspace's final
 // row height. Refit once against that settled frame, then synchronize the
 // renderer camera immediately instead of waiting for observer/rAF delivery.
@@ -85,3 +108,5 @@ window.addEventListener('pagehide', () => {
   viewportFrameResizeObserver.disconnect();
   game.dispose();
 }, { once: true });
+
+}

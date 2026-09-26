@@ -61,12 +61,12 @@ describe('field render resolution', () => {
     })).toBe(8);
   });
 
-  it('allows true 8x a bounded cold-start window without slowing lower scales', () => {
+  it('allows normal HDR and true 8x a bounded cold-start completion window', () => {
     expect(webGLPromotionTimeout(1)).toBe(WEBGL_PROMOTION_TIMEOUT_MS);
     expect(webGLPromotionTimeout(2)).toBe(WEBGL_PROMOTION_TIMEOUT_MS);
     expect(webGLPromotionTimeout(4)).toBe(WEBGL_PROMOTION_TIMEOUT_MS);
     expect(webGLPromotionTimeout(8)).toBe(WEBGL_EIGHT_X_PROMOTION_TIMEOUT_MS);
-    expect(WEBGL_EIGHT_X_PROMOTION_TIMEOUT_MS).toBeGreaterThan(WEBGL_PROMOTION_TIMEOUT_MS);
+    expect(WEBGL_EIGHT_X_PROMOTION_TIMEOUT_MS).toBe(WEBGL_PROMOTION_TIMEOUT_MS);
     expect(WEBGL_EIGHT_X_FRAME_STALL_MS).toBe(WEBGL_EIGHT_X_PROMOTION_TIMEOUT_MS);
   });
 });

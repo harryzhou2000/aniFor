@@ -1,0 +1,62 @@
+.render-mode-switch { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.render-mode-switch button { border: 1px solid #64717c55; border-radius: 9px; background: #17252d; color: #a7bdc8; padding: 10px 13px; font: inherit; font-size: 12px; cursor: pointer; }
+.render-mode-switch button[aria-pressed="true"] { background: #e0b77d; color: #17212a; border-color: #e0b77d; }
+.render-mode-error { flex-basis: 100%; color: #ffb2a0; font-size: 12px; max-width: 310px; }
+.studio-shell { min-height: 100dvh; color: #e2edf0; background: radial-gradient(ellipse at 30% 0%, #233943 0%, #101b24 65%); padding: 28px clamp(16px, 3.3vw, 64px) 14px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+.studio-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
+.studio-header .eyebrow { color: #afc1bd; font-size: 9px; letter-spacing: .23em; margin: 0 0 9px; }
+.studio-header h1 { margin: 0; font-size: 31px; font-weight: 450; letter-spacing: -.055em; }
+.studio-header h1 span { font-size: 15px; letter-spacing: .02em; margin-left: 9px; color: #d6b88e; font-weight: 400; }
+.studio-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 22px; }
+.studio-stage { position: relative; min-height: 520px; height: min(74vh, 820px); border: 1px solid #75909933; border-radius: 18px; overflow: hidden; background: #101c25; box-shadow: 0 20px 70px #0004; }
+.studio-canvas-host { position: absolute; inset: 0; }
+.three-field-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.studio-scene-label { position: absolute; top: 18px; left: 20px; display: flex; align-items: center; gap: 9px; font-size: 11px; letter-spacing: .02em; pointer-events: none; z-index: 2; color: #b4c8d1; }
+.studio-live-dot { width: 6px; height: 6px; border-radius: 50%; background: #bcd7a8; box-shadow: 0 0 8px #bcd7a866; }
+.studio-state { padding-left: 12px; border-left: 1px solid #77909c55; color: #dab98b; }
+.studio-camera { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 3px; padding: 5px; border: 1px solid #8197a344; border-radius: 12px; background: #15242deb; backdrop-filter: blur(14px); z-index: 2; white-space: nowrap; box-shadow: 0 4px 18px #0003; }
+.studio-camera button { font: inherit; font-size: 11px; color: #c1cfd6; background: transparent; border: 0; border-radius: 7px; padding: 9px 13px; cursor: pointer; }
+.studio-camera button[aria-pressed="true"] { color: #f0d5ae; background: #65766b55; }
+.studio-camera button:hover { background: #79899533; }
+.studio-camera > span { height: 20px; width: 1px; background: #8197a344; margin: 0 4px; }
+.studio-gesture { position: absolute; bottom: 11px; margin: 0; left: 10px; right: 10px; text-align: center; color: #92aab5; font-size: 10px; pointer-events: none; z-index: 2; }
+.studio-tools { display: flex; flex-direction: column; gap: 15px; min-width: 0; }
+.studio-section-heading { margin: 5px 0 0; }
+.studio-section-heading .eyebrow { color: #9db2b8; font-size: 9px; letter-spacing: .2em; margin: 0 0 8px; }
+.studio-section-heading h2 { font-size: 21px; font-weight: 450; margin: 0; letter-spacing: -.035em; }
+.studio-search { width: 100%; box-sizing: border-box; border-radius: 9px; padding: 12px; border: 1px solid #6c849144; color: #d9e9ec; background: #101c25; font: inherit; font-size: 12px; }
+.studio-search::placeholder { color: #899ca5; }
+.studio-palette { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; max-height: 310px; overflow: auto; padding: 1px; }
+.studio-palette button { display: flex; align-items: center; gap: 9px; padding: 12px 9px; min-width: 0; border-radius: 9px; border: 1px solid #8397a025; color: #bdced3; background: #21323b; font: inherit; font-size: 11px; text-align: left; cursor: pointer; }
+.studio-palette button[aria-pressed="true"] { border-color: #d5b889; background: #a7906229; color: #f4dbb6; }
+.studio-palette button:hover { border-color: #a9bdc988; }
+.studio-swatch { display: block; flex-shrink: 0; width: 16px; height: 16px; border-radius: 5px; background: radial-gradient(circle at 30% 25%, #fff7, transparent 70%), var(--material-color); box-shadow: inset -2px -3px 4px #0004, 0 2px 3px #0003; }
+.studio-brush { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; color: #aebfc5; font-size: 12px; padding: 15px 0 8px; border-top: 1px solid #8197a32b; }
+.studio-brush input { grid-column: 1 / -1; width: 100%; accent-color: #dfba88; }
+.studio-brush output { color: #e4c69f; font-variant-numeric: tabular-nums; }
+.studio-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.studio-actions button { font: inherit; font-size: 11px; color: #c4d2d5; padding: 11px 8px; border: 1px solid #7e929c33; border-radius: 8px; background: #263741; cursor: pointer; }
+.studio-actions button:first-child { color: #18252e; background: #d9b989; }
+.studio-actions button:hover { filter: brightness(1.15); }
+.studio-notice { margin: 0; min-height: 30px; font-size: 11px; color: #c8b795; line-height: 1.6; }
+.studio-explanation { margin: auto 0 0; padding-top: 12px; color: #829ba7; font-size: 11px; line-height: 1.7; }
+.studio-footer { display: flex; justify-content: space-between; gap: 16px; color: #8ba0a9; padding: 16px 3px 0; font-size: 10px; }
+.studio-footer a { color: inherit; text-decoration: none; }
+@media (max-width: 850px) {
+  .studio-workspace { grid-template-columns: minmax(0, 1fr); }
+  .studio-stage { min-height: 420px; height: 58vh; }
+  .studio-tools { display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
+  .studio-section-heading, .studio-search { grid-column: 1 / -1; }
+  .studio-palette { grid-row: span 4; max-height: 270px; }
+  .studio-brush { padding-top: 0; border: 0; }
+  .studio-explanation { margin: 0; padding: 0; }
+  .studio-header { flex-wrap: wrap; margin-bottom: 18px; }
+  .studio-footer { flex-wrap: wrap; }
+}
+@media (max-width: 480px) {
+  .studio-shell { padding: 18px 10px 12px; }
+  .studio-header { gap: 16px; padding: 0 5px; }
+  .studio-camera button { padding: 8px 9px; }
+  .studio-tools { gap: 12px; }
+  .studio-palette button { padding: 10px 6px; font-size: 10px; gap: 5px; }
+}

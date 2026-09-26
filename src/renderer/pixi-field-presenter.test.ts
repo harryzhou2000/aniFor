@@ -10333,7 +10333,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(presenter.app.render).toHaveBeenCalledOnce();
   });
 
-  it('coalesces true-8x redraws while one GPU fence remains in flight', () => {
+  it.each([1, 2, 4, 8])('coalesces %sx redraws while one GPU fence remains in flight', (scale) => {
     let status = 0x911b; // TIMEOUT_EXPIRED
     let scheduled: FrameRequestCallback | undefined;
     vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => {
@@ -10358,7 +10358,7 @@ describe('Pixi presenter startup configuration', () => {
     };
     const presenter = presenterHarness();
     Object.assign(presenter, {
-      outputScale: 8,
+      outputScale: scale,
       renderFencePoll: 0,
       destroyed: false,
       contextLost: false,
@@ -10387,7 +10387,7 @@ describe('Pixi presenter startup configuration', () => {
     expect(gl.fenceSync).toHaveBeenCalledTimes(2);
   });
 
-  it('does not declare true 8x ready until its first GPU fence completes', async () => {
+  it.each([1, 2, 4, 8])('does not declare %sx ready until its first GPU fence completes', async (scale) => {
     let status = 0x911b; // TIMEOUT_EXPIRED
     let scheduled: FrameRequestCallback | undefined;
     vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => {
@@ -10408,7 +10408,7 @@ describe('Pixi presenter startup configuration', () => {
     };
     const presenter = presenterHarness();
     Object.assign(presenter, {
-      outputScale: 8,
+      outputScale: scale,
       renderFencePoll: 0,
       destroyed: false,
       contextLost: false,
@@ -10590,7 +10590,7 @@ describe('Pixi presenter startup configuration', () => {
       app: { ...presenter.app, renderer: { gl } },
     });
 
-    expect((presenter as unknown as { prepareEightXRender(): boolean }).prepareEightXRender()).toBe(true);
+    expect((presenter as unknown as { prepareRenderFrame(): boolean }).prepareRenderFrame()).toBe(true);
     expect(gl.clientWaitSync).toHaveBeenNthCalledWith(1, fence, 0, 0);
     expect(gl.clientWaitSync).toHaveBeenNthCalledWith(2, fence, gl.SYNC_FLUSH_COMMANDS_BIT, 0);
     expect(gl.deleteSync).toHaveBeenCalledWith(fence);
