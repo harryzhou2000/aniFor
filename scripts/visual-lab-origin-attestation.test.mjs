@@ -57,9 +57,9 @@ describe('Visual Lab deployed-origin attestation', () => {
 
   it('rejects missing, escaped, duplicated, reordered, or miscounted closure paths', () => {
     expect(() => normalizeVisualLabOriginAttestation({
-      ...record(), resources: RESOURCES.filter((path) => !path.endsWith('powder_core.wasm')),
+      ...record(), resources: RESOURCES.filter((path) => !path.endsWith('stillroom_core.wasm')),
       checkedResources: RESOURCES.length - 1,
-    })).toThrow('missing wasm/powder_core.wasm');
+    })).toThrow('missing wasm/stillroom_core.wasm');
     expect(() => normalizeVisualLabOriginAttestation({
       ...record(), resources: [...RESOURCES, '/outside.js'].sort(),
       checkedResources: RESOURCES.length + 1,
@@ -74,6 +74,12 @@ describe('Visual Lab deployed-origin attestation', () => {
     expect(() => normalizeVisualLabOriginAttestation({
       ...record(), checkedResources: RESOURCES.length + 1,
     })).toThrow('resource count');
+  });
+
+  it('accepts native-only runtime proof while retaining compatibility with older closures', () => {
+    const resources = RESOURCES.filter(path => !path.endsWith('powder_core.wasm'));
+    expect(normalizeVisualLabOriginAttestation({...record(), resources, checkedResources: resources.length}).resources).toEqual(resources);
+    expect(normalizeVisualLabOriginAttestation(record()).resources).toEqual(RESOURCES);
   });
 
   it('rejects schema extension so the portable proof cannot be reinterpreted', () => {

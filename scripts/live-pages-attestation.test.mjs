@@ -49,6 +49,14 @@ const fixtureFetch = (overrides = {}) => {
 };
 
 describe('live Pages attestation', () => {
+  it('accepts the native-only startup closure without requiring the unused compatibility core', async () => {
+    const fixture = fixtureFetch({
+      '/anifor/assets/app.js': response('const wasm = "./wasm/stillroom_core.js";'),
+    });
+    const result = await verifyLivePagesDeployment(BASE_URL, REVISION, {fetch: fixture.fetch});
+    expect(result.resourcePaths).toContain('/anifor/wasm/stillroom_core.wasm');
+    expect(result.resourcePaths).not.toContain('/anifor/wasm/powder_core.wasm');
+  });
   it('attests an exact no-store same-origin closure and returns frozen evidence', async () => {
     const fixture = fixtureFetch();
     const result = await verifyLivePagesDeployment(BASE_URL, REVISION, { fetch: fixture.fetch });

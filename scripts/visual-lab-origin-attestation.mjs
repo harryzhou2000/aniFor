@@ -1,4 +1,4 @@
-import { normalizeLivePagesBaseUrl } from './live-pages-attestation.mjs';
+import { LIVE_PAGES_REQUIRED_RESOURCES, normalizeLivePagesBaseUrl } from './live-pages-attestation.mjs';
 
 export const VISUAL_LAB_ORIGIN_ATTESTATION_SCHEMA =
   'anifor.visual-lab.origin-attestation/v1';
@@ -6,13 +6,7 @@ export const VISUAL_LAB_ORIGIN_ATTESTATION_SCHEMA =
 const REVISION = /^[0-9a-f]{40}$/;
 const MAX_RESOURCES = 1_024;
 const MAX_RESOURCE_PATH_BYTES = 2_048;
-const REQUIRED_RUNTIME_RESOURCES = Object.freeze([
-  'assets/app.js',
-  'assets/style.css',
-  'wasm/stillroom_core.js',
-  'wasm/stillroom_core.wasm',
-  'wasm/powder_core.wasm',
-]);
+const REQUIRED_RUNTIME_RESOURCES = LIVE_PAGES_REQUIRED_RESOURCES;
 const FIELDS = Object.freeze([
   'schema',
   'baseUrl',

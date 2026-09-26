@@ -5,7 +5,9 @@ export const LIVE_PAGES_REQUIRED_RESOURCES = Object.freeze([
   'assets/style.css',
   'wasm/stillroom_core.js',
   'wasm/stillroom_core.wasm',
-  'wasm/powder_core.wasm',
+  // The legacy compatibility core is no longer referenced by ordinary startup.
+  // Every native runtime resource remains mandatory, and all discovered assets
+  // (including legacy ones in older builds) still receive the same checks.
 ]);
 
 const NO_STORE_REQUEST = Object.freeze({
