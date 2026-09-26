@@ -185,6 +185,9 @@ export class GasVolume {
 
   prepare(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera, time: number, interactive: boolean): void {
     if (!this.mesh.visible) return;
+    // OrbitControls may have changed the camera since the last renderer pass.
+    // Depth reconstruction must use the same transform as this frame's rays.
+    camera.updateMatrixWorld();
     renderer.getDrawingBufferSize(this.size);
     if (this.depth.width !== this.size.x || this.depth.height !== this.size.y) this.depth.setSize(this.size.x, this.size.y);
     const uniforms = this.mesh.material.uniforms;
