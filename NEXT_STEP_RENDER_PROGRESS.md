@@ -29,6 +29,7 @@ The earlier showcase script timeout came from its exact-consecutive-image captur
 - Fire/smoke use larger, softer particles with reduced per-particle opacity. Grain/wood bump strength and water normals are restrained to preserve coherent highlights.
 - Brush strokes retain their original draw/erase operation through release, complete a final release position when a move event was omitted, and cancel on focus loss, pointer cancellation or mode changes. Resizing the brush updates its cursor. Holding a brush in a running simulation continuously pours or erases at the selected native cell; releasing stops the source.
 - The studio audit now exercises exact circular footprints at radii 1/7/24, erasing, multiple material families, search and selection outside favorites, release-only stroke endpoints, ignored middle clicks, focus loss, pause/step/resume/clear, held brushes and cancelled touch, in addition to the original camera/surface tests. Both browser audit scripts accept a deployed base URL for fresh-incognito verification of GitHub Pages.
+- Published-site verification caught an ordinary startup selecting the small compatibility core. A subsequent direct module probe confirmed the deployed TPT module was valid (612 × 384). The old seven-second loader deadline and silent alternate-solver fallback are removed: ordinary worlds wait up to 30 seconds for native TPT, then display a recoverable error while retaining saves. Explicit deterministic Visual Lab fixtures remain available. Four regression tests cover delayed success, failure, timeout/late completion, and explicit fixture selection; the browser audit supports an injected eight-second WASM delay.
 
 ### Mode switching
 
@@ -56,6 +57,8 @@ npm run audit:studio
 # Run the same input and save checks against the published site:
 STUDIO_BASE_URL=https://harryzhou2000.github.io/aniFor/ node scripts/studio-interaction-smoke.mjs
 RENDER_BASE_URL=https://harryzhou2000.github.io/aniFor/ node scripts/render-modes-smoke.mjs
+# Optional cold-start regression, locally or together with STUDIO_BASE_URL:
+STUDIO_WASM_DELAY_MS=8000 node scripts/studio-interaction-smoke.mjs
 ```
 
 Local evidence is in `.artifacts/render-modes/`: `smoke.json`, `live-2d.json`, `three-paused.png`, `three-simulated.png`, `three-mobile.png`, `two-webgl-paused.png`, `two-webgl-live.png`, and the focused test reports. These generated files are intentionally untracked.

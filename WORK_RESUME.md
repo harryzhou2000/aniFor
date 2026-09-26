@@ -8,4 +8,6 @@ Use `?view=3d` for the studio and `?view=2d` for the field view. `npm run audit:
 
 The latest polish replaces the generic environment with controlled HDR reflection panels, refines material roughness and clearcoat, smooths bevel highlights and restrains bloom. Brush release/focus/cancellation behavior is hardened, and a held brush pours continuously while native simulation runs.
 
+Ordinary startup now requires native TPT with a 30-second allowance. A published-site check caught the old loader silently choosing the compact compatibility solver; that fallback is removed. Failed startup retains saves and displays a retry message. Explicit deterministic Visual Lab fixtures still work. Four startup regression tests cover this behavior; `STUDIO_WASM_DELAY_MS=8000` injects a slow browser download for the studio audit.
+
 Next development should improve liquid curvature, smooth motion and gas/fire appearance, informed by the rendered result and measurements. Physics remains two-dimensional and the editable domain finite despite the open background. Hardware performance has not been established by the software Chrome run. The historical full presenter suite has existing shader-source assertions that fail; the 65 focused tests for these changes pass separately.

@@ -1,23 +1,12 @@
-import { DeterministicBackend } from './deterministic-backend';
 import { PowderToyBackend } from './powder-toy-backend';
 import { RenderLabBackend } from './render-lab-backend';
 import type { SimulationBackend } from './types';
-import { WasmBackend } from './wasm-backend';
 
-// The UI depends only on SimulationBackend. A future Powder Toy module can be
-// selected here without leaking its memory layout into rendering or controls.
+// Ordinary worlds always use native TPT. A slow hosted download must never
+// silently select a different solver or seed/autosave a smaller legacy world.
 export async function createSimulation(options: { readonly renderLab?: boolean } = {}): Promise<SimulationBackend> {
   if (options.renderLab) return new RenderLabBackend(612, 384);
-  try {
-    return await loadWithin(PowderToyBackend.load(), 7000, 'Powder Toy startup timed out');
-  } catch {
-    // Keep the compact legacy core available for older static artifacts.
-  }
-  try {
-    return await loadWithin(WasmBackend.load(), 3500, 'Compatibility core startup timed out');
-  } catch {
-    return new DeterministicBackend();
-  }
+  return loadWithin(PowderToyBackend.load(), 30000, 'Native TPT took too long to load. Reload to retry.');
 }
 
 export type {

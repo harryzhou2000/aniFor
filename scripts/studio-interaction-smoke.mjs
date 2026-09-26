@@ -19,6 +19,15 @@ try {
   cdp.on('Runtime.consoleAPICalled', event => { if (event.type === 'error') report.errors.push(event); });
   cdp.on('Log.entryAdded', event => { if (event.entry.level === 'error') report.errors.push(event); });
   await cdp.send('Runtime.enable'); await cdp.send('Page.enable'); await cdp.send('Log.enable');
+  const wasmDelay = Number(process.env.STUDIO_WASM_DELAY_MS ?? 0);
+  if (wasmDelay > 0) {
+    report.wasmDelayMs = wasmDelay;
+    await cdp.send('Fetch.enable', {patterns: [{urlPattern:'*wasm/stillroom_core.wasm*'}]});
+    cdp.on('Fetch.requestPaused', async event => {
+      try { await delay(wasmDelay); await cdp.send('Fetch.continueRequest', {requestId:event.requestId}); }
+      catch (error) { report.errors.push(String(error)); }
+    });
+  }
   await cdp.send('Emulation.setDeviceMetricsOverride', {width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false});
   const evaluate = async expression => {
     const result = await cdp.send('Runtime.evaluate', {expression, returnByValue: true, awaitPromise: true}, 30000);

@@ -26,6 +26,7 @@ if (resolveRenderMode(location.search) === '3d') {
     notice.append(message, back); root.prepend(notice);
   }
 } else {
+try {
 const { Game } = await import('./app/game');
 root.dataset.renderMode = '2d';
 const query = new URLSearchParams(location.search);
@@ -55,7 +56,7 @@ root.innerHTML = `
         <div class="toolbox-heading"><p class="eyebrow">MATERIAL LAB</p><p>Shape the world</p></div>
       </aside>
     </section>
-    <footer class="footer"><p class="status">Deterministic simulation · saved on this device</p><a href="./NOTICE.txt" target="_blank" rel="license">GPLv3 · source notice</a></footer>
+    <footer class="footer"><p class="status">Loading native TPT simulation…</p><a href="./NOTICE.txt" target="_blank" rel="license">GPLv3 · source notice</a></footer>
   </section>`;
 
 const nativeLab = query.get('simulation') === 'native';
@@ -108,5 +109,10 @@ window.addEventListener('pagehide', () => {
   viewportFrameResizeObserver.disconnect();
   game.dispose();
 }, { once: true });
-
+} catch (error) {
+  const message = document.createElement('p'); message.className = 'boot-recovery';
+  message.textContent = `Could not start native TPT: ${error instanceof Error ? error.message : String(error)} Reload to retry. Your stored world has been retained.`;
+  root.prepend(message);
+  const status = root.querySelector('.status'); if (status) status.textContent = 'Simulation unavailable';
+}
 }
