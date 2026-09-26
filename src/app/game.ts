@@ -302,6 +302,7 @@ const AUTOSAVE_KEY = 'stillroom-world-v1';
 export class Game {
   private readonly simulation: SimulationBackend;
   private readonly renderer: MaterialRenderer;
+  private input?: WorldInputController;
   private material = Material.Sand;
   private wallTool?: WallToolInfo;
   private simulationTool?: SimToolInfo;
@@ -311,6 +312,7 @@ export class Game {
   private signOverlay?: NativeSignOverlay;
   private signEditor?: NativeSignEditor;
   private radius = 7;
+  private auditVisualTime = 1_000;
   private eraseMode = false;
   private paused = new URLSearchParams(location.search).get('paused') === '1';
   private restoredWorld = false;
@@ -362,7 +364,8 @@ export class Game {
       this.signOverlay = new NativeSignOverlay(viewport, this.simulation, this.renderer);
       this.signEditor = new NativeSignEditor(this.simulation);
     }
-    new WorldInputController(viewport, this.renderer, {
+    this.input = new WorldInputController(viewport, this.renderer, {
+      canRepeat: () => !this.signTool && !this.wallTool && this.simulationTool?.gesture !== 'vector',
       draw: ({ x, y }, erase) => {
         erase ||= this.eraseMode;
         if (this.signTool) {
@@ -428,6 +431,14 @@ export class Game {
         this.paused = !this.paused;
         this.renderer.setSimulationRunning(!this.paused);
       },
+      onStep: () => {
+        this.paused = true;
+        this.accumulator = 0;
+        this.simulation.step();
+        this.renderer.setSimulationRunning(false);
+        this.renderer.invalidateDynamicPresentation();
+      },
+      onResetView: () => this.renderer.resetView(),
       onEraseMode: (erase) => { this.eraseMode = erase; },
       onPowderRenderStyle: (style) => { this.renderer.setPowderRenderStyle(style); },
       onRenderScale: (scale) => {
@@ -513,6 +524,7 @@ export class Game {
     if (pauseButton) {
       pauseButton.classList.toggle('active', this.paused);
       pauseButton.textContent = this.paused ? 'Play' : 'Pause';
+      pauseButton.ariaLabel = `${pauseButton.textContent} simulation`;
     }
     this.renderer.setSimulationRunning(!this.paused);
     requestAnimationFrame(this.frame);
@@ -585,6 +597,9 @@ export class Game {
       },
       temperature: (x, y) => {
         if (x < 0 || y < 0 || x >= this.simulation.width || y >= this.simulation.height) return -1;
+        // Native auxiliary fields are extracted together by cells(). A paused
+        // tool edit may precede the next rendered frame, so refresh the snapshot.
+        this.simulation.cells();
         return this.simulation.temperature?.()[y * this.simulation.width + x] ?? -1;
       },
       velocity: (x, y) => {
@@ -636,6 +651,11 @@ export class Game {
         });
       },
       refreshPresentationFields: () => this.renderer.invalidateDynamicPresentation(),
+      setVisualTime: (milliseconds) => {
+        if (!Number.isFinite(milliseconds) || milliseconds < 0) throw new Error('Invalid visual time');
+        this.auditVisualTime = milliseconds;
+        this.renderer.invalidateDynamicPresentation();
+      },
       geologicalSolidStylingEnabled: () => this.renderer.geologicalSolidStylingIsEnabled(),
       thermalCatalyticRigidStylingEnabled: () => this.renderer.thermalCatalyticRigidStylingIsEnabled(),
       roleMaterialStylingEnabled: () => this.renderer.roleMaterialStylingIsEnabled(),
@@ -1499,11 +1519,12 @@ export class Game {
   private readonly frame = (time: number): void => {
     const elapsed = Math.min(time - this.lastFrame, 80);
     this.lastFrame = time;
+    this.input?.repeatHeldStroke(time);
     if (!this.paused) {
       this.accumulator += elapsed;
       while (this.accumulator >= 1000 / 60) { this.simulation.step(); this.accumulator -= 1000 / 60; }
     }
-    this.renderer.render(time, this.root.dataset.inputAudit === 'ready' ? 1_000 : time);
+    this.renderer.render(time, this.root.dataset.inputAudit === 'ready' ? this.auditVisualTime : time);
     this.signOverlay?.render(time);
     if (time - this.lastIndicatorUpdate >= 100) {
       this.lastIndicatorUpdate = time;

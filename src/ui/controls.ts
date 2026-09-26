@@ -97,6 +97,8 @@ export interface ControlsCallbacks {
   onSourceTarget?(material: Material): void;
   onRadius(radius: number): void;
   onPause(): void;
+  onStep?(): void;
+  onResetView?(): void;
   onEraseMode(erase: boolean): void;
   onPowderRenderStyle(style: PowderRenderStyle): void;
   onRenderScale(scale: FieldOutputScale): void;
@@ -135,7 +137,8 @@ export function reconcileOpenToolGroups(
   return next;
 }
 
-export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, catalog: readonly CatalogTool[] = materialTools(BROWSE_MATERIALS)): void {
+export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, toolCatalog: readonly CatalogTool[] = materialTools(BROWSE_MATERIALS)): void {
+  const catalog = toolCatalog.filter(isToolAvailable);
   const activeRenderScale = resolveFieldOutputScale();
   const tools = document.createElement('nav');
   tools.className = 'palette glass';
@@ -158,6 +161,9 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
   library.className = 'tool-library';
   library.id = 'tool-library-' + String(++controlsInstance);
   search.setAttribute('aria-controls', library.id);
+  const selection = document.createElement('output');
+  selection.className = 'active-tool';
+  selection.setAttribute('aria-live', 'polite');
 
   const results = document.createElement('output');
   results.className = 'tool-results';
@@ -188,6 +194,7 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
   let sourceTarget = Material.Sand;
   let openGroups = new Set<string>();
   let hasRenderedLibrary = false;
+  let libraryRevealsResults = false;
 
   const activeSourceTool = (): SourceToolInfo | undefined => {
     const tool = catalog.find((candidate) => candidate.key === selectedKey);
@@ -219,6 +226,12 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
    * perform the full, structural rebuild they require.
    */
   const syncSelectedTool = (): void => {
+    const active = catalog.find((tool) => tool.key === selectedKey);
+    selection.textContent = active?.kind === 'source'
+      ? sourceSelectionLabel(active.emitter, sourceTarget)
+      : active?.name ?? 'Choose a tool';
+    selection.style.setProperty('--material-color', active?.color ?? '#d5ad76');
+    selection.title = active?.description ?? '';
     for (const tile of library.querySelectorAll<HTMLElement>('.tool-tile')) {
       const button = tile.querySelector<HTMLButtonElement>('.material-button');
       if (!button) continue;
@@ -250,6 +263,7 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
     const badges = [tool.hazard ? `<i class="tool-badge hazard-${tool.hazard}">${tool.hazard}</i>` : '', tool.available === false ? '<i class="tool-badge unavailable">unavailable</i>' : tool.limitations?.length ? '<i class="tool-badge limited">limited</i>' : ''].join('');
     button.innerHTML = `<span class="material-dot" aria-hidden="true">${tool.icon}</span><span>${tool.name}</span><span class="tool-badges">${badges}</span>`;
     button.title = tool.available === false ? `${tool.description} · Unavailable in this build: ${tool.limitations?.map(humanizeLimitation).join(', ') ?? 'unsupported'}` : tool.limitations?.length ? `${tool.description} · ${tool.limitations.map(humanizeLimitation).join(', ')}` : tool.description;
+    if (tool.code) button.title = `${tool.name} (${tool.code}) · ${button.title}`;
     button.disabled = !isToolAvailable(tool) || (tool.kind !== 'element' && !callbacks.onTool);
     const selected = tool.key === selectedKey;
     button.classList.toggle('selected', selected);
@@ -289,6 +303,7 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
         }
         callbacks.onTool?.(tool);
       }
+      setEraseMode(false);
       syncSelectedTool();
     });
 
@@ -314,12 +329,13 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
     // that temporary expansion overwrite the user's normal category choices
     // when the query/filter is cleared.
     const revealResults = Boolean(search.value) || mode !== 'all';
-    if (hasRenderedLibrary && !revealResults) {
+    if (hasRenderedLibrary && !libraryRevealsResults) {
       openGroups = reconcileOpenToolGroups(openGroups, Array.from(
         library.querySelectorAll<HTMLDetailsElement>('details.material-group'),
-        (disclosure) => ({ id: disclosure.dataset.category ?? '', open: disclosure.open }),
-      ).filter(({ id }) => Boolean(id)));
+        disclosure => ({ id: disclosure.dataset.category ?? '', open: disclosure.open }),
+      ));
     }
+    libraryRevealsResults = revealResults;
     const visible = filterTools(catalog, { mode, query: search.value, favorites, recent });
     library.replaceChildren();
     results.value = toolCountLabel(visible.length);
@@ -337,6 +353,9 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
       disclosure.dataset.category = group.id;
       disclosure.open = revealResults || openGroups.has(group.id) || (!hasRenderedLibrary && groupIndex === 0);
       disclosure.addEventListener('toggle', () => {
+        // Only deliberate disclosure choices in the unfiltered library persist.
+        // Programmatic opening of search results must not expand every category.
+        if (revealResults || !disclosure.isConnected) return;
         if (disclosure.open) openGroups.add(group.id);
         else openGroups.delete(group.id);
       });
@@ -352,7 +371,22 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
     hasRenderedLibrary = true;
   };
 
-  for (const choice of filterChoices) {
+  const category = document.createElement('select');
+  category.className = 'tool-category';
+  category.ariaLabel = 'Tool category';
+  for (const choice of filterChoices) category.add(new Option(choice.label, choice.mode));
+  const selectFilter = (next: ToolFilter): void => {
+    mode = next;
+    category.value = next;
+    for (const filter of filters.querySelectorAll<HTMLButtonElement>('.tool-filter')) {
+      filter.setAttribute('aria-pressed', String(filter.dataset.filter === mode));
+    }
+    renderLibrary();
+    library.scrollTop = 0;
+  };
+  category.addEventListener('change', () => selectFilter(category.value as ToolFilter));
+  filters.append(category);
+  for (const choice of filterChoices.filter(({ mode }) => mode === 'favorites' || mode === 'recent')) {
     const button = document.createElement('button');
     button.className = 'tool-filter';
     button.type = 'button';
@@ -362,9 +396,7 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
     button.setAttribute('aria-controls', library.id);
     button.setAttribute('aria-pressed', choice.mode === mode ? 'true' : 'false');
     button.addEventListener('click', () => {
-      mode = choice.mode;
-      for (const filter of filters.querySelectorAll<HTMLButtonElement>('.tool-filter')) filter.setAttribute('aria-pressed', String(filter === button));
-      renderLibrary();
+      selectFilter(mode === choice.mode ? 'all' : choice.mode);
     });
     filters.append(button);
   }
@@ -381,23 +413,29 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
     selectedKey = `material:${sourceTarget}`;
     hideSourceSelection();
     callbacks.onMaterial(sourceTarget);
+    setEraseMode(false);
     syncSelectedTool();
   });
   tools.append(finder, filters, results, library);
-  renderLibrary();
 
   const actions = document.createElement('div');
   actions.className = 'actions glass';
   actions.innerHTML = `
-    <label class="brush-size">
-      <span class="brush-size-heading"><span>Brush</span><span class="render-scale">
-        <span>Detail</span>
-        <select class="render-scale-select" aria-label="Render resolution">
-          ${RENDER_SCALE_OPTIONS.map((scale) => `
-            <option value="${scale}"${scale === activeRenderScale ? ' selected' : ''}>${scale}×</option>`).join('')}
-        </select>
-      </span></span>
-      <input aria-label="Brush size" type="range" min="2" max="24" value="7" />
+    <div class="brush-size">
+      <label class="brush-size-heading">Brush radius <output class="brush-radius-value">7 cells</output>
+        <input aria-label="Brush size" type="range" min="1" max="48" value="7" />
+      </label>
+    </div>
+    <div class="playback-controls">
+      <button class="action-button pause" aria-label="Pause simulation">Pause</button>
+      <button class="action-button step" title="Advance one simulation frame"${callbacks.onStep ? '' : ' disabled'}>Step</button>
+      <button class="action-button fit-view" title="Reset zoom and pan"${callbacks.onResetView ? '' : ' disabled'}>Fit view</button>
+    </div>
+    <details class="render-settings"><summary>Appearance</summary>
+    <label class="render-scale">Detail
+      <select class="render-scale-select" aria-label="Render resolution">
+        ${RENDER_SCALE_OPTIONS.map((scale) => `<option value="${scale}"${scale === activeRenderScale ? ' selected' : ''}>${scale}×</option>`).join('')}
+      </select>
     </label>
     <div class="powder-render-style" role="group" aria-label="Powder look">
       <span class="powder-render-style-label">Powder look</span>
@@ -406,10 +444,11 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
           type="button" data-powder-render-style="${style}"
           aria-pressed="${String(style === DEFAULT_POWDER_RENDER_STYLE)}">${label}</button>`).join('')}
     </div>
-    <button class="action-button pause" aria-label="Pause simulation">Pause</button>
+    </details>
+    <div class="file-controls">
     <button class="action-button save-file" aria-label="Save or share world as a file">Save / share</button>
     <button class="action-button open-file" aria-label="Open a world file">Open file</button>
-    <button class="action-button clear" aria-label="Clear world">Clear</button>`;
+    <button class="action-button clear" aria-label="Clear world">Clear</button></div>`;
   const filePicker = document.createElement('input');
   filePicker.className = 'world-file-input';
   filePicker.type = 'file';
@@ -417,7 +456,10 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
   filePicker.setAttribute('aria-label', 'Choose a Powder Toy save file');
   actions.append(filePicker);
   const radius = actions.querySelector('input') as HTMLInputElement;
-  radius.addEventListener('input', () => callbacks.onRadius(Number(radius.value)));
+  radius.addEventListener('input', () => {
+    actions.querySelector<HTMLOutputElement>('.brush-radius-value')!.value = `${radius.value} ${radius.value === '1' ? 'cell' : 'cells'}`;
+    callbacks.onRadius(Number(radius.value));
+  });
   const powderStyleButtons = actions.querySelectorAll<HTMLButtonElement>('.powder-render-style-button');
   for (const powderStyleButton of powderStyleButtons) {
     powderStyleButton.addEventListener('click', () => {
@@ -440,23 +482,35 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
   const brushModes = document.createElement('div');
   brushModes.className = 'brush-modes brush-mode-bar glass';
   brushModes.setAttribute('role', 'group');
-  brushModes.ariaLabel = 'Mobile brush mode';
+  brushModes.ariaLabel = 'Brush mode';
   brushModes.innerHTML = `
     <button class="action-button brush-mode selected" type="button" data-erase="false" aria-pressed="true">Draw</button>
     <button class="action-button brush-mode" type="button" data-erase="true" aria-pressed="false">Eraser</button>`;
+  const setEraseMode = (erase: boolean): void => {
+    for (const button of brushModes.querySelectorAll<HTMLButtonElement>('.brush-mode')) {
+      const selected = (button.dataset.erase === 'true') === erase;
+      button.classList.toggle('selected', selected);
+      button.setAttribute('aria-pressed', String(selected));
+    }
+    selection.classList.toggle('erasing', erase);
+    callbacks.onEraseMode(erase);
+  };
   for (const brushMode of brushModes.querySelectorAll<HTMLButtonElement>('.brush-mode')) {
     brushMode.addEventListener('click', () => {
       const erase = brushMode.dataset.erase === 'true';
-      for (const button of brushModes.querySelectorAll<HTMLButtonElement>('.brush-mode')) {
-        const selected = button === brushMode;
-        button.classList.toggle('selected', selected);
-        button.setAttribute('aria-pressed', String(selected));
-      }
-      callbacks.onEraseMode(erase);
+      setEraseMode(erase);
     });
   }
   const pause = actions.querySelector('.pause') as HTMLButtonElement;
-  pause.addEventListener('click', () => { callbacks.onPause(); pause.classList.toggle('active'); pause.textContent = pause.classList.contains('active') ? 'Play' : 'Pause'; });
+  const syncPause = (): void => {
+    pause.textContent = pause.classList.contains('active') ? 'Play' : 'Pause';
+    pause.ariaLabel = `${pause.textContent} simulation`;
+  };
+  pause.addEventListener('click', () => { callbacks.onPause(); pause.classList.toggle('active'); syncPause(); });
+  actions.querySelector('.step')?.addEventListener('click', () => {
+    callbacks.onStep?.(); pause.classList.add('active'); syncPause();
+  });
+  actions.querySelector('.fit-view')?.addEventListener('click', () => callbacks.onResetView?.());
   const saveFile = actions.querySelector('.save-file') as HTMLButtonElement;
   saveFile.addEventListener('click', async () => {
     saveFile.disabled = true;
@@ -475,7 +529,13 @@ export function mountControls(host: HTMLElement, callbacks: ControlsCallbacks, c
     window.setTimeout(() => { openFile.disabled = false; openFile.textContent = 'Open file'; }, 1600);
   });
   actions.querySelector('.clear')?.addEventListener('click', callbacks.onClear);
-  host.append(brushModes, tools, actions);
+  const brushHeader = document.createElement('div');
+  brushHeader.className = 'brush-header';
+  brushHeader.append(selection, brushModes);
+  actions.prepend(brushHeader);
+  host.append(tools, actions);
+  renderLibrary();
+  syncSelectedTool();
 }
 
 function loadList(key: string): string[] {

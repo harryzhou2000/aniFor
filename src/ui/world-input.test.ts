@@ -9,6 +9,7 @@ function inputHarness() {
     classList: { toggle: vi.fn() },
     setPointerCapture: vi.fn(),
     addEventListener(name: string, listener: (event: any) => void) { listeners.set(name, listener); },
+    ownerDocument: { defaultView: { addEventListener(name: string, listener: (event: any) => void) { listeners.set(name, listener); } } },
   } as unknown as HTMLElement;
   const view = { zoom: 1, panX: 0, panY: 0 };
   const viewport = {
@@ -20,7 +21,8 @@ function inputHarness() {
   const draw = vi.fn();
   const drawSegment = vi.fn();
   const finishStroke = vi.fn();
-  new WorldInputController(element, viewport, { draw, drawSegment, finishStroke });
+  const canRepeat = vi.fn(() => true);
+  const controller = new WorldInputController(element, viewport, { draw, drawSegment, finishStroke, canRepeat });
   const dispatchPointer = (name: string, overrides: Partial<PointerEvent> = {}) => {
     const event = {
       pointerId: 1, pointerType: 'mouse', button: 0, clientX: 0, clientY: 0,
@@ -29,7 +31,7 @@ function inputHarness() {
     listeners.get(name)!(event);
     return event;
   };
-  return { listeners, element, view, viewport, draw, drawSegment, finishStroke, dispatchPointer };
+  return { controller, canRepeat, listeners, element, view, viewport, draw, drawSegment, finishStroke, dispatchPointer };
 }
 
 describe('wheelZoomRatio', () => {
@@ -162,6 +164,23 @@ describe('WorldInputController pointer modes', () => {
     dispatchPointer('pointermove', { pointerId: 7, button: 1, clientX: 90, clientY: 100 });
     expect(viewport.applyGesture).not.toHaveBeenCalled();
   });
+
+  it('includes a release-only endpoint and retains right-button erasing', () => {
+    const { draw, dispatchPointer } = inputHarness();
+    dispatchPointer('pointerdown', { button: 2, clientX: 20, clientY: 30 });
+    dispatchPointer('pointerup', { button: 2, buttons: 0, clientX: 60, clientY: 30 });
+    expect(draw.mock.calls).toEqual([2, 3, 4, 5, 6].map(x => [{ x, y: 3 }, true]));
+  });
+
+  it('does not complete or extend a stroke after window blur', () => {
+    const { draw, finishStroke, listeners, dispatchPointer } = inputHarness();
+    dispatchPointer('pointerdown', { clientX: 20, clientY: 30 });
+    listeners.get('blur')!({});
+    dispatchPointer('pointermove', { clientX: 60, clientY: 30 });
+    dispatchPointer('pointerup', { clientX: 90, clientY: 30 });
+    expect(draw).toHaveBeenCalledOnce();
+    expect(finishStroke).not.toHaveBeenCalled();
+  });
 });
 
 describe('visitGridLine', () => {
@@ -174,5 +193,40 @@ describe('visitGridLine', () => {
       { x: 5, y: 5 },
       { x: 6, y: 5 },
     ]);
+  });
+});
+
+
+describe('held brushes', () => {
+  it('repeats a stationary brush and stops on release or focus loss', () => {
+    const h = inputHarness();
+    h.dispatchPointer('pointerdown', { clientX: 100, clientY: 120 });
+    h.controller.repeatHeldStroke(100);
+    h.controller.repeatHeldStroke(151);
+    expect(h.draw).toHaveBeenCalledTimes(2);
+    h.dispatchPointer('pointerup', { clientX: 100, clientY: 120 });
+    h.controller.repeatHeldStroke(250);
+    expect(h.draw).toHaveBeenCalledTimes(2);
+    h.dispatchPointer('pointerdown');
+    h.controller.repeatHeldStroke(300);
+    h.listeners.get('blur')!({});
+    h.controller.repeatHeldStroke(400);
+    expect(h.draw).toHaveBeenCalledTimes(3);
+  });
+
+  it('does not repeat vector tools or a touch waiting for pinch navigation', () => {
+    const h = inputHarness();
+    h.canRepeat.mockReturnValue(false);
+    h.dispatchPointer('pointerdown');
+    h.controller.repeatHeldStroke(100);
+    h.controller.repeatHeldStroke(200);
+    expect(h.draw).toHaveBeenCalledOnce();
+    h.dispatchPointer('pointerup');
+    h.canRepeat.mockReturnValue(true);
+    h.draw.mockClear();
+    h.dispatchPointer('pointerdown', { pointerType: 'touch' });
+    h.controller.repeatHeldStroke(300);
+    h.controller.repeatHeldStroke(400);
+    expect(h.draw).not.toHaveBeenCalled();
   });
 });

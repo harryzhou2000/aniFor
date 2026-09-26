@@ -60,7 +60,7 @@ describe('organic/plant graphics audit fixture', () => {
     )).map(({ id }) => id);
     expect(selectableGrowthIds).toEqual(ORGANIC_PLANT_IDS.slice(0, 5));
     expect(NATIVE_PROJECTIONS.find(({ id }) => id === Material.DYST)).toMatchObject({
-      name: 'DYST',
+      name: 'Dead Yeast', code: 'DYST',
       selectable: false,
     });
     expect(ORGANIC_PLANT_GRAPHICS_AUDIT.solidCards.map(({ code }) => code))

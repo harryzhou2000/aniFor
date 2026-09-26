@@ -43,9 +43,9 @@ describe('tool catalog view model', () => {
     const nativeWalls = catalog.filter((tool) => tool.kind === 'wall');
     const availableNativeWalls = nativeWalls.filter(isToolAvailable);
     expect(availableNativeWalls.map(({ nativeWall }) => nativeWall)).toEqual([
-      8, 1, 2, 3, 4, 6, 7, 9, 10, 11, 12, 13, 15, 16, 18,
+      8, 1, 2, 3, 6, 7, 9, 10, 11, 12, 13, 15, 16, 18,
     ]);
-    expect(availableNativeWalls).toHaveLength(15);
+    expect(availableNativeWalls).toHaveLength(14);
     expect(nativeWalls.filter((tool) => !isToolAvailable(tool))).toMatchObject([
       {
         key: 'wall:5', nativeWall: 5, name: 'Fan wall', available: false,
@@ -115,7 +115,7 @@ describe('tool catalog view model', () => {
     const state = { query: '', favorites: new Set<string>(), recent: [] as string[] };
     const visible = filterTools(catalog, { ...state, mode: 'all' });
 
-    expect(catalog).toHaveLength(224);
+    expect(catalog).toHaveLength(223);
     expect(visible).toHaveLength(catalog.length);
     expect(new Set(catalog.map(({ key }) => key)).size).toBe(catalog.length);
     expect(new Set(catalog.filter((tool) => tool.kind === 'element').map(({ id }) => id)))
@@ -127,10 +127,10 @@ describe('tool catalog view model', () => {
     ]));
 
     const semantic = catalog.filter((tool) => tool.kind !== 'element');
-    expect(semantic).toHaveLength(53);
-    expect(semantic.filter(isToolAvailable)).toHaveLength(52);
-    expect(semantic.filter((tool) => tool.kind === 'wall')).toHaveLength(17);
-    expect(semantic.filter((tool) => tool.kind === 'wall' && isToolAvailable(tool))).toHaveLength(16);
+    expect(semantic).toHaveLength(52);
+    expect(semantic.filter(isToolAvailable)).toHaveLength(51);
+    expect(semantic.filter((tool) => tool.kind === 'wall')).toHaveLength(16);
+    expect(semantic.filter((tool) => tool.kind === 'wall' && isToolAvailable(tool))).toHaveLength(15);
     expect(semantic.filter((tool) => tool.kind === 'source')).toHaveLength(6);
     expect(semantic.filter((tool) => tool.kind === 'life')).toHaveLength(LIFE_PRESETS.length);
     expect(semantic.filter((tool) => tool.kind === 'sign')).toHaveLength(1);
@@ -207,5 +207,26 @@ describe('tool catalog view model', () => {
   it('deduplicates and bounds recent selections', () => {
     expect(recordRecent(['b', 'a', 'c'], 'a', 3)).toEqual(['a', 'b', 'c']);
     expect(recordRecent(['a', 'b', 'c'], 'd', 3)).toEqual(['d', 'a', 'b']);
+  });
+});
+
+
+describe('readable tool labels', () => {
+  it('keeps native codes searchable beside human names', () => {
+    const catalog = buildToolCatalog(MATERIALS, { lifePresets: true, configuredSources: true });
+    const state = { mode: 'all' as const, favorites: new Set<string>(), recent: [] };
+    for (const [query, key, name] of [
+      ['BGLA', 'material:44', 'Broken Glass'],
+      ['CO2', 'material:41', 'Carbon Dioxide'],
+      ['sawdust', 'material:49', 'Sawdust'],
+      ['PCLN', 'source:pcln', 'Powered Clone source'],
+      ['GOL', 'life:gol', 'Game of Life'],
+    ]) {
+      expect(filterTools(catalog, { ...state, query }).find(tool => tool.key === key)?.name).toBe(name);
+    }
+  });
+
+  it('does not offer a Streamline brush without an airflow renderer', () => {
+    expect(semanticTools({ walls: true }).some(tool => tool.key === 'wall:4')).toBe(false);
   });
 });

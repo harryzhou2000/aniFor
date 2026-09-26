@@ -17,6 +17,8 @@ export interface WorldViewport {
 
 export interface WorldInputCallbacks {
   draw(cell: Point, erase: boolean): void;
+  /** Particle and thermal brushes can act while held; vector tools cannot. */
+  canRepeat?(): boolean;
   /** Raw consecutive grid samples for vector tools such as TPT Wind. */
   drawSegment?(start: Point, end: Point, erase: boolean): void;
   /** One completed nonzero paint drag, used by native Fan-wall configuration. */
@@ -31,6 +33,17 @@ export function wheelZoomRatio(deltaY: number, deltaMode: number, viewportHeight
 export class WorldInputController {
   private readonly pointers = new Map<number, PointerSample>();
   private interaction?: Interaction;
+  private nextRepeatAt = 0;
+
+  /** Called by the game clock, including while physics is paused. */
+  repeatHeldStroke(time: number): void {
+    const stroke = this.interaction;
+    if (stroke?.kind !== 'paint' || !stroke.started || !this.callbacks.canRepeat?.()) return;
+    if (!this.nextRepeatAt) this.nextRepeatAt = time + 50;
+    if (time < this.nextRepeatAt) return;
+    this.nextRepeatAt = time + 50;
+    this.callbacks.draw(stroke.lastCell, stroke.erase);
+  }
 
   constructor(
     private readonly element: HTMLElement,
@@ -44,6 +57,10 @@ export class WorldInputController {
     element.addEventListener('pointerup', this.onPointerUp);
     element.addEventListener('pointercancel', this.onPointerAbort);
     element.addEventListener('lostpointercapture', this.onPointerAbort);
+    element.ownerDocument?.defaultView?.addEventListener('blur', () => {
+      this.pointers.clear();
+      this.setInteraction(undefined);
+    });
     element.addEventListener('auxclick', (event) => { if (event.button === 1) event.preventDefault(); });
     element.addEventListener('wheel', this.onWheel, { passive: false });
     element.addEventListener('dblclick', () => viewport.resetView());
@@ -120,6 +137,12 @@ export class WorldInputController {
   private finishPointer(event: PointerEvent, commitTap: boolean): void {
     if (!this.pointers.has(event.pointerId)) return;
     const interaction = this.interaction;
+    if (commitTap && interaction?.kind === 'paint' && interaction.pointerId === event.pointerId
+      && (interaction.started || interaction.tapEligible)) {
+      // Pointer-up may carry a newer position than the last move. Preserve the
+      // operation captured on press: buttons is already zero on release.
+      this.drawStrokeTo(event.clientX, event.clientY, interaction);
+    }
     if (commitTap && interaction?.kind === 'paint' && interaction.pointerId === event.pointerId && !interaction.started && interaction.tapEligible) {
       this.callbacks.draw(interaction.lastCell, interaction.erase);
     }
@@ -162,6 +185,7 @@ export class WorldInputController {
       interaction.started = true;
     }
     if (end.x === interaction.lastCell.x && end.y === interaction.lastCell.y) return;
+    this.nextRepeatAt = 0;
     this.callbacks.drawSegment?.(interaction.lastCell, end, interaction.erase);
     visitGridLine(interaction.lastCell, end, (cell) => this.callbacks.draw(cell, interaction.erase));
     interaction.lastCell = end;
@@ -189,6 +213,7 @@ export class WorldInputController {
 
   private setInteraction(interaction: Interaction | undefined): void {
     this.interaction = interaction;
+    this.nextRepeatAt = 0;
     this.element.classList?.toggle('is-panning', interaction?.kind === 'pan' || interaction?.kind === 'pinch');
   }
 }

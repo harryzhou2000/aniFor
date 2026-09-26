@@ -12,6 +12,33 @@ A Chrome/SwiftShader trace measured initial submission at 9.9 seconds and comple
 
 The earlier showcase script timeout came from its exact-consecutive-image capture condition. The new focused browser check inspects the selected renderer and native state and captures the actual view; it does not use identical screenshots as its completion criterion.
 
+### 2D material and interface refinement
+
+- Water's established HDR reflection/refraction field now follows the presenter's visual clock. Its moving bright folds and absorption share one optical pattern; the meniscus and native liquid support remain intact.
+- Dense Steam gains slowly rolling internal billows, pearly scattering and cooler shaded folds. The motion remains subordinate to native atmosphere velocity. Gas coverage still comes from the atmosphere field.
+- Lava's surface crust attenuates its final incandescence, preserving dark plates under the hot mantle and narrow fissures. A warm radiance shoulder limits broad yellow clipping. Native heat and the shared illumination field remain unchanged.
+- Settled Sand gains irregular broad dune shading, with fixed world-space grain and opaque pile coverage. The refinement adds no rendering pass or simulation state.
+- The 2D controls now show the selected tool, Draw/Eraser and numeric brush radius together, with visible Step and Fit view. Appearance is a disclosure. A category selector and Favorites/Recent replace the independently scrolling filter rail. Desktop uses three material columns; mobile puts frequent actions before the library. The desktop shell retains two columns at larger display scales and allows scrolling when expanded settings need more height.
+- Particle and thermal brushes now repeat while held, including Heat/Cool on a paused world. Release, cancellation and focus loss stop the stroke; vector tools remain driven by drag direction. The temperature audit refreshes the native shared snapshot before reading it.
+- 154 element labels now use readable names, as do LIFE presets and configured sources. Original codes remain search aliases and hover details; IDs, saves and native mappings are unchanged. The 2D picker hides unavailable reaction-only brushes. Streamline was removed from the offered wall tools because neither frontend implements its promised airflow lines; imported wall state is preserved.
+- Removed 164 shader-formula/source-only presenter tests and the source assertions from 29 mixed tests, retaining their runtime checks. HDR tests retain capability/resource safety without pinning lighting formulas or exact sampler counts. The presenter suite is reduced from 10,652 to about 2,650 lines.
+- Fixed search temporarily expanding categories permanently, choosing a material while Eraser remained active, missing release-only stroke endpoints, and strokes remaining active after window blur. Configured-source labels no longer overlap the search heading.
+- `npm run audit:field` exercises the native WASM backend, captures Water/Steam/Lava/Sand at fixed animation times, checks unchanged native cell data, operates desktop controls at 125%/150%/200% equivalent scaling, and checks brush, erasing, stepping, thermal tools and mobile touch. `FIELD_BASE_URL` runs the same checks on a published build. Evidence is written to `.artifacts/field-materials/` or `.artifacts/published-field/`.
+
+### Tool assessment
+
+| Tools | Result |
+| --- | --- |
+| Heat / Cool | Native temperature edits work; held repetition added, including while paused. |
+| Air / Vacuum / Wind | Native pressure/vector tests pass, including wall blocking and saved Wind state. Wind needs a drag; the tooltip now says so. |
+| Fan / Gravity walls and gravity elements | Native fan direction, connected fan configuration, Newtonian gravity and masking tests pass. |
+| Clone / converter / particle-ray sources | Native configuration, rejected-target atomicity, actual emission and OPS round trips pass. Powered-source instructions now explain P-type/N-type Silicon activation. |
+| LIFE / Signs | All 24 preset mappings, LIFE evolution, sign edit/removal and native save round trips pass. |
+| Spark | Retained; it must be painted onto a conductor. The tooltip now explains why empty-space painting does nothing. |
+| Streamline / reaction-only products | No working airflow visualization exists for Streamline, so its brush was removed. Unpaintable native products are hidden from the 2D picker. Save/render support remains. |
+
+These results assess the implemented tool families using the 48 native backend tests and representative browser interactions; they do not claim every possible element reaction has been tested. Unit fixture concurrency is capped at four workers to avoid CPU-contention timeouts.
+
 ### Three.js studio
 
 - Separately loaded Three.js WebGL2 scene with full azimuth orbit/zoom/pan and front/reset views. The rear panel and perimeter rails are removed. A ground plane follows the camera horizontally and extends beyond the far clip; fog blends into the background without a visible enclosing box.
@@ -40,6 +67,8 @@ Saving failures keep the current view open. Failed restoration retains the store
 
 ## Verification
 
+- Current 2D browser check: all 33 checks pass against native TPT/Pixi HDR, including material motion, 125%/150%/200% desktop scaling, brush/eraser, pause/step, Heat/Cool/held Heat, readable-code search, configured Clone target and mobile touch. No browser/shader errors. Evidence: `.artifacts/field-materials/report.json` and PNGs.
+- Current 2D cleanup: full `npm test` passes (14 prechecks, 1,491 application tests, 421 script tests), including all 48 native backend tests. Logs: `.artifacts/2d-suite-final.log`.
 - Production build and 25-file static runtime asset closure passed.
 - 53 focused mode/contour/powder-volume/resolution/world-file/field-renderer tests passed; 12 GPU-fence/coalescing/first-frame/stall checks passed. Powder tests check native input preservation, pore/foreign ownership, sparse grains, and watertight, consistently oriented geometry.
 - `npm run audit:render-modes`: 14 checks passed in Chrome with ANGLE Vulkan SwiftShader. Native backend: **The Powder Toy 100.0 (direct WebAssembly)**. Both Realistic/Pixi WebGL with HDR and Three.js WebGL2 rendered.
@@ -47,7 +76,7 @@ Saving failures keep the current view open. Failed restoration retains the store
 - Browser pointer drawing and orbit worked. A paused **3D → 2D → 3D** round trip preserved the entire native save byte-for-byte. Native OPS file download and upload also restored it exactly. Native stepping, empty-world transitions, and a 390-pixel-wide layout passed without browser/shader errors.
 - The initial `npm run audit:studio` passed 25 checks after the open-scene refinements. The expanded brush/highlight audit passes 50 checks, recorded in `.artifacts/open-studio/interaction.json` and `polish-audit.log`. The mode/native-file audit passed all 14 checks again after the material changes; the 16 geometry/mode/world-file unit tests were also rerun successfully. No browser/shader errors were reported.
 - An earlier open-studio checkpoint had 31,744 occupied cells across seven material groups, including 7,811 dense powder cells. The initial reported render was about 97,548 triangles / 34 calls and reconstruction took 140 ms. After 120 native steps, 7,712 dense powder cells and 13 loose grains remained; that reconstruction took 68 ms. These are individual Chrome/SwiftShader observations, not frame-rate guarantees or hardware benchmarks. Render totals include the passes used for that frame; the later bevel refinement changes triangle totals.
-- The historical presenter suite is not green: an isolated original-HEAD run had 15 failures, largely assertions about shader source text. Those pre-existing failures are recorded separately from the passing checks above.
+- The earlier original-HEAD presenter run had 15 failures. The current cleanup removes the obsolete shader-text assertions and repairs stale GPU test harnesses (snapshot polling state, the shared presentation fence and the 30-second deadline); the remaining 108 presenter behavior checks pass.
 
 Reproduce against the production build:
 

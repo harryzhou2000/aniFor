@@ -31,8 +31,8 @@ describe('material controls', () => {
   });
 
   it('describes configured source direction without hiding the target', () => {
-    expect(sourceSelectionLabel(Material.PCLN, Material.Water)).toBe('PCLN → Water');
-    expect(sourceRejectionLabel(Material.PCLN, Material.PSCN)).toBe('PCLN → PSCN unsupported');
+    expect(sourceSelectionLabel(Material.PCLN, Material.Water)).toBe('Powered Clone → Water');
+    expect(sourceRejectionLabel(Material.PCLN, Material.PSCN)).toBe('Powered Clone → P-type Silicon unsupported');
   });
 
   it('omits empty categories for filtered catalogs', () => {

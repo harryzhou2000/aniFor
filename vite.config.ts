@@ -4,6 +4,9 @@ export default defineConfig({
   base: './',
   test: {
     exclude: [...configDefaults.exclude, '.toolchains/**'],
+    // Native/612x384 fixtures are CPU intensive. Unbounded workers on a large
+    // host can make correctness checks fail only because they contend for CPU.
+    maxWorkers: 4,
   },
   build: {
     target: 'es2022',

@@ -9,6 +9,7 @@ interface ToolInfoBase {
   readonly key: string;
   readonly kind: ToolKind;
   readonly name: string;
+  readonly code?: string;
   readonly description: string;
   readonly color: string;
   readonly icon: string;
@@ -65,17 +66,18 @@ export interface ToolCapabilities {
 }
 
 const WALL_DEFINITIONS = [
+  // Native Streamline (4) is a renderer-only airflow marker. Neither frontend
+  // draws those lines, so it is not offered as a brush. Imported walls survive.
   [8, 'Solid wall', 'Blocks particles and air', '#777777', '■'],
   [1, 'Conductive wall', 'Blocks matter and conducts electricity', '#909090', '▦'],
-  [2, 'E-Wall', 'Becomes transparent when powered', '#6f7784', '▥'],
+  [2, 'Powered gate', 'Allows matter through when powered', '#6f7784', '▥'],
   [3, 'Detector wall', 'Detects passing particles', '#c78d42', '◇'],
-  [4, 'Streamline', 'Creates a line that follows air movement', '#808080', '〰'],
   [6, 'Liquid filter', 'Allows liquids through', '#4f9fb8', '≈'],
   [7, 'Absorb wall', 'Absorbs particles while allowing air currents', '#808080', '◉'],
   [9, 'Air-only wall', 'Allows air but blocks particles', '#8294a4', '↟'],
   [10, 'Powder filter', 'Allows powders through', '#c69a58', '⁙'],
   [11, 'Conductor', 'Allows particles through and conducts electricity', '#ffff22', '⚡'],
-  [12, 'E-Hole', 'Absorbs particles and releases them when powered', '#242424', '◌'],
+  [12, 'Powered trap', 'Absorbs particles and releases them when powered', '#242424', '◌'],
   [13, 'Gas filter', 'Allows gases through', '#9a8ab5', '☁'],
   [15, 'Energy filter', 'Allows energy particles through', '#e8df88', '✦'],
   [16, 'Air blocker', 'Blocks air while allowing particles', '#52606d', '▧'],
@@ -91,12 +93,12 @@ const GRAVITY_WALL_DEFINITION = [
 ] as const;
 
 const SOURCE_DEFINITIONS = [
-  ['clne', Material.CLNE, 'CLNE source', 'Places a clone configured to emit the selected target element', '#ffd010', '◇'],
-  ['bcln', Material.BCLN, 'BCLN source', 'Places a breakable clone configured to emit the selected target element', '#ffd040', '◇'],
-  ['pcln', Material.PCLN, 'PCLN source', 'Places a powered clone configured to emit the selected target element', '#c4b84a', '▣'],
-  ['pbcn', Material.PBCN, 'PBCN source', 'Places a powered breakable clone configured to emit the selected target element', '#b86f43', '▣'],
-  ['conv', Material.CONV, 'CONV source', 'Places a converter configured to produce the selected target element', '#0aab0a', '◇'],
-  ['cray', Material.CRAY, 'CRAY source', 'Places a particle ray configured to emit the selected target element when sparked', '#bbff00', '⇢'],
+  ['clne', Material.CLNE, 'Clone source', 'Places a clone configured to emit the selected target element', '#ffd010', '◇'],
+  ['bcln', Material.BCLN, 'Breakable Clone source', 'Places a breakable clone configured to emit the selected target element', '#ffd040', '◇'],
+  ['pcln', Material.PCLN, 'Powered Clone source', 'Emits the selected element when enabled by sparked P-type Silicon; sparked N-type Silicon disables it', '#c4b84a', '▣'],
+  ['pbcn', Material.PBCN, 'Powered Breakable Clone source', 'Breakable source enabled by sparked P-type Silicon; sparked N-type Silicon disables it', '#b86f43', '▣'],
+  ['conv', Material.CONV, 'Converter source', 'Places a converter configured to produce the selected target element', '#0aab0a', '◇'],
+  ['cray', Material.CRAY, 'Particle Ray source', 'Places a particle ray configured to emit the selected target element when sparked', '#bbff00', '⇢'],
 ] as const;
 
 export function semanticTools(capabilities: ToolCapabilities = {}): readonly Exclude<CatalogTool, ElementToolInfo>[] {
@@ -108,6 +110,7 @@ export function semanticTools(capabilities: ToolCapabilities = {}): readonly Exc
     kind: 'wall',
     nativeWall,
     name,
+    code: nativeWall === 2 ? 'E-Wall' : nativeWall === 12 ? 'E-Hole' : undefined,
     description,
     color,
     icon,
@@ -143,6 +146,7 @@ export function semanticTools(capabilities: ToolCapabilities = {}): readonly Exc
     kind: 'source',
     emitter,
     requiresTarget: true,
+    code: key.toUpperCase(),
     name,
     description,
     color,
@@ -155,7 +159,8 @@ export function semanticTools(capabilities: ToolCapabilities = {}): readonly Exc
     kind: 'life',
     preset,
     projection: material,
-    name: code,
+    name,
+    code,
     description: `${name}: ${rule}`,
     color,
     icon: '▦',
@@ -183,17 +188,17 @@ export function semanticTools(capabilities: ToolCapabilities = {}): readonly Exc
     },
     {
       key: 'tool:wind', kind: 'force', nativeTool: SimulationTool.Wind, gesture: 'vector',
-      name: 'Wind', description: 'Pushes air along a dragged vector', color: '#9bdcff', icon: '➜', category: 'simulation-forces',
+      name: 'Wind', description: 'Drag to push air in that direction; a tap does not apply wind', color: '#9bdcff', icon: '➜', category: 'simulation-forces',
       ...unsupported(capabilities.simulationTools, 'simulation-tools-unavailable'),
     },
     {
       key: 'tool:heat', kind: 'thermal', nativeTool: SimulationTool.Heat, gesture: 'brush',
-      name: 'Heat', description: 'Raises local particle temperature', color: '#ff754f', icon: '+', category: 'thermal-tools',
+      name: 'Heat', description: 'Hold over particles to raise their temperature', color: '#ff754f', icon: '+', category: 'thermal-tools',
       ...unsupported(capabilities.simulationTools, 'simulation-tools-unavailable'),
     },
     {
       key: 'tool:cool', kind: 'thermal', nativeTool: SimulationTool.Cool, gesture: 'brush',
-      name: 'Cool', description: 'Lowers local particle temperature', color: '#63bce8', icon: '−', category: 'thermal-tools',
+      name: 'Cool', description: 'Hold over particles to lower their temperature', color: '#63bce8', icon: '−', category: 'thermal-tools',
       ...unsupported(capabilities.simulationTools, 'simulation-tools-unavailable'),
     },
   ];
@@ -215,10 +220,9 @@ export function materialTools(
 ): readonly ElementToolInfo[] {
   return materials.map((material) => {
     const metadata = material as MaterialInfo & { readonly hazard?: 'caution' | 'danger'; readonly available?: boolean; readonly limitations?: readonly string[] };
-    // Render-only products have stable identities in imported/native worlds,
-    // but cannot safely cross the ordinary powder_set ABI.  Keep them visible
-    // and searchable rather than silently hiding them, while disabling their
-    // tile before it can become a misleading brush selection.
+    // Render-only products retain metadata for imported/native worlds, but
+    // cannot cross the ordinary powder_set ABI. The operating palette filters
+    // these unavailable entries before they can become misleading brushes.
     const nativeProductOnly = !material.selectable;
     const gravityEnabled = capabilities.newtonianGravity === true
       && metadata.limitations?.includes('newtonian-gravity-unavailable');
@@ -230,6 +234,7 @@ export function materialTools(
       kind: 'element',
       id: material.id,
       name: material.name,
+      code: material.code,
       description: material.description,
       color: material.color,
       icon: material.icon,
@@ -242,7 +247,7 @@ export function materialTools(
 }
 
 export function filterTools(tools: readonly CatalogTool[], state: CatalogFilterState): readonly CatalogTool[] {
-  const query = state.query.trim().toLocaleLowerCase();
+  const query = state.query.trim().normalize('NFKC').toLocaleLowerCase();
   const recent = new Set(state.recent);
   return tools.filter((tool) => {
     if (state.mode === 'favorites' && !state.favorites.has(tool.key)) return false;
@@ -258,7 +263,7 @@ export function filterTools(tools: readonly CatalogTool[], state: CatalogFilterS
     if (!['all', 'favorites', 'recent'].includes(state.mode)
       && tool.kind !== state.mode && !categoryElement) return false;
     if (!query) return true;
-    return `${tool.name} ${tool.description} ${tool.category} ${tool.kind} ${tool.hazard ?? ''} ${tool.limitations?.join(' ') ?? ''}`.toLocaleLowerCase().includes(query);
+    return `${tool.name} ${tool.code ?? ''} ${tool.description} ${tool.category} ${tool.kind} ${tool.hazard ?? ''} ${tool.limitations?.join(' ') ?? ''}`.normalize('NFKC').toLocaleLowerCase().includes(query);
   }).sort((a, b) => state.mode === 'recent' ? state.recent.indexOf(a.key) - state.recent.indexOf(b.key) : 0);
 }
 

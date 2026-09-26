@@ -1,6 +1,14 @@
 # Switchable 2D and 3D rendering
 
-Revised 2026-09-26. This replaces the earlier plan to keep refining the existing field shader.
+Revised 2026-09-26. The switchable rendering foundation below is delivered; see the progress document for evidence.
+
+## Current focus: 2D materials and controls
+
+The current request is to improve the existing Realistic WebGL view while preserving native TPT and the accepted Water surface. Animate the existing water reflection/refraction field together; give dense steam rolling light and shadow; retain dark crust in Lava's final glow; give settled Sand broad, stable material shading.
+
+Make the 2D interface easier to operate, especially on desktop at larger display scales. Keep tool discovery, the current brush, its numeric radius, Draw/Eraser, playback and view reset accessible. Check the desktop arrangement at 125%, 150% and 200% equivalent scaling without changing to the mobile layout, and separately check touch. Validate rendered results and native painting/erasing/tools rather than relying solely on shader-source assertions.
+
+The follow-up also simplifies unit tests that pin shader formulas, gives elements readable names with searchable native-code aliases, and verifies native tool behavior. Remove picker entries with no implemented user-visible behavior; preserve their native save identities. Keep physics, save/load, input and GPU failure tests.
 
 ## Goal
 

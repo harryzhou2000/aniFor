@@ -254,6 +254,8 @@ export interface BrowserInputAuditApi {
   materialCandidateSurveyFixture(): MaterialCandidateSurveyAuditSnapshot;
   /** Queues one paused audit-only native/presentation-field refresh. */
   refreshPresentationFields(): void;
+  /** Deterministic shader animation time; does not step native simulation. */
+  setVisualTime(milliseconds: number): void;
   geologicalSolidStylingEnabled(): boolean;
   thermalCatalyticRigidStylingEnabled(): boolean;
   roleMaterialStylingEnabled(): boolean;

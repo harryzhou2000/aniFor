@@ -192,6 +192,7 @@ uniform float uBloomIntensity;
 uniform float uBloomSoftIntensity;
 uniform float uExposure;
 uniform float uSaturation;
+uniform float uOpticalTime;
 
 const float MATERIAL_WATER = 2.0;
 const float MATERIAL_OIL = 8.0;
@@ -296,6 +297,15 @@ vec3 liquidInteriorTransport(
   vec2 volumeUv = worldPosition / vec2(108.0, 76.0)
     + velocity * 0.022
     + vec2(material * 0.031, material * -0.019);
+  if (material == MATERIAL_WATER) {
+    // Roll the same reflection/refraction field instead of sliding a second
+    // highlight over it. World-space warping keeps the light calm and coherent
+    // across a pool, including when the average native velocity is nearly zero.
+    volumeUv += vec2(
+      sin(worldPosition.y * 0.024 - uOpticalTime * 0.23),
+      sin(worldPosition.x * 0.018 + uOpticalTime * 0.19)
+    ) * 0.028 + vec2(-0.0035, 0.0022) * uOpticalTime;
+  }
   vec3 volume = texture(uMaterialVolumeTexture, volumeUv).rgb;
   float fold = clamp(volume.r * 0.54 + volume.g * 0.31 + volume.b * 0.15, 0.0, 1.0);
   vec3 upstreamRadiance = straightRadiance(texture(uHdrTexture, upstreamUv));
@@ -423,6 +433,10 @@ vec3 liquidInteriorTransport(
     * mix(0.075, 0.165, deepBody);
   float liquidFoldPocket = max(-liquidLensFold, 0.0) * body
     * mix(0.090, 0.210, deepBody);
+  if (material == MATERIAL_WATER) {
+    liquidFoldKey *= 1.22;
+    liquidFoldPocket *= 1.35;
+  }
   result += max(vec3(0.0), vec3(1.16) - clamp(result, 0.0, 1.16))
     * causticTint * liquidFoldKey;
   result *= exp(-absorption * liquidFoldPocket * 1.65);
@@ -1168,6 +1182,7 @@ export class HDRVfxPipeline {
         uBloomSoftIntensity: { value: this.bloomSoftIntensity, type: 'f32' },
         uExposure: { value: look === 'neon-lab' ? 1.04 : 1.0, type: 'f32' },
         uSaturation: { value: look === 'neon-lab' ? 1.14 : 1.01, type: 'f32' },
+        uOpticalTime: { value: 0, type: 'f32' },
         uWorldTexel: {
           value: new Float32Array([1 / width, 1 / height]), type: 'vec2<f32>',
         },
@@ -1285,6 +1300,10 @@ export class HDRVfxPipeline {
   }
 
   render(): void {
+    // All optical passes use the presenter's clock, including paused captures.
+    if (this.compositeUniforms) {
+      this.compositeUniforms.uniforms.uOpticalTime = Number(this.sourceUniforms.uniforms.uTime ?? 0);
+    }
     this.renderer.render({ container: this.behindScene, target: this.behindTarget, clear: true });
     try {
       this.sourceUniforms.uniforms.uOpticalLayer = 1;

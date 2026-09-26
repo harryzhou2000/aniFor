@@ -6699,6 +6699,9 @@ void main() {
   float alpha;
   vec3 color;
   float liquidLightResponse = 0.0;
+  // Surface crust attenuates Lava's final incandescence as well as its pigment.
+  // The native temperature and shared light field still describe the hot bulk.
+  float moltenSurfaceRadiance = 1.0;
   // E06 carries the deep-body proof used by local light transport. E09 keeps a
   // separate one-scalar packed resting-contact proof because a rigid floor
   // cannot satisfy E06's deliberate requirement for two more powder rows below
@@ -7279,15 +7282,22 @@ void main() {
         }
       }
       // Three long, incommensurate world-space waves form a cheap directional
-      // warp. Enhanced coherent gas carries the resulting volume pattern along
-      // its real field velocity. Still gas and the Balanced look retain the
-      // established position exactly; field-owned support prevents the moving
-      // pattern from filling holes or exposing semantic carriers.
+      // warp. Enhanced coherent gas carries the volume pattern along its real
+      // field velocity. Field-owned support keeps its holes and sparse edges.
       vec2 gasBillowPosition = fieldPosition - gasMotionDirection * uTime
         * (12.0 * gasMotionStrength * gasMaterialVolumeB);
-      float gasVfxWaveA = sin(dot(gasBillowPosition, vec2(0.055, 0.031)) + 0.80);
-      float gasVfxWaveB = sin(dot(gasBillowPosition, vec2(-0.029, 0.081)) + 2.15);
-      float gasVfxWaveC = sin(dot(gasBillowPosition, vec2(0.097, -0.043)) + 4.05);
+      // Slow internal eddies keep a dense, low-velocity cloud alive. Steam has
+      // a stronger rising roll; the actual velocity remains the main advection.
+      float gasSteamRoll = uSteamCondensateVfx * uGasIdentityStyling
+        * (1.0 - step(0.5, abs(floor(gasStyleState.r * 255.0 + 0.5) - 2.0)));
+      float gasEddyTime = uTime * gasMaterialVolumeB * uGasMotionVfx;
+      gasBillowPosition += vec2(0.35, 1.6) * gasEddyTime * gasSteamRoll;
+      float gasVfxWaveA = sin(dot(gasBillowPosition, vec2(0.055, 0.031))
+        + 0.80 + gasEddyTime * 0.13);
+      float gasVfxWaveB = sin(dot(gasBillowPosition, vec2(-0.029, 0.081))
+        + 2.15 - gasEddyTime * 0.17);
+      float gasVfxWaveC = sin(dot(gasBillowPosition, vec2(0.097, -0.043))
+        + 4.05 + gasEddyTime * 0.11);
       float gasVfxWaveBasis = clamp(
         gasVfxWaveA * 0.50 + gasVfxWaveB * 0.31 + gasVfxWaveC * 0.19,
         -1.0, 1.0
@@ -7298,7 +7308,7 @@ void main() {
       // bends the lookup so it reads as rolling participating media instead of
       // a tiled image. The atmosphere still owns density, silhouette, gaps,
       // species, and alpha.
-      vec2 gasVfxWarp = vec2(gasVfxWaveB, gasVfxWaveC) * 7.5;
+      vec2 gasVfxWarp = vec2(gasVfxWaveB, gasVfxWaveC) * (7.5 + gasSteamRoll * 5.0);
       float gasVfxBillow = gasVfxWaveBasis;
       vec3 gasVfxNoise = vec3(0.5);
       if (gasMaterialVolumeB > 0.5) {
@@ -7657,7 +7667,8 @@ void main() {
             * smoothstep(0.16, 0.54, cloudNeighbourMean)
             * smoothstep(0.10, 0.54, atmosphereState.a);
           float steamCondensatePhase = clamp(
-            gasVfxBillow * 0.46 + gasVfxWaveC * 0.32
+            gasVfxBillow * 0.62 + gasVfxWaveC * 0.25
+              + (gasVfxNoise.g - gasVfxNoise.b) * 0.48 * gasMaterialVolumeB
               + gasDirectionalRelief * 0.14 + gasCurvature * 0.08,
             -1.0, 1.0
           );
@@ -7676,10 +7687,17 @@ void main() {
             clamp(0.58 + gasDirectionalRelief * 0.18 + gasCrown * 0.14, 0.0, 1.0)
           );
           color += (vec3(1.14) - clamp(color, 0.0, 1.14))
-            * steamCondensateKey * steamCondensateCrown * 0.680;
+            * steamCondensateKey * steamCondensateCrown * 0.820;
           color *= vec3(1.0)
-            - vec3(0.30, 0.18, 0.10) * steamCondensatePocket * 0.480
+            - vec3(0.42, 0.29, 0.16) * steamCondensatePocket * 0.650
             - vec3(0.090, 0.055, 0.032) * steamCondensateCore;
+          // Light passes through thinner folds, with cool absorption behind
+          // the pearly front lobes. Coverage stays with the atmosphere field.
+          float steamWindow = steamCondensateSupport * gasMaterialVolumeB
+            * (1.0 - smoothstep(0.04, 0.38, abs(steamCondensatePhase)))
+            * (0.45 + gasVfxNoise.b * 0.55);
+          color += (vec3(1.10) - clamp(color, 0.0, 1.10))
+            * vec3(0.46, 0.72, 0.92) * steamWindow * 0.13;
         }
       }
 
@@ -8672,7 +8690,7 @@ void main() {
           * (1.0 - liquidFresnelContour * 0.58);
         float moltenHotMantle = smoothstep(0.18, 0.68, moltenMacroFold)
           * moltenBodyInterior;
-        float moltenCoolCrust = smoothstep(0.04, 0.58, -moltenMacroFold)
+        float moltenCoolCrust = smoothstep(-0.28, 0.42, -moltenMacroFold)
           * moltenBodyInterior;
         float moltenFissureDistance = abs(
           moltenMacroFold + moltenMesoFold * 0.36
@@ -8690,7 +8708,9 @@ void main() {
             * moltenFissureGate * moltenBodyInterior - moltenFissure
         );
         float moltenHeatBody = mix(0.78, 1.0, clamp(heat, 0.0, 1.0));
-        color *= vec3(1.0) - vec3(0.58, 0.46, 0.28)
+        moltenSurfaceRadiance = 1.0 - moltenCoolCrust * 0.84
+          * (1.0 - moltenFissure * 0.85);
+        color *= vec3(1.0) - vec3(0.72, 0.68, 0.56)
           * moltenCoolCrust;
         color *= vec3(1.0) - vec3(0.28, 0.20, 0.10)
           * moltenFissureShoulder;
@@ -10182,6 +10202,23 @@ void main() {
               + (0.48 - powderBodyVolumeDepth) * 0.10,
             -1.0, 1.0
           );
+          if (material == 1.0 && uMaterialLightingVariant > 1.5) {
+            // Sand's broad faces are irregular dune folds, with its existing
+            // fine grain retained below. This lookup is fixed in world space:
+            // settled sand does not crawl or sparkle when time advances.
+            vec3 sandDune = texture(uMaterialVolumeTexture,
+              fieldPosition / vec2(210.0, 145.0) + vec2(0.37, 0.11)).rgb;
+            powderVfxFacetBalance = clamp(powderDirectedSlope * 0.52
+              + (sandDune.r - 0.5) * 1.50
+              + (sandDune.g - 0.5) * 0.48, -1.0, 1.0);
+            float sandShade = smoothstep(0.04, 0.58, -powderVfxFacetBalance)
+              * powderBodyGate;
+            float sandKey = smoothstep(0.04, 0.56, powderVfxFacetBalance)
+              * powderBodyGate;
+            color *= vec3(1.0) - vec3(0.17, 0.21, 0.26) * sandShade;
+            color += (vec3(1.10) - clamp(color, 0.0, 1.10))
+              * vec3(1.00, 0.81, 0.51) * sandKey * 0.15;
+          }
           float powderVfxCrown = max(powderVfxFacetBalance, 0.0);
           float powderVfxPocket = max(-powderVfxFacetBalance, 0.0);
           float powderVfxShoulder = (1.0 - powderBodyVolumeDepth)
@@ -13422,6 +13459,8 @@ void main() {
       vec3 blackbody = blackbodyColor(temperatureByte);
       float reveal = smoothstep(0.0, 0.85, radiance)
         * mix(0.28, 0.52, thermalCore);
+      radiance *= moltenSurfaceRadiance;
+      reveal *= moltenSurfaceRadiance;
       color = mix(color, blackbody * (0.72 + radiance * 0.10), reveal);
       color += blackbody * radiance * mix(0.18, 0.46, thermalCore)
         * (uHDRVfx > 1.5 ? 1.18 : 1.0);
@@ -13430,6 +13469,7 @@ void main() {
   float emission = energyCore > 0.5
     ? 0.0
     : (materialEmissive ? 0.48 + heat * 1.05 : (material == 11.0 ? 0.28 + heat * 0.62 : 0.0));
+  emission *= moltenSurfaceRadiance;
   color += mix(base, vec3(1.0, 0.52, 0.20), heat) * emission;
   float profileIrradianceB = step(1.5, uMaterialLightingVariant);
   float transportedGasLight = gasVolume * profileIrradianceB * uHighQuality;
@@ -14160,6 +14200,14 @@ void main() {
   }
   if (halo > 0.5 && wallOnly < 0.5 && emissionOnly < 0.5 && surfaceOnly < 0.5
     && gasVolume < 0.5 && liquidVolume < 0.5 && energyCore < 0.5) alpha = volume * 0.52;
+  if (material == 11.0 && moltenSurfaceRadiance < 1.0) {
+    // Finish after all lighting, before the shared HDR ceiling: otherwise hot
+    // red and green both clip to 1.35 and erase the mantle's smooth gradients.
+    vec3 moltenShoulder = vec3(1.30, 0.62, 0.22)
+      * (vec3(1.0) - exp(-max(color, vec3(0.0)) * vec3(1.15, 1.10, 1.0)));
+    color = mix(color, moltenShoulder,
+      smoothstep(0.0, 0.08, 1.0 - moltenSurfaceRadiance));
+  }
   alpha = clamp(alpha, 0.0, 1.0);
   vec3 premultiplied = clamp(color, 0.0, 1.35) * alpha;
   float compositeAlpha = alpha;
